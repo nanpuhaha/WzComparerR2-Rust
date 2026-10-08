@@ -38,6 +38,22 @@ impl Arena {
         a
     }
 
+    /// `wz-core` 노드 트리를 루트로 하는 새 Arena 를 만든다.
+    pub fn from_wz_node(node: &WzNode) -> (Self, NodeId) {
+        let mut a = Self::default();
+        let value = node.value.as_ref().and_then(convert_value);
+        let root = a.alloc(node.name.clone(), value, None);
+        if let Some(wz_core::image::ImageValue::Property(inner)) = &node.value {
+            for ch in &inner.children {
+                a.ingest(root, ch);
+            }
+        }
+        for ch in &node.children {
+            a.ingest(root, ch);
+        }
+        (a, root)
+    }
+
     pub fn root(&self) -> NodeId {
         // `with_root` 가 항상 0번 슬롯을 쓰므로 첫 노드가 루트다.
         NodeId::new(0, 0)

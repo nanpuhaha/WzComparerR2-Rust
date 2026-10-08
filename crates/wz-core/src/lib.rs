@@ -25,6 +25,7 @@
 //! - ⏳ 컨테이너 파서 (`pkg1`/`pkg2`/`ms`) — 다음 스텝
 //! - ⏳ 포맷 프로파일 탐지 (`detect`) — 다음 스텝
 
+pub mod archive;
 pub mod crypto;
 pub mod detect;
 pub mod detect_version;
@@ -34,6 +35,7 @@ pub mod profile;
 pub mod read;
 pub mod text;
 
+pub use archive::WzArchive;
 pub use image::{ImageParser, ImageValue, Node, PngRef, Vec2};
 pub use offset::{
     OffsetCalc, Pkg1OffsetCalc, Pkg2OffsetCalc32, Pkg2OffsetCalc64V1, Pkg2OffsetCalc64V2,

@@ -5,6 +5,9 @@
 
 use std::sync::Arc;
 
+pub mod scene;
+pub use scene::{AvatarBatch, AvatarScene, AvatarVertex};
+
 /// 29 predefined avatar equipment and component slots.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AvatarSlot {

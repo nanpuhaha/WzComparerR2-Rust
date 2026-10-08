@@ -22,72 +22,36 @@ pub struct DiffItem {
 pub struct DiffEngine;
 
 impl DiffEngine {
-    /// Compare two `wz_core::image::Node` trees recursively
+    /// Compare two `wz_core::image::Node` trees by adapting them into Arena storage
     pub fn diff_core_nodes(
         old_node: Option<&WzCoreNode>,
         new_node: Option<&WzCoreNode>,
         path: &str,
     ) -> Vec<DiffItem> {
-        match (old_node, new_node) {
-            (None, Some(new_n)) => {
-                let mut items = vec![DiffItem {
-                    path: path.to_string(),
-                    diff_type: DiffType::Append,
-                    description: format!("Added node: {}", path),
-                }];
-                for ch in &new_n.children {
-                    let subpath = format!("{}/{}", path, ch.name);
-                    items.extend(Self::diff_core_nodes(None, Some(ch), &subpath));
-                }
-                items
+        let (old_arena, old_id) = match old_node {
+            Some(n) => {
+                let (a, root) = Arena::from_wz_node(n);
+                (Some(a), Some(root))
             }
-            (Some(old_n), None) => {
-                let mut items = vec![DiffItem {
-                    path: path.to_string(),
-                    diff_type: DiffType::Delete,
-                    description: format!("Deleted node: {}", path),
-                }];
-                for ch in &old_n.children {
-                    let subpath = format!("{}/{}", path, ch.name);
-                    items.extend(Self::diff_core_nodes(Some(ch), None, &subpath));
-                }
-                items
+            None => (None, None),
+        };
+
+        let (new_arena, new_id) = match new_node {
+            Some(n) => {
+                let (a, root) = Arena::from_wz_node(n);
+                (Some(a), Some(root))
             }
-            (Some(old_n), Some(new_n)) => {
-                let mut items = Vec::new();
-                if old_n.value != new_n.value {
-                    items.push(DiffItem {
-                        path: path.to_string(),
-                        diff_type: DiffType::Changed,
-                        description: format!("Modified value at {}", path),
-                    });
-                }
+            None => (None, None),
+        };
 
-                // Child names union
-                let mut child_names = Vec::new();
-                for ch in &old_n.children {
-                    if !child_names.contains(&ch.name) {
-                        child_names.push(ch.name.clone());
-                    }
-                }
-                for ch in &new_n.children {
-                    if !child_names.contains(&ch.name) {
-                        child_names.push(ch.name.clone());
-                    }
-                }
-
-                // Compare children
-                for c_name in child_names {
-                    let o_child = old_n.children.iter().find(|c| c.name == c_name);
-                    let n_child = new_n.children.iter().find(|c| c.name == c_name);
-                    let subpath = format!("{}/{}", path, c_name);
-                    items.extend(Self::diff_core_nodes(o_child, n_child, &subpath));
-                }
-
-                items
-            }
-            (None, None) => Vec::new(),
-        }
+        let empty = Arena::new();
+        Self::diff_arena_nodes(
+            old_arena.as_ref().unwrap_or(&empty),
+            new_arena.as_ref().unwrap_or(&empty),
+            old_id,
+            new_id,
+            path,
+        )
     }
 
     /// Compare two `wz-db` Arena nodes recursively

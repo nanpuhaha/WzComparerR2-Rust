@@ -463,159 +463,29 @@ fn cmd_detect(path: &std::path::Path, json: bool) -> Result<(), Box<dyn std::err
     }
 }
 
-/// 감지 결과에서 만든 파싱 컨텍스트.
-struct Resolved {
-    detection: wz_core::detect_version::Detection,
-    calc: Box<dyn wz_core::offset::OffsetCalc>,
-    pkg2: bool,
-    dir_start: u64,
-}
 
-/// 헤더 감지 → 프로파일 판별 → 오프셋 계산기.
-///
-/// # 왜 자동 감지가 기본인가
-///
-/// `hashVersion` 을 모르면 어떤 오프셋도 복호화할 수 없다. C# 의
-/// `WzVersionVerifier` 와 같은 접근을 쓴다: 후보를 나열하고 **오프셋이
-/// 겹치지 않는 것**으로 하나를 고른다.
-///
-/// `--hash-version` 은 그 과정을 건너뛰고 강제한다. 오라클 대조나
-/// 성능 측정용이다 — 틀린 값을 넣으면 조용히 엉뚱한 트리가 나오므로
-/// 검증 단계에서 걸러진다.
-fn resolve(
-    src: &std::sync::Arc<dyn wz_pool::ByteSource>,
-    hash_version: u64,
-) -> Result<Resolved, Box<dyn std::error::Error>> {
-    use wz_core::detect_version::{detect_version, Options};
-
-    // 함정: KMST1199–1201 과 KMST1200 의 `hashVersion` 은 2³² 전수 탐색이라
-    // **프로필당 ~18초**다 (12코어 기준, rayon 256청크). 게다가 표준 PKG2 헤더는
-    // 1201→1200→1199→1198 순으로 시도하므로 최악엔 스윕을 여러 번 한다.
-    //
-    // 사용자가 멈추지 않은 것처럼 보이지 않게 미리 알린다.
-    let detected0 = wz_core::detect::detect(src.as_ref()).map_err(|e| format!("감지 실패: {e}"))?;
-    let expensive = detected0.profile == "PKG2_STANDARD_HEADER";
-    if expensive && hash_version == 0 {
-        eprintln!(
-            "참고: 이 파일은 표준 PKG2 헤더라 `hashVersion` 역산을 시도합니다.\n\
-             KMST1199–1201 은 2^32 전수 탐색이라 수십 초 걸릴 수 있습니다.\n\
-             --hash-version 을 주면 건너뜁니다."
-        );
-    }
-
-    let opts = Options {
-        max_depth: 1,
-        hash_version,
-    };
-    let t0 = std::time::Instant::now();
-    let detection = detect_version(src, opts).map_err(|e| format!("버전 자동 감지 실패: {e}"))?;
-    if expensive {
-        eprintln!("  · 감지 소요 {:?}", t0.elapsed());
-    }
-
-    let calc = detection.profile.offset_calc(
-        detection.detected.header_len,
-        detection.hash_version,
-        detection.detected.hash1.unwrap_or(0),
-    );
-    let is_pkg1 = detection.profile.format == wz_core::profile::WzFileFormat::Pkg1;
-    let dir_start = if is_pkg1 {
-        detection.detected.header_len as u64
-            + if detection.detected.capabilities.encver_missing {
-                0
-            } else {
-                2
-            }
-    } else if detection.detected.capabilities.pkg2_random_header
-        || detection.detected.capabilities.pkg2_random_header64
-    {
-        detection.detected.header_len as u64
-    } else {
-        detection.detected.header_len as u64 + 8
-    };
-
-    Ok(Resolved {
-        calc,
-        pkg2: !is_pkg1,
-        dir_start,
-        detection,
-    })
-}
 fn cmd_tree(
     path: &std::path::Path,
     hash_version: u64,
     shallow: bool,
     json: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use wz_core::dirtree::*;
+    use wz_core::WzArchive;
 
-    let src = wz_pool::open_file_arc(path)?;
-    let r = resolve(&src, hash_version)?;
+    let archive = WzArchive::open_with_hash_version(path, hash_version)?;
 
     if !json {
-        println!("파일: {}", src.describe());
+        println!("파일: {}", archive.source().describe());
         println!(
             "프로파일: {} / KMST{}",
-            r.detection.reason, r.detection.profile.wz_version
+            archive.detection().reason,
+            archive.detection().profile.wz_version
         );
-        println!("hashVersion: {:#018x}", r.detection.hash_version);
-        println!("headerSize: {}", r.detection.detected.header_len);
-        println!("dirStart: {}", r.dir_start);
+        println!("hashVersion: {:#018x}", archive.detection().hash_version);
+        println!("headerSize: {}", archive.detection().detected.header_len);
     }
 
-    /// PKG2 V2 이름 키스트림 입력값을 감지 결과에서 뽑는다.
-    ///
-    /// # 왜 프로파일별로 가를까
-    ///
-    /// PKG2 V2 문자열(`ReadPkg2DirStringV2`)을 쓰는 프로파일은 1205/1206 뿐이다
-    /// (`WzVersionProfile.cs:505,650` -> `allNamesUseV2: true`). 다른 프로파일은
-    /// WZ 표준 문자열을 쓰므로 키스트림을 만들면 안 된다 — 길이 접두사가 1바이트로
-    /// 달라서 **전부** 깨진다.
-    fn pkg2_name_key_material(
-        d: &wz_core::detect_version::Detection,
-    ) -> Option<Pkg2NameKeyMaterial> {
-        let v = d.profile.wz_version;
-        if !(v == 1205 || v == 1206) {
-            return None;
-        }
-        Some(Pkg2NameKeyMaterial {
-            hash1: d.detected.hash1?,
-            hash_version: d.hash_version,
-        })
-    }
-
-    let ctx = DirTreeContext {
-        detected: &r.detection.detected,
-        offset_calc: Some(r.calc.as_ref()),
-        dir_start: r.dir_start,
-        pkg2: r.pkg2,
-        read_offset_table: r.pkg2,
-        name_position: match r.detection.profile.name_position {
-            wz_core::profile::EntryNamePosition::AfterData => EntryNamePosition::AfterData,
-            wz_core::profile::EntryNamePosition::BeforeData => EntryNamePosition::BeforeData,
-        },
-        // PKG2 V2 이름 키스트림 입력값 (1205/1206 프로파일).
-        //
-        // # 함정: 키는 **위치마다** 다르다
-        //
-        // `Pkg2DirStringKeyV5.ApplyState(filePosition)` 이 이름마다 호출되므로
-        // 키 하나만 만들어 두면 두 번째 이름부터 틀린다. 원본 입력값을 넘겨
-        // 호출 시점에 계산하게 한다. 위치는 절대 오프셋이 아니라 `dirStart`
-        // 기준 **상대값**이다 (디렉터리는 `PartialStream` 위에서 읽힌다).
-        pkg2_name_key_material: pkg2_name_key_material(&r.detection),
-    };
-    let mut c = wz_pool::ReadCtx::new(src.clone());
-    let parser = DirTreeParser::new(ctx);
-    let tree = if shallow {
-        let mut c2 = wz_pool::ReadCtx::new(src.clone());
-        c2.seek(r.dir_start)?;
-        DirTree {
-            root: parser.read_root_only(&mut c2)?,
-            blocks: Vec::new(),
-        }
-    } else {
-        parser.parse(&mut c)?
-    };
+    let tree = archive.read_tree_with_mode(shallow)?;
 
     if json {
         let out = tree_to_json(&tree);
@@ -696,43 +566,19 @@ fn cmd_image(
     hash_version: u64,
     max_depth: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use wz_core::image::ImageParser;
+    use wz_core::WzArchive;
 
-    let src = wz_pool::open_file_arc(path)?;
-    let r = resolve(&src, hash_version)?;
-    let len = src.len()?;
-    if offset >= len {
-        return Err(format!("오프셋 {offset} 가 파일 크기 {len} 를 넘는다").into());
-    }
+    let archive = WzArchive::open_with_hash_version(path, hash_version)?;
+    let root = archive.parse_image_at(offset)?;
 
-    let mut c = wz_pool::ReadCtx::new(src.clone());
-    c.seek(offset)?;
-    // 함정: 복호화기를 넘기지 않으면 문자열이 깨져 루트 태그(`Property`)
-    // 비교가 실패한다. 파일·오프셋을 주면 BMS/KMS/GMS 중 맞는 키를 고른다.
-    //
-    // `declared` 는 구조체에 키가 명시된 경우(`Wz_Structure.Pkg1EncType`)
-    // 뿐이라 CLI 에서는 `None` 이다.
-    //
-    // 함정: `string_ref_offset` = 이미지 시작 오프셋이어야 한다.
-    // `0x1B` 문자열 참조는 **이미지 기준 상대 오프셋**인데, C# 은 이미지에
-    // PartialStream 을 씌워서 그게 자동으로 맞춰진다. Rust 은 파일 전체
-    // 스트림을 쓰므로 기준을 넘겨야 하고, 안 넘기면 파일 앞부분을 문자열로
-    // 읽어 엉뚱한 태그가 나온다.
-    let mut parser = ImageParser::new(None)
-        .detect_key(&mut c, offset, None)?
-        .with_string_ref_offset(offset);
-    let root = parser
-        .parse_image_root(&mut c)
-        .map_err(|e| format!("이미지 파싱 실패 @{offset}: {e}"))?;
-
-    println!("파일: {}", src.describe());
+    println!("파일: {}", archive.source().describe());
     println!(
         "프로파일: {} / KMST{}",
-        r.detection.reason, r.detection.profile.wz_version
+        archive.detection().reason,
+        archive.detection().profile.wz_version
     );
-    println!("hashVersion: {:#018x}", r.detection.hash_version);
+    println!("hashVersion: {:#018x}", archive.detection().hash_version);
     println!("이미지 오프셋: {offset}");
-    println!("소비 바이트: {}", parser.bytes_consumed());
     println!();
     print_node(&root, 0, max_depth);
     Ok(())
@@ -865,24 +711,13 @@ fn cmd_diff(
     new_offset: Option<u64>,
     json: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use wz_core::image::ImageParser;
     use wz_diff::{DiffEngine, DiffType};
 
     if let (Some(o1), Some(o2)) = (old_offset, new_offset) {
-        let src1 = wz_pool::open_file_arc(old_wz)?;
-        let src2 = wz_pool::open_file_arc(new_wz)?;
-        let mut c1 = wz_pool::ReadCtx::new(src1);
-        let mut c2 = wz_pool::ReadCtx::new(src2);
-        c1.seek(o1)?;
-        c2.seek(o2)?;
-        let mut p1 = ImageParser::new(None)
-            .detect_key(&mut c1, o1, None)?
-            .with_string_ref_offset(o1);
-        let mut p2 = ImageParser::new(None)
-            .detect_key(&mut c2, o2, None)?
-            .with_string_ref_offset(o2);
-        let n1 = p1.parse_image_root(&mut c1)?;
-        let n2 = p2.parse_image_root(&mut c2)?;
+        let a1 = wz_core::WzArchive::open(old_wz)?;
+        let a2 = wz_core::WzArchive::open(new_wz)?;
+        let n1 = a1.parse_image_at(o1)?;
+        let n2 = a2.parse_image_at(o2)?;
         let diffs = DiffEngine::diff_core_nodes(Some(&n1), Some(&n2), "root");
         if json {
             println!("{}", serde_json::to_string_pretty(&diffs)?);
@@ -918,15 +753,8 @@ fn cmd_dump(
     offset: u64,
     json: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use wz_core::image::ImageParser;
-
-    let src = wz_pool::open_file_arc(path)?;
-    let mut c = wz_pool::ReadCtx::new(src);
-    c.seek(offset)?;
-    let mut parser = ImageParser::new(None)
-        .detect_key(&mut c, offset, None)?
-        .with_string_ref_offset(offset);
-    let root = parser.parse_image_root(&mut c)?;
+    let archive = wz_core::WzArchive::open(path)?;
+    let root = archive.parse_image_at(offset)?;
 
     if json {
         let dump_json = dump_node_to_json(&root);
@@ -940,7 +768,7 @@ fn cmd_dump(
 
 fn cmd_avatar(demo: bool) -> Result<(), Box<dyn std::error::Error>> {
     use std::sync::Arc;
-    use wz_avatar::{AvatarCanvas, AvatarSlot, Bone, Point, SkinLayer, ZMap};
+    use wz_avatar::{AvatarSlot, Bone, Point, SkinLayer, ZMap};
 
     println!("=== 29개 MapleStory 아바타 슬롯 ===");
     for i in 0..AvatarSlot::TOTAL_SLOTS {
@@ -974,8 +802,8 @@ fn cmd_avatar(demo: bool) -> Result<(), Box<dyn std::error::Error>> {
         head_skin.height = 44;
         root.append_bone(head_skin, "navel", Point::new(0, 10));
 
-        let canvas = AvatarCanvas::new(zmap);
-        let layers = canvas.generate_layers(&root);
+        let scene = wz_avatar::AvatarScene::new(zmap);
+        let layers = scene.canvas.generate_layers(&root);
         println!("생성된 레이어 수: {}", layers.len());
         for (i, layer) in layers.iter().enumerate() {
             println!(
@@ -983,8 +811,13 @@ fn cmd_avatar(demo: bool) -> Result<(), Box<dyn std::error::Error>> {
                 layer.name, layer.position, layer.width, layer.height, layer.z_index
             );
         }
-        let quads = canvas.build_quads(&layers);
-        println!("생성된 GPU 렌더 쿼드 수: {}", quads.len());
+        let batch = scene.build_batch(&root, (1024, 1024));
+        println!(
+            "생성된 GPU 렌더 배치: 정점 {} 개, 인덱스 {} 개 (삼각형 {} 개)",
+            batch.vertex_count(),
+            batch.index_count(),
+            batch.index_count() / 3
+        );
     }
     Ok(())
 }
