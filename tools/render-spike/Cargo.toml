@@ -1,0 +1,34 @@
+[package]
+name = "render-spike"
+description = "headless wgpu 파이프라인 도달성 스파이크 (Phase 6 착수 근거)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+# 스파이크는 Phase 6 전에 "egui + wgpu 가 되나" 를 한 번만 실측하는 것이다.
+# 확정되면 이 바이너리를 GUI 크레이트로 옮기고, 그때 이 게이트를 끈다.
+publish = false
+
+[[bin]]
+name = "render-spike"
+path = "src/main.rs"
+
+[dependencies]
+wz-render.workspace = true
+wgpu.workspace = true
+bytemuck.workspace = true
+pollster.workspace = true
+# inter-stage 레이아웃 요약을 사람이 읽으려면 IR 가 필요하다.
+naga.workspace = true
+
+[features]
+default = ["spike"]
+# GPU 코드 전체를 게이트한다. `cargo check --no-default-features` 로
+# GPU 없이도 이 크레이트가 컴파일되는지 (헤드리스 CI) 확인할 수 있다.
+spike = []
+
+[lints.rust]
+unsafe_code = "deny"

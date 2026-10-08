@@ -1,0 +1,25 @@
+[package]
+name = "wz-cli"
+description = "Headless command line interface — the primary product surface of the Rust rewrite"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "wz"
+path = "src/main.rs"
+
+[dependencies]
+wz-error.workspace = true
+wz-pool.workspace = true
+wz-core.workspace = true
+wz-image.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints.rust]
+unsafe_code = "forbid"

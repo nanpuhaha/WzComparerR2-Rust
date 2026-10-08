@@ -1,0 +1,15 @@
+[package]
+name = "wz-error"
+description = "WzComparerR2 error types — the single error vocabulary shared by every wz-* crate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+
+[lints.rust]
+unsafe_code = "forbid"

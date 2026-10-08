@@ -1,0 +1,57 @@
+# cargo-deny 정책 — 리포트 §12 R1 (라이선스/법적 리스크) 대응
+# 사용법: cargo deny check
+#
+# 핵심 목적:
+#   1. 게임 클라이언트에서 추출한 바이너리(DXBC 셰이더 등)가 산출물에 섞이지 않도록 한다.
+#   2. 순수 Rust 원칙 — FFI 크레이트는 명시적 예외로만 허용한다.
+
+[graph]
+all-features = true
+
+[bans]
+# 여러 버전이 공존하면 WZ 포맷 버전에 따라 동작이 갈릴 수 있다.
+multiple-versions = "warn"
+wildcards = "deny"
+deny = [
+    # 랜덤 크레이트를 쓰지 않는다. 결정성(§ADR-6)이 깨진다.
+    { name = "rand" },
+    # getrandom 은 tempfile 가 테스트에서만 끌어온다 (dev-dependency).
+    # 운영 코드 경로에는 새지 않으므로 여기서 허용한다.
+    # tempfile 는 표준 라이브러리의 TempDir 을 쓰지 못하는 정당화된 이유
+    # (테스트의 임시 디렉터리 정리) 때문에 쓰는 결정론 없는 코드다.
+    { name = "getrandom", wrappers = ["tempfile"] },
+    # unsafe wrapper 금지 — #[allow(unsafe_code)]는 크레이트별로 명시적 opt-in 한다.
+    { name = "rusticata-tiny-badgers" },
+]
+
+[licenses]
+# 주의: cargo-deny 의 `allow` 항목은 **단일 SPDX 식**만 받는다.
+# "MIT OR Apache-2.0" 같은 이중 라이선스 표현을 넣으면 설정 파일 해석 단계에서
+# `expected a `WITH` here` 로 죽는다 (체크가 아니라 파싱 자체가 실패).
+# 허용 목록은 **각 라이선스 ID** 를 개별 항목으로 나열한다.
+# OR 식이 필요한 크레이트는 아래 `clarify` 에서 직접 지정한다.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+]
+confidence-threshold = 0.93
+# 추출된 게임 셰이더/에셋이 실수로 번들에 들어가는 것을 이력에서 차단
+exceptions = []
+
+[[licenses.clarify]]
+name = "ring"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [{ path = "LICENSE", hash = 0xbd0e_ed23 }]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# Git 의존성이 필요해지면 여기에 명시적으로 추가한다. 자동 허용 금지.
+allow-git = []

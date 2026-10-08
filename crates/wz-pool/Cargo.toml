@@ -1,0 +1,23 @@
+[package]
+name = "wz-pool"
+description = "Random-access byte sources (mmap/file/memory) and caching primitives for WZ archives"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+wz-error.workspace = true
+memmap2.workspace = true
+dashmap.workspace = true
+lru.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints.rust]
+# 이 크레이트는 mmap 생성(`memmap2::Mmap::map`)에만 unsafe 가 필요하다.
+# 그 외 unsafe 는 PR review 를 거치지 못하게 막는다.
+unsafe_code = "deny"

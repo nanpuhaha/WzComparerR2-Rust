@@ -1,0 +1,17 @@
+[package]
+name = "wz-image"
+description = "WZ texture format decoders (13 formats incl. BC7) and image blob handling"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+wz-error.workspace = true
+wz-core.workspace = true
+wz-pool.workspace = true
+
+[lints.rust]
+unsafe_code = "deny"

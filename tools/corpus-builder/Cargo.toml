@@ -1,0 +1,23 @@
+[package]
+name = "corpus-builder"
+description = "Synthetic WZ corpus generator — golden tests without proprietary MapleStory assets (report §10.1)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "corpus-builder"
+path = "src/main.rs"
+
+[dependencies]
+wz-error.workspace = true
+wz-pool.workspace = true
+wz-core.workspace = true
+flate2.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints.rust]
+unsafe_code = "forbid"

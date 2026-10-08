@@ -1,0 +1,84 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/wz-error",
+    "crates/wz-pool",
+    "crates/wz-core",
+    "crates/wz-image",
+    "crates/wz-render",
+    "crates/wz-db",
+    "crates/wz-cli",
+    "tools/corpus-builder",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+# 실제 하한은 여기 적힌 숫자가 아니라 **의존성 그래프가 정한다**.
+# 실측: cargo +1.85.0 check 와 +1.87.0 check 는 모두
+# `ordered-float@5.5.0 requires rustc 1.90` (wgpu-hal 경유) 으로 실패하고,
+# 1.90 은 통과한다. 즉 1.85 는 사실을 반영하지 못하는 선언이었다.
+#
+# 부수 효과: clippy 도 이 값을 MSRV 로 인식한다. 1.85 면 0개, 1.87 면 3개,
+# 1.90 면 13개 린트가 켜진다(`.is_multiple_of()`, `chunks_exact(상수)` 계열).
+# 즉 이 값을 실제에 맞추면 린트 표면도 함께 올라간다 — CI 의 clippy 잡이
+# 그대로 잡아내므로, 이 하한 교정과 린트 정리는 한 묶음이다.
+rust-version = "1.90"
+license = "MIT"
+repository = "https://github.com/seotbeo/WzComparerR2-seotbeo"
+authors = ["WzComparerR2 contributors"]
+
+[workspace.dependencies]
+wz-error = { path = "crates/wz-error", version = "0.1.0" }
+wz-pool = { path = "crates/wz-pool", version = "0.1.0" }
+wz-core = { path = "crates/wz-core", version = "0.1.0" }
+wz-image = { path = "crates/wz-image", version = "0.1.0" }
+wz-render = { path = "crates/wz-render", version = "0.1.0" }
+wz-db = { path = "crates/wz-db", version = "0.1.0" }
+
+
+memmap2 = "0.9"
+thiserror = "1.0"
+bytes = "1.7"
+indexmap = "2.5"
+compact_str = "0.9"
+dashmap = "6.1"
+# `lru` 0.18 은 개수 상한 없는 `LruCache::unbounded()` 가 기본이다.
+# 항목 수가 아니라 **바이트 예산**으로 관리해야 하므로 개수 상한이 필요 없다
+# (원본의 LRU(32) 는 너무 작다 — 리포트 ADR-1).
+lru = "0.18"
+rayon = "1.10"
+# KMST1206 hashVersion 은 HMAC-SHA256 기반이다 (WzVersionHasher.cs:61-89).
+hmac = "0.12"
+sha2 = "0.10"
+aes = "0.8"
+chacha20 = "0.9"
+flate2 = "1.0"
+crc32fast = "1.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+regex = "1.11"
+toml = "0.8"
+clap = { version = "4.5", features = ["derive"] }
+tempfile = "3.13"
+
+# ── 렌더링 (Tier 3) ──────────────────────────────────────────────────────
+# wgpu = Vulkan / Metal / DX12 3백엔드 → 크로스플랫폼 (리포트 §8.3)
+wgpu = "30"
+glam = "0.29"
+bytemuck = { version = "1.20", features = ["derive"] }
+pollster = "1.0"
+# WGSL 검증 — 셰이더 문법 오류를 빌드 타임에 잡는다
+naga = { version = "30", features = ["wgsl-in", "wgsl-out"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+
+[profile.bench]
+opt-level = 3
+lto = "thin"
+
