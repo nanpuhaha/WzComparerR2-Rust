@@ -1,0 +1,21 @@
+[package]
+name = "wz-diff"
+description = "Lock-free tree and node comparison engine with Rayon parallelization"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+wz-error.workspace = true
+wz-core.workspace = true
+wz-db.workspace = true
+wz-image.workspace = true
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints.rust]
+unsafe_code = "deny"

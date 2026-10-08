@@ -7,6 +7,8 @@ members = [
     "crates/wz-image",
     "crates/wz-render",
     "crates/wz-db",
+    "crates/wz-diff",
+    "crates/wz-avatar",
     "crates/wz-cli",
     "tools/corpus-builder",
 ]
@@ -35,6 +37,8 @@ wz-core = { path = "crates/wz-core", version = "0.1.0" }
 wz-image = { path = "crates/wz-image", version = "0.1.0" }
 wz-render = { path = "crates/wz-render", version = "0.1.0" }
 wz-db = { path = "crates/wz-db", version = "0.1.0" }
+wz-diff = { path = "crates/wz-diff", version = "0.1.0" }
+wz-avatar = { path = "crates/wz-avatar", version = "0.1.0" }
 
 
 memmap2 = "0.9"

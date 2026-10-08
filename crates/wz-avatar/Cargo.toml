@@ -1,0 +1,19 @@
+[package]
+name = "wz-avatar"
+description = "29 MapleStory avatar slots, Z-Map sorting, and anchor positioning engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+wz-error.workspace = true
+wz-core.workspace = true
+wz-db.workspace = true
+wz-image.workspace = true
+wz-render.workspace = true
+
+[lints.rust]
+unsafe_code = "deny"

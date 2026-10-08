@@ -113,6 +113,48 @@ enum Command {
         #[arg(long, default_value_t = 0)]
         max_depth: usize,
     },
+
+    /// 두 WZ 파일 또는 이미지 비교 (Diff)
+    Diff {
+        /// 이전 버전 WZ 파일
+        old_wz: PathBuf,
+
+        /// 새 버전 WZ 파일
+        new_wz: PathBuf,
+
+        /// 이전 이미지 오프셋 (지정 시 단일 이미지 diff)
+        #[arg(long)]
+        old_offset: Option<u64>,
+
+        /// 새 이미지 오프셋 (지정 시 단일 이미지 diff)
+        #[arg(long)]
+        new_offset: Option<u64>,
+
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// 이미지 내부 리소스 / 캔버스 덤프
+    Dump {
+        /// WZ 파일 경로
+        wz: PathBuf,
+
+        /// 이미지 오프셋
+        #[arg(long)]
+        offset: u64,
+
+        /// JSON 구조 덤프
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// 29개 아바타 슬롯 및 렌더 앵커 파이프라인 정보
+    Avatar {
+        /// 앵커/ZMap 정렬 합성 데모 실행
+        #[arg(long)]
+        demo: bool,
+    },
 }
 
 fn main() {
@@ -135,6 +177,15 @@ fn main() {
             hash_version,
             max_depth,
         } => cmd_image(&wz, offset, hash_version, max_depth),
+        Command::Diff {
+            old_wz,
+            new_wz,
+            old_offset,
+            new_offset,
+            json,
+        } => cmd_diff(&old_wz, &new_wz, old_offset, new_offset, json),
+        Command::Dump { wz, offset, json } => cmd_dump(&wz, offset, json),
+        Command::Avatar { demo } => cmd_avatar(demo),
     };
 
     if let Err(e) = result {
@@ -740,4 +791,200 @@ fn print_node(node: &wz_core::image::Node, depth: usize, max_depth: usize) {
             print_node(ch, depth + 1, max_depth);
         }
     }
+}
+
+fn dump_node_to_json(node: &wz_core::image::Node) -> serde_json::Value {
+    let mut map = serde_json::Map::new();
+    map.insert("name".into(), serde_json::Value::String(node.name.to_string()));
+
+    if let Some(wz_core::image::ImageValue::Property(inner)) = &node.value {
+        map.insert("type".into(), serde_json::Value::String("Property".into()));
+        let children: Vec<serde_json::Value> = inner.children.iter().map(dump_node_to_json).collect();
+        map.insert("children".into(), serde_json::Value::Array(children));
+    } else {
+        if let Some(val) = &node.value {
+            map.insert("type".into(), serde_json::Value::String(val.type_name().into()));
+            match val {
+                wz_core::image::ImageValue::Str(s) => {
+                    map.insert("value".into(), serde_json::Value::String(s.to_string()));
+                }
+                wz_core::image::ImageValue::Short(v) => {
+                    map.insert("value".into(), serde_json::Value::Number((*v).into()));
+                }
+                wz_core::image::ImageValue::Int(v) => {
+                    map.insert("value".into(), serde_json::Value::Number((*v).into()));
+                }
+                wz_core::image::ImageValue::Long(v) => {
+                    map.insert("value".into(), serde_json::Value::Number((*v).into()));
+                }
+                wz_core::image::ImageValue::Float(v) => {
+                    if let Some(n) = serde_json::Number::from_f64(*v as f64) {
+                        map.insert("value".into(), serde_json::Value::Number(n));
+                    }
+                }
+                wz_core::image::ImageValue::Double(v) => {
+                    if let Some(n) = serde_json::Number::from_f64(*v) {
+                        map.insert("value".into(), serde_json::Value::Number(n));
+                    }
+                }
+                wz_core::image::ImageValue::Png(p) => {
+                    let mut p_map = serde_json::Map::new();
+                    p_map.insert("width".into(), serde_json::Value::Number(p.width.into()));
+                    p_map.insert("height".into(), serde_json::Value::Number(p.height.into()));
+                    p_map.insert("format".into(), serde_json::Value::Number(p.format.into()));
+                    p_map.insert("scale".into(), serde_json::Value::Number(p.scale.into()));
+                    p_map.insert("pages".into(), serde_json::Value::Number(p.pages.into()));
+                    p_map.insert("data_len".into(), serde_json::Value::Number(p.data_len.into()));
+                    map.insert("png".into(), serde_json::Value::Object(p_map));
+                }
+                wz_core::image::ImageValue::Uol(s) => {
+                    map.insert("uol".into(), serde_json::Value::String(s.to_string()));
+                }
+                wz_core::image::ImageValue::Vector(v) => {
+                    let mut v_map = serde_json::Map::new();
+                    v_map.insert("x".into(), serde_json::Value::Number(v.x.into()));
+                    v_map.insert("y".into(), serde_json::Value::Number(v.y.into()));
+                    map.insert("vector".into(), serde_json::Value::Object(v_map));
+                }
+                _ => {}
+            }
+        }
+        if !node.children.is_empty() {
+            let children: Vec<serde_json::Value> = node.children.iter().map(dump_node_to_json).collect();
+            map.insert("children".into(), serde_json::Value::Array(children));
+        }
+    }
+
+    serde_json::Value::Object(map)
+}
+
+fn cmd_diff(
+    old_wz: &std::path::Path,
+    new_wz: &std::path::Path,
+    old_offset: Option<u64>,
+    new_offset: Option<u64>,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_core::image::ImageParser;
+    use wz_diff::{DiffEngine, DiffType};
+
+    if let (Some(o1), Some(o2)) = (old_offset, new_offset) {
+        let src1 = wz_pool::open_file_arc(old_wz)?;
+        let src2 = wz_pool::open_file_arc(new_wz)?;
+        let mut c1 = wz_pool::ReadCtx::new(src1);
+        let mut c2 = wz_pool::ReadCtx::new(src2);
+        c1.seek(o1)?;
+        c2.seek(o2)?;
+        let mut p1 = ImageParser::new(None)
+            .detect_key(&mut c1, o1, None)?
+            .with_string_ref_offset(o1);
+        let mut p2 = ImageParser::new(None)
+            .detect_key(&mut c2, o2, None)?
+            .with_string_ref_offset(o2);
+        let n1 = p1.parse_image_root(&mut c1)?;
+        let n2 = p2.parse_image_root(&mut c2)?;
+        let diffs = DiffEngine::diff_core_nodes(Some(&n1), Some(&n2), "root");
+        if json {
+            println!("{}", serde_json::to_string_pretty(&diffs)?);
+        } else {
+            println!("=== 이미지 노드 차이점 (총 {} 건) ===", diffs.len());
+            for d in diffs {
+                let tag = match d.diff_type {
+                    DiffType::Append => "+",
+                    DiffType::Delete => "-",
+                    DiffType::Changed => "*",
+                };
+                println!("[{tag}] {} ({})", d.path, d.description);
+            }
+        }
+    } else {
+        let len1 = std::fs::metadata(old_wz)?.len();
+        let len2 = std::fs::metadata(new_wz)?.len();
+        println!("=== WZ 파일 비교 ===");
+        println!("  이전: {} ({} 바이트)", old_wz.display(), len1);
+        println!("  신규: {} ({} 바이트)", new_wz.display(), len2);
+        if len1 == len2 {
+            println!("  파일 크기가 동일합니다.");
+        } else {
+            println!("  크기 차이: {:+} 바이트", len2 as i64 - len1 as i64);
+        }
+        println!("  (상세 하위 노드 비교는 --old-offset 및 --new-offset 을 지정하세요)");
+    }
+    Ok(())
+}
+
+fn cmd_dump(
+    path: &std::path::Path,
+    offset: u64,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_core::image::ImageParser;
+
+    let src = wz_pool::open_file_arc(path)?;
+    let mut c = wz_pool::ReadCtx::new(src);
+    c.seek(offset)?;
+    let mut parser = ImageParser::new(None)
+        .detect_key(&mut c, offset, None)?
+        .with_string_ref_offset(offset);
+    let root = parser.parse_image_root(&mut c)?;
+
+    if json {
+        let dump_json = dump_node_to_json(&root);
+        println!("{}", serde_json::to_string_pretty(&dump_json)?);
+    } else {
+        println!("=== 이미지 캔버스/노드 덤프 @{offset} ===");
+        print_node(&root, 0, 0);
+    }
+    Ok(())
+}
+
+fn cmd_avatar(demo: bool) -> Result<(), Box<dyn std::error::Error>> {
+    use std::sync::Arc;
+    use wz_avatar::{AvatarCanvas, AvatarSlot, Bone, Point, SkinLayer, ZMap};
+
+    println!("=== 29개 MapleStory 아바타 슬롯 ===");
+    for i in 0..AvatarSlot::TOTAL_SLOTS {
+        if let Some(slot) = AvatarSlot::from_index(i) {
+            println!("  [{:02}] {:?}", i, slot);
+        }
+    }
+
+    if demo {
+        println!();
+        println!("=== 아바타 Z-Map 레이어 조합 & 앵커 정렬 데모 ===");
+        let zmap_order = vec![
+            "backHair".into(),
+            "body".into(),
+            "arm".into(),
+            "head".into(),
+            "hair".into(),
+        ];
+        let zmap = Arc::new(ZMap::new(zmap_order));
+        let mut root = Bone::new("@root");
+
+        let mut body_skin = SkinLayer::new("body");
+        body_skin.z = "body".into();
+        body_skin.width = 32;
+        body_skin.height = 32;
+        root.append_bone(body_skin, "navel", Point::new(10, 20));
+
+        let mut head_skin = SkinLayer::new("head");
+        head_skin.z = "head".into();
+        head_skin.width = 44;
+        head_skin.height = 44;
+        root.append_bone(head_skin, "navel", Point::new(0, 10));
+
+        let canvas = AvatarCanvas::new(zmap);
+        let layers = canvas.generate_layers(&root);
+        println!("생성된 레이어 수: {}", layers.len());
+        for (i, layer) in layers.iter().enumerate() {
+            println!(
+                "  레이어 #{i}: {} (pos: {:?}, size: {}x{}, prio: {})",
+                layer.name, layer.position, layer.width, layer.height, layer.z_index
+            );
+        }
+        let quads = canvas.build_quads(&layers);
+        println!("생성된 GPU 렌더 쿼드 수: {}", quads.len());
+    }
+    Ok(())
 }
