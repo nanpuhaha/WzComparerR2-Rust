@@ -53,61 +53,52 @@ impl AvatarScene {
         self.canvas.set_slot(slot, item_desc);
     }
 
+    pub fn slots(&self) -> &[Option<String>; AvatarSlot::TOTAL_SLOTS] {
+        &self.canvas.slots
+    }
+
+    /// Assembles bones into sorted layers.
+    pub fn layers(&self, root_bone: &Bone) -> Vec<crate::RenderLayer> {
+        self.canvas.generate_layers(root_bone)
+    }
+
     /// Assembles bones into sorted layers, then builds textured GPU quad batches.
+    ///
+    /// Delegates quad vertex layout calculation to [`crate::RenderLayer::to_quad_vertices`]
+    /// ensuring correct encapsulation and 2D painter's order.
     pub fn build_batch(&self, root_bone: &Bone, atlas_size: (u32, u32)) -> AvatarBatch {
-        let layers = self.canvas.generate_layers(root_bone);
+        self.build_batch_with_uvs(root_bone, atlas_size, None)
+    }
+
+    /// Builds textured GPU quad batches with optional per-layer UV rectangles `[u0, v0, u1, v1]`.
+    pub fn build_batch_with_uvs(
+        &self,
+        root_bone: &Bone,
+        _atlas_size: (u32, u32),
+        layer_uvs: Option<&[[f32; 4]]>,
+    ) -> AvatarBatch {
+        let layers = self.layers(root_bone);
         let mut batch = AvatarBatch {
             layer_count: layers.len(),
             ..Default::default()
         };
 
-        let (atlas_w, atlas_h) = atlas_size;
-
         for (idx, layer) in layers.iter().enumerate() {
             let z = idx as f32 * 0.001;
-            let x0 = layer.position.x as f32;
-            let y0 = layer.position.y as f32;
-            let x1 = x0 + layer.width as f32;
-            let y1 = y0 + layer.height as f32;
 
-            // Compute UV coordinates (normalized or 0..1 fallback)
-            let (u0, v0, u1, v1) = if atlas_w > 0 && atlas_h > 0 {
-                (
-                    layer.origin.x.max(0) as f32 / atlas_w as f32,
-                    layer.origin.y.max(0) as f32 / atlas_h as f32,
-                    (layer.origin.x.max(0) as u32 + layer.width) as f32 / atlas_w as f32,
-                    (layer.origin.y.max(0) as u32 + layer.height) as f32 / atlas_h as f32,
-                )
-            } else {
-                (0.0, 0.0, 1.0, 1.0)
-            };
+            // Default to full unit quad (0..1) unless custom UVs are provided
+            let uv_rect = layer_uvs
+                .and_then(|uvs| uvs.get(idx).copied())
+                .unwrap_or([0.0, 0.0, 1.0, 1.0]);
 
             let white = [1.0, 1.0, 1.0, 1.0];
             let base_idx = batch.vertices.len() as u32;
 
-            // 4 Quad Vertices (TL, TR, BR, BL)
-            batch.vertices.push(AvatarVertex {
-                position: [x0, y0, z],
-                uv: [u0, v0],
-                color: white,
-            });
-            batch.vertices.push(AvatarVertex {
-                position: [x1, y0, z],
-                uv: [u1, v0],
-                color: white,
-            });
-            batch.vertices.push(AvatarVertex {
-                position: [x1, y1, z],
-                uv: [u1, v1],
-                color: white,
-            });
-            batch.vertices.push(AvatarVertex {
-                position: [x0, y1, z],
-                uv: [u0, v1],
-                color: white,
-            });
+            // Delegate quad geometry to RenderLayer (resolves Feature Envy smell)
+            let quad_verts = layer.to_quad_vertices(z, uv_rect, white);
+            batch.vertices.extend_from_slice(&quad_verts);
 
-            // 2 Triangles (0, 1, 2) and (0, 2, 3)
+            // 2 Triangles per quad: (0, 1, 2) and (0, 2, 3)
             batch.indices.extend_from_slice(&[
                 base_idx,
                 base_idx + 1,
@@ -144,5 +135,13 @@ mod tests {
         assert_eq!(batch.layer_count, 1);
         assert_eq!(batch.vertex_count(), 4);
         assert_eq!(batch.index_count(), 6);
+        assert_eq!(batch.vertices[0].uv, [0.0, 0.0]);
+        assert_eq!(batch.vertices[2].uv, [1.0, 1.0]);
+
+        // Test custom UVs
+        let custom_uvs = vec![[0.1, 0.2, 0.3, 0.4]];
+        let batch_custom = scene.build_batch_with_uvs(&root, (1024, 1024), Some(&custom_uvs));
+        assert_eq!(batch_custom.vertices[0].uv, [0.1, 0.2]);
+        assert_eq!(batch_custom.vertices[2].uv, [0.3, 0.4]);
     }
 }

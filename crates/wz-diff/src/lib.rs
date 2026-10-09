@@ -18,7 +18,7 @@ pub struct DiffItem {
     pub description: String,
 }
 
-/// Rayon-powered tree comparator
+/// High-performance tree comparator
 pub struct DiffEngine;
 
 impl DiffEngine {
@@ -54,6 +54,92 @@ impl DiffEngine {
         )
     }
 
+    /// Compare two `wz_core::dirtree::DirTree` structures by building unified Arena representations.
+    pub fn diff_dirtree(
+        old_tree: &wz_core::dirtree::DirTree,
+        new_tree: &wz_core::dirtree::DirTree,
+        root_name: &str,
+    ) -> Vec<DiffItem> {
+        let (old_arena, old_root) = Self::dirtree_to_arena(old_tree, root_name);
+        let (new_arena, new_root) = Self::dirtree_to_arena(new_tree, root_name);
+        Self::diff_arena_nodes(
+            &old_arena,
+            &new_arena,
+            Some(old_root),
+            Some(new_root),
+            root_name,
+        )
+    }
+
+    /// Converts a `DirTree` into a hierarchical `Arena` representation.
+    pub fn dirtree_to_arena(tree: &wz_core::dirtree::DirTree, root_name: &str) -> (Arena, NodeId) {
+        let mut arena = Arena::with_root(root_name);
+        let root = arena.root();
+        let mut block_cursor = 0;
+        Self::ingest_dir_block(
+            &mut arena,
+            root,
+            &tree.root,
+            &tree.blocks,
+            &mut block_cursor,
+        );
+        (arena, root)
+    }
+
+    fn ingest_dir_block(
+        arena: &mut Arena,
+        parent: NodeId,
+        block: &wz_core::dirtree::DirBlock,
+        blocks: &[wz_core::dirtree::DirBlock],
+        block_cursor: &mut usize,
+    ) {
+        use wz_core::dirtree::node_type;
+        use wz_db::NodeValue;
+        for e in &block.entries {
+            let name = e.name.clone().unwrap_or_else(|| std::sync::Arc::from("<ref>"));
+            if e.node_type == node_type::DIRECTORY {
+                let dir_id = arena.add_node(parent, name, None);
+                if *block_cursor < blocks.len() {
+                    let sub_block = &blocks[*block_cursor];
+                    *block_cursor += 1;
+                    Self::ingest_dir_block(arena, dir_id, sub_block, blocks, block_cursor);
+                }
+            } else {
+                arena.add_node(parent, name, Some(NodeValue::Int(e.data_len)));
+            }
+        }
+    }
+
+    /// Recursively collects an entire subtree as Append or Delete items
+    fn collect_subtree(
+        arena: &Arena,
+        id: NodeId,
+        diff_type: DiffType,
+        path: &str,
+    ) -> Vec<DiffItem> {
+        let desc = match diff_type {
+            DiffType::Append => format!("Added node: {}", path),
+            DiffType::Delete => format!("Deleted node: {}", path),
+            DiffType::Changed => format!("Modified value at {}", path),
+        };
+        let mut items = vec![DiffItem {
+            path: path.to_string(),
+            diff_type,
+            description: desc,
+        }];
+        for &cid in arena.children(id) {
+            if let Some(c_name) = arena.name(cid) {
+                let subpath = if path.is_empty() {
+                    c_name.to_string()
+                } else {
+                    format!("{}/{}", path, c_name)
+                };
+                items.extend(Self::collect_subtree(arena, cid, diff_type, &subpath));
+            }
+        }
+        items
+    }
+
     /// Compare two `wz-db` Arena nodes recursively
     pub fn diff_arena_nodes(
         old_arena: &Arena,
@@ -63,46 +149,8 @@ impl DiffEngine {
         path: &str,
     ) -> Vec<DiffItem> {
         match (old_id, new_id) {
-            (None, Some(nid)) => {
-                let mut items = vec![DiffItem {
-                    path: path.to_string(),
-                    diff_type: DiffType::Append,
-                    description: format!("Added node: {}", path),
-                }];
-                for &cid in new_arena.children(nid) {
-                    if let Some(c_name) = new_arena.name(cid) {
-                        let subpath = format!("{}/{}", path, c_name);
-                        items.extend(Self::diff_arena_nodes(
-                            old_arena,
-                            new_arena,
-                            None,
-                            Some(cid),
-                            &subpath,
-                        ));
-                    }
-                }
-                items
-            }
-            (Some(oid), None) => {
-                let mut items = vec![DiffItem {
-                    path: path.to_string(),
-                    diff_type: DiffType::Delete,
-                    description: format!("Deleted node: {}", path),
-                }];
-                for &cid in old_arena.children(oid) {
-                    if let Some(c_name) = old_arena.name(cid) {
-                        let subpath = format!("{}/{}", path, c_name);
-                        items.extend(Self::diff_arena_nodes(
-                            old_arena,
-                            new_arena,
-                            Some(cid),
-                            None,
-                            &subpath,
-                        ));
-                    }
-                }
-                items
-            }
+            (None, Some(nid)) => Self::collect_subtree(new_arena, nid, DiffType::Append, path),
+            (Some(oid), None) => Self::collect_subtree(old_arena, oid, DiffType::Delete, path),
             (Some(oid), Some(nid)) => {
                 let mut items = Vec::new();
                 let o_val = old_arena.value(oid);
@@ -205,5 +253,60 @@ mod tests {
         assert_eq!(diffs.len(), 1);
         assert_eq!(diffs[0].diff_type, DiffType::Append);
         assert_eq!(diffs[0].path, "Base/zmap.img");
+    }
+
+    #[test]
+    fn test_dirtree_diff() {
+        use wz_core::dirtree::{node_type, DirBlock, DirTree, RawEntry};
+
+        let old_tree = DirTree {
+            root: DirBlock {
+                entries: vec![RawEntry {
+                    node_type: node_type::IMAGE,
+                    name: Some("item.img".into()),
+                    name_ref: None,
+                    data_len: 1024,
+                    cs32: 0,
+                    file_pos: 0,
+                    offset: Some(100),
+                }],
+            },
+            blocks: vec![],
+        };
+
+        let new_tree = DirTree {
+            root: DirBlock {
+                entries: vec![
+                    RawEntry {
+                        node_type: node_type::IMAGE,
+                        name: Some("item.img".into()),
+                        name_ref: None,
+                        data_len: 2048, // changed size
+                        cs32: 0,
+                        file_pos: 0,
+                        offset: Some(100),
+                    },
+                    RawEntry {
+                        node_type: node_type::IMAGE,
+                        name: Some("mob.img".into()), // added
+                        name_ref: None,
+                        data_len: 512,
+                        cs32: 0,
+                        file_pos: 0,
+                        offset: Some(200),
+                    },
+                ],
+            },
+            blocks: vec![],
+        };
+
+        let diffs = DiffEngine::diff_dirtree(&old_tree, &new_tree, "Data.wz");
+        assert_eq!(diffs.len(), 2);
+
+        let changed = diffs.iter().find(|d| d.path == "Data.wz/item.img").unwrap();
+        assert_eq!(changed.diff_type, DiffType::Changed);
+
+        let added = diffs.iter().find(|d| d.path == "Data.wz/mob.img").unwrap();
+        assert_eq!(added.diff_type, DiffType::Append);
     }
 }

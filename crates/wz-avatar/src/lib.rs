@@ -258,6 +258,56 @@ pub struct RenderLayer {
     pub height: u32,
 }
 
+impl RenderLayer {
+    /// Convert layer bounds to an `AvatarQuad` for CPU layout.
+    pub fn to_quad(&self, z_order: f32) -> AvatarQuad {
+        AvatarQuad {
+            x: self.position.x as f32,
+            y: self.position.y as f32,
+            width: self.width as f32,
+            height: self.height as f32,
+            z_order,
+        }
+    }
+
+    /// Generate 4 quad vertices (TL, TR, BR, BL) for GPU rendering.
+    pub fn to_quad_vertices(
+        &self,
+        z_order: f32,
+        uv_rect: [f32; 4],
+        color: [f32; 4],
+    ) -> [AvatarVertex; 4] {
+        let x0 = self.position.x as f32;
+        let y0 = self.position.y as f32;
+        let x1 = x0 + self.width as f32;
+        let y1 = y0 + self.height as f32;
+        let [u0, v0, u1, v1] = uv_rect;
+
+        [
+            AvatarVertex {
+                position: [x0, y0, z_order],
+                uv: [u0, v0],
+                color,
+            },
+            AvatarVertex {
+                position: [x1, y0, z_order],
+                uv: [u1, v0],
+                color,
+            },
+            AvatarVertex {
+                position: [x1, y1, z_order],
+                uv: [u1, v1],
+                color,
+            },
+            AvatarVertex {
+                position: [x0, y1, z_order],
+                uv: [u0, v1],
+                color,
+            },
+        ]
+    }
+}
+
 /// 2D Quad vertex coordinates and texture mapping for GPU rendering.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AvatarQuad {
@@ -287,12 +337,15 @@ impl AvatarCanvas {
     }
 
     /// Flattens the bone hierarchy into a list of positioned `RenderLayer`s.
+    ///
+    /// Layers are sorted in ascending order (background to foreground) according to
+    /// the 2D painter's algorithm for alpha blending.
     pub fn generate_layers(&self, root_bone: &Bone) -> Vec<RenderLayer> {
         let mut layers = Vec::new();
         Self::collect_layers_recursive(root_bone, Point::ZERO, &self.zmap, &mut layers);
 
-        // Sort descending by z_index
-        layers.sort_by(|a, b| b.z_index.cmp(&a.z_index));
+        // Sort ascending by z_index for 2D painter's algorithm (background drawn first)
+        layers.sort_by_key(|a| a.z_index);
         layers
     }
 
@@ -331,13 +384,7 @@ impl AvatarCanvas {
         layers
             .iter()
             .enumerate()
-            .map(|(idx, layer)| AvatarQuad {
-                x: layer.position.x as f32,
-                y: layer.position.y as f32,
-                width: layer.width as f32,
-                height: layer.height as f32,
-                z_order: idx as f32 * 0.001,
-            })
+            .map(|(idx, layer)| layer.to_quad(idx as f32 * 0.001))
             .collect()
     }
 }
@@ -386,13 +433,18 @@ mod tests {
         let layers = canvas.generate_layers(&root);
 
         assert_eq!(layers.len(), 2);
-        // Head (z="head", idx=3) should be before Body (z="body", idx=1) in descending order
-        assert_eq!(layers[0].name, "head");
-        assert_eq!(layers[1].name, "body");
+        // In 2D painter's algorithm (ascending order): Body (z="body", idx=1) is drawn
+        // before Head (z="head", idx=3) so Head is drawn over Body.
+        assert_eq!(layers[0].name, "body");
+        assert_eq!(layers[1].name, "head");
 
         let quads = canvas.build_quads(&layers);
         assert_eq!(quads.len(), 2);
-        assert_eq!(quads[0].width, 40.0);
-        assert_eq!(quads[1].width, 30.0);
+        assert_eq!(quads[0].width, 30.0);
+        assert_eq!(quads[1].width, 40.0);
+
+        let verts = layers[0].to_quad_vertices(0.0, [0.0, 0.0, 1.0, 1.0], [1.0; 4]);
+        assert_eq!(verts.len(), 4);
+        assert_eq!(verts[0].position[2], 0.0);
     }
 }

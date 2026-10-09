@@ -1,6 +1,6 @@
 [package]
 name = "wz-diff"
-description = "Lock-free tree and node comparison engine with Rayon parallelization"
+description = "High-performance tree and node comparison engine for MapleStory WZ archives"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,7 +13,6 @@ wz-error.workspace = true
 wz-core.workspace = true
 wz-db.workspace = true
 wz-image.workspace = true
-rayon.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 

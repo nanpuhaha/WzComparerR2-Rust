@@ -733,17 +733,39 @@ fn cmd_diff(
             }
         }
     } else {
-        let len1 = std::fs::metadata(old_wz)?.len();
-        let len2 = std::fs::metadata(new_wz)?.len();
-        println!("=== WZ 파일 비교 ===");
-        println!("  이전: {} ({} 바이트)", old_wz.display(), len1);
-        println!("  신규: {} ({} 바이트)", new_wz.display(), len2);
-        if len1 == len2 {
-            println!("  파일 크기가 동일합니다.");
-        } else {
-            println!("  크기 차이: {:+} 바이트", len2 as i64 - len1 as i64);
+        match (wz_core::WzArchive::open(old_wz), wz_core::WzArchive::open(new_wz)) {
+            (Ok(a1), Ok(a2)) => {
+                let t1 = a1.read_tree()?;
+                let t2 = a2.read_tree()?;
+                let diffs = DiffEngine::diff_dirtree(&t1, &t2, "root");
+
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&diffs)?);
+                } else {
+                    println!("=== WZ 디렉터리 트리 차이점 (총 {} 건) ===", diffs.len());
+                    for d in diffs {
+                        let tag = match d.diff_type {
+                            DiffType::Append => "+",
+                            DiffType::Delete => "-",
+                            DiffType::Changed => "*",
+                        };
+                        println!("[{tag}] {} ({})", d.path, d.description);
+                    }
+                }
+            }
+            _ => {
+                let len1 = std::fs::metadata(old_wz)?.len();
+                let len2 = std::fs::metadata(new_wz)?.len();
+                println!("=== WZ 파일 크기 비교 (아카이브 헤더 감지 실패) ===");
+                println!("  이전: {} ({} 바이트)", old_wz.display(), len1);
+                println!("  신규: {} ({} 바이트)", new_wz.display(), len2);
+                if len1 == len2 {
+                    println!("  파일 크기가 동일합니다.");
+                } else {
+                    println!("  크기 차이: {:+} 바이트", len2 as i64 - len1 as i64);
+                }
+            }
         }
-        println!("  (상세 하위 노드 비교는 --old-offset 및 --new-offset 을 지정하세요)");
     }
     Ok(())
 }
