@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use crate::{AvatarCanvas, AvatarSlot, Bone, ZMap};
+use crate::{AvatarCanvas, Bone, ZMap};
 
 /// Standard 2D Textured Vertex for MapleStory sprite rendering.
 #[repr(C)]
@@ -37,9 +37,25 @@ impl AvatarBatch {
     }
 }
 
+use std::ops::{Deref, DerefMut};
+
 /// High-level Avatar Scene managing assembly, anchor resolving, and GPU batching.
 pub struct AvatarScene {
     pub canvas: AvatarCanvas,
+}
+
+impl Deref for AvatarScene {
+    type Target = AvatarCanvas;
+
+    fn deref(&self) -> &Self::Target {
+        &self.canvas
+    }
+}
+
+impl DerefMut for AvatarScene {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.canvas
+    }
 }
 
 impl AvatarScene {
@@ -49,35 +65,21 @@ impl AvatarScene {
         }
     }
 
-    pub fn set_slot(&mut self, slot: AvatarSlot, item_desc: Option<String>) {
-        self.canvas.set_slot(slot, item_desc);
-    }
-
-    pub fn slots(&self) -> &[Option<String>; AvatarSlot::TOTAL_SLOTS] {
-        &self.canvas.slots
-    }
-
-    /// Assembles bones into sorted layers.
-    pub fn layers(&self, root_bone: &Bone) -> Vec<crate::RenderLayer> {
-        self.canvas.generate_layers(root_bone)
-    }
-
     /// Assembles bones into sorted layers, then builds textured GPU quad batches.
     ///
     /// Delegates quad vertex layout calculation to [`crate::RenderLayer::to_quad_vertices`]
     /// ensuring correct encapsulation and 2D painter's order.
-    pub fn build_batch(&self, root_bone: &Bone, atlas_size: (u32, u32)) -> AvatarBatch {
-        self.build_batch_with_uvs(root_bone, atlas_size, None)
+    pub fn build_batch(&self, root_bone: &Bone) -> AvatarBatch {
+        self.build_batch_with_uvs(root_bone, None)
     }
 
     /// Builds textured GPU quad batches with optional per-layer UV rectangles `[u0, v0, u1, v1]`.
     pub fn build_batch_with_uvs(
         &self,
         root_bone: &Bone,
-        _atlas_size: (u32, u32),
         layer_uvs: Option<&[[f32; 4]]>,
     ) -> AvatarBatch {
-        let layers = self.layers(root_bone);
+        let layers = self.generate_layers(root_bone);
         let mut batch = AvatarBatch {
             layer_count: layers.len(),
             ..Default::default()
@@ -116,7 +118,7 @@ impl AvatarScene {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Point, SkinLayer};
+    use crate::{AvatarSlot, Point, SkinLayer};
 
     #[test]
     fn test_avatar_scene_batching() {
@@ -131,7 +133,7 @@ mod tests {
         body_skin.height = 30;
         root.append_bone(body_skin, "navel", Point::new(0, 0));
 
-        let batch = scene.build_batch(&root, (1024, 1024));
+        let batch = scene.build_batch(&root);
         assert_eq!(batch.layer_count, 1);
         assert_eq!(batch.vertex_count(), 4);
         assert_eq!(batch.index_count(), 6);
@@ -140,7 +142,7 @@ mod tests {
 
         // Test custom UVs
         let custom_uvs = vec![[0.1, 0.2, 0.3, 0.4]];
-        let batch_custom = scene.build_batch_with_uvs(&root, (1024, 1024), Some(&custom_uvs));
+        let batch_custom = scene.build_batch_with_uvs(&root, Some(&custom_uvs));
         assert_eq!(batch_custom.vertices[0].uv, [0.1, 0.2]);
         assert_eq!(batch_custom.vertices[2].uv, [0.3, 0.4]);
     }

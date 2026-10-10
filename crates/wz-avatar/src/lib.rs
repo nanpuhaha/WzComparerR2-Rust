@@ -229,7 +229,7 @@ impl ZMap {
         self.order.iter().position(|name| name == z)
     }
 
-    /// Computes the sort priority. Higher index draws on top.
+    /// Computes the sort priority. Higher value draws on top (ascending order in 2D painter's algorithm).
     pub fn compute_priority(&self, z: &str, raw_z_index: i32) -> i32 {
         if !z.is_empty() {
             if let Some(idx) = self.index_of(z) {
@@ -239,10 +239,12 @@ impl ZMap {
             } else {
                 self.order.len() as i32
             }
-        } else if raw_z_index < 0 {
-            self.order.len() as i32 - raw_z_index
+        } else if raw_z_index >= 0 {
+            // When z is empty, positive raw_z_index draws in front of default zmap entries
+            self.order.len() as i32 + raw_z_index
         } else {
-            -1 - raw_z_index
+            // Negative raw_z_index draws behind zmap entries
+            raw_z_index
         }
     }
 }
@@ -446,5 +448,31 @@ mod tests {
         let verts = layers[0].to_quad_vertices(0.0, [0.0, 0.0, 1.0, 1.0], [1.0; 4]);
         assert_eq!(verts.len(), 4);
         assert_eq!(verts[0].position[2], 0.0);
+    }
+
+    #[test]
+    fn test_compute_priority_raw_z_index() {
+        let zmap = ZMap::new(vec!["body".into(), "head".into()]);
+        // zmap order len = 2.
+        // With z tag
+        assert_eq!(zmap.compute_priority("body", 0), 0);
+        assert_eq!(zmap.compute_priority("head", 0), 1);
+        assert_eq!(zmap.compute_priority("default", 0), 0);
+        assert_eq!(zmap.compute_priority("unknown", 0), 2);
+
+        // When z tag is empty:
+        // Positive raw_z_index should draw in front (order.len() + raw_z_index)
+        assert_eq!(zmap.compute_priority("", 0), 2);
+        assert_eq!(zmap.compute_priority("", 5), 7);
+        // Negative raw_z_index should draw in background (lower than 0)
+        assert_eq!(zmap.compute_priority("", -1), -1);
+        assert_eq!(zmap.compute_priority("", -5), -5);
+
+        // Order consistency: -5 < -1 < body(0) < head(1) < raw(0) < raw(5)
+        assert!(zmap.compute_priority("", -5) < zmap.compute_priority("", -1));
+        assert!(zmap.compute_priority("", -1) < zmap.compute_priority("body", 0));
+        assert!(zmap.compute_priority("body", 0) < zmap.compute_priority("head", 0));
+        assert!(zmap.compute_priority("head", 0) < zmap.compute_priority("", 0));
+        assert!(zmap.compute_priority("", 0) < zmap.compute_priority("", 5));
     }
 }

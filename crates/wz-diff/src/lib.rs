@@ -99,8 +99,7 @@ impl DiffEngine {
             let name = e.name.clone().unwrap_or_else(|| std::sync::Arc::from("<ref>"));
             if e.node_type == node_type::DIRECTORY {
                 let dir_id = arena.add_node(parent, name, None);
-                if *block_cursor < blocks.len() {
-                    let sub_block = &blocks[*block_cursor];
+                if let Some(sub_block) = blocks.get(*block_cursor) {
                     *block_cursor += 1;
                     Self::ingest_dir_block(arena, dir_id, sub_block, blocks, block_cursor);
                 }
@@ -164,27 +163,29 @@ impl DiffEngine {
                     });
                 }
 
-                // Match children by name
-                let mut child_names: Vec<String> = Vec::new();
-                for &cid in old_arena.children(oid) {
-                    if let Some(name) = old_arena.name(cid) {
-                        if !child_names.iter().any(|n| n == name) {
-                            child_names.push(name.to_string());
-                        }
-                    }
-                }
-                for &cid in new_arena.children(nid) {
-                    if let Some(name) = new_arena.name(cid) {
-                        if !child_names.iter().any(|n| n == name) {
-                            child_names.push(name.to_string());
+                // Match children by borrowed &str name without heap allocation
+                let mut child_names: Vec<&str> = Vec::new();
+                fn collect_names<'a>(arena: &'a Arena, id: NodeId, names: &mut Vec<&'a str>) {
+                    for &cid in arena.children(id) {
+                        if let Some(name) = arena.name(cid) {
+                            if !names.contains(&name) {
+                                names.push(name);
+                            }
                         }
                     }
                 }
 
-                for name in &child_names {
+                collect_names(old_arena, oid, &mut child_names);
+                collect_names(new_arena, nid, &mut child_names);
+
+                for name in child_names {
                     let o_child = old_arena.find_child(oid, name);
                     let n_child = new_arena.find_child(nid, name);
-                    let subpath = format!("{}/{}", path, name);
+                    let subpath = if path.is_empty() {
+                        name.to_string()
+                    } else {
+                        format!("{}/{}", path, name)
+                    };
                     items.extend(Self::diff_arena_nodes(
                         old_arena, new_arena, o_child, n_child, &subpath,
                     ));
@@ -308,5 +309,82 @@ mod tests {
 
         let added = diffs.iter().find(|d| d.path == "Data.wz/mob.img").unwrap();
         assert_eq!(added.diff_type, DiffType::Append);
+    }
+
+    #[test]
+    fn test_nested_dirtree_diff() {
+        use wz_core::dirtree::{node_type, DirBlock, DirTree, RawEntry};
+
+        // Old: Dir "Map" containing "Map0"
+        let old_tree = DirTree {
+            root: DirBlock {
+                entries: vec![RawEntry {
+                    node_type: node_type::DIRECTORY,
+                    name: Some("Map".into()),
+                    name_ref: None,
+                    data_len: 0,
+                    cs32: 0,
+                    file_pos: 0,
+                    offset: Some(10),
+                }],
+            },
+            blocks: vec![DirBlock {
+                entries: vec![RawEntry {
+                    node_type: node_type::IMAGE,
+                    name: Some("Map0.img".into()),
+                    name_ref: None,
+                    data_len: 100,
+                    cs32: 0,
+                    file_pos: 0,
+                    offset: Some(20),
+                }],
+            }],
+        };
+
+        // New: Dir "Map" containing "Map0" (changed) and "Map1" (added)
+        let new_tree = DirTree {
+            root: DirBlock {
+                entries: vec![RawEntry {
+                    node_type: node_type::DIRECTORY,
+                    name: Some("Map".into()),
+                    name_ref: None,
+                    data_len: 0,
+                    cs32: 0,
+                    file_pos: 0,
+                    offset: Some(10),
+                }],
+            },
+            blocks: vec![DirBlock {
+                entries: vec![
+                    RawEntry {
+                        node_type: node_type::IMAGE,
+                        name: Some("Map0.img".into()),
+                        name_ref: None,
+                        data_len: 150,
+                        cs32: 0,
+                        file_pos: 0,
+                        offset: Some(20),
+                    },
+                    RawEntry {
+                        node_type: node_type::IMAGE,
+                        name: Some("Map1.img".into()),
+                        name_ref: None,
+                        data_len: 200,
+                        cs32: 0,
+                        file_pos: 0,
+                        offset: Some(30),
+                    },
+                ],
+            }],
+        };
+
+        let diffs = DiffEngine::diff_dirtree(&old_tree, &new_tree, "Map.wz");
+        assert_eq!(diffs.len(), 2);
+
+        let map0 = diffs.iter().find(|d| d.path == "Map.wz/Map/Map0.img").unwrap();
+        assert_eq!(map0.diff_type, DiffType::Changed);
+
+        let map1 = diffs.iter().find(|d| d.path == "Map.wz/Map/Map1.img").unwrap();
+        assert_eq!(map1.diff_type, DiffType::Append);
     }
 }

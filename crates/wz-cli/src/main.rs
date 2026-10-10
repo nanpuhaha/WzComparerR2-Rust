@@ -610,29 +610,34 @@ fn print_node(node: &wz_core::image::Node, depth: usize, max_depth: usize) {
         return;
     }
 
+    let detail = match &node.value {
+        Some(wz_core::image::ImageValue::Str(s)) => format!(" = {s:?}"),
+        Some(wz_core::image::ImageValue::Short(v)) => format!(" = {v}"),
+        Some(wz_core::image::ImageValue::Int(v)) => format!(" = {v}"),
+        Some(wz_core::image::ImageValue::Float(v)) => format!(" = {v}"),
+        Some(wz_core::image::ImageValue::Double(v)) => format!(" = {v}"),
+        Some(wz_core::image::ImageValue::Long(v)) => format!(" = {v}"),
+        Some(wz_core::image::ImageValue::Bool(v)) => format!(" = {v}"),
+        Some(wz_core::image::ImageValue::Null) | None => String::new(),
+        Some(wz_core::image::ImageValue::Png(p)) => {
+            format!(
+                " = {}x{} fmt={} scale={} pages={} ({} 바이트)",
+                p.width, p.height, p.format, p.scale, p.pages, p.data_len
+            )
+        }
+        Some(wz_core::image::ImageValue::Uol(s)) => format!(" = {s}"),
+        Some(wz_core::image::ImageValue::Vector(v)) => format!(" = ({}, {})", v.x, v.y),
+        _ => String::new(),
+    };
+
     if node.children.is_empty() {
-        let detail = match &node.value {
-            Some(wz_core::image::ImageValue::Str(s)) => format!(" = {s:?}"),
-            Some(wz_core::image::ImageValue::Short(v)) => format!(" = {v}"),
-            Some(wz_core::image::ImageValue::Int(v)) => format!(" = {v}"),
-            Some(wz_core::image::ImageValue::Float(v)) => format!(" = {v}"),
-            Some(wz_core::image::ImageValue::Double(v)) => format!(" = {v}"),
-            Some(wz_core::image::ImageValue::Long(v)) => format!(" = {v}"),
-            Some(wz_core::image::ImageValue::Bool(v)) => format!(" = {v}"),
-            Some(wz_core::image::ImageValue::Null) | None => String::new(),
-            Some(wz_core::image::ImageValue::Png(p)) => {
-                format!(
-                    " = {}x{} fmt={} scale={} pages={} ({} 바이트)",
-                    p.width, p.height, p.format, p.scale, p.pages, p.data_len
-                )
-            }
-            Some(wz_core::image::ImageValue::Uol(s)) => format!(" = {s}"),
-            Some(wz_core::image::ImageValue::Vector(v)) => format!(" = ({}, {})", v.x, v.y),
-            _ => String::new(),
-        };
         println!("{pad}{}: {ty}{detail}", node.name);
     } else {
-        println!("{pad}{}: {ty} ({} 자식)", node.name, node.children.len());
+        println!(
+            "{pad}{}: {ty}{detail} ({} 자식)",
+            node.name,
+            node.children.len()
+        );
         for ch in &node.children {
             print_node(ch, depth + 1, max_depth);
         }
@@ -704,6 +709,19 @@ fn dump_node_to_json(node: &wz_core::image::Node) -> serde_json::Value {
     serde_json::Value::Object(map)
 }
 
+fn print_diffs(title: &str, diffs: &[wz_diff::DiffItem]) {
+    use wz_diff::DiffType;
+    println!("{title} (총 {} 건)", diffs.len());
+    for d in diffs {
+        let tag = match d.diff_type {
+            DiffType::Append => "+",
+            DiffType::Delete => "-",
+            DiffType::Changed => "*",
+        };
+        println!("[{tag}] {} ({})", d.path, d.description);
+    }
+}
+
 fn cmd_diff(
     old_wz: &std::path::Path,
     new_wz: &std::path::Path,
@@ -711,59 +729,37 @@ fn cmd_diff(
     new_offset: Option<u64>,
     json: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use wz_diff::{DiffEngine, DiffType};
+    use wz_diff::DiffEngine;
 
-    if let (Some(o1), Some(o2)) = (old_offset, new_offset) {
-        let a1 = wz_core::WzArchive::open(old_wz)?;
-        let a2 = wz_core::WzArchive::open(new_wz)?;
-        let n1 = a1.parse_image_at(o1)?;
-        let n2 = a2.parse_image_at(o2)?;
-        let diffs = DiffEngine::diff_core_nodes(Some(&n1), Some(&n2), "root");
-        if json {
-            println!("{}", serde_json::to_string_pretty(&diffs)?);
-        } else {
-            println!("=== 이미지 노드 차이점 (총 {} 건) ===", diffs.len());
-            for d in diffs {
-                let tag = match d.diff_type {
-                    DiffType::Append => "+",
-                    DiffType::Delete => "-",
-                    DiffType::Changed => "*",
-                };
-                println!("[{tag}] {} ({})", d.path, d.description);
+    match (old_offset, new_offset) {
+        (Some(o1), Some(o2)) => {
+            let a1 = wz_core::WzArchive::open(old_wz)?;
+            let a2 = wz_core::WzArchive::open(new_wz)?;
+            let n1 = a1.parse_image_at(o1)?;
+            let n2 = a2.parse_image_at(o2)?;
+            let diffs = DiffEngine::diff_core_nodes(Some(&n1), Some(&n2), "root");
+            if json {
+                println!("{}", serde_json::to_string_pretty(&diffs)?);
+            } else {
+                print_diffs("=== 이미지 노드 차이점 ===", &diffs);
             }
         }
-    } else {
-        match (wz_core::WzArchive::open(old_wz), wz_core::WzArchive::open(new_wz)) {
-            (Ok(a1), Ok(a2)) => {
-                let t1 = a1.read_tree()?;
-                let t2 = a2.read_tree()?;
-                let diffs = DiffEngine::diff_dirtree(&t1, &t2, "root");
+        (Some(_), None) | (None, Some(_)) => {
+            return Err(
+                "오류: 이미지 노드 비교는 --old-offset과 --new-offset을 모두 지정해야 합니다.".into(),
+            );
+        }
+        (None, None) => {
+            let a1 = wz_core::WzArchive::open(old_wz)?;
+            let a2 = wz_core::WzArchive::open(new_wz)?;
+            let t1 = a1.read_tree()?;
+            let t2 = a2.read_tree()?;
+            let diffs = DiffEngine::diff_dirtree(&t1, &t2, "root");
 
-                if json {
-                    println!("{}", serde_json::to_string_pretty(&diffs)?);
-                } else {
-                    println!("=== WZ 디렉터리 트리 차이점 (총 {} 건) ===", diffs.len());
-                    for d in diffs {
-                        let tag = match d.diff_type {
-                            DiffType::Append => "+",
-                            DiffType::Delete => "-",
-                            DiffType::Changed => "*",
-                        };
-                        println!("[{tag}] {} ({})", d.path, d.description);
-                    }
-                }
-            }
-            _ => {
-                let len1 = std::fs::metadata(old_wz)?.len();
-                let len2 = std::fs::metadata(new_wz)?.len();
-                println!("=== WZ 파일 크기 비교 (아카이브 헤더 감지 실패) ===");
-                println!("  이전: {} ({} 바이트)", old_wz.display(), len1);
-                println!("  신규: {} ({} 바이트)", new_wz.display(), len2);
-                if len1 == len2 {
-                    println!("  파일 크기가 동일합니다.");
-                } else {
-                    println!("  크기 차이: {:+} 바이트", len2 as i64 - len1 as i64);
-                }
+            if json {
+                println!("{}", serde_json::to_string_pretty(&diffs)?);
+            } else {
+                print_diffs("=== WZ 디렉터리 트리 차이점 ===", &diffs);
             }
         }
     }
@@ -833,7 +829,7 @@ fn cmd_avatar(demo: bool) -> Result<(), Box<dyn std::error::Error>> {
                 layer.name, layer.position, layer.width, layer.height, layer.z_index
             );
         }
-        let batch = scene.build_batch(&root, (1024, 1024));
+        let batch = scene.build_batch(&root);
         println!(
             "생성된 GPU 렌더 배치: 정점 {} 개, 인덱스 {} 개 (삼각형 {} 개)",
             batch.vertex_count(),
