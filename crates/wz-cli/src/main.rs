@@ -731,7 +731,14 @@ fn cmd_diff(
 ) -> Result<(), Box<dyn std::error::Error>> {
     use wz_diff::DiffEngine;
 
-    match (old_offset, new_offset) {
+    let (old_off, new_off) = match (old_offset, new_offset) {
+        (Some(o1), Some(o2)) => (Some(o1), Some(o2)),
+        (Some(o1), None) => (Some(o1), Some(o1)),
+        (None, Some(o2)) => (Some(o2), Some(o2)),
+        (None, None) => (None, None),
+    };
+
+    match (old_off, new_off) {
         (Some(o1), Some(o2)) => {
             let a1 = wz_core::WzArchive::open(old_wz)?;
             let a2 = wz_core::WzArchive::open(new_wz)?;
@@ -744,12 +751,7 @@ fn cmd_diff(
                 print_diffs("=== 이미지 노드 차이점 ===", &diffs);
             }
         }
-        (Some(_), None) | (None, Some(_)) => {
-            return Err(
-                "오류: 이미지 노드 비교는 --old-offset과 --new-offset을 모두 지정해야 합니다.".into(),
-            );
-        }
-        (None, None) => {
+        _ => {
             let a1 = wz_core::WzArchive::open(old_wz)?;
             let a2 = wz_core::WzArchive::open(new_wz)?;
             let t1 = a1.read_tree()?;

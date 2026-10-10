@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use crate::{AvatarCanvas, Bone, ZMap};
+use crate::{AvatarCanvas, AvatarSlot, Bone, ZMap};
 
 /// Standard 2D Textured Vertex for MapleStory sprite rendering.
 #[repr(C)]
@@ -37,25 +37,9 @@ impl AvatarBatch {
     }
 }
 
-use std::ops::{Deref, DerefMut};
-
 /// High-level Avatar Scene managing assembly, anchor resolving, and GPU batching.
 pub struct AvatarScene {
     pub canvas: AvatarCanvas,
-}
-
-impl Deref for AvatarScene {
-    type Target = AvatarCanvas;
-
-    fn deref(&self) -> &Self::Target {
-        &self.canvas
-    }
-}
-
-impl DerefMut for AvatarScene {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.canvas
-    }
 }
 
 impl AvatarScene {
@@ -63,6 +47,31 @@ impl AvatarScene {
         Self {
             canvas: AvatarCanvas::new(zmap),
         }
+    }
+
+    /// Access the underlying `AvatarCanvas`.
+    pub fn canvas(&self) -> &AvatarCanvas {
+        &self.canvas
+    }
+
+    /// Mutably access the underlying `AvatarCanvas`.
+    pub fn canvas_mut(&mut self) -> &mut AvatarCanvas {
+        &mut self.canvas
+    }
+
+    /// Assign an item description to a slot.
+    pub fn set_slot(&mut self, slot: AvatarSlot, item_desc: Option<String>) {
+        self.canvas.set_slot(slot, item_desc);
+    }
+
+    /// Read slot configurations.
+    pub fn slots(&self) -> &[Option<String>; AvatarSlot::TOTAL_SLOTS] {
+        &self.canvas.slots
+    }
+
+    /// Assembles bones into sorted layers using the canvas ZMap.
+    pub fn layers(&self, root_bone: &Bone) -> Vec<crate::RenderLayer> {
+        self.canvas.generate_layers(root_bone)
     }
 
     /// Assembles bones into sorted layers, then builds textured GPU quad batches.
@@ -79,7 +88,7 @@ impl AvatarScene {
         root_bone: &Bone,
         layer_uvs: Option<&[[f32; 4]]>,
     ) -> AvatarBatch {
-        let layers = self.generate_layers(root_bone);
+        let layers = self.canvas.generate_layers(root_bone);
         let mut batch = AvatarBatch {
             layer_count: layers.len(),
             ..Default::default()
