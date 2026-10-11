@@ -23,6 +23,16 @@ pub struct AvatarBatch {
     pub layer_count: usize,
 }
 
+impl From<AvatarVertex> for wz_render::SpriteVertex {
+    fn from(v: AvatarVertex) -> Self {
+        wz_render::SpriteVertex {
+            position: [v.position[0], v.position[1], v.position[2], 1.0],
+            color: v.color,
+            texcoord: v.uv,
+        }
+    }
+}
+
 impl AvatarBatch {
     pub fn is_empty(&self) -> bool {
         self.vertices.is_empty()
@@ -34,6 +44,25 @@ impl AvatarBatch {
 
     pub fn index_count(&self) -> usize {
         self.indices.len()
+    }
+
+    /// `wz-render::SpriteBatch` 로 직접 변환.
+    pub fn into_sprite_batch(self, texture_key: wz_render::GpuKey) -> wz_render::SpriteBatch {
+        let mut sprite_batch = wz_render::SpriteBatch::new();
+        let index_count = self.indices.len() as u32;
+
+        sprite_batch.vertices = self.vertices.into_iter().map(Into::into).collect();
+        sprite_batch.indices = self.indices;
+
+        if index_count > 0 {
+            sprite_batch.commands.push(wz_render::DrawCommand {
+                texture_key,
+                index_start: 0,
+                index_count,
+            });
+        }
+
+        sprite_batch
     }
 }
 
@@ -154,5 +183,15 @@ mod tests {
         let batch_custom = scene.build_batch_with_uvs(&root, Some(&custom_uvs));
         assert_eq!(batch_custom.vertices[0].uv, [0.1, 0.2]);
         assert_eq!(batch_custom.vertices[2].uv, [0.3, 0.4]);
+
+        // Test conversion to wz_render::SpriteBatch
+        let sprite_batch = batch.into_sprite_batch(wz_render::GpuKey(7));
+        assert_eq!(sprite_batch.vertices.len(), 4);
+        assert_eq!(sprite_batch.indices.len(), 6);
+        assert_eq!(sprite_batch.commands.len(), 1);
+        assert_eq!(sprite_batch.commands[0].texture_key, wz_render::GpuKey(7));
+        assert_eq!(sprite_batch.commands[0].index_start, 0);
+        assert_eq!(sprite_batch.commands[0].index_count, 6);
+        assert_eq!(sprite_batch.vertices[0].position[3], 1.0);
     }
 }

@@ -18,11 +18,11 @@
 //! | 모듈 | 상태 |
 //! |---|---|
 //! | [`shader`] — WGSL 4종 + 파이프라인 정의 + naga 검증 | ✅ |
-//! | `device` — wgpu 디바이스/어댑터/서피스 | ⏳ Phase 6 |
-//! | `batch` — 2D 배치기 (텍스처·블렌드 단위 batch break) | ⏳ Phase 6 |
-//! | `atlas` — 텍스처 아틀라스 (shelf packer) | ⏳ Phase 6 |
-//! | `camera` — 2D 카메라 + follow/lerp | ⏳ Phase 6 |
-//! | `light` — 라이트맵 (vertex color, 커스텀 셰이더 불필요) | ⏳ Phase 6 |
+//! | [`device`] — wgpu 디바이스/어댑터/서피스 | ✅ |
+//! | [`batch`] — 2D 배치기 (텍스처·블렌드 단위 batch break) | ✅ |
+//! | [`atlas`] — 텍스처 아틀라스 (shelf packer) | ✅ |
+//! | [`camera`] — 2D 카메라 + follow/lerp | ✅ |
+//! | [`light`] — 라이트맵 (vertex color, 커스텀 셰이더 불필요) | ✅ |
 //!
 //! 라이트맵은 원본도 `BasicEffect` + 정점 색상이라 **DXBC 나 WGSL 이 필요 없다**
 //! (`LightRenderer.cs:18`).
@@ -31,12 +31,14 @@ pub mod atlas;
 pub mod batch;
 pub mod camera;
 pub mod device;
+pub mod light;
 pub mod shader;
 
 pub use atlas::{AtlasPage, AtlasShelfPacker};
 pub use batch::{DrawCommand, SpriteBatch, SpriteVertex};
 pub use camera::{Camera2D, SpriteUniformsGpu};
 pub use device::RenderContext;
+pub use light::{LightMap, LightSource};
 pub use shader::{
     all_pipelines, pipeline_table, MaplePixelShader, SpritePipelineDesc, SpriteVertexShader,
 };
