@@ -27,8 +27,16 @@
 //! 라이트맵은 원본도 `BasicEffect` + 정점 색상이라 **DXBC 나 WGSL 이 필요 없다**
 //! (`LightRenderer.cs:18`).
 
+pub mod atlas;
+pub mod batch;
+pub mod camera;
+pub mod device;
 pub mod shader;
 
+pub use atlas::{AtlasPage, AtlasShelfPacker};
+pub use batch::{DrawCommand, SpriteBatch, SpriteVertex};
+pub use camera::{Camera2D, SpriteUniformsGpu};
+pub use device::RenderContext;
 pub use shader::{
     all_pipelines, pipeline_table, MaplePixelShader, SpritePipelineDesc, SpriteVertexShader,
 };

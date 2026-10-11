@@ -154,6 +154,10 @@ enum Command {
         /// 앵커/ZMap 정렬 합성 데모 실행
         #[arg(long)]
         demo: bool,
+
+        /// 아바타 합성 배치 및 렌더링 파이프라인 검증 (오프스크린 렌더)
+        #[arg(long)]
+        render: bool,
     },
 }
 
@@ -185,7 +189,7 @@ fn main() {
             json,
         } => cmd_diff(&old_wz, &new_wz, old_offset, new_offset, json),
         Command::Dump { wz, offset, json } => cmd_dump(&wz, offset, json),
-        Command::Avatar { demo } => cmd_avatar(demo),
+        Command::Avatar { demo, render } => cmd_avatar(demo, render),
     };
 
     if let Err(e) = result {
@@ -786,7 +790,7 @@ fn cmd_dump(
     Ok(())
 }
 
-fn cmd_avatar(demo: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn cmd_avatar(demo: bool, render: bool) -> Result<(), Box<dyn std::error::Error>> {
     use std::sync::Arc;
     use wz_avatar::{AvatarSlot, Bone, Point, SkinLayer, ZMap};
 
@@ -797,32 +801,33 @@ fn cmd_avatar(demo: bool) -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    let zmap_order = vec![
+        "backHair".into(),
+        "body".into(),
+        "arm".into(),
+        "head".into(),
+        "hair".into(),
+    ];
+    let zmap = Arc::new(ZMap::new(zmap_order));
+    let mut root = Bone::new("@root");
+
+    let mut body_skin = SkinLayer::new("body");
+    body_skin.z = "body".into();
+    body_skin.width = 32;
+    body_skin.height = 32;
+    root.append_bone(body_skin, "navel", Point::new(10, 20));
+
+    let mut head_skin = SkinLayer::new("head");
+    head_skin.z = "head".into();
+    head_skin.width = 44;
+    head_skin.height = 44;
+    root.append_bone(head_skin, "navel", Point::new(0, 10));
+
+    let scene = wz_avatar::AvatarScene::new(zmap);
+
     if demo {
         println!();
         println!("=== 아바타 Z-Map 레이어 조합 & 앵커 정렬 데모 ===");
-        let zmap_order = vec![
-            "backHair".into(),
-            "body".into(),
-            "arm".into(),
-            "head".into(),
-            "hair".into(),
-        ];
-        let zmap = Arc::new(ZMap::new(zmap_order));
-        let mut root = Bone::new("@root");
-
-        let mut body_skin = SkinLayer::new("body");
-        body_skin.z = "body".into();
-        body_skin.width = 32;
-        body_skin.height = 32;
-        root.append_bone(body_skin, "navel", Point::new(10, 20));
-
-        let mut head_skin = SkinLayer::new("head");
-        head_skin.z = "head".into();
-        head_skin.width = 44;
-        head_skin.height = 44;
-        root.append_bone(head_skin, "navel", Point::new(0, 10));
-
-        let scene = wz_avatar::AvatarScene::new(zmap);
         let layers = scene.canvas.generate_layers(&root);
         println!("생성된 레이어 수: {}", layers.len());
         for (i, layer) in layers.iter().enumerate() {
@@ -838,6 +843,55 @@ fn cmd_avatar(demo: bool) -> Result<(), Box<dyn std::error::Error>> {
             batch.index_count(),
             batch.index_count() / 3
         );
+    }
+
+    if render {
+        println!();
+        println!("=== wz-render GPU 오프스크린 렌더 파이프라인 검증 ===");
+        let mut packer = wz_render::AtlasShelfPacker::new(512, 512);
+        let slot = packer
+            .allocate(64, 64)
+            .ok_or("아틀라스 텍스처 슬롯 할당 실패")?;
+        println!(
+            "아틀라스 할당 성공: GpuKey({}), Rect [x:{}, y:{}, w:{}, h:{}]",
+            slot.key.0, slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h
+        );
+
+        let camera = wz_render::Camera2D::new(800.0, 600.0);
+        let uniforms = camera.build_uniforms(0.0, 0.0);
+        println!(
+            "2D 직교 카메라 유니폼 생성 완료: 뷰포트 [{}, {}], 줌 {}",
+            camera.viewport_size.x, camera.viewport_size.y, camera.zoom
+        );
+
+        let mut sprite_batch = wz_render::SpriteBatch::new();
+        let uv = slot.rect.uv(512, 512);
+        sprite_batch.push_quad(
+            slot.key,
+            [100.0, 100.0, 64.0, 64.0],
+            0.0,
+            uv,
+            [1.0, 1.0, 1.0, 1.0],
+        );
+        sprite_batch.finish();
+        println!(
+            "스프라이트 배치 빌드 완료: 정점 {}개, 인덱스 {}개, 드로우 커맨드 {}개",
+            sprite_batch.vertices.len(),
+            sprite_batch.indices.len(),
+            sprite_batch.commands.len()
+        );
+
+        match wz_render::RenderContext::new_headless() {
+            Ok(mut ctx) => {
+                let dummy_pixels = vec![255u8; 64 * 64 * 4];
+                ctx.create_texture(slot.key, 64, 64, &dummy_pixels)?;
+                ctx.update_buffers(&uniforms, &sprite_batch);
+                println!("wgpu 렌더 컨텍스트 초기화 및 GPU 버퍼/텍스처 업로드 성공 (Headless)");
+            }
+            Err(e) => {
+                println!("(안내) 호환되는 GPU 어댑터가 없는 환경이므로 실제 디바이스 생성을 건너뜁니다: {e}");
+            }
+        }
     }
     Ok(())
 }
