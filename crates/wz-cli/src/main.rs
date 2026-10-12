@@ -194,6 +194,21 @@ enum OracleAction {
         #[arg(long)]
         r#mod: PathBuf,
     },
+
+    /// 이미지 내부 Canvas 픽셀 해시(SHA-256) 표준 JSON 덤프
+    Image {
+        /// WZ 파일 경로
+        #[arg(long)]
+        wz: PathBuf,
+
+        /// 이미지/캔버스 노드 경로 (예: Character/00002000.img 또는 00002000.img/0)
+        #[arg(long)]
+        path: String,
+
+        /// 출력 포맷 (sha256 등)
+        #[arg(long, default_value = "sha256")]
+        format: String,
+    },
 }
 
 fn main() {
@@ -957,6 +972,7 @@ fn cmd_oracle(action: OracleAction) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         OracleAction::Tree { wz, filter } => cmd_oracle_tree(&wz, filter.as_deref()),
         OracleAction::Diff { base, r#mod } => cmd_oracle_diff(&base, &r#mod),
+        OracleAction::Image { wz, path, format } => cmd_oracle_image(&wz, &path, &format),
     }
 }
 
@@ -1180,6 +1196,162 @@ fn cmd_oracle_diff(
     Ok(())
 }
 
+fn cmd_oracle_image(
+    wz_path: &std::path::Path,
+    node_path: &str,
+    format_opt: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use sha2::{Digest, Sha256};
+    use wz_core::WzArchive;
+    use wz_image::{TextureDecoder, TextureFormat};
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let detection = archive.detection();
+
+    // 경로 파싱: <dir/.../file.img>/<inner_path> 형태 분리
+    let normalized = node_path.replace('\\', "/");
+    let parts: Vec<&str> = normalized.split('/').filter(|s| !s.is_empty()).collect();
+
+    // .img 확장자를 가진 세그먼트 위치 탐색
+    let img_idx = parts.iter().position(|p| p.to_lowercase().ends_with(".img"));
+
+    let (img_entry, sub_path_parts) = if let Some(idx) = img_idx {
+        let img_name = parts[idx];
+        let found = find_image_entry_in_dirtree(&tree, img_name)
+            .ok_or_else(|| format!("디렉터리 트리에서 이미지를 찾을 수 없습니다: {img_name}"))?;
+        (found, &parts[idx + 1..])
+    } else {
+        // 경로 전체에서 첫 번째 .img 검색 또는 첫 번째 이미지 사용
+        let found = tree.root.entries.iter().find(|e| {
+            e.node_type == wz_core::dirtree::node_type::IMAGE
+        }).cloned().ok_or("WZ 아카이브에 이미지가 없습니다")?;
+        (found, &parts[..])
+    };
+
+    let img_offset = img_entry.offset.ok_or("이미지 오프셋이 유효하지 않습니다")?;
+    let img_root = archive.parse_image_at(img_offset)?;
+
+    // 서브 노드 탐색
+    let target_node = find_sub_node(&img_root, sub_path_parts)?;
+
+    // 노드에서 PngRef 추출 (현재 노드 또는 첫 번째 Canvas 자식)
+    let png_ref = extract_png_ref(&target_node)
+        .ok_or_else(|| format!("경로에서 Canvas/Png 노드를 찾을 수 없습니다: {node_path}"))?;
+
+    // Png 압축 해제 및 디코딩
+    let raw_payload = png_ref.extract_raw_bytes(archive.source())?;
+    let decompressed = TextureDecoder::decompress_zlib(&raw_payload)?;
+
+    let tex_fmt = TextureFormat::from_u32(png_ref.format as u32);
+    let rgba_pixels = match tex_fmt {
+        TextureFormat::Unknown => decompressed,
+        fmt => TextureDecoder::decode_rgba8(
+            fmt,
+            png_ref.width as u32,
+            png_ref.height as u32,
+            &decompressed,
+        )
+        .unwrap_or(decompressed),
+    };
+
+    let hash_hex = if format_opt.eq_ignore_ascii_case("sha256") {
+        let mut hasher = Sha256::new();
+        hasher.update(&rgba_pixels);
+        format!("{:x}", hasher.finalize())
+    } else {
+        format!("len:{}", rgba_pixels.len())
+    };
+
+    let profile_name = format!("{:?}", detection.profile.format);
+    let hash1_str = detection
+        .detected
+        .hash1
+        .map(|h| format!("{:#010x}", h))
+        .unwrap_or_else(|| "0x00000000".into());
+    let hash2_str = detection
+        .detected
+        .hash2
+        .map(|h| format!("{:#010x}", h))
+        .unwrap_or_else(|| "0x00000000".into());
+
+    let mut doc = serde_json::Map::new();
+    doc.insert("schema_version".into(), serde_json::Value::Number(1.into()));
+    doc.insert("op".into(), serde_json::Value::String("image".into()));
+    doc.insert("profile".into(), serde_json::Value::String(profile_name));
+    doc.insert("hash1".into(), serde_json::Value::String(hash1_str));
+    doc.insert("hash2".into(), serde_json::Value::String(hash2_str));
+
+    let mut res = serde_json::Map::new();
+    res.insert("w".into(), serde_json::Value::Number(png_ref.width.into()));
+    res.insert("h".into(), serde_json::Value::Number(png_ref.height.into()));
+    res.insert("format".into(), serde_json::Value::Number(png_ref.format.into()));
+    res.insert("scale".into(), serde_json::Value::Number(png_ref.scale.into()));
+    res.insert("pages".into(), serde_json::Value::Number(png_ref.pages.into()));
+    res.insert("sha256".into(), serde_json::Value::String(hash_hex));
+    doc.insert("result".into(), serde_json::Value::Object(res));
+
+    println!("{}", serde_json::to_string_pretty(&doc)?);
+    Ok(())
+}
+
+fn find_image_entry_in_dirtree(
+    tree: &wz_core::dirtree::DirTree,
+    img_name: &str,
+) -> Option<wz_core::dirtree::RawEntry> {
+    for e in &tree.root.entries {
+        if e.name.as_deref().map(|s| s.eq_ignore_ascii_case(img_name)).unwrap_or(false) {
+            return Some(e.clone());
+        }
+    }
+    for b in &tree.blocks {
+        for e in &b.entries {
+            if e.name.as_deref().map(|s| s.eq_ignore_ascii_case(img_name)).unwrap_or(false) {
+                return Some(e.clone());
+            }
+        }
+    }
+    None
+}
+
+fn find_sub_node<'a>(
+    root: &'a wz_core::image::Node,
+    parts: &[&str],
+) -> Result<&'a wz_core::image::Node, Box<dyn std::error::Error>> {
+    let mut current = root;
+    for part in parts {
+        if let Some(child) = current.children.iter().find(|c| c.name.as_ref() == *part) {
+            current = child;
+        } else if let Some(wz_core::image::ImageValue::Property(p)) = &current.value {
+            if let Some(child) = p.children.iter().find(|c| c.name.as_ref() == *part) {
+                current = child;
+            } else {
+                return Err(format!("자식 노드를 찾을 수 없습니다: {part}").into());
+            }
+        } else {
+            return Err(format!("자식 노드를 찾을 수 없습니다: {part}").into());
+        }
+    }
+    Ok(current)
+}
+
+fn extract_png_ref(node: &wz_core::image::Node) -> Option<wz_core::image::PngRef> {
+    if let Some(wz_core::image::ImageValue::Png(p)) = &node.value {
+        return Some(p.clone());
+    }
+    for ch in &node.children {
+        if let Some(p) = extract_png_ref(ch) {
+            return Some(p);
+        }
+    }
+    if let Some(wz_core::image::ImageValue::Property(p)) = &node.value {
+        if let Some(res) = extract_png_ref(p) {
+            return Some(res);
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1238,5 +1410,38 @@ mod tests {
         assert_eq!(children[1]["name"], "SubDir");
         assert_eq!(children[1]["type"], "Directory");
         assert_eq!(children[1]["children"][0]["name"], "Inner.img");
+    }
+
+    #[test]
+    fn test_extract_png_ref_nested() {
+        use wz_core::image::{ImageValue, Node, PngRef};
+
+        let png = PngRef {
+            width: 32,
+            height: 32,
+            format: 2,
+            scale: 1,
+            pages: 1,
+            unknown1: 0,
+            data_len: 100,
+            offset: 50,
+            sub_property: None,
+        };
+
+        let mut canvas_node = Node::new("0");
+        canvas_node.value = Some(ImageValue::Png(png));
+
+        let mut prop_node = Node::new("info");
+        prop_node.children.push(canvas_node);
+
+        let mut root = Node::new("");
+        root.children.push(prop_node);
+
+        let extracted = extract_png_ref(&root);
+        assert!(extracted.is_some());
+        let res = extracted.unwrap();
+        assert_eq!(res.width, 32);
+        assert_eq!(res.height, 32);
+        assert_eq!(res.format, 2);
     }
 }
