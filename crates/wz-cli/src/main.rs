@@ -163,6 +163,37 @@ enum Command {
         #[arg(long, short = 'o')]
         output: Option<PathBuf>,
     },
+
+    /// C# Oracle 호환 검증용 표준 JSON 출력 하네스
+    Oracle {
+        #[command(subcommand)]
+        action: OracleAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum OracleAction {
+    /// 노드 트리 표준 JSON 덤프
+    Tree {
+        /// WZ 파일 경로
+        #[arg(long)]
+        wz: PathBuf,
+
+        /// 노드 이름 정규식 필터
+        #[arg(long)]
+        filter: Option<String>,
+    },
+
+    /// 두 WZ 파일 간의 차이점 표준 JSON 덤프
+    Diff {
+        /// 기준 WZ 파일 경로
+        #[arg(long)]
+        base: PathBuf,
+
+        /// 변경된 WZ 파일 경로
+        #[arg(long)]
+        r#mod: PathBuf,
+    },
 }
 
 fn main() {
@@ -194,6 +225,7 @@ fn main() {
         } => cmd_diff(&old_wz, &new_wz, old_offset, new_offset, json),
         Command::Dump { wz, offset, json } => cmd_dump(&wz, offset, json),
         Command::Avatar { demo, render, output } => cmd_avatar(demo, render, output),
+        Command::Oracle { action } => cmd_oracle(action),
     };
 
     if let Err(e) = result {
@@ -919,4 +951,292 @@ fn cmd_avatar(
         }
     }
     Ok(())
+}
+
+fn cmd_oracle(action: OracleAction) -> Result<(), Box<dyn std::error::Error>> {
+    match action {
+        OracleAction::Tree { wz, filter } => cmd_oracle_tree(&wz, filter.as_deref()),
+        OracleAction::Diff { base, r#mod } => cmd_oracle_diff(&base, &r#mod),
+    }
+}
+
+fn cmd_oracle_tree(
+    path: &std::path::Path,
+    filter_pattern: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use regex::Regex;
+    use wz_core::WzArchive;
+
+    let archive = WzArchive::open(path)?;
+    let tree = archive.read_tree()?;
+    let detection = archive.detection();
+
+    let filter_re = if let Some(pat) = filter_pattern {
+        Some(Regex::new(pat)?)
+    } else {
+        None
+    };
+
+    let mut node_count = 0usize;
+    let root_val = build_oracle_dirtree(&tree, filter_re.as_ref(), &mut node_count);
+
+    let profile_name = format!("{:?}", detection.profile.format);
+    let hash1_str = detection
+        .detected
+        .hash1
+        .map(|h| format!("{:#010x}", h))
+        .unwrap_or_else(|| "0x00000000".into());
+    let hash2_str = detection
+        .detected
+        .hash2
+        .map(|h| format!("{:#010x}", h))
+        .unwrap_or_else(|| "0x00000000".into());
+
+    let mut doc = serde_json::Map::new();
+    doc.insert("schema_version".into(), serde_json::Value::Number(1.into()));
+    doc.insert("op".into(), serde_json::Value::String("tree".into()));
+    doc.insert("profile".into(), serde_json::Value::String(profile_name));
+    doc.insert("hash1".into(), serde_json::Value::String(hash1_str));
+    doc.insert("hash2".into(), serde_json::Value::String(hash2_str));
+
+    let mut res_map = serde_json::Map::new();
+    res_map.insert("root".into(), root_val);
+    res_map.insert(
+        "node_count".into(),
+        serde_json::Value::Number(node_count.into()),
+    );
+    doc.insert("result".into(), serde_json::Value::Object(res_map));
+
+    println!("{}", serde_json::to_string_pretty(&doc)?);
+    Ok(())
+}
+
+fn build_oracle_dirtree(
+    tree: &wz_core::dirtree::DirTree,
+    filter: Option<&regex::Regex>,
+    node_count: &mut usize,
+) -> serde_json::Value {
+    *node_count += 1; // root itself
+
+    let mut block_cursor = 0;
+    let children = build_dir_block_children(
+        &tree.root,
+        &tree.blocks,
+        &mut block_cursor,
+        filter,
+        node_count,
+    );
+
+    let mut root_obj = serde_json::Map::new();
+    root_obj.insert("name".into(), serde_json::Value::String("".into()));
+    root_obj.insert("type".into(), serde_json::Value::String("Directory".into()));
+    root_obj.insert("children".into(), serde_json::Value::Array(children));
+    serde_json::Value::Object(root_obj)
+}
+
+fn build_dir_block_children(
+    block: &wz_core::dirtree::DirBlock,
+    blocks: &[wz_core::dirtree::DirBlock],
+    block_cursor: &mut usize,
+    filter: Option<&regex::Regex>,
+    node_count: &mut usize,
+) -> Vec<serde_json::Value> {
+    use wz_core::dirtree::node_type;
+    use wz_core::text::sort_natural;
+
+    let mut entries = Vec::new();
+
+    for e in &block.entries {
+        let name = e.name.as_deref().unwrap_or("");
+        if let Some(re) = filter {
+            if !re.is_match(name) && e.node_type != node_type::DIRECTORY {
+                continue;
+            }
+        }
+
+        *node_count += 1;
+        let mut entry_obj = serde_json::Map::new();
+        entry_obj.insert("name".into(), serde_json::Value::String(name.to_string()));
+
+        if e.node_type == node_type::DIRECTORY {
+            entry_obj.insert("type".into(), serde_json::Value::String("Directory".into()));
+            if let Some(sub_block) = blocks.get(*block_cursor) {
+                *block_cursor += 1;
+                let sub_children = build_dir_block_children(
+                    sub_block,
+                    blocks,
+                    block_cursor,
+                    filter,
+                    node_count,
+                );
+                entry_obj.insert("children".into(), serde_json::Value::Array(sub_children));
+            } else {
+                entry_obj.insert("children".into(), serde_json::Value::Array(Vec::new()));
+            }
+        } else {
+            entry_obj.insert("type".into(), serde_json::Value::String("Image".into()));
+            let mut img_info = serde_json::Map::new();
+            img_info.insert(
+                "offset".into(),
+                e.offset
+                    .map(|o| serde_json::Value::Number(o.into()))
+                    .unwrap_or(serde_json::Value::Null),
+            );
+            img_info.insert(
+                "len".into(),
+                serde_json::Value::Number(e.data_len.into()),
+            );
+            img_info.insert(
+                "cs32".into(),
+                serde_json::Value::Number(e.cs32.into()),
+            );
+            entry_obj.insert("image".into(), serde_json::Value::Object(img_info));
+        }
+
+        entries.push(entry_obj);
+    }
+
+    // natural_cmp 정렬 적용
+    sort_natural(&mut entries, |item| {
+        item.get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+    });
+
+    entries.into_iter().map(serde_json::Value::Object).collect()
+}
+
+fn cmd_oracle_diff(
+    base_path: &std::path::Path,
+    mod_path: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_core::WzArchive;
+    use wz_diff::{DiffEngine, DiffType};
+
+    let a1 = WzArchive::open(base_path)?;
+    let a2 = WzArchive::open(mod_path)?;
+    let t1 = a1.read_tree()?;
+    let t2 = a2.read_tree()?;
+    let detection = a2.detection();
+
+    let diff_items = DiffEngine::diff_dirtree(&t1, &t2, "root");
+
+    let mut changed_count = 0usize;
+    let mut added_count = 0usize;
+    let mut removed_count = 0usize;
+
+    let mut result_items = Vec::new();
+    for d in diff_items {
+        let (kind, old_val, new_val) = match d.diff_type {
+            DiffType::Append => {
+                added_count += 1;
+                ("added", serde_json::Value::Null, serde_json::Value::String(d.description))
+            }
+            DiffType::Delete => {
+                removed_count += 1;
+                ("removed", serde_json::Value::String(d.description), serde_json::Value::Null)
+            }
+            DiffType::Changed => {
+                changed_count += 1;
+                ("changed", serde_json::Value::Null, serde_json::Value::String(d.description))
+            }
+        };
+
+        let mut item = serde_json::Map::new();
+        item.insert("path".into(), serde_json::Value::String(d.path));
+        item.insert("kind".into(), serde_json::Value::String(kind.into()));
+        item.insert("old".into(), old_val);
+        item.insert("new".into(), new_val);
+        result_items.push(serde_json::Value::Object(item));
+    }
+
+    let mut summary = serde_json::Map::new();
+    summary.insert("changed".into(), serde_json::Value::Number(changed_count.into()));
+    summary.insert("added".into(), serde_json::Value::Number(added_count.into()));
+    summary.insert("removed".into(), serde_json::Value::Number(removed_count.into()));
+
+    let profile_name = format!("{:?}", detection.profile.format);
+    let hash1_str = detection
+        .detected
+        .hash1
+        .map(|h| format!("{:#010x}", h))
+        .unwrap_or_else(|| "0x00000000".into());
+    let hash2_str = detection
+        .detected
+        .hash2
+        .map(|h| format!("{:#010x}", h))
+        .unwrap_or_else(|| "0x00000000".into());
+
+    let mut doc = serde_json::Map::new();
+    doc.insert("schema_version".into(), serde_json::Value::Number(1.into()));
+    doc.insert("op".into(), serde_json::Value::String("diff".into()));
+    doc.insert("profile".into(), serde_json::Value::String(profile_name));
+    doc.insert("hash1".into(), serde_json::Value::String(hash1_str));
+    doc.insert("hash2".into(), serde_json::Value::String(hash2_str));
+    doc.insert("result".into(), serde_json::Value::Array(result_items));
+    doc.insert("summary".into(), serde_json::Value::Object(summary));
+
+    println!("{}", serde_json::to_string_pretty(&doc)?);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_oracle_dirtree_json_schema() {
+        use wz_core::dirtree::{DirBlock, DirTree, RawEntry};
+
+        let mut entries = Vec::new();
+        entries.push(RawEntry {
+            node_type: wz_core::dirtree::node_type::DIRECTORY,
+            name: Some("SubDir".into()),
+            name_ref: None,
+            data_len: 0,
+            cs32: 0,
+            file_pos: 100,
+            offset: Some(100),
+        });
+        entries.push(RawEntry {
+            node_type: wz_core::dirtree::node_type::IMAGE,
+            name: Some("00002000.img".into()),
+            name_ref: None,
+            data_len: 1234,
+            cs32: 5678,
+            file_pos: 200,
+            offset: Some(200),
+        });
+
+        let sub_entries = vec![RawEntry {
+            node_type: wz_core::dirtree::node_type::IMAGE,
+            name: Some("Inner.img".into()),
+            name_ref: None,
+            data_len: 500,
+            cs32: 100,
+            file_pos: 300,
+            offset: Some(300),
+        }];
+
+        let tree = DirTree {
+            root: DirBlock { entries },
+            blocks: vec![DirBlock { entries: sub_entries }],
+        };
+
+        let mut node_count = 0;
+        let root_val = build_oracle_dirtree(&tree, None, &mut node_count);
+
+        assert_eq!(node_count, 4); // root + SubDir + 00002000.img + Inner.img
+        assert_eq!(root_val["type"], "Directory");
+        assert!(root_val["children"].is_array());
+        let children = root_val["children"].as_array().unwrap();
+        assert_eq!(children.len(), 2);
+        // natural_cmp 정렬에 의해 00002000.img 가 SubDir 보다 먼저 올 수 있음
+        assert_eq!(children[0]["name"], "00002000.img");
+        assert_eq!(children[0]["type"], "Image");
+        assert_eq!(children[0]["image"]["len"], 1234);
+        assert_eq!(children[1]["name"], "SubDir");
+        assert_eq!(children[1]["type"], "Directory");
+        assert_eq!(children[1]["children"][0]["name"], "Inner.img");
+    }
 }
