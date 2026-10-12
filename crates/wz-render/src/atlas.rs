@@ -19,6 +19,7 @@ pub struct AtlasPage {
     pub key: GpuKey,
     pub width: u32,
     pub height: u32,
+    pub pixels: Vec<u8>,
     shelves: Vec<Shelf>,
 }
 
@@ -28,7 +29,25 @@ impl AtlasPage {
             key,
             width,
             height,
+            pixels: vec![0u8; (width * height * 4) as usize],
             shelves: Vec::new(),
+        }
+    }
+
+    /// 할당된 사각형 영역에 RGBA8 픽셀 데이터를 복사(Blit)한다.
+    pub fn write_rect(&mut self, rect: &AtlasRect, src_rgba: &[u8]) {
+        let row_bytes = (rect.w * 4) as usize;
+        if src_rgba.len() < row_bytes * (rect.h as usize) {
+            return;
+        }
+        for row in 0..rect.h {
+            let src_start = (row as usize) * row_bytes;
+            let dst_start = (((rect.y + row) * self.width + rect.x) * 4) as usize;
+            let dst_end = dst_start + row_bytes;
+            if dst_end <= self.pixels.len() {
+                self.pixels[dst_start..dst_end]
+                    .copy_from_slice(&src_rgba[src_start..src_start + row_bytes]);
+            }
         }
     }
 
@@ -143,6 +162,37 @@ impl AtlasShelfPacker {
         self.pages.push(new_page);
 
         Some(GpuSlot { key, rect })
+    }
+
+    /// 스프라이트 영역을 할당하고 해당 페이지의 RGBA8 버퍼에 픽셀을 기록한다.
+    pub fn allocate_and_write(&mut self, w: u32, h: u32, src_rgba: &[u8]) -> Option<GpuSlot> {
+        if w > self.page_width || h > self.page_height {
+            return None;
+        }
+
+        for page in &mut self.pages {
+            if let Some(rect) = page.allocate(w, h) {
+                page.write_rect(&rect, src_rgba);
+                return Some(GpuSlot {
+                    key: page.key,
+                    rect,
+                });
+            }
+        }
+
+        let key = GpuKey(self.next_key);
+        self.next_key += 1;
+        let mut new_page = AtlasPage::new(key, self.page_width, self.page_height);
+        let rect = new_page.allocate(w, h)?;
+        new_page.write_rect(&rect, src_rgba);
+        self.pages.push(new_page);
+
+        Some(GpuSlot { key, rect })
+    }
+
+    /// 현재 관리 중인 모든 페이지 슬라이스.
+    pub fn pages(&self) -> &[AtlasPage] {
+        &self.pages
     }
 
     /// 현재 관리 중인 총 페이지 수.

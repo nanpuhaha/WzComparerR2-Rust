@@ -57,6 +57,7 @@ impl AvatarBatch {
         if index_count > 0 {
             sprite_batch.commands.push(wz_render::DrawCommand {
                 texture_key,
+                blend_mode: wz_render::BlendMode::Alpha,
                 index_start: 0,
                 index_count,
             });

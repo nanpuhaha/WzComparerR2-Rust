@@ -13,6 +13,7 @@ wz-error.workspace = true
 wz-core.workspace = true
 wz-pool.workspace = true
 flate2.workspace = true
+crc32fast.workspace = true
 
 [lints.rust]
 unsafe_code = "deny"

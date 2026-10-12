@@ -20,7 +20,7 @@ pub struct SpriteVertex {
 }
 
 impl SpriteVertex {
-    pub const LAYOUT: wgpu::VertexBufferLayout<'static> = wgpu::VertexBufferLayout {
+    pub(crate) const LAYOUT: wgpu::VertexBufferLayout<'static> = wgpu::VertexBufferLayout {
         array_stride: 40,
         step_mode: wgpu::VertexStepMode::Vertex,
         attributes: &[
@@ -51,10 +51,23 @@ impl SpriteVertex {
     }
 }
 
-/// 텍스처/재질 변경 시 끊어지는 단위 배치 명령.
+/// 2D 렌더링 블렌드 상태.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum BlendMode {
+    /// 기본 알파 블렌딩 (SrcAlpha, OneMinusSrcAlpha).
+    #[default]
+    Alpha,
+    /// 가산 혼합 (SrcAlpha, One) — 광원/이펙트용.
+    Additive,
+    /// 불투명 덮어쓰기.
+    Opaque,
+}
+
+/// 텍스처/재질/블렌드 변경 시 끊어지는 단위 배치 명령.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DrawCommand {
     pub texture_key: GpuKey,
+    pub blend_mode: BlendMode,
     pub index_start: u32,
     pub index_count: u32,
 }
@@ -66,6 +79,7 @@ pub struct SpriteBatch {
     pub indices: Vec<u32>,
     pub commands: Vec<DrawCommand>,
     current_key: Option<GpuKey>,
+    current_blend: BlendMode,
     current_start: u32,
 }
 
@@ -80,7 +94,46 @@ impl SpriteBatch {
         self.indices.clear();
         self.commands.clear();
         self.current_key = None;
+        self.current_blend = BlendMode::Alpha;
         self.current_start = 0;
+    }
+
+    /// 현재 블렌드 모드 설정 (변경 시 자동 batch break).
+    pub fn set_blend_mode(&mut self, blend: BlendMode) {
+        if self.current_blend != blend {
+            self.flush_current_command();
+            self.current_blend = blend;
+            self.current_start = self.indices.len() as u32;
+        }
+    }
+
+    fn ensure_state(&mut self, texture_key: GpuKey, blend_mode: BlendMode) {
+        if self.current_key != Some(texture_key) || self.current_blend != blend_mode {
+            self.flush_current_command();
+            self.current_key = Some(texture_key);
+            self.current_blend = blend_mode;
+            self.current_start = self.indices.len() as u32;
+        }
+    }
+
+    /// 임의의 삼각형 메시(정점 및 로컬 인덱스 오프셋)를 배치에 추가한다.
+    ///
+    /// `local_indices`는 `verts` 슬라이스 내 0-기반 인덱스다.
+    pub fn push_triangles(
+        &mut self,
+        texture_key: GpuKey,
+        blend_mode: BlendMode,
+        verts: &[SpriteVertex],
+        local_indices: &[u32],
+    ) {
+        if verts.is_empty() || local_indices.is_empty() {
+            return;
+        }
+        self.ensure_state(texture_key, blend_mode);
+        let base_idx = self.vertices.len() as u32;
+        self.vertices.extend_from_slice(verts);
+        self.indices
+            .extend(local_indices.iter().map(|&i| base_idx + i));
     }
 
     /// 단일 쿼드(Quad, 4 정점 + 6 인덱스) 스프라이트 추가.
@@ -97,12 +150,7 @@ impl SpriteBatch {
         uv: [f32; 4],
         color: [f32; 4],
     ) {
-        // 텍스처가 바뀌면 Batch Break
-        if self.current_key != Some(texture_key) {
-            self.flush_current_command();
-            self.current_key = Some(texture_key);
-            self.current_start = self.indices.len() as u32;
-        }
+        self.ensure_state(texture_key, self.current_blend);
 
         let base_idx = self.vertices.len() as u32;
         let x0 = pos[0];
@@ -156,6 +204,7 @@ impl SpriteBatch {
             if current_count > 0 {
                 self.commands.push(DrawCommand {
                     texture_key: key,
+                    blend_mode: self.current_blend,
                     index_start: self.current_start,
                     index_count: current_count,
                 });

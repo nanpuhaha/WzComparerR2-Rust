@@ -89,12 +89,12 @@ impl PngRef {
         if self.data_len <= 1 {
             return Ok(Vec::new());
         }
-        let payload_offset = self.offset.checked_add(1).ok_or_else(|| {
+        let payload_offset = self.offset.checked_add(1).ok_or(
             wz_error::WzFormatError::Malformed {
                 what: "canvas offset overflow",
                 offset: self.offset,
-            }
-        })?;
+            },
+        )?;
         let payload_len = (self.data_len - 1) as usize;
         let mut buf = vec![0u8; payload_len];
         src.read_at(payload_offset, &mut buf)?;

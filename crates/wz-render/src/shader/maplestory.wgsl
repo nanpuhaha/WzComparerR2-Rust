@@ -103,10 +103,10 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
     let falloff = light_falloff(dist, u.light_inner_radius, u.light_outer_radius);
     let player_light = u.player_light_color * falloff;
 
-    // 4. 합성: 텍스처 × (그라데이션 + 조명)
+    // 4. 합성: 텍스처 × 정점 색상 × (그라데이션 + 조명)
     let lit = grad_color + player_light;
-    var rgb = src.rgb * lit.rgb;
-    let alpha = src.a * lit.a;
+    var rgb = src.rgb * in.color.rgb * lit.rgb;
+    let alpha = src.a * in.color.a * lit.a;
 
     // z 는 원본의 깊이 기반 감쇠용이다. 0 이면 비활성.
     if (u.z > 0.0) {

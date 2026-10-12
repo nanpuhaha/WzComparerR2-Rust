@@ -155,11 +155,11 @@ enum Command {
         #[arg(long)]
         demo: bool,
 
-        /// 아바타 합성 배치 및 렌더링 파이프라인 검증 (오프스크린 렌더)
-        #[arg(long)]
-        render: bool,
+        /// 아바타 합성 배치 및 오프스크린 렌더링 실행 (선택적으로 출력 파일 경로 지정 가능: --render <output.png>)
+        #[arg(long, num_args = 0..=1, default_missing_value = "")]
+        render: Option<PathBuf>,
 
-        /// 오프스크린 렌더링된 결과를 파일로 저장 (예: output.rgba 또는 output.raw)
+        /// 오프스크린 렌더링된 결과를 파일로 저장 (예: output.png 또는 output.rgba)
         #[arg(long, short = 'o')]
         output: Option<PathBuf>,
     },
@@ -843,7 +843,7 @@ fn cmd_dump(
 
 fn cmd_avatar(
     demo: bool,
-    render: bool,
+    render: Option<PathBuf>,
     output: Option<PathBuf>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use std::sync::Arc;
@@ -900,7 +900,14 @@ fn cmd_avatar(
         );
     }
 
-    let should_render = render || output.is_some();
+    let resolved_output = output.or_else(|| {
+        render
+            .as_ref()
+            .filter(|p| !p.as_os_str().is_empty())
+            .cloned()
+    });
+    let should_render = render.is_some() || resolved_output.is_some();
+
     if should_render {
         println!();
         println!("=== wz-render 아바타 스프라이트 배치 및 오프스크린 렌더 ===");
@@ -910,20 +917,11 @@ fn cmd_avatar(
         let atlas_h = 512u32;
         let mut packer = wz_render::AtlasShelfPacker::new(atlas_w, atlas_h);
 
-        // 레이어별 아틀라스 슬롯 할당 및 더미/실제 픽셀 준비
-        let mut layer_slots = Vec::new();
-        let mut layer_pixels = Vec::new();
+        let mut layer_slots = Vec::with_capacity(layers.len());
 
         for layer in &layers {
-            let lw = (layer.width.max(1)) as u32;
-            let lh = (layer.height.max(1)) as u32;
-            let slot = packer
-                .allocate(lw, lh)
-                .ok_or("아틀라스 텍스처 슬롯 할당 실패")?;
-            println!(
-                "레이어 '{}' [{}x{}] -> 아틀라스 할당: GpuKey({}), Rect [x:{}, y:{}, w:{}, h:{}]",
-                layer.name, lw, lh, slot.key.0, slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h
-            );
+            let lw = layer.width.max(1);
+            let lh = layer.height.max(1);
 
             // 레이어별 시각적 구분을 위한 색상 RGBA 픽셀 생성 (body: 살색, head: 갈색 등)
             let color = match layer.name.as_str() {
@@ -936,8 +934,15 @@ fn cmd_avatar(
                 pixels.extend_from_slice(&color);
             }
 
-            layer_slots.push((slot, lw, lh));
-            layer_pixels.push(pixels);
+            let slot = packer
+                .allocate_and_write(lw, lh, &pixels)
+                .ok_or("아틀라스 텍스처 슬롯 할당 실패")?;
+            println!(
+                "레이어 '{}' [{}x{}] -> 아틀라스 할당: GpuKey({}), Rect [x:{}, y:{}, w:{}, h:{}]",
+                layer.name, lw, lh, slot.key.0, slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h
+            );
+
+            layer_slots.push(slot);
         }
 
         let render_w = 256u32;
@@ -950,16 +955,15 @@ fn cmd_avatar(
         );
 
         let mut sprite_batch = wz_render::SpriteBatch::new();
-        for (i, layer) in layers.iter().enumerate() {
-            let (slot, lw, lh) = &layer_slots[i];
+        for (layer, slot) in layers.iter().zip(layer_slots.iter()) {
             let uv = slot.rect.uv(atlas_w, atlas_h);
-            // 아바타 캔버스 원점(화면 중앙 기준 오프셋 배치)
-            let screen_x = (render_w as f32 * 0.5) + layer.position.x as f32;
-            let screen_y = (render_h as f32 * 0.5) + layer.position.y as f32;
+            // 카메라가 (0, 0)을 바라보므로 아바타 레이어 좌표를 원점 주변에 배치
+            let world_x = layer.position.x as f32;
+            let world_y = layer.position.y as f32;
 
             sprite_batch.push_quad(
                 slot.key,
-                [screen_x, screen_y, *lw as f32, *lh as f32],
+                [world_x, world_y, slot.rect.w as f32, slot.rect.h as f32],
                 0.0,
                 uv,
                 [1.0, 1.0, 1.0, 1.0],
@@ -976,14 +980,15 @@ fn cmd_avatar(
 
         match wz_render::RenderContext::new_headless() {
             Ok(mut ctx) => {
-                for (i, (slot, lw, lh)) in layer_slots.iter().enumerate() {
-                    ctx.create_texture(slot.key, *lw, *lh, &layer_pixels[i])?;
+                for page in packer.pages() {
+                    ctx.create_texture(page.key, page.width, page.height, &page.pixels)?;
                 }
                 ctx.update_buffers(&uniforms, &sprite_batch);
-                println!("wgpu 렌더 컨텍스트 초기화 및 GPU 버퍼/텍스처 업로드 성공 (Headless)");
+                println!("wgpu 렌더 컨텍스트 초기화 및 GPU 아틀라스 페이지 업로드 성공 (Headless)");
 
                 let clear_color = [0.08, 0.08, 0.12, 1.0];
-                let pixels = ctx.render_to_rgba(render_w, render_h, &sprite_batch, &uniforms, clear_color)?;
+                let pixels =
+                    ctx.render_to_rgba(render_w, render_h, &sprite_batch, &uniforms, clear_color)?;
                 println!(
                     "오프스크린 렌더링 및 픽셀 리드백 성공: {}x{} (총 {} 바이트)",
                     render_w,
@@ -991,17 +996,60 @@ fn cmd_avatar(
                     pixels.len()
                 );
 
-                if let Some(out_path) = output {
-                    std::fs::write(&out_path, &pixels)?;
-                    println!("렌더링된 아바타 RGBA 원시 버퍼 저장 완료: {}", out_path.display());
+                if let Some(out_path) = resolved_output {
+                    let is_png = out_path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .is_some_and(|e| e.eq_ignore_ascii_case("png"));
+                    if is_png {
+                        let png_bytes = wz_image::encode_png_rgba8(render_w, render_h, &pixels);
+                        std::fs::write(&out_path, &png_bytes)?;
+                        println!(
+                            "렌더링된 아바타 PNG 이미지 저장 완료 ({} 바이트): {}",
+                            png_bytes.len(),
+                            out_path.display()
+                        );
+                    } else {
+                        std::fs::write(&out_path, &pixels)?;
+                        println!("렌더링된 아바타 RGBA 원시 버퍼 저장 완료: {}", out_path.display());
+                    }
                 }
             }
             Err(e) => {
-                println!("(안내) 호환되는 GPU 어댑터가 없는 환경이므로 실제 디바이스 생성을 건너뜁니다: {e}");
+                println!(
+                    "(안내) 호환되는 GPU 어댑터가 없는 환경이므로 실제 디바이스 생성을 건너뜁니다: {e}"
+                );
             }
         }
     }
     Ok(())
+}
+
+fn oracle_envelope(
+    op: &str,
+    detection: &wz_core::detect_version::Detection,
+) -> serde_json::Map<String, serde_json::Value> {
+    let hash1_str = detection
+        .detected
+        .hash1
+        .map(|h| format!("{:#010x}", h))
+        .unwrap_or_else(|| "0x00000000".into());
+    let hash2_str = detection
+        .detected
+        .hash2
+        .map(|h| format!("{:#010x}", h))
+        .unwrap_or_else(|| "0x00000000".into());
+
+    let mut doc = serde_json::Map::new();
+    doc.insert("schema_version".into(), serde_json::Value::Number(1.into()));
+    doc.insert("op".into(), serde_json::Value::String(op.into()));
+    doc.insert(
+        "profile".into(),
+        serde_json::Value::String(detection.detected.profile.to_string()),
+    );
+    doc.insert("hash1".into(), serde_json::Value::String(hash1_str));
+    doc.insert("hash2".into(), serde_json::Value::String(hash2_str));
+    doc
 }
 
 fn cmd_oracle(action: OracleAction) -> Result<(), Box<dyn std::error::Error>> {
@@ -1030,27 +1078,10 @@ fn cmd_oracle_tree(
     };
 
     let mut node_count = 0usize;
-    let root_val = build_oracle_dirtree(&tree, filter_re.as_ref(), &mut node_count);
+    let root_val =
+        build_oracle_dirtree_with_archive(&tree, Some(&archive), filter_re.as_ref(), &mut node_count);
 
-    let profile_name = format!("{:?}", detection.profile.format);
-    let hash1_str = detection
-        .detected
-        .hash1
-        .map(|h| format!("{:#010x}", h))
-        .unwrap_or_else(|| "0x00000000".into());
-    let hash2_str = detection
-        .detected
-        .hash2
-        .map(|h| format!("{:#010x}", h))
-        .unwrap_or_else(|| "0x00000000".into());
-
-    let mut doc = serde_json::Map::new();
-    doc.insert("schema_version".into(), serde_json::Value::Number(1.into()));
-    doc.insert("op".into(), serde_json::Value::String("tree".into()));
-    doc.insert("profile".into(), serde_json::Value::String(profile_name));
-    doc.insert("hash1".into(), serde_json::Value::String(hash1_str));
-    doc.insert("hash2".into(), serde_json::Value::String(hash2_str));
-
+    let mut doc = oracle_envelope("tree", detection);
     let mut res_map = serde_json::Map::new();
     res_map.insert("root".into(), root_val);
     res_map.insert(
@@ -1063,8 +1094,18 @@ fn cmd_oracle_tree(
     Ok(())
 }
 
+#[cfg(test)]
 fn build_oracle_dirtree(
     tree: &wz_core::dirtree::DirTree,
+    filter: Option<&regex::Regex>,
+    node_count: &mut usize,
+) -> serde_json::Value {
+    build_oracle_dirtree_with_archive(tree, None, filter, node_count)
+}
+
+fn build_oracle_dirtree_with_archive(
+    tree: &wz_core::dirtree::DirTree,
+    archive: Option<&wz_core::WzArchive>,
     filter: Option<&regex::Regex>,
     node_count: &mut usize,
 ) -> serde_json::Value {
@@ -1075,6 +1116,7 @@ fn build_oracle_dirtree(
         &tree.root,
         &tree.blocks,
         &mut block_cursor,
+        archive,
         filter,
         node_count,
     );
@@ -1090,6 +1132,7 @@ fn build_dir_block_children(
     block: &wz_core::dirtree::DirBlock,
     blocks: &[wz_core::dirtree::DirBlock],
     block_cursor: &mut usize,
+    archive: Option<&wz_core::WzArchive>,
     filter: Option<&regex::Regex>,
     node_count: &mut usize,
 ) -> Vec<serde_json::Value> {
@@ -1118,6 +1161,7 @@ fn build_dir_block_children(
                     sub_block,
                     blocks,
                     block_cursor,
+                    archive,
                     filter,
                     node_count,
                 );
@@ -1143,6 +1187,14 @@ fn build_dir_block_children(
                 serde_json::Value::Number(e.cs32.into()),
             );
             entry_obj.insert("image".into(), serde_json::Value::Object(img_info));
+
+            if let (Some(arch), Some(off)) = (archive, e.offset) {
+                if let Ok(img_root) = arch.parse_image_at(off) {
+                    let img_children =
+                        build_oracle_image_children(&img_root, arch.source(), node_count);
+                    entry_obj.insert("children".into(), serde_json::Value::Array(img_children));
+                }
+            }
         }
 
         entries.push(entry_obj);
@@ -1158,6 +1210,187 @@ fn build_dir_block_children(
     entries.into_iter().map(serde_json::Value::Object).collect()
 }
 
+fn build_oracle_image_children(
+    node: &wz_core::image::Node,
+    src: &std::sync::Arc<dyn wz_pool::ByteSource>,
+    node_count: &mut usize,
+) -> Vec<serde_json::Value> {
+    use wz_core::image::ImageValue;
+    use wz_core::text::sort_natural;
+
+    let mut raw_children: Vec<&wz_core::image::Node> = Vec::new();
+    if let Some(ImageValue::Property(inner)) = &node.value {
+        for ch in &inner.children {
+            raw_children.push(ch);
+        }
+    }
+    for ch in &node.children {
+        raw_children.push(ch);
+    }
+
+    let mut items = Vec::with_capacity(raw_children.len());
+    for ch in raw_children {
+        items.push(build_oracle_image_node(ch, src, node_count));
+    }
+
+    sort_natural(&mut items, |item| {
+        item.get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+    });
+
+    items.into_iter().map(serde_json::Value::Object).collect()
+}
+
+fn build_oracle_image_node(
+    node: &wz_core::image::Node,
+    src: &std::sync::Arc<dyn wz_pool::ByteSource>,
+    node_count: &mut usize,
+) -> serde_json::Map<String, serde_json::Value> {
+    use wz_core::image::ImageValue;
+
+    *node_count += 1;
+    let mut map = serde_json::Map::new();
+    map.insert(
+        "name".into(),
+        serde_json::Value::String(node.name.to_string()),
+    );
+
+    match &node.value {
+        Some(ImageValue::Property(_)) | None => {
+            map.insert("type".into(), serde_json::Value::String("Property".into()));
+            let children = build_oracle_image_children(node, src, node_count);
+            map.insert("children".into(), serde_json::Value::Array(children));
+        }
+        Some(ImageValue::Png(png_ref)) => {
+            map.insert("type".into(), serde_json::Value::String("Canvas".into()));
+            let sha_hex = compute_png_ref_sha256(png_ref, src).unwrap_or_default();
+            let mut canvas_obj = serde_json::Map::new();
+            canvas_obj.insert("w".into(), serde_json::Value::Number(png_ref.width.into()));
+            canvas_obj.insert("h".into(), serde_json::Value::Number(png_ref.height.into()));
+            canvas_obj.insert(
+                "format".into(),
+                serde_json::Value::Number(png_ref.format.into()),
+            );
+            canvas_obj.insert(
+                "scale".into(),
+                serde_json::Value::Number(png_ref.scale.into()),
+            );
+            canvas_obj.insert(
+                "pages".into(),
+                serde_json::Value::Number(png_ref.pages.into()),
+            );
+            canvas_obj.insert("sha256".into(), serde_json::Value::String(sha_hex));
+            map.insert("canvas".into(), serde_json::Value::Object(canvas_obj));
+
+            let mut sub_children = build_oracle_image_children(node, src, node_count);
+            if let Some(sub_prop) = &png_ref.sub_property {
+                sub_children.extend(build_oracle_image_children(sub_prop, src, node_count));
+            }
+            if !sub_children.is_empty() {
+                map.insert("children".into(), serde_json::Value::Array(sub_children));
+            }
+        }
+        Some(ImageValue::Uol(u)) => {
+            map.insert("type".into(), serde_json::Value::String("UOL".into()));
+            map.insert("value".into(), serde_json::Value::String(u.to_string()));
+        }
+        Some(ImageValue::Short(v)) => {
+            map.insert("type".into(), serde_json::Value::String("Short".into()));
+            map.insert("value".into(), serde_json::Value::Number((*v).into()));
+        }
+        Some(ImageValue::Int(v)) => {
+            map.insert("type".into(), serde_json::Value::String("Int".into()));
+            map.insert("value".into(), serde_json::Value::Number((*v).into()));
+        }
+        Some(ImageValue::Long(v)) => {
+            map.insert("type".into(), serde_json::Value::String("Long".into()));
+            map.insert("value".into(), serde_json::Value::Number((*v).into()));
+        }
+        Some(ImageValue::Uint(v)) => {
+            map.insert("type".into(), serde_json::Value::String("UInt".into()));
+            map.insert("value".into(), serde_json::Value::Number((*v).into()));
+        }
+        Some(ImageValue::Float(v)) => {
+            map.insert("type".into(), serde_json::Value::String("Float".into()));
+            map.insert(
+                "value".into(),
+                serde_json::Number::from_f64(*v as f64)
+                    .map(serde_json::Value::Number)
+                    .unwrap_or(serde_json::Value::Null),
+            );
+        }
+        Some(ImageValue::Double(v)) => {
+            map.insert("type".into(), serde_json::Value::String("Double".into()));
+            map.insert(
+                "value".into(),
+                serde_json::Number::from_f64(*v)
+                    .map(serde_json::Value::Number)
+                    .unwrap_or(serde_json::Value::Null),
+            );
+        }
+        Some(ImageValue::Bool(v)) => {
+            map.insert("type".into(), serde_json::Value::String("Bool".into()));
+            map.insert("value".into(), serde_json::Value::Bool(*v));
+        }
+        Some(ImageValue::Str(s)) => {
+            map.insert("type".into(), serde_json::Value::String("String".into()));
+            map.insert("value".into(), serde_json::Value::String(s.to_string()));
+        }
+        Some(ImageValue::Vector(v)) => {
+            map.insert("type".into(), serde_json::Value::String("Vector".into()));
+            map.insert(
+                "value".into(),
+                serde_json::Value::Array(vec![
+                    serde_json::Value::Number(v.x.into()),
+                    serde_json::Value::Number(v.y.into()),
+                ]),
+            );
+        }
+        Some(ImageValue::Null) => {
+            map.insert("type".into(), serde_json::Value::String("Null".into()));
+            map.insert("value".into(), serde_json::Value::Null);
+        }
+        Some(other) => {
+            map.insert(
+                "type".into(),
+                serde_json::Value::String(format!("{other:?}")),
+            );
+        }
+    }
+
+    map
+}
+
+fn compute_png_ref_sha256(
+    png_ref: &wz_core::image::PngRef,
+    src: &std::sync::Arc<dyn wz_pool::ByteSource>,
+) -> Result<String, Box<dyn std::error::Error>> {
+    use sha2::{Digest, Sha256};
+    use wz_image::{decode_to_rgba8, decompress_zlib, TextureFormat, TextureLayout};
+
+    let raw_payload = png_ref.extract_raw_bytes(src)?;
+    let decompressed = decompress_zlib(&raw_payload)?;
+    let tex_fmt = TextureFormat::from_u32(png_ref.format as u32);
+    let (dec_w, dec_h) = TextureLayout::for_png(
+        tex_fmt,
+        png_ref.scale as u32,
+        png_ref.width as u32,
+        png_ref.height as u32,
+    )
+    .map(|l| (l.decodable_width, l.decodable_height))
+    .unwrap_or((png_ref.width as u32, png_ref.height as u32));
+
+    let rgba_pixels = match tex_fmt {
+        TextureFormat::Unknown => decompressed,
+        fmt => decode_to_rgba8(fmt, dec_w, dec_h, &decompressed).unwrap_or(decompressed),
+    };
+
+    let mut hasher = Sha256::new();
+    hasher.update(&rgba_pixels);
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
 fn cmd_oracle_diff(
     base_path: &std::path::Path,
     mod_path: &std::path::Path,
@@ -1171,7 +1404,7 @@ fn cmd_oracle_diff(
     let t2 = a2.read_tree()?;
     let detection = a2.detection();
 
-    let diff_items = DiffEngine::diff_dirtree(&t1, &t2, "root");
+    let diff_items = DiffEngine::diff_archives(&a1, &t1, &a2, &t2, "");
 
     let mut changed_count = 0usize;
     let mut added_count = 0usize;
@@ -1179,20 +1412,29 @@ fn cmd_oracle_diff(
 
     let mut result_items = Vec::new();
     for d in diff_items {
-        let (kind, old_val, new_val) = match d.diff_type {
+        let kind = match d.diff_type {
             DiffType::Append => {
                 added_count += 1;
-                ("added", serde_json::Value::Null, serde_json::Value::String(d.description))
+                "append"
             }
             DiffType::Delete => {
                 removed_count += 1;
-                ("removed", serde_json::Value::String(d.description), serde_json::Value::Null)
+                "remove"
             }
             DiffType::Changed => {
                 changed_count += 1;
-                ("changed", serde_json::Value::Null, serde_json::Value::String(d.description))
+                "changed"
             }
         };
+
+        let old_val = d
+            .old_value
+            .map(serde_json::Value::String)
+            .unwrap_or(serde_json::Value::Null);
+        let new_val = d
+            .new_value
+            .map(serde_json::Value::String)
+            .unwrap_or(serde_json::Value::Null);
 
         let mut item = serde_json::Map::new();
         item.insert("path".into(), serde_json::Value::String(d.path));
@@ -1203,28 +1445,20 @@ fn cmd_oracle_diff(
     }
 
     let mut summary = serde_json::Map::new();
-    summary.insert("changed".into(), serde_json::Value::Number(changed_count.into()));
-    summary.insert("added".into(), serde_json::Value::Number(added_count.into()));
-    summary.insert("removed".into(), serde_json::Value::Number(removed_count.into()));
+    summary.insert(
+        "changed".into(),
+        serde_json::Value::Number(changed_count.into()),
+    );
+    summary.insert(
+        "added".into(),
+        serde_json::Value::Number(added_count.into()),
+    );
+    summary.insert(
+        "removed".into(),
+        serde_json::Value::Number(removed_count.into()),
+    );
 
-    let profile_name = format!("{:?}", detection.profile.format);
-    let hash1_str = detection
-        .detected
-        .hash1
-        .map(|h| format!("{:#010x}", h))
-        .unwrap_or_else(|| "0x00000000".into());
-    let hash2_str = detection
-        .detected
-        .hash2
-        .map(|h| format!("{:#010x}", h))
-        .unwrap_or_else(|| "0x00000000".into());
-
-    let mut doc = serde_json::Map::new();
-    doc.insert("schema_version".into(), serde_json::Value::Number(1.into()));
-    doc.insert("op".into(), serde_json::Value::String("diff".into()));
-    doc.insert("profile".into(), serde_json::Value::String(profile_name));
-    doc.insert("hash1".into(), serde_json::Value::String(hash1_str));
-    doc.insert("hash2".into(), serde_json::Value::String(hash2_str));
+    let mut doc = oracle_envelope("diff", detection);
     doc.insert("result".into(), serde_json::Value::Array(result_items));
     doc.insert("summary".into(), serde_json::Value::Object(summary));
 
@@ -1237,9 +1471,7 @@ fn cmd_oracle_image(
     node_path: &str,
     format_opt: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use sha2::{Digest, Sha256};
     use wz_core::WzArchive;
-    use wz_image::{TextureDecoder, TextureFormat};
 
     let archive = WzArchive::open(wz_path)?;
     let tree = archive.read_tree()?;
@@ -1259,9 +1491,13 @@ fn cmd_oracle_image(
         (found, &parts[idx + 1..])
     } else {
         // 경로 전체에서 첫 번째 .img 검색 또는 첫 번째 이미지 사용
-        let found = tree.root.entries.iter().find(|e| {
-            e.node_type == wz_core::dirtree::node_type::IMAGE
-        }).cloned().ok_or("WZ 아카이브에 이미지가 없습니다")?;
+        let found = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.node_type == wz_core::dirtree::node_type::IMAGE)
+            .cloned()
+            .ok_or("WZ 아카이브에 이미지가 없습니다")?;
         (found, &parts[..])
     };
 
@@ -1272,58 +1508,34 @@ fn cmd_oracle_image(
     let target_node = find_sub_node(&img_root, sub_path_parts)?;
 
     // 노드에서 PngRef 추출 (현재 노드 또는 첫 번째 Canvas 자식)
-    let png_ref = extract_png_ref(&target_node)
+    let png_ref = extract_png_ref(target_node)
         .ok_or_else(|| format!("경로에서 Canvas/Png 노드를 찾을 수 없습니다: {node_path}"))?;
 
-    // Png 압축 해제 및 디코딩
-    let raw_payload = png_ref.extract_raw_bytes(archive.source())?;
-    let decompressed = TextureDecoder::decompress_zlib(&raw_payload)?;
-
-    let tex_fmt = TextureFormat::from_u32(png_ref.format as u32);
-    let rgba_pixels = match tex_fmt {
-        TextureFormat::Unknown => decompressed,
-        fmt => TextureDecoder::decode_rgba8(
-            fmt,
-            png_ref.width as u32,
-            png_ref.height as u32,
-            &decompressed,
-        )
-        .unwrap_or(decompressed),
-    };
-
     let hash_hex = if format_opt.eq_ignore_ascii_case("sha256") {
-        let mut hasher = Sha256::new();
-        hasher.update(&rgba_pixels);
-        format!("{:x}", hasher.finalize())
+        compute_png_ref_sha256(&png_ref, archive.source())?
     } else {
-        format!("len:{}", rgba_pixels.len())
+        let raw_payload = png_ref.extract_raw_bytes(archive.source())?;
+        let decompressed = wz_image::decompress_zlib(&raw_payload)?;
+        format!("len:{}", decompressed.len())
     };
 
-    let profile_name = format!("{:?}", detection.profile.format);
-    let hash1_str = detection
-        .detected
-        .hash1
-        .map(|h| format!("{:#010x}", h))
-        .unwrap_or_else(|| "0x00000000".into());
-    let hash2_str = detection
-        .detected
-        .hash2
-        .map(|h| format!("{:#010x}", h))
-        .unwrap_or_else(|| "0x00000000".into());
-
-    let mut doc = serde_json::Map::new();
-    doc.insert("schema_version".into(), serde_json::Value::Number(1.into()));
-    doc.insert("op".into(), serde_json::Value::String("image".into()));
-    doc.insert("profile".into(), serde_json::Value::String(profile_name));
-    doc.insert("hash1".into(), serde_json::Value::String(hash1_str));
-    doc.insert("hash2".into(), serde_json::Value::String(hash2_str));
+    let mut doc = oracle_envelope("image", detection);
 
     let mut res = serde_json::Map::new();
     res.insert("w".into(), serde_json::Value::Number(png_ref.width.into()));
     res.insert("h".into(), serde_json::Value::Number(png_ref.height.into()));
-    res.insert("format".into(), serde_json::Value::Number(png_ref.format.into()));
-    res.insert("scale".into(), serde_json::Value::Number(png_ref.scale.into()));
-    res.insert("pages".into(), serde_json::Value::Number(png_ref.pages.into()));
+    res.insert(
+        "format".into(),
+        serde_json::Value::Number(png_ref.format.into()),
+    );
+    res.insert(
+        "scale".into(),
+        serde_json::Value::Number(png_ref.scale.into()),
+    );
+    res.insert(
+        "pages".into(),
+        serde_json::Value::Number(png_ref.pages.into()),
+    );
     res.insert("sha256".into(), serde_json::Value::String(hash_hex));
     doc.insert("result".into(), serde_json::Value::Object(res));
 
@@ -1336,13 +1548,21 @@ fn find_image_entry_in_dirtree(
     img_name: &str,
 ) -> Option<wz_core::dirtree::RawEntry> {
     for e in &tree.root.entries {
-        if e.name.as_deref().map(|s| s.eq_ignore_ascii_case(img_name)).unwrap_or(false) {
+        if e.name
+            .as_deref()
+            .map(|s| s.eq_ignore_ascii_case(img_name))
+            .unwrap_or(false)
+        {
             return Some(e.clone());
         }
     }
     for b in &tree.blocks {
         for e in &b.entries {
-            if e.name.as_deref().map(|s| s.eq_ignore_ascii_case(img_name)).unwrap_or(false) {
+            if e.name
+                .as_deref()
+                .map(|s| s.eq_ignore_ascii_case(img_name))
+                .unwrap_or(false)
+            {
                 return Some(e.clone());
             }
         }
@@ -1396,25 +1616,26 @@ mod tests {
     fn test_oracle_dirtree_json_schema() {
         use wz_core::dirtree::{DirBlock, DirTree, RawEntry};
 
-        let mut entries = Vec::new();
-        entries.push(RawEntry {
-            node_type: wz_core::dirtree::node_type::DIRECTORY,
-            name: Some("SubDir".into()),
-            name_ref: None,
-            data_len: 0,
-            cs32: 0,
-            file_pos: 100,
-            offset: Some(100),
-        });
-        entries.push(RawEntry {
-            node_type: wz_core::dirtree::node_type::IMAGE,
-            name: Some("00002000.img".into()),
-            name_ref: None,
-            data_len: 1234,
-            cs32: 5678,
-            file_pos: 200,
-            offset: Some(200),
-        });
+        let entries = vec![
+            RawEntry {
+                node_type: wz_core::dirtree::node_type::DIRECTORY,
+                name: Some("SubDir".into()),
+                name_ref: None,
+                data_len: 0,
+                cs32: 0,
+                file_pos: 100,
+                offset: Some(100),
+            },
+            RawEntry {
+                node_type: wz_core::dirtree::node_type::IMAGE,
+                name: Some("00002000.img".into()),
+                name_ref: None,
+                data_len: 1234,
+                cs32: 5678,
+                file_pos: 200,
+                offset: Some(200),
+            },
+        ];
 
         let sub_entries = vec![RawEntry {
             node_type: wz_core::dirtree::node_type::IMAGE,
@@ -1428,7 +1649,9 @@ mod tests {
 
         let tree = DirTree {
             root: DirBlock { entries },
-            blocks: vec![DirBlock { entries: sub_entries }],
+            blocks: vec![DirBlock {
+                entries: sub_entries,
+            }],
         };
 
         let mut node_count = 0;

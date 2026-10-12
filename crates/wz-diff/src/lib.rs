@@ -16,6 +16,32 @@ pub struct DiffItem {
     pub path: String,
     pub diff_type: DiffType,
     pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub old_value: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub new_value: Option<String>,
+}
+
+fn format_node_value(val: Option<&wz_db::NodeValue>) -> Option<String> {
+    use wz_db::NodeValue;
+    match val? {
+        NodeValue::Null => None,
+        NodeValue::Short(v) => Some(v.to_string()),
+        NodeValue::Int(v) => Some(v.to_string()),
+        NodeValue::Long(v) => Some(v.to_string()),
+        NodeValue::Uint(v) => Some(v.to_string()),
+        NodeValue::Float(v) => Some(format!("{v}")),
+        NodeValue::Double(v) => Some(format!("{v}")),
+        NodeValue::Bool(v) => Some(v.to_string()),
+        NodeValue::Str(s) => Some(s.to_string()),
+        NodeValue::Uol(s) => Some(s.to_string()),
+        NodeValue::Vector(v) => Some(format!("{},{}", v.x, v.y)),
+        NodeValue::Canvas(p) => Some(format!("{}x{}@{}", p.width, p.height, p.format)),
+        NodeValue::RawData(r) => Some(format!("raw:{}", r.len)),
+        NodeValue::Video(v) => Some(format!("video:{}", v.len)),
+        NodeValue::Sound(s) => Some(format!("sound:{}", s.data_len)),
+        NodeValue::Convex(pts) => Some(format!("convex:{}", pts.len())),
+    }
 }
 
 /// High-performance tree comparator
@@ -71,6 +97,45 @@ impl DiffEngine {
         )
     }
 
+    /// Compare two full `WzArchive` instances, expanding `.img` entries when parseable.
+    pub fn diff_archives(
+        old_archive: &wz_core::WzArchive,
+        old_tree: &wz_core::dirtree::DirTree,
+        new_archive: &wz_core::WzArchive,
+        new_tree: &wz_core::dirtree::DirTree,
+        root_name: &str,
+    ) -> Vec<DiffItem> {
+        let (old_arena, old_root) = Self::archive_to_arena(old_archive, old_tree, root_name);
+        let (new_arena, new_root) = Self::archive_to_arena(new_archive, new_tree, root_name);
+        Self::diff_arena_nodes(
+            &old_arena,
+            &new_arena,
+            Some(old_root),
+            Some(new_root),
+            root_name,
+        )
+    }
+
+    /// Converts a `WzArchive` and its `DirTree` into an `Arena`, expanding `.img` subtrees.
+    pub fn archive_to_arena(
+        archive: &wz_core::WzArchive,
+        tree: &wz_core::dirtree::DirTree,
+        root_name: &str,
+    ) -> (Arena, NodeId) {
+        let mut arena = Arena::with_root(root_name);
+        let root = arena.root();
+        let mut block_cursor = 0;
+        Self::ingest_dir_block(
+            &mut arena,
+            root,
+            &tree.root,
+            &tree.blocks,
+            &mut block_cursor,
+            Some(archive),
+        );
+        (arena, root)
+    }
+
     /// Converts a `DirTree` into a hierarchical `Arena` representation.
     pub fn dirtree_to_arena(tree: &wz_core::dirtree::DirTree, root_name: &str) -> (Arena, NodeId) {
         let mut arena = Arena::with_root(root_name);
@@ -82,6 +147,7 @@ impl DiffEngine {
             &tree.root,
             &tree.blocks,
             &mut block_cursor,
+            None,
         );
         (arena, root)
     }
@@ -92,6 +158,7 @@ impl DiffEngine {
         block: &wz_core::dirtree::DirBlock,
         blocks: &[wz_core::dirtree::DirBlock],
         block_cursor: &mut usize,
+        archive: Option<&wz_core::WzArchive>,
     ) {
         use wz_core::dirtree::node_type;
         use wz_db::NodeValue;
@@ -101,10 +168,26 @@ impl DiffEngine {
                 let dir_id = arena.add_node(parent, name, None);
                 if let Some(sub_block) = blocks.get(*block_cursor) {
                     *block_cursor += 1;
-                    Self::ingest_dir_block(arena, dir_id, sub_block, blocks, block_cursor);
+                    Self::ingest_dir_block(arena, dir_id, sub_block, blocks, block_cursor, archive);
                 }
             } else {
-                arena.add_node(parent, name, Some(NodeValue::Int(e.data_len)));
+                let parsed_img = archive.and_then(|arch| {
+                    let off = e.offset?;
+                    arch.parse_image_at(off).ok()
+                });
+                if let Some(img_root) = parsed_img {
+                    let img_id = arena.add_node(parent, name, None);
+                    if let Some(wz_core::image::ImageValue::Property(inner)) = &img_root.value {
+                        for ch in &inner.children {
+                            arena.ingest(img_id, ch);
+                        }
+                    }
+                    for ch in &img_root.children {
+                        arena.ingest(img_id, ch);
+                    }
+                } else {
+                    arena.add_node(parent, name, Some(NodeValue::Int(e.data_len)));
+                }
             }
         }
     }
@@ -116,17 +199,28 @@ impl DiffEngine {
         diff_type: DiffType,
         path: &str,
     ) -> Vec<DiffItem> {
-        let desc = match diff_type {
-            DiffType::Append => format!("Added node: {}", path),
-            DiffType::Delete => format!("Deleted node: {}", path),
-            DiffType::Changed => format!("Modified value at {}", path),
+        let val_str = format_node_value(arena.value(id));
+        let (desc, old_value, new_value) = match diff_type {
+            DiffType::Append => (format!("Added node: {}", path), None, val_str),
+            DiffType::Delete => (format!("Deleted node: {}", path), val_str, None),
+            DiffType::Changed => (
+                format!("Modified value at {}", path),
+                val_str.clone(),
+                val_str,
+            ),
         };
         let mut items = vec![DiffItem {
             path: path.to_string(),
             diff_type,
             description: desc,
+            old_value,
+            new_value,
         }];
-        for &cid in arena.children(id) {
+        let mut child_ids: Vec<NodeId> = arena.children(id).to_vec();
+        child_ids.sort_by(|&a, &b| {
+            wz_core::text::natural_cmp(arena.name(a).unwrap_or(""), arena.name(b).unwrap_or(""))
+        });
+        for cid in child_ids {
             if let Some(c_name) = arena.name(cid) {
                 let subpath = if path.is_empty() {
                     c_name.to_string()
@@ -160,6 +254,8 @@ impl DiffEngine {
                         path: path.to_string(),
                         diff_type: DiffType::Changed,
                         description: format!("Modified value at {}", path),
+                        old_value: format_node_value(o_val),
+                        new_value: format_node_value(n_val),
                     });
                 }
 
@@ -177,6 +273,7 @@ impl DiffEngine {
 
                 collect_names(old_arena, oid, &mut child_names);
                 collect_names(new_arena, nid, &mut child_names);
+                child_names.sort_by(|a, b| wz_core::text::natural_cmp(a, b));
 
                 for name in child_names {
                     let o_child = old_arena.find_child(oid, name);

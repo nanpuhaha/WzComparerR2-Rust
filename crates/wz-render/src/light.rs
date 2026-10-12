@@ -6,7 +6,7 @@
 //! 정점 색상(Vertex Color RGBA)의 선형 감쇠 및 메시 합성으로 구현된다 (`LightRenderer.cs:18`).
 //! 따라서 추가 셰이더 비용 없이 기존 `SpriteVertex`의 `color` 필드를 통해 효율적으로 렌더링된다.
 
-use crate::batch::{SpriteBatch, SpriteVertex};
+use crate::batch::{BlendMode, SpriteBatch, SpriteVertex};
 use crate::GpuKey;
 
 /// 점광원(Point Light) 정의.
@@ -121,8 +121,8 @@ impl LightMap {
             return;
         }
 
-        let center_idx = batch.vertices.len() as u32;
-        batch.vertices.push(SpriteVertex::new(
+        let mut verts = Vec::with_capacity((segments + 1) as usize);
+        verts.push(SpriteVertex::new(
             light.pos,
             z,
             [0.5, 0.5],
@@ -136,7 +136,7 @@ impl LightMap {
             let theta = i as f32 * angle_step;
             let px = light.pos[0] + light.outer_radius * theta.cos();
             let py = light.pos[1] + light.outer_radius * theta.sin();
-            batch.vertices.push(SpriteVertex::new(
+            verts.push(SpriteVertex::new(
                 [px, py],
                 z,
                 [0.5, 0.5],
@@ -144,13 +144,14 @@ impl LightMap {
             ));
         }
 
+        let mut local_indices = Vec::with_capacity((segments * 3) as usize);
         for i in 0..segments {
-            let current = center_idx + 1 + i;
-            let next = center_idx + 1 + ((i + 1) % segments);
-            batch.indices.extend_from_slice(&[center_idx, current, next]);
+            let current = 1 + i;
+            let next = 1 + ((i + 1) % segments);
+            local_indices.extend_from_slice(&[0, current, next]);
         }
 
-        batch.push_quad(white_texture, [0.0, 0.0, 0.0, 0.0], z, [0.0; 4], [0.0; 4]);
+        batch.push_triangles(white_texture, BlendMode::Additive, &verts, &local_indices);
     }
 }
 
@@ -192,5 +193,22 @@ mod tests {
         // 빛 영향권 밖에서는 앰비언트(0.2)만 남음
         let evaluated_far = lightmap.evaluate_color([100.0, 100.0], [1.0, 1.0, 1.0, 1.0]);
         assert!((evaluated_far[0] - 0.2).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_append_light_disk_records_draw_command() {
+        let lightmap = LightMap::new([0.2, 0.2, 0.2, 1.0]);
+        let light = LightSource::new([50.0, 50.0], 10.0, 40.0, [1.0, 0.9, 0.5, 1.0]);
+        let mut batch = SpriteBatch::new();
+        lightmap.append_light_disk(&mut batch, GpuKey(7), &light, 8, 0.0);
+        batch.finish();
+
+        assert_eq!(batch.vertices.len(), 9); // 중심 1 + 둘레 8
+        assert_eq!(batch.indices.len(), 24); // 삼각형 8 * 3
+        assert_eq!(batch.commands.len(), 1);
+        assert_eq!(batch.commands[0].texture_key, GpuKey(7));
+        assert_eq!(batch.commands[0].blend_mode, BlendMode::Additive);
+        assert_eq!(batch.commands[0].index_start, 0);
+        assert_eq!(batch.commands[0].index_count, 24);
     }
 }

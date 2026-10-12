@@ -8,16 +8,18 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::batch::{SpriteBatch, SpriteVertex};
+use crate::batch::{BlendMode, SpriteBatch, SpriteVertex};
 use crate::camera::SpriteUniformsGpu;
 use crate::shader::{assemble, WgslModule};
 use crate::GpuKey;
 
 /// WGPU GPU 컨텍스트 래퍼.
 pub struct RenderContext {
-    pub device: Arc<wgpu::Device>,
-    pub queue: Arc<wgpu::Queue>,
-    pipeline: wgpu::RenderPipeline,
+    pub(crate) device: Arc<wgpu::Device>,
+    pub(crate) queue: Arc<wgpu::Queue>,
+    pipeline_alpha: wgpu::RenderPipeline,
+    pipeline_additive: wgpu::RenderPipeline,
+    pipeline_opaque: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     uniform_buffer: wgpu::Buffer,
@@ -140,40 +142,59 @@ impl RenderContext {
             source: wgpu::ShaderSource::Wgsl(fs_src.into()),
         });
 
-        // 6. 렌더 파이프라인 (RGBA8UnormSrgb 타깃, 알파 블렌딩)
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("sprite_render_pipeline"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &vs_module,
-                entry_point: Some("vs_main"),
-                buffers: &[Some(SpriteVertex::LAYOUT)],
-                compilation_options: Default::default(),
+        let create_pipeline = |label: &str, blend: Option<wgpu::BlendState>| {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some(label),
+                layout: Some(&pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &vs_module,
+                    entry_point: Some("vs_main"),
+                    buffers: &[Some(SpriteVertex::LAYOUT)],
+                    compilation_options: Default::default(),
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &fs_module,
+                    entry_point: Some("fs_main"),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                        blend,
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                    compilation_options: Default::default(),
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: None,
+                    unclipped_depth: false,
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                multiview_mask: None,
+                cache: None,
+            })
+        };
+
+        // 6. 렌더 파이프라인 (알파 블렌딩 / 가산 블렌딩 / 불투명)
+        let pipeline_alpha =
+            create_pipeline("sprite_pipeline_alpha", Some(wgpu::BlendState::ALPHA_BLENDING));
+        let additive_blend = wgpu::BlendState {
+            color: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::SrcAlpha,
+                dst_factor: wgpu::BlendFactor::One,
+                operation: wgpu::BlendOperation::Add,
             },
-            fragment: Some(wgpu::FragmentState {
-                module: &fs_module,
-                entry_point: Some("fs_main"),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
-                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-                compilation_options: Default::default(),
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: None,
-                unclipped_depth: false,
-                polygon_mode: wgpu::PolygonMode::Fill,
-                conservative: false,
+            alpha: wgpu::BlendComponent {
+                src_factor: wgpu::BlendFactor::One,
+                dst_factor: wgpu::BlendFactor::One,
+                operation: wgpu::BlendOperation::Add,
             },
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            multiview_mask: None,
-            cache: None,
-        });
+        };
+        let pipeline_additive = create_pipeline("sprite_pipeline_additive", Some(additive_blend));
+        let pipeline_opaque = create_pipeline("sprite_pipeline_opaque", None);
 
         // 7. 기본 동적 정점/인덱스 버퍼 (초기 64KB)
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -204,7 +225,9 @@ impl RenderContext {
         Ok(Self {
             device,
             queue,
-            pipeline,
+            pipeline_alpha,
+            pipeline_additive,
+            pipeline_opaque,
             vertex_buffer,
             index_buffer,
             uniform_buffer,
@@ -258,13 +281,25 @@ impl RenderContext {
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        // Light ps 용 기본 더미 유니폼 버퍼 (112 바이트)
+        // Light ps 용 기본 중립(White) 유니폼 버퍼 (112 바이트)
+        // offset 48..64: top_color = vec4(1.0, 1.0, 1.0, 1.0)
+        // offset 64..80: bottom_color = vec4(1.0, 1.0, 1.0, 1.0)
+        // offset 80..84: min_y = 0.0, offset 84..88: max_y = 1.0
+        let mut default_light_uniform = [0u8; 112];
+        for i in 0..8 {
+            let offset = 48 + i * 4;
+            default_light_uniform[offset..offset + 4].copy_from_slice(&1.0f32.to_le_bytes());
+        }
+        default_light_uniform[84..88].copy_from_slice(&1.0f32.to_le_bytes());
+
         let light_uniform_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("light_dummy_uniform"),
+            label: Some("light_neutral_uniform"),
             size: 112,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
+        self.queue
+            .write_buffer(&light_uniform_buffer, 0, &default_light_uniform);
 
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("sprite_texture_bind_group"),
@@ -290,7 +325,7 @@ impl RenderContext {
     }
 
     /// 배치 렌더링을 렌더 패스에 기록.
-    pub fn render_batch<'a>(
+    pub(crate) fn render_batch<'a>(
         &'a self,
         render_pass: &mut wgpu::RenderPass<'a>,
         batch: &'a SpriteBatch,
@@ -299,13 +334,18 @@ impl RenderContext {
             return;
         }
 
-        render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
 
         for cmd in &batch.commands {
             if let Some((_, _, bind_group)) = self.textures.get(&cmd.texture_key) {
+                let pipeline = match cmd.blend_mode {
+                    BlendMode::Alpha => &self.pipeline_alpha,
+                    BlendMode::Additive => &self.pipeline_additive,
+                    BlendMode::Opaque => &self.pipeline_opaque,
+                };
+                render_pass.set_pipeline(pipeline);
                 render_pass.set_bind_group(1, bind_group, &[]);
                 let end = cmd.index_start + cmd.index_count;
                 render_pass.draw_indexed(cmd.index_start..end, 0, 0..1);
@@ -497,18 +537,40 @@ mod tests {
     fn test_render_to_rgba_readback() {
         match RenderContext::new_headless() {
             Ok(mut ctx) => {
-                let batch = SpriteBatch::new();
-                let clear_color = [0.2, 0.4, 0.6, 1.0];
-                let width = 64;
-                let height = 64;
+                // 4x4 순수 빨간색(255, 0, 0, 255) 텍스처 등록
+                let mut red_tex = Vec::with_capacity(4 * 4 * 4);
+                for _ in 0..16 {
+                    red_tex.extend_from_slice(&[255, 0, 0, 255]);
+                }
+                ctx.create_texture(GpuKey(0), 4, 4, &red_tex)
+                    .expect("create red texture");
+
+                let mut batch = SpriteBatch::new();
+                // 카메라 중심(0, 0)을 덮는 64x64 쿼드 배치
+                batch.push_quad(
+                    GpuKey(0),
+                    [-32.0, -32.0, 64.0, 64.0],
+                    0.0,
+                    [0.0, 0.0, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0],
+                );
+                batch.finish();
+
+                let clear_color = [0.0, 0.0, 0.0, 1.0];
+                let width = 16;
+                let height = 16;
                 let camera = crate::Camera2D::new(width as f32, height as f32);
                 let uniforms = camera.build_uniforms(0.0, 0.0);
-                let res = ctx.render_to_rgba(width, height, &batch, &uniforms, clear_color);
-                assert!(res.is_ok());
-                let pixels = res.unwrap();
+                let pixels = ctx
+                    .render_to_rgba(width, height, &batch, &uniforms, clear_color)
+                    .expect("render_to_rgba");
                 assert_eq!(pixels.len(), (width * height * 4) as usize);
-                // 첫 픽셀의 RGBA 값 확인 (0.2, 0.4, 0.6, 1.0 -> ~51, ~102, ~153, 255)
-                assert!(pixels[3] >= 250); // Alpha ~ 255
+                // 중앙 픽셀이 검은색(0)이 아닌 빨간색(~255, 0, 0, 255)으로 렌더링되었는지 확인
+                let center_idx = ((height / 2 * width + width / 2) * 4) as usize;
+                assert!(pixels[center_idx] >= 250, "R channel should be ~255, got {}", pixels[center_idx]);
+                assert_eq!(pixels[center_idx + 1], 0);
+                assert_eq!(pixels[center_idx + 2], 0);
+                assert!(pixels[center_idx + 3] >= 250);
             }
             Err(e) => {
                 eprintln!("GPU Headless 초기화 스킵 (어댑터 없음): {e}");
