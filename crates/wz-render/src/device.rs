@@ -344,6 +344,133 @@ impl RenderContext {
             self.queue.write_buffer(&self.index_buffer, 0, idx_bytes);
         }
     }
+
+    /// 오프스크린 텍스처로 배치를 렌더링하고 RGBA8 픽셀 버퍼로 리드백한다.
+    pub fn render_to_rgba(
+        &mut self,
+        width: u32,
+        height: u32,
+        batch: &SpriteBatch,
+        uniforms: &SpriteUniformsGpu,
+        clear_color: [f64; 4],
+    ) -> Result<Vec<u8>, String> {
+        self.update_buffers(uniforms, batch);
+
+        let texture_desc = wgpu::TextureDescriptor {
+            label: Some("offscreen_target_texture"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        };
+        let target_texture = self.device.create_texture(&texture_desc);
+        let target_view = target_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        // wgpu 리드백 버퍼 정렬 (256 바이트 정렬)
+        let unaligned_bytes_per_row = width * 4;
+        let align = 256;
+        let bytes_per_row = (unaligned_bytes_per_row + align - 1) & !(align - 1);
+        let buffer_size = (bytes_per_row * height) as u64;
+
+        let staging_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("staging_readback_buffer"),
+            size: buffer_size,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("offscreen_render_encoder"),
+            });
+
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("offscreen_render_pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &target_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: clear_color[0],
+                            g: clear_color[1],
+                            b: clear_color[2],
+                            a: clear_color[3],
+                        }),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+
+            self.render_batch(&mut render_pass, batch);
+        }
+
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture: &target_texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &staging_buffer,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(bytes_per_row),
+                    rows_per_image: Some(height),
+                },
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        self.queue.submit(Some(encoder.finish()));
+
+        // GPU 버퍼 맵핑 및 CPU 복사
+        let slice = staging_buffer.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |res| {
+            let _ = tx.send(res);
+        });
+        self.device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|e| format!("{e:?}"))?;
+        rx.recv()
+            .map_err(|e| format!("Map buffer recv error: {e:?}"))?
+            .map_err(|e| format!("Map buffer error: {e:?}"))?;
+
+        let mapped = slice
+            .get_mapped_range()
+            .map_err(|e| format!("{e:?}"))?;
+        let mut pixels = Vec::with_capacity((width * height * 4) as usize);
+
+        for row in 0..height {
+            let start = (row * bytes_per_row) as usize;
+            let end = start + (width * 4) as usize;
+            pixels.extend_from_slice(&mapped[start..end]);
+        }
+
+        drop(mapped);
+        staging_buffer.unmap();
+
+        Ok(pixels)
+    }
 }
 
 #[cfg(test)]
@@ -361,6 +488,29 @@ mod tests {
             }
             Err(e) => {
                 // CI나 GPU 드라이버가 없는 환경에서의 안전한 스킵 처리
+                eprintln!("GPU Headless 초기화 스킵 (어댑터 없음): {e}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_render_to_rgba_readback() {
+        match RenderContext::new_headless() {
+            Ok(mut ctx) => {
+                let batch = SpriteBatch::new();
+                let clear_color = [0.2, 0.4, 0.6, 1.0];
+                let width = 64;
+                let height = 64;
+                let camera = crate::Camera2D::new(width as f32, height as f32);
+                let uniforms = camera.build_uniforms(0.0, 0.0);
+                let res = ctx.render_to_rgba(width, height, &batch, &uniforms, clear_color);
+                assert!(res.is_ok());
+                let pixels = res.unwrap();
+                assert_eq!(pixels.len(), (width * height * 4) as usize);
+                // 첫 픽셀의 RGBA 값 확인 (0.2, 0.4, 0.6, 1.0 -> ~51, ~102, ~153, 255)
+                assert!(pixels[3] >= 250); // Alpha ~ 255
+            }
+            Err(e) => {
                 eprintln!("GPU Headless 초기화 스킵 (어댑터 없음): {e}");
             }
         }

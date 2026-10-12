@@ -158,6 +158,10 @@ enum Command {
         /// 아바타 합성 배치 및 렌더링 파이프라인 검증 (오프스크린 렌더)
         #[arg(long)]
         render: bool,
+
+        /// 오프스크린 렌더링된 결과를 파일로 저장 (예: output.rgba 또는 output.raw)
+        #[arg(long, short = 'o')]
+        output: Option<PathBuf>,
     },
 }
 
@@ -189,7 +193,7 @@ fn main() {
             json,
         } => cmd_diff(&old_wz, &new_wz, old_offset, new_offset, json),
         Command::Dump { wz, offset, json } => cmd_dump(&wz, offset, json),
-        Command::Avatar { demo, render } => cmd_avatar(demo, render),
+        Command::Avatar { demo, render, output } => cmd_avatar(demo, render, output),
     };
 
     if let Err(e) = result {
@@ -790,7 +794,11 @@ fn cmd_dump(
     Ok(())
 }
 
-fn cmd_avatar(demo: bool, render: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn cmd_avatar(
+    demo: bool,
+    render: bool,
+    output: Option<PathBuf>,
+) -> Result<(), Box<dyn std::error::Error>> {
     use std::sync::Arc;
     use wz_avatar::{AvatarSlot, Bone, Point, SkinLayer, ZMap};
 
@@ -845,7 +853,8 @@ fn cmd_avatar(demo: bool, render: bool) -> Result<(), Box<dyn std::error::Error>
         );
     }
 
-    if render {
+    let should_render = render || output.is_some();
+    if should_render {
         println!();
         println!("=== wz-render GPU 오프스크린 렌더 파이프라인 검증 ===");
         let mut packer = wz_render::AtlasShelfPacker::new(512, 512);
@@ -857,7 +866,9 @@ fn cmd_avatar(demo: bool, render: bool) -> Result<(), Box<dyn std::error::Error>
             slot.key.0, slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h
         );
 
-        let camera = wz_render::Camera2D::new(800.0, 600.0);
+        let render_w = 256u32;
+        let render_h = 256u32;
+        let camera = wz_render::Camera2D::new(render_w as f32, render_h as f32);
         let uniforms = camera.build_uniforms(0.0, 0.0);
         println!(
             "2D 직교 카메라 유니폼 생성 완료: 뷰포트 [{}, {}], 줌 {}",
@@ -868,7 +879,7 @@ fn cmd_avatar(demo: bool, render: bool) -> Result<(), Box<dyn std::error::Error>
         let uv = slot.rect.uv(512, 512);
         sprite_batch.push_quad(
             slot.key,
-            [100.0, 100.0, 64.0, 64.0],
+            [64.0, 64.0, 64.0, 64.0],
             0.0,
             uv,
             [1.0, 1.0, 1.0, 1.0],
@@ -887,6 +898,20 @@ fn cmd_avatar(demo: bool, render: bool) -> Result<(), Box<dyn std::error::Error>
                 ctx.create_texture(slot.key, 64, 64, &dummy_pixels)?;
                 ctx.update_buffers(&uniforms, &sprite_batch);
                 println!("wgpu 렌더 컨텍스트 초기화 및 GPU 버퍼/텍스처 업로드 성공 (Headless)");
+
+                let clear_color = [0.1, 0.1, 0.15, 1.0];
+                let pixels = ctx.render_to_rgba(render_w, render_h, &sprite_batch, &uniforms, clear_color)?;
+                println!(
+                    "오프스크린 렌더링 및 픽셀 리드백 성공: {}x{} (총 {} 바이트)",
+                    render_w,
+                    render_h,
+                    pixels.len()
+                );
+
+                if let Some(out_path) = output {
+                    std::fs::write(&out_path, &pixels)?;
+                    println!("렌더링된 RGBA 원시 버퍼 저장 완료: {}", out_path.display());
+                }
             }
             Err(e) => {
                 println!("(안내) 호환되는 GPU 어댑터가 없는 환경이므로 실제 디바이스 생성을 건너뜁니다: {e}");
