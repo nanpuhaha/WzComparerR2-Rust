@@ -903,15 +903,42 @@ fn cmd_avatar(
     let should_render = render || output.is_some();
     if should_render {
         println!();
-        println!("=== wz-render GPU 오프스크린 렌더 파이프라인 검증 ===");
-        let mut packer = wz_render::AtlasShelfPacker::new(512, 512);
-        let slot = packer
-            .allocate(64, 64)
-            .ok_or("아틀라스 텍스처 슬롯 할당 실패")?;
-        println!(
-            "아틀라스 할당 성공: GpuKey({}), Rect [x:{}, y:{}, w:{}, h:{}]",
-            slot.key.0, slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h
-        );
+        println!("=== wz-render 아바타 스프라이트 배치 및 오프스크린 렌더 ===");
+        let layers = scene.canvas.generate_layers(&root);
+
+        let atlas_w = 512u32;
+        let atlas_h = 512u32;
+        let mut packer = wz_render::AtlasShelfPacker::new(atlas_w, atlas_h);
+
+        // 레이어별 아틀라스 슬롯 할당 및 더미/실제 픽셀 준비
+        let mut layer_slots = Vec::new();
+        let mut layer_pixels = Vec::new();
+
+        for layer in &layers {
+            let lw = (layer.width.max(1)) as u32;
+            let lh = (layer.height.max(1)) as u32;
+            let slot = packer
+                .allocate(lw, lh)
+                .ok_or("아틀라스 텍스처 슬롯 할당 실패")?;
+            println!(
+                "레이어 '{}' [{}x{}] -> 아틀라스 할당: GpuKey({}), Rect [x:{}, y:{}, w:{}, h:{}]",
+                layer.name, lw, lh, slot.key.0, slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h
+            );
+
+            // 레이어별 시각적 구분을 위한 색상 RGBA 픽셀 생성 (body: 살색, head: 갈색 등)
+            let color = match layer.name.as_str() {
+                "body" => [240u8, 200, 160, 255],
+                "head" => [180u8, 120, 80, 255],
+                _ => [220u8, 220, 220, 255],
+            };
+            let mut pixels = Vec::with_capacity((lw * lh * 4) as usize);
+            for _ in 0..(lw * lh) {
+                pixels.extend_from_slice(&color);
+            }
+
+            layer_slots.push((slot, lw, lh));
+            layer_pixels.push(pixels);
+        }
 
         let render_w = 256u32;
         let render_h = 256u32;
@@ -923,17 +950,25 @@ fn cmd_avatar(
         );
 
         let mut sprite_batch = wz_render::SpriteBatch::new();
-        let uv = slot.rect.uv(512, 512);
-        sprite_batch.push_quad(
-            slot.key,
-            [64.0, 64.0, 64.0, 64.0],
-            0.0,
-            uv,
-            [1.0, 1.0, 1.0, 1.0],
-        );
+        for (i, layer) in layers.iter().enumerate() {
+            let (slot, lw, lh) = &layer_slots[i];
+            let uv = slot.rect.uv(atlas_w, atlas_h);
+            // 아바타 캔버스 원점(화면 중앙 기준 오프셋 배치)
+            let screen_x = (render_w as f32 * 0.5) + layer.position.x as f32;
+            let screen_y = (render_h as f32 * 0.5) + layer.position.y as f32;
+
+            sprite_batch.push_quad(
+                slot.key,
+                [screen_x, screen_y, *lw as f32, *lh as f32],
+                0.0,
+                uv,
+                [1.0, 1.0, 1.0, 1.0],
+            );
+        }
         sprite_batch.finish();
+
         println!(
-            "스프라이트 배치 빌드 완료: 정점 {}개, 인덱스 {}개, 드로우 커맨드 {}개",
+            "아바타 스프라이트 배치 빌드 완료: 정점 {}개, 인덱스 {}개, 드로우 커맨드 {}개",
             sprite_batch.vertices.len(),
             sprite_batch.indices.len(),
             sprite_batch.commands.len()
@@ -941,12 +976,13 @@ fn cmd_avatar(
 
         match wz_render::RenderContext::new_headless() {
             Ok(mut ctx) => {
-                let dummy_pixels = vec![255u8; 64 * 64 * 4];
-                ctx.create_texture(slot.key, 64, 64, &dummy_pixels)?;
+                for (i, (slot, lw, lh)) in layer_slots.iter().enumerate() {
+                    ctx.create_texture(slot.key, *lw, *lh, &layer_pixels[i])?;
+                }
                 ctx.update_buffers(&uniforms, &sprite_batch);
                 println!("wgpu 렌더 컨텍스트 초기화 및 GPU 버퍼/텍스처 업로드 성공 (Headless)");
 
-                let clear_color = [0.1, 0.1, 0.15, 1.0];
+                let clear_color = [0.08, 0.08, 0.12, 1.0];
                 let pixels = ctx.render_to_rgba(render_w, render_h, &sprite_batch, &uniforms, clear_color)?;
                 println!(
                     "오프스크린 렌더링 및 픽셀 리드백 성공: {}x{} (총 {} 바이트)",
@@ -957,7 +993,7 @@ fn cmd_avatar(
 
                 if let Some(out_path) = output {
                     std::fs::write(&out_path, &pixels)?;
-                    println!("렌더링된 RGBA 원시 버퍼 저장 완료: {}", out_path.display());
+                    println!("렌더링된 아바타 RGBA 원시 버퍼 저장 완료: {}", out_path.display());
                 }
             }
             Err(e) => {
