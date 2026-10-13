@@ -253,6 +253,24 @@ enum OracleAction {
         #[arg(long)]
         prop: Option<String>,
     },
+
+    /// Calculator 수식 평가 표준 JSON 덤프
+    Expr {
+        /// 수식 문자열 (예: "u(x/2)+10")
+        #[arg(long)]
+        expr: String,
+
+        /// 인자 목록 (쉼표 구분 f64: x,y,z,w)
+        #[arg(long, default_value = "")]
+        args: String,
+    },
+
+    /// 패치 파일(.patch) 헤더 및 체크섬 검증 표준 JSON 덤프
+    Patch {
+        /// 패치 파일 경로
+        #[arg(long)]
+        patch: PathBuf,
+    },
 }
 
 fn main() {
@@ -1263,6 +1281,8 @@ fn cmd_oracle(action: OracleAction) -> Result<(), Box<dyn std::error::Error>> {
         OracleAction::Image { wz, path, format } => cmd_oracle_image(&wz, &path, &format),
         OracleAction::Tooltip { wz, item } => cmd_oracle_tooltip(&wz, item),
         OracleAction::Stats { wz, gear, prop } => cmd_oracle_stats(&wz, &gear, prop.as_deref()),
+        OracleAction::Expr { expr, args } => cmd_oracle_expr(&expr, &args),
+        OracleAction::Patch { patch } => cmd_oracle_patch(&patch),
     }
 }
 
@@ -1935,6 +1955,71 @@ fn cmd_oracle_stats(
     Ok(())
 }
 
+fn cmd_oracle_expr(
+    expr: &str,
+    args_str: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<f64> = if args_str.trim().is_empty() {
+        Vec::new()
+    } else {
+        args_str
+            .split(',')
+            .filter_map(|s| s.trim().parse::<f64>().ok())
+            .collect()
+    };
+
+    let evaluated = wz_db::evaluate_expression(expr, &args)?;
+
+    let mut doc = serde_json::Map::new();
+    doc.insert("op".into(), serde_json::Value::String("expr".into()));
+    let mut res = serde_json::Map::new();
+    res.insert("expr".into(), serde_json::Value::String(expr.to_string()));
+    if let Some(num) = serde_json::Number::from_f64(evaluated) {
+        res.insert("value".into(), serde_json::Value::Number(num));
+    } else {
+        res.insert("value".into(), serde_json::Value::Null);
+    }
+    doc.insert("result".into(), serde_json::Value::Object(res));
+
+    println!("{}", serde_json::to_string_pretty(&doc)?);
+    Ok(())
+}
+
+fn cmd_oracle_patch(
+    patch_path: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use std::sync::Arc;
+    use wz_core::patch::PatchHeader;
+
+    let src: Arc<dyn wz_pool::ByteSource> = wz_pool::open_file(patch_path)?.into();
+    let header = PatchHeader::parse(&src)?;
+
+    let mut doc = serde_json::Map::new();
+    doc.insert("op".into(), serde_json::Value::String("patch".into()));
+    let mut res = serde_json::Map::new();
+    res.insert("version".into(), serde_json::Value::Number(header.version.into()));
+    res.insert(
+        "expected_checksum".into(),
+        serde_json::Value::Number(header.expected_checksum.into()),
+    );
+    res.insert(
+        "computed_checksum".into(),
+        serde_json::Value::Number(header.computed_checksum.into()),
+    );
+    res.insert("is_valid".into(), serde_json::Value::Bool(header.is_valid));
+    res.insert(
+        "compressed_len".into(),
+        serde_json::Value::Number(header.compressed_len.into()),
+    );
+    if let Some(notice) = header.notice_text {
+        res.insert("notice".into(), serde_json::Value::String(notice));
+    }
+    doc.insert("result".into(), serde_json::Value::Object(res));
+
+    println!("{}", serde_json::to_string_pretty(&doc)?);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2054,6 +2139,12 @@ mod tests {
         let stats = extract_gear_stats_from_node(&root);
         assert_eq!(stats["incSTR"], 420);
         assert_eq!(stats["reqLevel"], 200);
+    }
+
+    #[test]
+    fn test_oracle_expr_evaluation() {
+        let res = wz_db::evaluate_expression("u(x / 2) + 10", &[15.0]).expect("valid expr");
+        assert_eq!(res, 18.0);
     }
 }
 

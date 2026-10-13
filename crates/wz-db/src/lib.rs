@@ -21,6 +21,8 @@
 //!   한 벌로 통합한다.
 
 pub mod arena;
+pub mod calc;
+pub mod chara_prop;
 pub mod linker;
 pub mod node;
 pub mod query;
@@ -30,6 +32,8 @@ pub mod resolve;
 mod tests;
 
 pub use arena::Arena;
+pub use calc::{evaluate_expression, CalcError};
+pub use chara_prop::CharaProp;
 pub use linker::{extract_gear_stats, StringLinker, StringResult};
 pub use node::{NodeId, NodeValue, RawDataRef};
 pub use query::{

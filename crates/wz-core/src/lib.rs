@@ -31,6 +31,7 @@ pub mod detect;
 pub mod detect_version;
 pub mod image;
 pub mod offset;
+pub mod patch;
 pub mod profile;
 pub mod read;
 pub mod text;
@@ -40,6 +41,7 @@ pub use image::{ImageParser, ImageValue, Node, PngRef, Vec2};
 pub use offset::{
     OffsetCalc, Pkg1OffsetCalc, Pkg2OffsetCalc32, Pkg2OffsetCalc64V1, Pkg2OffsetCalc64V2,
 };
+pub use patch::{compute_patch_checksum, PatchHeader, PatchPart, PatchPartType};
 pub use wz_error as error;
 
 #[cfg(test)]
