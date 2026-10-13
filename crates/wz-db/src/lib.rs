@@ -24,6 +24,7 @@ pub mod arena;
 pub mod calc;
 pub mod chara_prop;
 pub mod linker;
+pub mod map;
 pub mod node;
 pub mod query;
 pub mod resolve;
@@ -35,6 +36,9 @@ pub use arena::Arena;
 pub use calc::{evaluate_expression, CalcError};
 pub use chara_prop::CharaProp;
 pub use linker::{extract_gear_stats, StringLinker, StringResult};
+pub use map::{
+    Foothold, LadderRope, MapData, MapInfo, MapLife, MapPortal, MapVirtualRect,
+};
 pub use node::{NodeId, NodeValue, RawDataRef};
 pub use query::{
     execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,
