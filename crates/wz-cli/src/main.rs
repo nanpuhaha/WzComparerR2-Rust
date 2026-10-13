@@ -248,6 +248,10 @@ enum OracleAction {
         /// 장비 ID (예: 01000000)
         #[arg(long)]
         gear: String,
+
+        /// 특정 스탯 프로퍼티 키 (예: incSTR, reqLevel)
+        #[arg(long)]
+        prop: Option<String>,
     },
 }
 
@@ -1102,50 +1106,61 @@ fn oracle_envelope(
     doc
 }
 
-fn parse_prop_filter(spec: &str) -> Option<wz_db::ValueRule> {
-    use wz_db::{QueryValueType, ValueRule};
+fn infer_value_type(pat: &str) -> wz_db::QueryValueType {
+    if pat.parse::<f64>().is_ok() {
+        wz_db::QueryValueType::Number
+    } else if pat.starts_with('(') && pat.ends_with(')') {
+        wz_db::QueryValueType::Vector
+    } else {
+        wz_db::QueryValueType::String
+    }
+}
 
-    let ops: [(&str, u8); 6] = [
-        ("<=", 4),
-        (">=", 5),
-        ("!=", 1),
-        ("==", 0),
-        ("<", 2),
-        (">", 3),
+fn parse_prop_filter(spec: &str) -> Option<wz_db::ValueRule> {
+    use wz_db::{NumericComparisonMode, QueryValueType, StringComparisonMode, ValueRule};
+
+    let ops: [(&str, NumericComparisonMode); 6] = [
+        ("<=", NumericComparisonMode::LessOrEqual),
+        (">=", NumericComparisonMode::GreaterOrEqual),
+        ("!=", NumericComparisonMode::NotEqual),
+        ("==", NumericComparisonMode::Equal),
+        ("<", NumericComparisonMode::LessThan),
+        (">", NumericComparisonMode::GreaterThan),
     ];
-    for (op, cmp_idx) in ops {
+    for (op, num_cmp) in ops {
         if let Some((path, pat)) = spec.split_once(op) {
             let pat = pat.trim();
-            let value_type = if pat.parse::<f64>().is_ok() {
-                QueryValueType::Number
-            } else if pat.starts_with('(') && pat.ends_with(')') {
-                QueryValueType::Vector
-            } else {
-                QueryValueType::String
+            let path = path.trim();
+            let value_type = infer_value_type(pat);
+            return match value_type {
+                QueryValueType::Number => Some(ValueRule::with_numeric(path, num_cmp, pat)),
+                QueryValueType::String => {
+                    let str_cmp = if num_cmp == NumericComparisonMode::Equal {
+                        StringComparisonMode::Equals
+                    } else {
+                        StringComparisonMode::Contains
+                    };
+                    Some(ValueRule::with_string(path, str_cmp, pat))
+                }
+                QueryValueType::Vector => {
+                    Some(ValueRule::with_vector(path, num_cmp == NumericComparisonMode::Equal, pat))
+                }
             };
-            let cmp = if value_type == QueryValueType::String && cmp_idx == 0 {
-                3 // StringComparisonMode::Equals
-            } else {
-                cmp_idx
-            };
-            return Some(ValueRule::new(path.trim(), value_type, cmp, pat));
         }
     }
     if let Some((path, pat)) = spec.split_once('=') {
         let pat = pat.trim();
-        let value_type = if pat.parse::<f64>().is_ok() {
-            QueryValueType::Number
-        } else if pat.starts_with('(') && pat.ends_with(')') {
-            QueryValueType::Vector
-        } else {
-            QueryValueType::String
+        let path = path.trim();
+        let value_type = infer_value_type(pat);
+        return match value_type {
+            QueryValueType::Number => {
+                Some(ValueRule::with_numeric(path, NumericComparisonMode::Equal, pat))
+            }
+            QueryValueType::String => {
+                Some(ValueRule::with_string(path, StringComparisonMode::Equals, pat))
+            }
+            QueryValueType::Vector => Some(ValueRule::with_vector(path, true, pat)),
         };
-        let cmp = if value_type == QueryValueType::String {
-            3 // Equals
-        } else {
-            0 // Equal
-        };
-        return Some(ValueRule::new(path.trim(), value_type, cmp, pat));
     }
     None
 }
@@ -1247,7 +1262,7 @@ fn cmd_oracle(action: OracleAction) -> Result<(), Box<dyn std::error::Error>> {
         OracleAction::Diff { base, r#mod } => cmd_oracle_diff(&base, &r#mod),
         OracleAction::Image { wz, path, format } => cmd_oracle_image(&wz, &path, &format),
         OracleAction::Tooltip { wz, item } => cmd_oracle_tooltip(&wz, item),
-        OracleAction::Stats { wz, gear } => cmd_oracle_stats(&wz, &gear),
+        OracleAction::Stats { wz, gear, prop } => cmd_oracle_stats(&wz, &gear, prop.as_deref()),
     }
 }
 
@@ -1558,23 +1573,27 @@ fn compute_png_ref_sha256(
     src: &std::sync::Arc<dyn wz_pool::ByteSource>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     use sha2::{Digest, Sha256};
-    use wz_image::{decode_to_rgba8, decompress_zlib, TextureFormat, TextureLayout};
+    use wz_image::{decode_raw_page_to_rgba8, decompress_zlib, TextureFormat};
 
     let raw_payload = png_ref.extract_raw_bytes(src)?;
-    let decompressed = decompress_zlib(&raw_payload)?;
     let tex_fmt = TextureFormat::from_u32(png_ref.format as u32);
-    let (dec_w, dec_h) = TextureLayout::for_png(
-        tex_fmt,
-        png_ref.scale as u32,
-        png_ref.width as u32,
-        png_ref.height as u32,
-    )
-    .map(|l| (l.decodable_width, l.decodable_height))
-    .unwrap_or((png_ref.width as u32, png_ref.height as u32));
 
     let rgba_pixels = match tex_fmt {
-        TextureFormat::Unknown => decompressed,
-        fmt => decode_to_rgba8(fmt, dec_w, dec_h, &decompressed).unwrap_or(decompressed),
+        TextureFormat::Unknown => decompress_zlib(&raw_payload).unwrap_or(raw_payload),
+        fmt => {
+            // 멀티페이지(기본 0페이지) 및 RGB565 scale=16 업스케일링 규칙 적용
+            decode_raw_page_to_rgba8(
+                fmt,
+                png_ref.width as u32,
+                png_ref.height as u32,
+                png_ref.scale as u32,
+                png_ref.pages as u32,
+                0,
+                &raw_payload,
+            )
+            .map(|(_, _, px)| px)
+            .unwrap_or_else(|_| decompress_zlib(&raw_payload).unwrap_or(raw_payload))
+        }
     };
 
     let mut hasher = Sha256::new();
@@ -1877,6 +1896,7 @@ fn extract_gear_stats_from_node(node: &wz_core::image::Node) -> serde_json::Map<
 fn cmd_oracle_stats(
     wz_path: &std::path::Path,
     gear_id: &str,
+    prop_filter: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use wz_core::WzArchive;
 
@@ -1901,7 +1921,15 @@ fn cmd_oracle_stats(
     let props = extract_gear_stats_from_node(&img_root);
 
     let mut doc = oracle_envelope("stats", detection);
-    doc.insert("result".into(), serde_json::Value::Object(props));
+    if let Some(prop_key) = prop_filter {
+        let val = props.get(prop_key).cloned().unwrap_or(serde_json::Value::Null);
+        let mut single_res = serde_json::Map::new();
+        single_res.insert("prop".into(), serde_json::Value::String(prop_key.to_string()));
+        single_res.insert("value".into(), val);
+        doc.insert("result".into(), serde_json::Value::Object(single_res));
+    } else {
+        doc.insert("result".into(), serde_json::Value::Object(props));
+    }
 
     println!("{}", serde_json::to_string_pretty(&doc)?);
     Ok(())

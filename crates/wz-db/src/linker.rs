@@ -312,3 +312,30 @@ fn add_all_values(arena: &Arena, sr: &mut StringResult, node: NodeId) {
         }
     }
 }
+
+/// 장비(Gear) 이미지의 `info` 노드에서 스탯 프로퍼티 맵을 자연 정렬하여 추출한다.
+pub fn extract_gear_stats(
+    arena: &Arena,
+    gear_root: NodeId,
+) -> Vec<(String, String)> {
+    use wz_core::text::sort_natural;
+
+    let target_node = arena
+        .children(gear_root)
+        .iter()
+        .copied()
+        .find(|&c| arena.name(c) == Some("info"))
+        .unwrap_or(gear_root);
+
+    let mut entries = Vec::new();
+    for &child in arena.children(target_node) {
+        if let (Some(name), Some(val_str)) =
+            (arena.name(child), node_value_to_string(arena.value(child)))
+        {
+            entries.push((name.to_string(), val_str));
+        }
+    }
+
+    sort_natural(&mut entries, |(k, _)| k.as_str());
+    entries
+}

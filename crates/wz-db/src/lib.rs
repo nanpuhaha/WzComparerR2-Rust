@@ -30,7 +30,7 @@ pub mod resolve;
 mod tests;
 
 pub use arena::Arena;
-pub use linker::{StringLinker, StringResult};
+pub use linker::{extract_gear_stats, StringLinker, StringResult};
 pub use node::{NodeId, NodeValue, RawDataRef};
 pub use query::{
     execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,

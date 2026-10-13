@@ -152,6 +152,20 @@ pub fn decode_page_to_rgba8(
     Ok((layout.decodable_width, layout.decodable_height, rgba))
 }
 
+/// 압축 해제 전의 ZLIB raw 페이로드를 받아 압축 해제 후 특정 `page`를 RGBA8로 디코딩한다.
+pub fn decode_raw_page_to_rgba8(
+    format: TextureFormat,
+    width: u32,
+    height: u32,
+    scale: u32,
+    pages: u32,
+    page: u32,
+    raw_compressed: &[u8],
+) -> Result<(u32, u32, Vec<u8>)> {
+    let decompressed = decompress_zlib(raw_compressed)?;
+    decode_page_to_rgba8(format, width, height, scale, pages, page, &decompressed)
+}
+
 /// RGBA8 픽셀 버퍼(`width * height * 4` 바이트)를 표준 무손실 PNG 바이트 스트림으로 인코딩한다.
 pub fn encode_png_rgba8(width: u32, height: u32, rgba: &[u8]) -> Vec<u8> {
     let mut out = Vec::new();
@@ -286,6 +300,8 @@ pub fn decode_to_rgba8(
             .into());
         }
         let mut output = vec![0u8; out_w * out_h * 4];
+        // C# ImageCodec.BC7ToRGBA32 (ImageCodec.cs:192-211) 대응:
+        // BC7 압축 블록 행 스트라이드는 `this.Width * 4` 바이트(4개 픽셀 행 당 width * 4 바이트 raw 블록).
         let src_stride = (width as usize) * 4;
         let dst_stride = out_w * 4;
         for (by, y) in (0..out_h).step_by(4).enumerate() {

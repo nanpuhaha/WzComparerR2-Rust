@@ -172,6 +172,33 @@ impl ValueRule {
         }
     }
 
+    /// 숫자 조건 규칙 생성
+    pub fn with_numeric(
+        path: impl Into<String>,
+        comparison: NumericComparisonMode,
+        pattern: impl Into<String>,
+    ) -> Self {
+        Self::new(path, QueryValueType::Number, comparison as u8, pattern)
+    }
+
+    /// 문자열 조건 규칙 생성
+    pub fn with_string(
+        path: impl Into<String>,
+        comparison: StringComparisonMode,
+        pattern: impl Into<String>,
+    ) -> Self {
+        Self::new(path, QueryValueType::String, comparison as u8, pattern)
+    }
+
+    /// 벡터 조건 규칙 생성 (`equal`: true면 ==, false면 !=)
+    pub fn with_vector(
+        path: impl Into<String>,
+        equal: bool,
+        pattern: impl Into<String>,
+    ) -> Self {
+        Self::new(path, QueryValueType::Vector, if equal { 0 } else { 1 }, pattern)
+    }
+
     fn resolve_target(&self, arena: &Arena, node: NodeId) -> Option<NodeId> {
         let mut current = arena.descend_image(node);
         if self.path.is_empty() {
