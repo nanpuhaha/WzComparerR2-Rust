@@ -5,7 +5,11 @@
 
 use std::sync::Arc;
 
+pub mod frame;
+pub mod prism;
 pub mod scene;
+pub use frame::FrameTiming;
+pub use prism::{apply_prism_rgba8, PrismData};
 pub use scene::{AvatarBatch, AvatarScene, AvatarVertex};
 
 /// 29 predefined avatar equipment and component slots.
@@ -475,4 +479,41 @@ mod tests {
         assert!(zmap.compute_priority("head", 0) < zmap.compute_priority("", 0));
         assert!(zmap.compute_priority("", 0) < zmap.compute_priority("", 5));
     }
+
+    #[test]
+    fn test_prism_hsv_shift_and_16bit_quantization() {
+        // 16비트 스프라이트(17의 배수): 순수 빨강(255, 0, 0, 255) -> Hue +120도 회전 -> 순수 초록(0, 255, 0, 255)
+        let mut rgba = vec![
+            255, 0, 0, 255,     // 빨강 (변환 대상)
+            0, 0, 0, 255,       // 순수 검정 (convert_pure_black=false 이므로 보존)
+            255, 255, 255, 255, // 순수 흰색 (보존)
+        ];
+        let prism = PrismData::new(0, 120, 100, 100);
+        assert!(prism.is_valid());
+        apply_prism_rgba8(&mut rgba, &prism, false);
+        assert_eq!(&rgba[0..4], &[0, 255, 0, 255]);
+        assert_eq!(&rgba[4..8], &[0, 0, 0, 255]);
+        assert_eq!(&rgba[8..12], &[255, 255, 255, 255]);
+
+        // 색상 계열 필터: type=5 (파란색 계열 210..=270) 일 때 빨강(hue=0)은 변환되지 않아야 함
+        let mut red_px = vec![255, 0, 0, 255];
+        let blue_only_prism = PrismData::new(5, 120, 100, 100);
+        apply_prism_rgba8(&mut red_px, &blue_only_prism, false);
+        assert_eq!(red_px, vec![255, 0, 0, 255]);
+    }
+
+    #[test]
+    fn test_frame_timing_delay_and_alpha_interpolation() {
+        // delay=0 -> 120ms 기본값, 음수 delay -> 양수 abs 정규화
+        let f_zero = FrameTiming::from_raw(Some(0), None, None);
+        assert_eq!(f_zero.delay_ms, 120);
+        assert_eq!(f_zero.alpha_at(60), 255);
+
+        let f_neg = FrameTiming::from_raw(Some(-200), Some(0), Some(200));
+        assert_eq!(f_neg.delay_ms, 200);
+        assert_eq!(f_neg.alpha_at(0), 0);
+        assert_eq!(f_neg.alpha_at(100), 100);
+        assert_eq!(f_neg.alpha_at(200), 200);
+    }
 }
+

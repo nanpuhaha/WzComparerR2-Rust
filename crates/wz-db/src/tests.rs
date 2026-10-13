@@ -285,3 +285,118 @@ fn round_trip_to_wz_node_preserves_scalars() {
         Some(wz_core::image::ImageValue::Int(-7))
     );
 }
+
+#[test]
+fn query_engine_matches_numeric_string_and_vector_rules() {
+    use wz_core::image::Vec2;
+
+    use crate::query::{
+        execute_query, QueryRule, QueryValueType, StringComparisonMode, ValueRule,
+        DEFAULT_MAX_RESULTS,
+    };
+
+    let mut a = Arena::with_root("");
+    let item1 = a.add_node(a.root(), "01000000.img", None);
+    let info1 = a.add_node(item1, "info", None);
+    a.add_node(info1, "reqLevel", Some(NodeValue::Int(150)));
+    a.add_node(
+        info1,
+        "islot",
+        Some(NodeValue::Str(Arc::from("Cp"))),
+    );
+    a.add_node(
+        info1,
+        "origin",
+        Some(NodeValue::Vector(Vec2 { x: 16, y: 32 })),
+    );
+
+    let item2 = a.add_node(a.root(), "01000001.img", None);
+    let info2 = a.add_node(item2, "info", None);
+    a.add_node(info2, "reqLevel", Some(NodeValue::Int(50)));
+    a.add_node(
+        info2,
+        "islot",
+        Some(NodeValue::Str(Arc::from("Cp"))),
+    );
+
+    let mut rule = QueryRule::target(StringComparisonMode::EndsWith, ".img");
+    rule.values.push(ValueRule::new(
+        "info/reqLevel",
+        QueryValueType::Number,
+        5, // >=
+        "100",
+    ));
+    rule.values.push(ValueRule::new(
+        "info/origin",
+        QueryValueType::Vector,
+        0, // ==
+        "(16, 32)",
+    ));
+
+    let res = execute_query(&a, a.root(), &[rule], DEFAULT_MAX_RESULTS);
+    assert_eq!(res.results.len(), 1);
+    assert_eq!(res.results[0].path, "01000000.img");
+    assert!(res.results[0].value.contains("reqLevel: 150"));
+    assert!(res.results[0].value.contains("origin: (16, 32)"));
+}
+
+#[test]
+fn string_linker_indexes_consume_and_eqp_with_uol() {
+    use crate::linker::StringLinker;
+
+    let mut a = Arena::with_root("");
+    let string_root = a.add_node(a.root(), "String.wz", None);
+
+    // Consume.img
+    let consume_entry = a.add_node(string_root, "Consume.img", None);
+    let consume_img = a.ingest_image(
+        consume_entry,
+        &with_children(
+            node("Consume.img"),
+            vec![
+                with_children(
+                    node("2000000"),
+                    vec![
+                        node_val("name", NodeValue::Str(Arc::from("빨간 포션"))),
+                        node_val("desc", NodeValue::Str(Arc::from("HP를 50 회복시킨다."))),
+                    ],
+                ),
+                node_val("2000001", NodeValue::Uol(Arc::from("2000000"))),
+            ],
+        ),
+    );
+    assert!(a.valid(consume_img));
+
+    // Eqp.img -> Eqp -> Cap -> 1000000
+    let eqp_entry = a.add_node(string_root, "Eqp.img", None);
+    let _eqp_img = a.ingest_image(
+        eqp_entry,
+        &with_children(
+            node("Eqp.img"),
+            vec![with_children(
+                node("Eqp"),
+                vec![with_children(
+                    node("Cap"),
+                    vec![with_children(
+                        node("1000000"),
+                        vec![node_val("name", NodeValue::Str(Arc::from("가죽 모자")))],
+                    )],
+                )],
+            )],
+        ),
+    );
+
+    let mut linker = StringLinker::new();
+    assert!(linker.load_string_wz(&a, string_root));
+    assert_eq!(
+        linker.format_tooltip(2000000).as_deref(),
+        Some("빨간 포션\nHP를 50 회복시킨다.")
+    );
+    // UOL 해석된 2000001도 동일한 이름/설명을 가져야 함
+    assert_eq!(
+        linker.format_tooltip(2000001).as_deref(),
+        Some("빨간 포션\nHP를 50 회복시킨다.")
+    );
+    assert_eq!(linker.format_tooltip(1000000).as_deref(), Some("가죽 모자"));
+}
+

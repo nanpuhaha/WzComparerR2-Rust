@@ -164,6 +164,24 @@ enum Command {
         output: Option<PathBuf>,
     },
 
+    /// WZ 아카이브 노드 질의 검색 (이름 및 하위 속성 필터)
+    Query {
+        /// WZ 파일 경로
+        wz: PathBuf,
+
+        /// 대상 노드 이름 포함 패턴
+        #[arg(long, default_value = "")]
+        name: String,
+
+        /// 하위 속성 조건 (예: info/reqLevel>=100, info/islot=Cp)
+        #[arg(long = "prop")]
+        props: Vec<String>,
+
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// C# Oracle 호환 검증용 표준 JSON 출력 하네스
     Oracle {
         #[command(subcommand)]
@@ -209,6 +227,28 @@ enum OracleAction {
         #[arg(long, default_value = "sha256")]
         format: String,
     },
+
+    /// 아이템/장비/스킬 툴팁 문자열(StringLinker) 표준 JSON 덤프
+    Tooltip {
+        /// WZ 파일 경로
+        #[arg(long)]
+        wz: PathBuf,
+
+        /// 아이템/장비/스킬 ID (예: 2000000)
+        #[arg(long)]
+        item: i32,
+    },
+
+    /// 장비(Gear) 스탯 프로퍼티 표준 JSON 덤프
+    Stats {
+        /// WZ 파일 경로
+        #[arg(long)]
+        wz: PathBuf,
+
+        /// 장비 ID (예: 01000000)
+        #[arg(long)]
+        gear: String,
+    },
 }
 
 fn main() {
@@ -239,7 +279,17 @@ fn main() {
             json,
         } => cmd_diff(&old_wz, &new_wz, old_offset, new_offset, json),
         Command::Dump { wz, offset, json } => cmd_dump(&wz, offset, json),
-        Command::Avatar { demo, render, output } => cmd_avatar(demo, render, output),
+        Command::Avatar {
+            demo,
+            render,
+            output,
+        } => cmd_avatar(demo, render, output),
+        Command::Query {
+            wz,
+            name,
+            props,
+            json,
+        } => cmd_query(&wz, &name, &props, json),
         Command::Oracle { action } => cmd_oracle(action),
     };
 
@@ -1052,11 +1102,152 @@ fn oracle_envelope(
     doc
 }
 
+fn parse_prop_filter(spec: &str) -> Option<wz_db::ValueRule> {
+    use wz_db::{QueryValueType, ValueRule};
+
+    let ops: [(&str, u8); 6] = [
+        ("<=", 4),
+        (">=", 5),
+        ("!=", 1),
+        ("==", 0),
+        ("<", 2),
+        (">", 3),
+    ];
+    for (op, cmp_idx) in ops {
+        if let Some((path, pat)) = spec.split_once(op) {
+            let pat = pat.trim();
+            let value_type = if pat.parse::<f64>().is_ok() {
+                QueryValueType::Number
+            } else if pat.starts_with('(') && pat.ends_with(')') {
+                QueryValueType::Vector
+            } else {
+                QueryValueType::String
+            };
+            let cmp = if value_type == QueryValueType::String && cmp_idx == 0 {
+                3 // StringComparisonMode::Equals
+            } else {
+                cmp_idx
+            };
+            return Some(ValueRule::new(path.trim(), value_type, cmp, pat));
+        }
+    }
+    if let Some((path, pat)) = spec.split_once('=') {
+        let pat = pat.trim();
+        let value_type = if pat.parse::<f64>().is_ok() {
+            QueryValueType::Number
+        } else if pat.starts_with('(') && pat.ends_with(')') {
+            QueryValueType::Vector
+        } else {
+            QueryValueType::String
+        };
+        let cmp = if value_type == QueryValueType::String {
+            3 // Equals
+        } else {
+            0 // Equal
+        };
+        return Some(ValueRule::new(path.trim(), value_type, cmp, pat));
+    }
+    None
+}
+
+fn build_arena_from_archive(
+    archive: &wz_core::WzArchive,
+    tree: &wz_core::dirtree::DirTree,
+) -> wz_db::Arena {
+    let mut arena = wz_db::Arena::with_root("");
+    let root = arena.root();
+    let mut block_cursor = 0usize;
+    populate_arena_block(
+        &mut arena,
+        root,
+        &tree.root,
+        &tree.blocks,
+        &mut block_cursor,
+        archive,
+    );
+    arena
+}
+
+fn populate_arena_block(
+    arena: &mut wz_db::Arena,
+    parent: wz_db::NodeId,
+    block: &wz_core::dirtree::DirBlock,
+    blocks: &[wz_core::dirtree::DirBlock],
+    block_cursor: &mut usize,
+    archive: &wz_core::WzArchive,
+) {
+    use wz_core::dirtree::node_type;
+
+    for e in &block.entries {
+        let name = e.name.as_deref().unwrap_or("");
+        let child_id = arena.add_node(parent, name, None);
+        if e.node_type == node_type::DIRECTORY {
+            if let Some(sub_block) = blocks.get(*block_cursor) {
+                *block_cursor += 1;
+                populate_arena_block(arena, child_id, sub_block, blocks, block_cursor, archive);
+            }
+        } else if let Some(off) = e.offset {
+            if let Ok(img_root) = archive.parse_image_at(off) {
+                arena.ingest_image(child_id, &img_root);
+            }
+        }
+    }
+}
+
+fn cmd_query(
+    wz_path: &std::path::Path,
+    name_pattern: &str,
+    props: &[String],
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_core::WzArchive;
+    use wz_db::{execute_query, QueryRule, StringComparisonMode, DEFAULT_MAX_RESULTS};
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let arena = build_arena_from_archive(&archive, &tree);
+
+    let mut rule = QueryRule::target(StringComparisonMode::Contains, name_pattern);
+    rule.search_descendants = true;
+    for p in props {
+        if let Some(vr) = parse_prop_filter(p) {
+            rule.values.push(vr);
+        }
+    }
+
+    let exec = execute_query(&arena, arena.root(), &[rule], DEFAULT_MAX_RESULTS);
+    if json {
+        let items: Vec<serde_json::Value> = exec
+            .results
+            .iter()
+            .map(|r| {
+                serde_json::json!({
+                    "path": r.path,
+                    "value": r.value,
+                })
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&items)?);
+    } else {
+        println!("=== 질의 검색 결과 ({}건) ===", exec.results.len());
+        for r in &exec.results {
+            if r.value.is_empty() {
+                println!("  {}", r.path);
+            } else {
+                println!("  {} -> {}", r.path, r.value);
+            }
+        }
+    }
+    Ok(())
+}
+
 fn cmd_oracle(action: OracleAction) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         OracleAction::Tree { wz, filter } => cmd_oracle_tree(&wz, filter.as_deref()),
         OracleAction::Diff { base, r#mod } => cmd_oracle_diff(&base, &r#mod),
         OracleAction::Image { wz, path, format } => cmd_oracle_image(&wz, &path, &format),
+        OracleAction::Tooltip { wz, item } => cmd_oracle_tooltip(&wz, item),
+        OracleAction::Stats { wz, gear } => cmd_oracle_stats(&wz, &gear),
     }
 }
 
@@ -1608,6 +1799,114 @@ fn extract_png_ref(node: &wz_core::image::Node) -> Option<wz_core::image::PngRef
     None
 }
 
+fn cmd_oracle_tooltip(
+    wz_path: &std::path::Path,
+    item_id: i32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_core::WzArchive;
+    use wz_db::StringLinker;
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let detection = archive.detection();
+    let arena = build_arena_from_archive(&archive, &tree);
+
+    let mut linker = StringLinker::new();
+    linker.load_string_wz(&arena, arena.root());
+
+    let text = linker
+        .format_tooltip(item_id)
+        .unwrap_or_default();
+
+    let mut doc = oracle_envelope("tooltip", detection);
+    let mut res = serde_json::Map::new();
+    res.insert("text".into(), serde_json::Value::String(text));
+    doc.insert("result".into(), serde_json::Value::Object(res));
+
+    println!("{}", serde_json::to_string_pretty(&doc)?);
+    Ok(())
+}
+
+fn extract_gear_stats_from_node(node: &wz_core::image::Node) -> serde_json::Map<String, serde_json::Value> {
+    use wz_core::image::ImageValue;
+    use wz_core::text::sort_natural;
+
+    let info_node = node
+        .children
+        .iter()
+        .find(|c| c.name.as_ref() == "info")
+        .or_else(|| {
+            if let Some(ImageValue::Property(inner)) = &node.value {
+                inner.children.iter().find(|c| c.name.as_ref() == "info")
+            } else {
+                None
+            }
+        })
+        .unwrap_or(node);
+
+    let mut children: Vec<&wz_core::image::Node> = info_node.children.iter().collect();
+    if let Some(ImageValue::Property(inner)) = &info_node.value {
+        children.extend(inner.children.iter());
+    }
+    sort_natural(&mut children, |c| c.name.as_ref());
+
+    let mut props = serde_json::Map::new();
+    for ch in children {
+        let val = match &ch.value {
+            Some(ImageValue::Short(v)) => serde_json::Value::Number((*v).into()),
+            Some(ImageValue::Int(v)) => serde_json::Value::Number((*v).into()),
+            Some(ImageValue::Long(v)) => serde_json::Value::Number((*v).into()),
+            Some(ImageValue::Uint(v)) => serde_json::Value::Number((*v).into()),
+            Some(ImageValue::Float(v)) => serde_json::Number::from_f64(*v as f64)
+                .map(serde_json::Value::Number)
+                .unwrap_or(serde_json::Value::Null),
+            Some(ImageValue::Double(v)) => serde_json::Number::from_f64(*v)
+                .map(serde_json::Value::Number)
+                .unwrap_or(serde_json::Value::Null),
+            Some(ImageValue::Bool(v)) => serde_json::Value::Bool(*v),
+            Some(ImageValue::Str(s) | ImageValue::Uol(s)) => {
+                serde_json::Value::String(s.to_string())
+            }
+            _ => continue,
+        };
+        props.insert(ch.name.to_string(), val);
+    }
+    props
+}
+
+fn cmd_oracle_stats(
+    wz_path: &std::path::Path,
+    gear_id: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_core::WzArchive;
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let detection = archive.detection();
+
+    let clean = gear_id.trim_end_matches(".img");
+    let padded = if let Ok(num) = clean.parse::<u32>() {
+        format!("{num:08}.img")
+    } else {
+        format!("{clean}.img")
+    };
+    let raw_name = format!("{clean}.img");
+
+    let entry = find_image_entry_in_dirtree(&tree, &padded)
+        .or_else(|| find_image_entry_in_dirtree(&tree, &raw_name))
+        .ok_or_else(|| format!("장비 이미지를 찾을 수 없습니다: {gear_id}"))?;
+    let off = entry.offset.ok_or("장비 이미지 오프셋이 없습니다")?;
+    let img_root = archive.parse_image_at(off)?;
+
+    let props = extract_gear_stats_from_node(&img_root);
+
+    let mut doc = oracle_envelope("stats", detection);
+    doc.insert("result".into(), serde_json::Value::Object(props));
+
+    println!("{}", serde_json::to_string_pretty(&doc)?);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1703,4 +2002,30 @@ mod tests {
         assert_eq!(res.height, 32);
         assert_eq!(res.format, 2);
     }
+
+    #[test]
+    fn test_parse_prop_filter_and_gear_stats() {
+        use wz_core::image::{ImageValue, Node};
+
+        let vr = parse_prop_filter("info/reqLevel>=150").expect("valid prop filter");
+        assert_eq!(vr.path, "info/reqLevel");
+        assert_eq!(vr.comparison, 5);
+        assert_eq!(vr.pattern, "150");
+
+        let mut info = Node::new("info");
+        let mut s_str = Node::new("incSTR");
+        s_str.value = Some(ImageValue::Int(420));
+        let mut s_lvl = Node::new("reqLevel");
+        s_lvl.value = Some(ImageValue::Int(200));
+        info.children.push(s_lvl);
+        info.children.push(s_str);
+
+        let mut root = Node::new("01000000.img");
+        root.children.push(info);
+
+        let stats = extract_gear_stats_from_node(&root);
+        assert_eq!(stats["incSTR"], 420);
+        assert_eq!(stats["reqLevel"], 200);
+    }
 }
+

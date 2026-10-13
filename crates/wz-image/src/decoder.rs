@@ -8,7 +8,10 @@ use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use wz_error::{Result, WzImageError};
 
-use crate::format::{uncompressed_data_size, TextureFormat};
+use crate::bc7::unpack_bc7;
+use crate::format::{
+    actual_scale, bc7_data_size, uncompressed_data_size, TextureFormat, TextureLayout,
+};
 
 /// ZLIB 스트림을 압축 해제한다.
 pub fn decompress_zlib(compressed: &[u8]) -> Result<Vec<u8>> {
@@ -21,6 +24,132 @@ pub fn decompress_zlib(compressed: &[u8]) -> Result<Vec<u8>> {
             source: e,
         })?;
     Ok(decompressed)
+}
+
+/// RGBA8 픽셀 버퍼(`src_w * src_h * 4` 바이트)를 가로 `scale_x`배, 세로 `scale_y`배 최근접 이웃 확장한다.
+///
+/// 원본 `ImageCodec.ScalePixels` (`ImageCodec.cs:97-126`) 대응.
+pub fn scale_pixels_rgba8(
+    src: &[u8],
+    src_w: u32,
+    src_h: u32,
+    scale_x: u32,
+    scale_y: u32,
+) -> Vec<u8> {
+    let sw = src_w as usize;
+    let sh = src_h as usize;
+    let sx = scale_x as usize;
+    let sy = scale_y as usize;
+    let dst_w = sw * sx;
+    let dst_h = sh * sy;
+    let dst_stride = dst_w * 4;
+    let src_stride = sw * 4;
+    let mut out = vec![0u8; dst_stride * dst_h];
+
+    for y in 0..sh {
+        let src_row_start = y * src_stride;
+        let dst_row0_start = (y * sy) * dst_stride;
+        for x in 0..sw {
+            let px_off = src_row_start + x * 4;
+            let px = &src[px_off..px_off + 4];
+            for s in 0..sx {
+                let dst_off = dst_row0_start + (x * sx + s) * 4;
+                out[dst_off..dst_off + 4].copy_from_slice(px);
+            }
+        }
+        let first_row = out[dst_row0_start..dst_row0_start + dst_stride].to_vec();
+        for s in 1..sy {
+            let dup_start = dst_row0_start + s * dst_stride;
+            out[dup_start..dup_start + dst_stride].copy_from_slice(&first_row);
+        }
+    }
+
+    out
+}
+
+/// 멀티페이지 및 스케일(`RGB565` scale=16 포함) 규칙을 반영해 특정 `page`의 RGBA8 픽셀과 출력 크기(`(width, height, rgba)`)를 반환한다.
+///
+/// 원본 `Wz_Png.ExtractPng(int page)` (`Wz_Png.cs:173-315`) 대응.
+pub fn decode_page_to_rgba8(
+    format: TextureFormat,
+    width: u32,
+    height: u32,
+    scale: u32,
+    pages: u32,
+    page: u32,
+    raw_all_pages: &[u8],
+) -> Result<(u32, u32, Vec<u8>)> {
+    let effective_page = if pages > 0 {
+        if page >= pages {
+            return Err(WzImageError::PageOutOfRange {
+                requested: page,
+                available: pages,
+            }
+            .into());
+        }
+        page as usize
+    } else {
+        0
+    };
+
+    let layout = TextureLayout::for_png(format, scale, width, height).ok_or(
+        WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale,
+        },
+    )?;
+
+    let bytes_per_page = if format == TextureFormat::Bc7 {
+        bc7_data_size(width, height).ok_or(WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale,
+        })?
+    } else {
+        layout.bytes_per_page
+    };
+
+    let start = effective_page
+        .checked_mul(bytes_per_page)
+        .ok_or(WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale,
+        })?;
+    let end = start
+        .checked_add(bytes_per_page)
+        .ok_or(WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale,
+        })?;
+    if raw_all_pages.len() < end {
+        return Err(WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale,
+        }
+        .into());
+    }
+    let page_slice = &raw_all_pages[start..end];
+
+    let a_scale = actual_scale(scale);
+    if format == TextureFormat::Rgb565 && a_scale == 16 {
+        let raw_w = width / 16;
+        let raw_h = height / 16;
+        let small_rgba = decode_to_rgba8(TextureFormat::Rgb565, raw_w, raw_h, page_slice)?;
+        let upscaled = scale_pixels_rgba8(&small_rgba, raw_w, raw_h, 16, 16);
+        return Ok((layout.decodable_width, layout.decodable_height, upscaled));
+    }
+
+    let rgba = decode_to_rgba8(format, width, height, page_slice)?;
+    Ok((layout.decodable_width, layout.decodable_height, rgba))
 }
 
 /// RGBA8 픽셀 버퍼(`width * height * 4` 바이트)를 표준 무손실 PNG 바이트 스트림으로 인코딩한다.
@@ -137,6 +266,47 @@ pub fn decode_to_rgba8(
     height: u32,
     raw: &[u8],
 ) -> Result<Vec<u8>> {
+    if format == TextureFormat::Bc7 {
+        let out_w = (width & !3) as usize;
+        let out_h = (height & !3) as usize;
+        let expected_raw =
+            bc7_data_size(width, height).ok_or(WzImageError::SizeOverflow {
+                w: width,
+                h: height,
+                format: format as u32,
+                scale: 1,
+            })?;
+        if raw.len() < expected_raw {
+            return Err(WzImageError::SizeOverflow {
+                w: width,
+                h: height,
+                format: format as u32,
+                scale: 1,
+            }
+            .into());
+        }
+        let mut output = vec![0u8; out_w * out_h * 4];
+        let src_stride = (width as usize) * 4;
+        let dst_stride = out_w * 4;
+        for (by, y) in (0..out_h).step_by(4).enumerate() {
+            let row_start = by * src_stride;
+            for (bx, x) in (0..out_w).step_by(4).enumerate() {
+                let block_start = row_start + bx * 16;
+                let mut block = [0u8; 16];
+                block.copy_from_slice(&raw[block_start..block_start + 16]);
+                let pixels = unpack_bc7(&block);
+                for py in 0..4 {
+                    let dst_row_off = (y + py) * dst_stride + x * 4;
+                    for px in 0..4 {
+                        let dst_off = dst_row_off + px * 4;
+                        output[dst_off..dst_off + 4].copy_from_slice(&pixels[py * 4 + px]);
+                    }
+                }
+            }
+        }
+        return Ok(output);
+    }
+
     let pixel_count = (width as usize)
         .checked_mul(height as usize)
         .ok_or(WzImageError::SizeOverflow {
@@ -473,4 +643,48 @@ mod tests {
         assert!(png.windows(4).any(|w| w == b"IDAT"));
         assert!(png.windows(4).any(|w| w == b"IEND"));
     }
+
+    #[test]
+    fn test_bc7_mode6_decoding_and_tail_row_truncation() {
+        // Mode 6 (first byte bit 6 set = 0x40), all endpoints = 0x7F and pbits = 1 -> RGBA = (255, 255, 255, 255)
+        let lo: u64 = (1u64 << 6) | (!0u64 << 7);
+        let hi: u64 = 1u64; // p1 = 1, all weight indices = 0
+        let mut block = [0u8; 16];
+        block[0..8].copy_from_slice(&lo.to_le_bytes());
+        block[8..16].copy_from_slice(&hi.to_le_bytes());
+
+        // height=6 (4의 배수가 아닌 BC7 높이 -> 4로 절삭되어 4x4 = 64바이트 출력)
+        let rgba = decode_to_rgba8(TextureFormat::Bc7, 4, 6, &block).expect("decode bc7");
+        assert_eq!(rgba.len(), 4 * 4 * 4);
+        assert_eq!(&rgba[0..4], &[255, 255, 255, 255]);
+    }
+
+    #[test]
+    fn test_multipage_and_rgb565_scale16() {
+        // 2페이지 1x1 ARGB8888: page 0 = 파랑, page 1 = 빨강
+        let raw_pages = vec![
+            255, 0, 0, 255, // page 0: BGRA(255,0,0,255) -> RGBA(0,0,255,255)
+            0, 0, 255, 255, // page 1: BGRA(0,0,255,255) -> RGBA(255,0,0,255)
+        ];
+        let (w0, h0, p0) =
+            decode_page_to_rgba8(TextureFormat::Argb8888, 1, 1, 0, 2, 0, &raw_pages).unwrap();
+        assert_eq!((w0, h0), (1, 1));
+        assert_eq!(p0, vec![0, 0, 255, 255]);
+
+        let (_, _, p1) =
+            decode_page_to_rgba8(TextureFormat::Argb8888, 1, 1, 0, 2, 1, &raw_pages).unwrap();
+        assert_eq!(p1, vec![255, 0, 0, 255]);
+
+        // 범위 초과 페이지 요청 시 에러
+        assert!(decode_page_to_rgba8(TextureFormat::Argb8888, 1, 1, 0, 2, 2, &raw_pages).is_err());
+
+        // RGB565 scale=4 (ActualScale=16): 16x16 출력에 1x1 (2바이트) 원시 데이터만 사용
+        let raw_565 = vec![0xFF, 0xFF];
+        let (sw, sh, scaled) =
+            decode_page_to_rgba8(TextureFormat::Rgb565, 16, 16, 4, 1, 0, &raw_565).unwrap();
+        assert_eq!((sw, sh), (16, 16));
+        assert_eq!(scaled.len(), 16 * 16 * 4);
+        assert!(scaled.iter().all(|&b| b == 255));
+    }
 }
+

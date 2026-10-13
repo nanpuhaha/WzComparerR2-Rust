@@ -1,4 +1,4 @@
-//! `wz-db` — 노드 arena, UOL/링크 해석, 질의 엔진.
+//! `wz-db` — 노드 arena, UOL/링크 해석, 질의 엔진, 문자열 링커.
 //!
 //! # 이 crate 가 하는 일
 //!
@@ -9,7 +9,8 @@
 //!    핸들로 메모리를 다룬다 (ADR-2).
 //! 2. **해석** — UOL(`"../Other.img/icon"`) 체인을 푼다. 원본의 해석기 두 벌
 //!    (`Db2Host.GetNode` / `DB2NodeExtension.GetNode`) 을 이 한 곳으로 모은다.
-//! 3. **질의** — 문자열/숫자/벡터 매처 (`WzQueryControl.cs:761-1229`).
+//! 3. **질의 및 문자열 링커** — 문자열/숫자/벡터 매처 (`WzQueryControl.cs:761-1229`) 및
+//!    아이템/장비/스킬/맵 ID별 툴팁 문자열 링커 (`StringLinker.cs`).
 //!
 //! # 원본에서 고치는 것
 //!
@@ -20,12 +21,19 @@
 //!   한 벌로 통합한다.
 
 pub mod arena;
+pub mod linker;
 pub mod node;
+pub mod query;
 pub mod resolve;
 
 #[cfg(test)]
 mod tests;
 
 pub use arena::Arena;
+pub use linker::{StringLinker, StringResult};
 pub use node::{NodeId, NodeValue, RawDataRef};
+pub use query::{
+    execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,
+    QueryRule, QueryRuleKind, QueryValueType, StringComparisonMode, ValueRule, DEFAULT_MAX_RESULTS,
+};
 pub use resolve::{find_path, handle_uol, resolve_uol, resolve_uol_lossy, ResolveError};
