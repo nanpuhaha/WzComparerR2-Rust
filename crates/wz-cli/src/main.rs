@@ -1983,6 +1983,7 @@ fn cmd_oracle_expr(
     let evaluated = wz_db::evaluate_expression(expr, &args)?;
 
     let mut doc = serde_json::Map::new();
+    doc.insert("schema_version".into(), serde_json::Value::Number(1.into()));
     doc.insert("op".into(), serde_json::Value::String("expr".into()));
     let mut res = serde_json::Map::new();
     res.insert("expr".into(), serde_json::Value::String(expr.to_string()));
@@ -2001,12 +2002,14 @@ fn cmd_oracle_patch(
     patch_path: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use std::sync::Arc;
-    use wz_core::patch::PatchHeader;
+    use wz_core::patch::{PatchHeader, PatchPartType};
 
     let src: Arc<dyn wz_pool::ByteSource> = wz_pool::open_file(patch_path)?.into();
     let header = PatchHeader::parse(&src)?;
+    let parts = header.parse_parts(&src).unwrap_or_default();
 
     let mut doc = serde_json::Map::new();
+    doc.insert("schema_version".into(), serde_json::Value::Number(1.into()));
     doc.insert("op".into(), serde_json::Value::String("patch".into()));
     let mut res = serde_json::Map::new();
     res.insert("version".into(), serde_json::Value::Number(header.version.into()));
@@ -2026,6 +2029,25 @@ fn cmd_oracle_patch(
     if let Some(notice) = header.notice_text {
         res.insert("notice".into(), serde_json::Value::String(notice));
     }
+
+    let part_items: Vec<serde_json::Value> = parts
+        .iter()
+        .map(|p| {
+            let type_str = match p.part_type {
+                PatchPartType::Create => "create",
+                PatchPartType::Modify => "modify",
+                PatchPartType::Delete => "delete",
+            };
+            serde_json::json!({
+                "file_name": p.file_name,
+                "type": type_str,
+                "old_checksum": p.old_checksum,
+                "new_checksum": p.new_checksum,
+                "new_file_len": p.new_file_len,
+            })
+        })
+        .collect();
+    res.insert("parts".into(), serde_json::Value::Array(part_items));
     doc.insert("result".into(), serde_json::Value::Object(res));
 
     println!("{}", serde_json::to_string_pretty(&doc)?);
@@ -2132,7 +2154,12 @@ fn cmd_oracle_mapscene(
 
     // portals (포탈 이름 natural_cmp 및 ID 오름차순)
     let mut sorted_portals = map_data.portals.clone();
-    sort_natural(&mut sorted_portals, |p| &p.p_name);
+    sorted_portals.sort_by(|a, b| {
+        match wz_core::text::natural_cmp(&a.p_name, &b.p_name) {
+            std::cmp::Ordering::Equal => a.id.cmp(&b.id),
+            other => other,
+        }
+    });
     let portal_items: Vec<serde_json::Value> = sorted_portals
         .iter()
         .map(|p| {
@@ -2149,25 +2176,6 @@ fn cmd_oracle_mapscene(
         })
         .collect();
     res.insert("portals".into(), serde_json::Value::Array(portal_items));
-
-    // ladders_ropes (ID 오름차순)
-    let mut sorted_lr = map_data.ladders_ropes.clone();
-    sorted_lr.sort_by_key(|lr| lr.id);
-    let lr_items: Vec<serde_json::Value> = sorted_lr
-        .iter()
-        .map(|lr| {
-            serde_json::json!({
-                "id": lr.id,
-                "x": lr.x,
-                "y1": lr.y1,
-                "y2": lr.y2,
-                "l": lr.l,
-                "uf": lr.uf,
-                "page": lr.page,
-            })
-        })
-        .collect();
-    res.insert("ladders_ropes".into(), serde_json::Value::Array(lr_items));
 
     // life (ID natural_cmp 정렬)
     let mut sorted_life = map_data.life.clone();

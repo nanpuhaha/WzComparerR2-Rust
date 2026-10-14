@@ -37,7 +37,8 @@ pub use calc::{evaluate_expression, CalcError};
 pub use chara_prop::CharaProp;
 pub use linker::{extract_gear_stats, StringLinker, StringResult};
 pub use map::{
-    Foothold, LadderRope, MapData, MapInfo, MapLife, MapPortal, MapVirtualRect,
+    BackItem, Foothold, FootholdTree, LadderRope, MapData, MapInfo, MapLife, MapPortal,
+    MapVirtualRect, ObjItem, TileItem,
 };
 pub use node::{NodeId, NodeValue, RawDataRef};
 pub use query::{

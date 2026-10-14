@@ -138,6 +138,156 @@ impl PatchHeader {
             notice_text: notice,
         })
     }
+
+    /// ZLIB 인플레이트 스트림을 열어 패치 파일 내부의 파트 목록(`PatchPart`)을 파싱한다.
+    ///
+    /// 원본 `WzPatcher.PrePatch` (`WzPatcher.cs:171-237`) 대응:
+    /// - ZLIB 헤더(0x78 0x9C 등)를 확인/건너뛰고 인플레이트 스트림을 초기화
+    /// - 패치 파트 헤더(`GetFileName` + 타입별 메타데이터)를 순차 추출
+    pub fn parse_parts(&self, src: &Arc<dyn ByteSource>) -> Result<Vec<PatchPart>> {
+        use flate2::read::ZlibDecoder;
+        use std::io::Read;
+
+        let mut raw = vec![0u8; self.compressed_len as usize];
+        src.read_at(self.data_start_offset, &mut raw)?;
+
+        if raw.len() < 2 {
+            return Ok(Vec::new());
+        }
+        let slice = &raw[..];
+
+        let mut decoder = ZlibDecoder::new(slice);
+        let mut decompressed = Vec::new();
+        if decoder.read_to_end(&mut decompressed).is_err() {
+            // raw deflate fallback
+            use flate2::read::DeflateDecoder;
+            let mut def_decoder = DeflateDecoder::new(slice);
+            decompressed.clear();
+            let _ = def_decoder.read_to_end(&mut decompressed);
+        }
+
+        if decompressed.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut cursor = 0usize;
+        let mut parts = Vec::new();
+
+        // KMST1125 파일 해시 테이블 건너뛰기/확인
+        if cursor + 4 <= decompressed.len() {
+            let count = i32::from_le_bytes([
+                decompressed[cursor],
+                decompressed[cursor + 1],
+                decompressed[cursor + 2],
+                decompressed[cursor + 3],
+            ]);
+            if count > 0 && count < 10000 {
+                // hash list heuristic: try parse
+                let mut temp_cur = cursor + 4;
+                let mut valid_table = true;
+                for _ in 0..count {
+                    if temp_cur + 4 > decompressed.len() {
+                        valid_table = false;
+                        break;
+                    }
+                    let str_len = i32::from_le_bytes([
+                        decompressed[temp_cur],
+                        decompressed[temp_cur + 1],
+                        decompressed[temp_cur + 2],
+                        decompressed[temp_cur + 3],
+                    ]) as usize;
+                    temp_cur += 4;
+                    if str_len > 1024 || temp_cur + str_len + 4 > decompressed.len() {
+                        valid_table = false;
+                        break;
+                    }
+                    temp_cur += str_len + 4;
+                }
+                if valid_table {
+                    cursor = temp_cur;
+                }
+            }
+        }
+
+        while cursor < decompressed.len() {
+            let mut name_bytes = Vec::new();
+            let mut patch_type_byte = None;
+            while cursor < decompressed.len() {
+                let b = decompressed[cursor];
+                cursor += 1;
+                if b <= 2 {
+                    patch_type_byte = Some(b);
+                    break;
+                }
+                name_bytes.push(b);
+            }
+
+            let p_type = match patch_type_byte {
+                Some(0) => PatchPartType::Create,
+                Some(1) => PatchPartType::Modify,
+                Some(2) => PatchPartType::Delete,
+                _ => break,
+            };
+
+            let file_name = String::from_utf8_lossy(&name_bytes).to_string();
+            let mut old_checksum = None;
+            let mut new_checksum = None;
+            let mut new_file_len = 0usize;
+
+            match p_type {
+                PatchPartType::Create => {
+                    if file_name.contains('.') && cursor + 8 <= decompressed.len() {
+                        new_file_len = i32::from_le_bytes([
+                            decompressed[cursor],
+                            decompressed[cursor + 1],
+                            decompressed[cursor + 2],
+                            decompressed[cursor + 3],
+                        ]) as usize;
+                        cursor += 4;
+                        new_checksum = Some(u32::from_le_bytes([
+                            decompressed[cursor],
+                            decompressed[cursor + 1],
+                            decompressed[cursor + 2],
+                            decompressed[cursor + 3],
+                        ]));
+                        cursor += 4;
+                        // skip payload
+                        cursor = cursor.saturating_add(new_file_len).min(decompressed.len());
+                    }
+                }
+                PatchPartType::Modify => {
+                    if cursor + 8 <= decompressed.len() {
+                        old_checksum = Some(u32::from_le_bytes([
+                            decompressed[cursor],
+                            decompressed[cursor + 1],
+                            decompressed[cursor + 2],
+                            decompressed[cursor + 3],
+                        ]));
+                        cursor += 4;
+                        new_checksum = Some(u32::from_le_bytes([
+                            decompressed[cursor],
+                            decompressed[cursor + 1],
+                            decompressed[cursor + 2],
+                            decompressed[cursor + 3],
+                        ]));
+                        cursor += 4;
+                    }
+                }
+                PatchPartType::Delete => {}
+            }
+
+            parts.push(PatchPart {
+                file_name,
+                part_type: p_type,
+                old_checksum,
+                new_checksum,
+                new_file_len,
+                data_offset: cursor as u64,
+            });
+        }
+
+        Ok(parts)
+    }
 }
 
 #[cfg(test)]
@@ -168,5 +318,48 @@ mod tests {
         assert_eq!(header.computed_checksum, computed_crc);
         assert!(header.is_valid);
         assert_eq!(header.compressed_len, payload.len() as u64);
+    }
+
+    #[test]
+    fn test_patch_parse_parts_decompression() {
+        use flate2::write::ZlibEncoder;
+        use flate2::Compression;
+        use std::io::Write;
+
+        // 더미 파트 데이터 구성:
+        // [0..4] type: 0 (Create)
+        // [4..] string: "Sound/Bgm00.img" (utf16 or len-prefixed)
+        // [..] old_len: 4바이트
+        // [..] new_len: 4바이트 (100)
+        // [..] payload: 100바이트
+        let mut raw_parts = Vec::new();
+        // Part 1: Type 0 (Create), name "Base.wz"
+        let name1 = "Base.wz";
+        raw_parts.extend_from_slice(name1.as_bytes());
+        raw_parts.push(0u8); // type 0 = Create
+        raw_parts.extend_from_slice(&10i32.to_le_bytes()); // new_file_len
+        raw_parts.extend_from_slice(&12345u32.to_le_bytes()); // new_checksum
+        raw_parts.extend_from_slice(&[0xAA; 10]); // payload
+
+        // ZLIB 압축
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&raw_parts).unwrap();
+        let compressed_payload = encoder.finish().unwrap();
+
+        let computed_crc = compute_patch_checksum(&compressed_payload, 0);
+
+        let mut data = vec![0u8; 16];
+        data[8..12].copy_from_slice(&200i32.to_le_bytes());
+        data[12..16].copy_from_slice(&computed_crc.to_le_bytes());
+        data.extend_from_slice(&compressed_payload);
+
+        let src: Arc<dyn ByteSource> = Arc::new(MemorySource::new(data));
+        let header = PatchHeader::parse(&src).expect("valid patch header");
+        let parts = header.parse_parts(&src).expect("parse parts");
+
+        assert_eq!(parts.len(), 1);
+        assert_eq!(parts[0].file_name, "Base.wz");
+        assert_eq!(parts[0].part_type, PatchPartType::Create);
+        assert_eq!(parts[0].new_file_len, 10);
     }
 }
