@@ -174,6 +174,58 @@ C# 은 `IEnumerable<CompareDifference>` 스트림이고 Rust 도 스트림이어
 출력은 `System.Text.Json` + `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`
 (한글/이모지 라운드트립에 필수 — 원본 `Utils.ToJson` 과 동일).
 
+### 🔴 `net8.0` 은 실제로 빌드되지 않는다 — `net8.0-windows` 로 바꿔야 한다
+
+위 예시의 `WzComparerR2.csproj` 참조는 **핀 커밋에서 빌드 불가**하다.
+`CharaSimResource\CharaSimResource.csproj` 가 트리에 없기 때문에 `WzComparerR2.csproj`
+가 `CharaSimControl/*.cs` 전부에서 `CS0246` 으로 죽는다. `WzComparerR2.MapRender.csproj`
+도 같은 프로젝트를 참조하므로 같이 죽는다. → `diff` 와 `mapscene` op 의 C# 짝이 없다
+(`.scratch/oracle-completion/reports/28-csharp-oracle.md` 참조).
+
+또한 `WzComparerR2.Common` 의 TFM 이 `net462;net6.0-windows;net8.0-windows` 이므로
+평범한 `net8.0` 콘솔은 그것을 참조할 수 없다. 그래서 오라클의 TFM 은
+**`net8.0-windows`** 다. (`WzLib` 만은 `net462;net6.0;net8.0`.)
+
+### `WzComparerR2.sln` 에 넣지 않는다
+
+`.sln` 에 등록하면 `dotnet build WzComparerR2.sln -c Release` 가 오라클까지 끌어들인다.
+오라클은 Release 빌드를 **하드 에러**(`ORACLE0001`)로 막아 두었으므로, `.sln` 에 넣지
+않는 것이 "배포물에 절대 포함되지 않게" 를 보장하는 유일한 방법이다.
+직접 빌드하려면 프로젝트 경로를 지정한다:
+
+```bash
+dotnet build <repo>/WzComparerR2.Oracle/WzComparerR2.Oracle.csproj -c Debug
+```
+
+## C# 참조 핀
+
+오라클은 **명시적 커밋에 고정**되어야 differential 이 재현 가능하다.
+C# 를 Rust 저장소에 벤더링하지 않고, 서브모듈로 붙이지도 않는다.
+
+| 항목 | 값 |
+|---|---|
+| 저장소 | `https://github.com/seotbeo/WzComparerR2` |
+| 핀 커밋 | `bb98c257f3a175a98bce84a38ef3bb65e8b93b75` |
+| 제목 | `StringLinker: fix StringLinker Update for GMS format` |
+| 날짜 | 2026-10-13 |
+| 오라클 브랜치 | `oracle-harness` (이 커밋에서 만든 하네스 작업 브랜치) |
+
+**업스트림이 움직였을 때 재핀하는 법**
+
+```bash
+git -C <C# 저장소> fetch origin
+git -C <C# 저장소> log --oneline bb98c25..HEAD   # 무엇이 바뀌었는지 먼저 본다
+git -C <C# 저장소> checkout -b oracle-harness-<새 sha> <새 sha>
+# 1) 이 표의 커밋/날짜 갱신
+# 2) docs/known-bugs.md 상단의 커밋 참조 갱신
+# 3) .scratch/oracle-completion/README.md 의 "C# 참조 핀" 표 갱신
+# 4) cargo run -p wz-cli --bin wz -- oracle <op> … && dotnet run --project … 로 재대조
+```
+
+재핀할 때는 **StringLinker 를 먼저 본다.** `bb98c25` 자체가 StringLinker 대수정이고,
+#25에서 발견한 파리티 갭의 직접 원인이었다. 그 뒤 upstream StringLinker가 또 바뀌었다면
+`docs/oracle-spec.md` 의 `op: tooltip` 계약과 `crates/wz-db/src/linker.rs` 를 먼저 본다.
+
 ## 차이 비교 스크립트
 
 ```bash
@@ -222,9 +274,9 @@ diff -u /tmp/csharp.s.json /tmp/rust.s.json
 |---|---|
 | 스키마 정의 | ✅ 본 문서 |
 | 합성 코퍼스 생성기 | ✅ `tools/corpus-builder` (100 파일, 결정성 검증됨) |
-| Rust `oracle` 서브커맨드 | ⏳ Phase 1 완료 후 (컨테이너 파서가 필요) |
-| C# `WzComparerR2.Oracle` | ⬜ 착수 필요 (Phase 1 병행) |
-| `scripts/differential.sh` | ⬜ Phase 1.12 |
+| Rust `oracle` 서브커맨드 | ✅ Phase 1 완료 후 (컨테이너 파서가 필요) |
+| C# `WzComparerR2.Oracle` | ✅ #28에서 착수. `tree`/`image`/`tooltip`/`stats`/`expr` 구현, `diff`/`mapscene`/`patch` 는 블록 사유로 스텁 |
+| `scripts/differential.sh` | ⬜ #29 대기. 스펙이 `jq` 를 요구하는데 이 머신에 미설치 |
 
 ## `op: tooltip` 계약 — 확정 사항과 KNOWN GAP
 
