@@ -1862,12 +1862,20 @@ fn cmd_oracle_tooltip(
     let detection = archive.detection();
     let arena = build_arena_from_archive(&archive, &tree);
 
+    // `StringLinker.Load(stringWz.Node, ...)` (`StringLinker.cs:44`) 는 WZ 파일
+    // 자체의 루트를 받는다. 그 루트의 **직접 자식**이 `Consume.img` 같은 `.img`
+    // 엔트리여야 한다 (`StringLinker.cs:67-71`). 한 단계 더 내려가면 조용히
+    // 아무 것도 잡지 못한다.
     let mut linker = StringLinker::new();
-    linker.load_string_wz(&arena, arena.root());
+    if !linker.load_string_wz(&arena, arena.root()) {
+        return Err(format!(
+            "oracle tooltip: {} 에서 문자열 테이블을 찾지 못했습니다 (String.wz 를 지정했는지 확인하세요)",
+            wz_path.display()
+        )
+        .into());
+    }
 
-    let text = linker
-        .format_tooltip(item_id)
-        .unwrap_or_default();
+    let text = oracle_tooltip_text(&linker, item_id)?;
 
     let mut doc = oracle_envelope("tooltip", detection);
     let mut res = serde_json::Map::new();
@@ -1876,6 +1884,26 @@ fn cmd_oracle_tooltip(
 
     println!("{}", serde_json::to_string_pretty(&doc)?);
     Ok(())
+}
+
+/// `op: tooltip` 의 `result.text`.
+///
+/// 없는 ID 는 **빈 문자열이 아니라 오류**다. 오라클 출력은 차이의 원인이
+/// 반드시 드러나야 한다 (`docs/oracle-spec.md:136-137`). 빈 문자열을 찍으면
+/// "이 항목이 원래 없는 것인지, 파싱이 틀린 것인지" 를 구분할 수 없다.
+fn oracle_tooltip_text(linker: &wz_db::StringLinker, item_id: i32) -> Result<String, String> {
+    linker.format_tooltip(item_id).ok_or_else(|| {
+        format!(
+            "oracle tooltip: id {item_id} 에 해당하는 문자열이 없습니다 \
+             (읽은 테이블 크기: item {} / eqp {} / skill {} / map {} / mob {} / npc {})",
+            linker.string_item.len(),
+            linker.string_eqp.len(),
+            linker.string_skill.len(),
+            linker.string_map.len(),
+            linker.string_mob.len(),
+            linker.string_npc.len(),
+        )
+    })
 }
 
 fn extract_gear_stats_from_node(node: &wz_core::image::Node) -> serde_json::Map<String, serde_json::Value> {
@@ -2206,6 +2234,55 @@ fn cmd_oracle_mapscene(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_oracle_tooltip_reports_unknown_id_instead_of_empty_string() {
+        let mut a = wz_db::Arena::with_root("");
+        let root = a.root();
+        let entry = a.add_node(root, "Consume.img", None);
+        a.ingest_image(
+            entry,
+            &wz_core::image::Node {
+                name: "Consume.img".into(),
+                value: None,
+                children: vec![wz_core::image::Node {
+                    name: "2000000".into(),
+                    value: None,
+                    children: vec![
+                        wz_core::image::Node {
+                            name: "name".into(),
+                            value: Some(wz_core::image::ImageValue::Str("빨간 포션".into())),
+                            children: Vec::new(),
+                        },
+                        wz_core::image::Node {
+                            name: "desc".into(),
+                            value: Some(wz_core::image::ImageValue::Str(
+                                "HP를 50 회복시킨다.".into(),
+                            )),
+                            children: Vec::new(),
+                        },
+                    ],
+                }],
+            },
+        );
+
+        let mut linker = wz_db::StringLinker::new();
+        assert!(linker.load_string_wz(&a, root));
+
+        // 존재하는 ID.
+        assert_eq!(
+            oracle_tooltip_text(&linker, 2000000).unwrap(),
+            "빨간 포션\nHP를 50 회복시킨다."
+        );
+
+        // 없는 ID 는 오류. 빈 문자열이 아니다 — 오라클이 실패해야 하기 때문이다.
+        let err = oracle_tooltip_text(&linker, 999).unwrap_err();
+        assert!(err.contains("999"), "에러 메시지에 ID 가 있어야 함: {err}");
+        assert!(
+            err.contains("item 1"),
+            "읽은 테이블 크기가 나와야 함: {err}"
+        );
+    }
 
     #[test]
     fn test_oracle_dirtree_json_schema() {
