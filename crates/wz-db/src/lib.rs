@@ -35,7 +35,7 @@ mod tests;
 pub use arena::Arena;
 pub use calc::{evaluate_expression, CalcError};
 pub use chara_prop::CharaProp;
-pub use linker::{extract_gear_stats, StringLinker, StringResult};
+pub use linker::{extract_gear_stats, LoadMode, StringLinker, StringResult};
 pub use map::{
     BackItem, Foothold, FootholdTree, LadderRope, MapData, MapInfo, MapLife, MapPortal,
     MapVirtualRect, ObjItem, TileItem,

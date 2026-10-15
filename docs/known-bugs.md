@@ -15,7 +15,7 @@ Rust 테스트로 고정한다.
 | 6 | `Gear.cs:28-32` | `diff` 가 **no-op setter**. `MakeTimeLimitedPropAvailable:190` 이 여기에 쓰는데 조용히 값 버림 | `diff` 필드 제거 또는 실제 구현 | Phase 4 |
 | 7 | `CharaEquip.cs:219-226` | `else if (newGearType == GearType.pants)` 가 도달 불가 (앞 분기가 이미 처리) | 슬롯 충돌 매트릭스를 테이블로 재작성하면서 제거 | Phase 4 |
 | 8 | `Wz_Node.cs:549-558` | `ResolveUol` 무한 루프 — **사이클 감지가 없다.** 자기참조 UOL 이 멈추지 않는다 | `resolve()` 에 깊이 상한. `WzFormatError::UolDepthExceeded` | Phase 2 |
-| 9 | `Wz_Node.cs:432-439` vs `:366-370` | 문자열 인덱스는 **마지막** 중복을 유지, 선형 폴백은 **역방향** 스캔. 우연히 일치할 뿐 | 중복 이름을 전부 보관하는 `ChildrenIndex`. 경로 규칙 테스트 | Phase 2 |
+| 9 | `Wz_Node.cs:432-439` vs `:366-370` | 문자열 인덱스는 **마지막** 중복을 유지, 선형 폴백은 **역방향** 스캔. 우연히 일치할 뿐 | 중복 이름을 전부 보관하는 `ChildrenIndex`. 경로 규칙 테스트 | ✅ `tests::duplicate_names_return_last`, `string_linker_resolves_duplicate_name_to_the_last_entry` |
 | 10 | `VpxVideoDecoder` `vpx_image` | `planes_0..3` 필드 + `fixed` 로 포인터 getter 위조. ABI 버전에 취약 | libvpx FFI 제거 | Phase 6 |
 | 11 | `PngEffect` / `MonogameUtils.cs:76-92` | MonoGame **사私有 필드 리플렉션** (`_d3dContext`, `_swapChain`) 으로 텍스처 교체 | wgpu 로 대체하면 필드 접근이 필요 없어짐 | Phase 6 |
 | 12 | `MapRenderV1` 블록 | 3,802 LOC 이 **컴파일조차 되지 않음** (매크로 미정의) | 삭제 | ✅ Phase 0 |
@@ -47,7 +47,7 @@ Rust 테스트로 고정한다.
 | T10 | 원시 데이터 크기의 제수는 `Scale` 가 아니라 **`ActualScale = 1<<Scale`** | `Wz_Png.cs:89` | `wz_image::format::tests::layout_uses_actual_scale_as_divisor` |
 | T11 | PKG2 1202+ 디렉터리 문자열은 **i16** 길이 (그 이전은 i8) | `WzBinaryReader.cs:153-216` | `read::string::tests::pkg2_v1_and_v2_use_different_length_fields` |
 | T12 | `Pkg2DirStringKeyV4` 는 **위치 의존** (stateful) | `Wz_Crypto.cs:479-486` | `crypto::pkg2_key::tests::v4_is_position_dependent` |
-| T13 | UOL 경로는 UOL 노드의 **부모 기준 상대 경로**. 이미지 밖으로 나가면 `img.OwnerNode` 로 넘어가고 실패 시 `+ ".img"` 재시도 | `Wz_Uol.cs:37-68` | Phase 2 |
+| T13 | UOL 경로는 UOL 노드의 **부모 기준 상대 경로**. 이미지 밖으로 나가면 `img.OwnerNode` 로 넘어가고 실패 시 `+ ".img"` 재시도 | `Wz_Uol.cs:37-68` | `tests::resolve_uol_*`, `string_linker_resolves_parent_relative_uol_across_ids` |
 | T14 | `CharaProp.GetSum()` 은 `(base+add+...) * (100+rate+...) / 100` — **정수 나눗셈 순서 보존** | `CharaProp.cs:82-86` | Phase 4 |
 | T15 | `GearPropType` 숫자값 = WZ 노드 이름 (`1..99` 일반, `100..199` 잠재, `1000+` 장비별) | `GearPropType.cs` | Phase 4 |
 | T16 | Frame `delay` 기본 120, `Math.Abs` 적용 | `Frame.cs:129-132` | Phase 4 |

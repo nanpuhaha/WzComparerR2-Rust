@@ -225,3 +225,53 @@ diff -u /tmp/csharp.s.json /tmp/rust.s.json
 | Rust `oracle` 서브커맨드 | ⏳ Phase 1 완료 후 (컨테이너 파서가 필요) |
 | C# `WzComparerR2.Oracle` | ⬜ 착수 필요 (Phase 1 병행) |
 | `scripts/differential.sh` | ⬜ Phase 1.12 |
+
+## `op: tooltip` 계약 — 확정 사항과 KNOWN GAP
+
+### 1. `StringLinker` 의 `stringRoot` 는 **String.wz 파일 자체의 루트**다
+
+원본 `StringLinker.Load(Wz_File stringWz, ...)` 는 `stringWz.Node` 를
+`stringNode` 로 넘긴다 (`StringLinker.cs:44`). 그 노드의 **직접 자식**이
+`Consume.img` / `Eqp.img` 같은 `.img` 엔트리다 (`StringLinker.cs:67-71`).
+
+따라서 Rust `StringLinker::load_string_wz(arena, string_root)` 에 넘기는
+노드는 "`String.wz` 라는 이름의 노드"가 아니라 **WZ 파일 루트**여야 한다.
+`wz oracle tooltip --wz String.wz` 에서 `arena.root()` 가 바로 그 노드다.
+한 단계 더 내려간 노드를 넘기면 `_ => {}` 에 걸려 조용히 아무 것도 잡지 않는다.
+
+→ `string_linker_takes_the_wz_file_root_whose_children_are_img_entries` 가 고정하고,
+CLI 는 테이블을 하나도 못 읽으면 오류로 끝낸다.
+
+### 2. `Item.wz` / `Etc.wz` 는 **별도 루트**다
+
+원본 `Load` 는 `stringNode, itemNode, etcNode, questNode, reactorNode`
+5개를 받는다 (`StringLinker.cs:47`). `0910.img` 은 `Item.wz/Special/` 아래에,
+`SetItemInfo.img` 와 `worldArchive.img` 은 `Etc.wz` 아래에 있다. 그래서 Rust 도
+`load_item_wz` / `load_etc_wz` 진입점을 따로 갖는다.
+
+### 3. 🔴 KNOWN GAP — C# 에 **텍스트** 툴팁이 없다
+
+`result.text` 와 대조할 C# 쪽 문자열이 **존재하지 않는다**.
+`ItemTooltipRender.renderItem` (`ItemTooltipRender.cs:52-117`) 은 `Bitmap` 을
+만들어서 GDI `DrawString` 으로 다음을 **좌표에 얹는다**:
+
+1. `sr.Name` — `StringItem` 에 없으면 `"(null)"`
+2. 속성 태그 (`quest` / `pquest` / `only` / `tradeBlock` / `accountSharable`) 를 `", "` 로 이은 것
+3. 아이콘 비트맵
+4. `"要求等级 : " + reqLevel`
+5. `sr.Desc + sr.AutoDesc` — **구분자 없이 연결**, `Desc` 가 있을 때만
+6. `tradeAvailable` 속성 문자열
+
+돌려주는 문자열이 없다. 그러므로:
+
+- Rust `format_tooltip` 은 `name` + `"\n"` + `desc` 만 돌려주고,
+  **`Desc + AutoDesc` 연결과 `"(null)"` 이름 대체를 하지 않는다.**
+- 더 풍부한 형식을 **발명하지 않는다.** 발명하면 대조 자체가 불가능해진다.
+- C# 오라클을 만들 때는 위 6줄 중 텍스트로 표현 가능한 것만 골라
+  **어느 줄까지 포함하는지 먼저 결정하고** 양쪽에 같은 규칙을 적용해야 한다.
+
+### 4. 없는 ID 는 오류다
+
+`format_tooltip` 이 `None` 을 돌려주면 `wz oracle tooltip` 은 종료 코드 1 로
+실패한다. 빈 문자열을 출력하면 "차이가 났는데 어디서 났는지" 를 알 수 없다
+(§`op: tooltip / stats` 의 마지막 문장).
