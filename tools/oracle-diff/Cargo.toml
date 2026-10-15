@@ -1,0 +1,24 @@
+[package]
+name = "oracle-diff"
+description = "Differential verdict driver — runs the Rust and C# oracles on identical argv and reports a diagnosable byte-comparison result"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+name = "oracle_diff"
+path = "src/lib.rs"
+
+[[bin]]
+name = "oracle-diff"
+path = "src/main.rs"
+
+[dependencies]
+serde_json.workspace = true
+clap.workspace = true
+
+[lints.rust]
+unsafe_code = "forbid"

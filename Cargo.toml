@@ -11,6 +11,7 @@ members = [
     "crates/wz-avatar",
     "crates/wz-cli",
     "tools/corpus-builder",
+    "tools/oracle-diff",
 ]
 
 [workspace.package]

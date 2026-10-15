@@ -229,20 +229,51 @@ git -C <C# 저장소> checkout -b oracle-harness-<새 sha> <새 sha>
 ## 차이 비교 스크립트
 
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
-# 사용: scripts/differential.sh <op> [args...]
-OP="$1"; shift
-wz oracle "$OP" "$@" --format json > /tmp/rust.json
-dotnet run --project ../WzComparerR2.Oracle -- "$OP" "$@" --format json > /tmp/csharp.json
-# 키 순서 무관 비교 + 줄바꿈 정규화
-jq -S . /tmp/rust.json    > /tmp/rust.s.json
-jq -S . /tmp/csharp.json > /tmp/csharp.s.json
-diff -u /tmp/csharp.s.json /tmp/rust.s.json
+scripts/differential.sh <op> [args...]
 ```
 
 **jq 정규화(키 정렬)를 반드시 거친다.** C# 과 Rust 의 JSON 직렬화 순서는 다르므로
 그대로 diff 하면 100% 실패한다. 비교 대상은 **값**이어야 한다.
+
+> **원래 스펙의 5줄 스크립트는 그대로 동작하지 않는다. 왜 그런지는
+> [`docs/differential.md`](differential.md) 의 `## 스펙이 틀렸던 곳` 을 본다.**
+> 요약: `--format json` 은 어느 쪽 오라클도 받지 않는 플래그이고,
+> `../WzComparerR2.Oracle` 상대경로는 어디를 기준으로 해도 존재하지 않는다.
+> 아래 절은 그 설계 의도를 살린 실제 구현이다.
+
+### 구현이 스펙과 다른 세 가지
+
+| 스펙 | 실제 | 이유 |
+|---|---|---|
+| 판정 로직이 셸 | 판정 로직이 `tools/oracle-diff`(Rust), 셸은 진입점만 | 셸 테스트 프레임워크가 없다. "왜 틀렸는지" 를 짜내는 로직에 테스트가 없으면 안 된다 |
+| C# 경로 하드코딩 | `--csharp-repo` / `--csharp-dll` 또는 환경변수 | C# 참조는 커밋으로 핀된다 (사용자 결정). 경로를 저장소에 복사하지 않는다 |
+| `diff -u` 의 종료 코드만 사용 | op 등급 + 종료 코드 5종 | C# 의 `exit 3`(스텁)은 "아직 못 만들었다" 이지 통과도 실패도 아니다 |
+
+### 종료 코드
+
+| 코드 | 뜻 |
+|---:|---|
+| 0 | 일치 (`Gate` op) |
+| 1 | 불일치 |
+| 2 | 도구 사용법 오류 (모르는 op 등) |
+| 3 | 비교 불가 — C# 스텁(`exit 3`) 또는 `tooltip` 처럼 대조 계약이 좁혀진 op |
+| 4 | 하네스 오류 — 빌드 실패, 크래시, `jq` 없음(strict 모드), JSON 아님 |
+
+`3` 이 C# 오라클의 `ExitNotImplemented`(=3)와 같은 숫자이고 같은 의미라는 것은 의도적이다.
+
+### op 등급
+
+| 등급 | op | 의미 |
+|---|---|---|
+| `Gate` | `tree` `image` `stats` `expr` | 바이트 일치 자체가 계약. 일치 = 통과 |
+| `Advisory` | `tooltip` | 양쪽이 **의도적으로 좁힌** 계약만 낸다. 일치해도 통과로 승격하지 않는다 (exit 3) |
+| `Uncomparable` | `diff` `mapscene` `patch` `avatar` `timeline` | 대조할 짝이 없다 |
+
+**"이미 알려진 차이" 예외 목록은 일부러 없다.** 있으면 #28 리포트가 정리한 스펙 JSON
+문제 6건이 그 안에 묻힌다. 예외가 생기면 그 항목을 문서로 올리는 쪽이 정직하다.
+
+세부 사항(선행 조건 · `jq` · C# 경로 지정 · 재핀 · 현재 비교 불가 목록)은
+[`docs/differential.md`](differential.md) 에 있다.
 
 ## 결정성 요구
 
@@ -276,7 +307,8 @@ diff -u /tmp/csharp.s.json /tmp/rust.s.json
 | 합성 코퍼스 생성기 | ✅ `tools/corpus-builder` (100 파일, 결정성 검증됨) |
 | Rust `oracle` 서브커맨드 | ✅ Phase 1 완료 후 (컨테이너 파서가 필요) |
 | C# `WzComparerR2.Oracle` | ✅ #28에서 착수. `tree`/`image`/`tooltip`/`stats`/`expr` 구현, `diff`/`mapscene`/`patch` 는 블록 사유로 스텁 |
-| `scripts/differential.sh` | ⬜ #29 대기. 스펙이 `jq` 를 요구하는데 이 머신에 미설치 |
+| `scripts/differential.sh` | ✅ #29 완료. `docs/differential.md` 참조. 판정 로직은 `tools/oracle-diff`(Rust, 테스트 69개) |
+| 정수 값 `expr` 결과 표기 | 🔴 **새로 발견된 스펙 문제** — C# 는 `2`, Rust 는 `2.0`. `jq` 로는 고쳐지지 않는다. `docs/differential.md` 의 `## 스펙이 틀렸던 곳` §7 |
 
 ## `op: tooltip` 계약 — 확정 사항과 KNOWN GAP
 
