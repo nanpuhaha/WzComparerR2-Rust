@@ -3,7 +3,10 @@
 리포트 §12 R12. **원본 버그를 그대로 재현하지 않는다.** 고치되, 각 항목을
 Rust 테스트로 고정한다.
 
-원본 코드 위치는 `WzComparerR2-seotbeo` 기준 (커밋 `03c18a8`).
+원본 코드 위치는 `WzComparerR2-seotbeo` 기준 (커밋 `bb98c257f3a175a98bce84a38ef3bb65e8b93b75`,
+2026-10-13). 이전에 인용하던 `03c18a8`은 **11커밋 뒤처진 값**이었고 #28에서 정정했다.
+재핀 절차는 `docs/oracle-spec.md`의 "C# 참조 핀" 절과
+`.scratch/oracle-completion/README.md`의 "C# 참조 핀" 표를 본다.
 
 | # | 위치 | 버그 | Rust 대응 | 상태 |
 |---|---|---|---|---|
