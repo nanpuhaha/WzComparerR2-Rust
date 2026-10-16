@@ -2015,7 +2015,9 @@ fn cmd_oracle_expr(
     doc.insert("op".into(), serde_json::Value::String("expr".into()));
     let mut res = serde_json::Map::new();
     res.insert("expr".into(), serde_json::Value::String(expr.to_string()));
-    if let Some(num) = serde_json::Number::from_f64(evaluated) {
+    if evaluated.is_finite() && evaluated.fract() == 0.0 && evaluated >= i64::MIN as f64 && evaluated <= i64::MAX as f64 {
+        res.insert("value".into(), serde_json::Value::Number((evaluated as i64).into()));
+    } else if let Some(num) = serde_json::Number::from_f64(evaluated) {
         res.insert("value".into(), serde_json::Value::Number(num));
     } else {
         res.insert("value".into(), serde_json::Value::Null);
