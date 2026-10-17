@@ -55,6 +55,15 @@ impl Foothold {
     }
 }
 
+/// 사다리 / 로프 종류.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LadderRopeKind {
+    /// 사다리 (WZ `l = 1`).
+    Ladder,
+    /// 로프 (WZ `l = 0`).
+    Rope,
+}
+
 /// 사다리 / 로프 데이터.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LadderRope {
@@ -62,9 +71,22 @@ pub struct LadderRope {
     pub x: i32,
     pub y1: i32,
     pub y2: i32,
-    pub l: bool, // true: ladder, false: rope
+    /// 사다리/로프 구분 플래그 (true: ladder, false: rope). WZ 속성명 `l`.
+    pub l: bool,
     pub uf: i32,
     pub page: i32,
+}
+
+impl LadderRope {
+    /// 사다리 또는 로프 종류를 반환한다.
+    #[inline]
+    pub fn kind(&self) -> LadderRopeKind {
+        if self.l {
+            LadderRopeKind::Ladder
+        } else {
+            LadderRopeKind::Rope
+        }
+    }
 }
 
 /// 포탈 데이터.
@@ -80,11 +102,23 @@ pub struct MapPortal {
     pub script: Option<String>,
 }
 
+/// 라이프 (NPC / Mob) 종류.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LifeKind {
+    /// NPC (WZ `type = "n"`).
+    Npc,
+    /// 몬스터 (WZ `type = "m"`).
+    Mob,
+    /// 기타 / 미분류.
+    Unknown,
+}
+
 /// 라이프 (NPC / Mob) 배치 데이터.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MapLife {
     pub id: String,
-    pub life_type: String, // "n": NPC, "m": Mob
+    /// WZ 원시 라이프 타입 문자열 ("n": NPC, "m": Mob).
+    pub life_type: String,
     pub x: i32,
     pub y: i32,
     pub cy: i32,
@@ -93,10 +127,23 @@ pub struct MapLife {
     pub hide: bool,
 }
 
+impl MapLife {
+    /// 라이프 종류(NPC, Mob 등)를 반환한다.
+    #[inline]
+    pub fn kind(&self) -> LifeKind {
+        match self.life_type.as_str() {
+            "n" | "N" => LifeKind::Npc,
+            "m" | "M" => LifeKind::Mob,
+            _ => LifeKind::Unknown,
+        }
+    }
+}
+
 /// 맵 배경 아이템 (`back/{id}`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BackItem {
     pub index: usize,
+    /// 배경 세트 이름 (WZ 속성명 `bS` / background set).
     pub b_s: String,
     pub ani: i32,
     pub no: String,
@@ -112,11 +159,20 @@ pub struct BackItem {
     pub alpha: i32,
 }
 
+impl BackItem {
+    /// 배경 세트 이름 (`bS` 속성)을 반환한다.
+    #[inline]
+    pub fn bg_set(&self) -> &str {
+        &self.b_s
+    }
+}
+
 /// 맵 오브젝트 아이템 (`{layer}/obj/{id}`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ObjItem {
     pub layer: usize,
     pub index: usize,
+    /// 오브젝트 세트 이름 (WZ 속성명 `oS` / object set).
     pub o_s: String,
     pub l0: String,
     pub l1: String,
@@ -127,16 +183,33 @@ pub struct ObjItem {
     pub flip: bool,
 }
 
+impl ObjItem {
+    /// 오브젝트 세트 이름 (`oS` 속성)을 반환한다.
+    #[inline]
+    pub fn obj_set(&self) -> &str {
+        &self.o_s
+    }
+}
+
 /// 맵 타일 아이템 (`{layer}/tile/{id}`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TileItem {
     pub layer: usize,
     pub index: usize,
+    /// 타일 세트 이름 (WZ 레이어 info 속성명 `tS` / tile set).
     pub t_s: String,
     pub u: String,
     pub no: String,
     pub x: i32,
     pub y: i32,
+}
+
+impl TileItem {
+    /// 타일 세트 이름 (`tS` 속성)을 반환한다.
+    #[inline]
+    pub fn tile_set(&self) -> &str {
+        &self.t_s
+    }
 }
 
 /// 발판 그룹 및 전체 발판 트리 (`FootholdManager.cs:20-53` 대응).
@@ -597,5 +670,53 @@ mod tests {
         assert_eq!(bounds.bottom, 100);
         assert_eq!(tree.get_by_id(1).map(|f| f.id), Some(1));
         assert!(tree.get_by_id(999).is_none());
+    }
+
+    #[test]
+    fn test_map_domain_types_and_accessors() {
+        let lr_ladder = LadderRope {
+            l: true,
+            ..Default::default()
+        };
+        let lr_rope = LadderRope {
+            l: false,
+            ..Default::default()
+        };
+        assert_eq!(lr_ladder.kind(), LadderRopeKind::Ladder);
+        assert_eq!(lr_rope.kind(), LadderRopeKind::Rope);
+
+        let life_npc = MapLife {
+            life_type: "n".into(),
+            ..Default::default()
+        };
+        let life_mob = MapLife {
+            life_type: "m".into(),
+            ..Default::default()
+        };
+        let life_other = MapLife {
+            life_type: "x".into(),
+            ..Default::default()
+        };
+        assert_eq!(life_npc.kind(), LifeKind::Npc);
+        assert_eq!(life_mob.kind(), LifeKind::Mob);
+        assert_eq!(life_other.kind(), LifeKind::Unknown);
+
+        let back = BackItem {
+            b_s: "grassyCat".into(),
+            ..Default::default()
+        };
+        assert_eq!(back.bg_set(), "grassyCat");
+
+        let obj = ObjItem {
+            o_s: "house".into(),
+            ..Default::default()
+        };
+        assert_eq!(obj.obj_set(), "house");
+
+        let tile = TileItem {
+            t_s: "woodFloor".into(),
+            ..Default::default()
+        };
+        assert_eq!(tile.tile_set(), "woodFloor");
     }
 }
