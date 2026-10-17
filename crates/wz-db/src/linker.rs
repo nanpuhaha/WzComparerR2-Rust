@@ -664,33 +664,30 @@ impl StringLinker {
         // (`StringLinker.cs:565`, `:602`). 그래서 `Name` 는 열거된 ID 중
         // `stringMob` / `stringNpc` 에 **실제로 있는 마지막 것**의 이름이 된다.
         // 하나도 없으면 배정 자체가 일어나지 않으므로 기존 값이 남는다.
-        let assigned_name = ids.iter().rev().find_map(|id| match kind {
-            WorldArchiveKind::Mob => self.string_mob.get(id),
-            WorldArchiveKind::Npc => self.string_npc.get(id),
-        });
-        if let Some(mob) = assigned_name {
-            sr.name = mob.name.clone();
+        let target_map = match kind {
+            WorldArchiveKind::Mob => &self.string_mob,
+            WorldArchiveKind::Npc => &self.string_npc,
+        };
+        let assigned_name = ids.iter().rev().find_map(|id| target_map.get(id));
+        if let Some(target) = assigned_name {
+            sr.name = target.name.clone();
         }
 
-        match kind {
-            WorldArchiveKind::Mob => {
-                self.string_world_archive_mob_by_path
-                    .insert(path, sr.clone());
-                for id in ids {
-                    // 원본은 `stringMob` 에 없는 ID 를 건너뛴다 (`:569-572`).
-                    if self.string_mob.contains_key(&id) {
-                        self.string_world_archive_mob.insert(id, sr.clone());
-                    }
-                }
-            }
-            WorldArchiveKind::Npc => {
-                self.string_world_archive_npc_by_path
-                    .insert(path, sr.clone());
-                for id in ids {
-                    if self.string_npc.contains_key(&id) {
-                        self.string_world_archive_npc.insert(id, sr.clone());
-                    }
-                }
+        let (path_map, id_map) = match kind {
+            WorldArchiveKind::Mob => (
+                &mut self.string_world_archive_mob_by_path,
+                &mut self.string_world_archive_mob,
+            ),
+            WorldArchiveKind::Npc => (
+                &mut self.string_world_archive_npc_by_path,
+                &mut self.string_world_archive_npc,
+            ),
+        };
+
+        path_map.insert(path, sr.clone());
+        for id in ids {
+            if target_map.contains_key(&id) {
+                id_map.insert(id, sr.clone());
             }
         }
     }

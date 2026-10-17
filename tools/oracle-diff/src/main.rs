@@ -294,16 +294,22 @@ const ARTIFACT_FILES: &[&str] = &[
     "report.txt",
 ];
 
-fn write_artifacts(dir: &Path, rust: &SideResult, csharp: &SideResult, verdict: &Verdict, report: &str) -> std::io::Result<()> {
+/// 실행 양측의 결과 쌍.
+struct SidePair<'a> {
+    rust: &'a SideResult,
+    csharp: &'a SideResult,
+}
+
+fn write_artifacts(dir: &Path, sides: SidePair<'_>, verdict: &Verdict, report: &str) -> std::io::Result<()> {
     std::fs::create_dir_all(dir)?;
     for name in ARTIFACT_FILES {
         let body: Option<String> = match *name {
-            "rust.json" => Some(rust.stdout.clone()),
-            "rust.stderr" => Some(rust.stderr.clone()),
-            "rust.code" => Some(rust.code.to_string()),
-            "csharp.json" => Some(csharp.stdout.clone()),
-            "csharp.stderr" => Some(csharp.stderr.clone()),
-            "csharp.code" => Some(csharp.code.to_string()),
+            "rust.json" => Some(sides.rust.stdout.clone()),
+            "rust.stderr" => Some(sides.rust.stderr.clone()),
+            "rust.code" => Some(sides.rust.code.to_string()),
+            "csharp.json" => Some(sides.csharp.stdout.clone()),
+            "csharp.stderr" => Some(sides.csharp.stderr.clone()),
+            "csharp.code" => Some(sides.csharp.code.to_string()),
             "rust.normalized.json" => verdict.rust_normalized.clone(),
             "csharp.normalized.json" => verdict.csharp_normalized.clone(),
             "report.txt" => Some(report.to_string()),
@@ -449,7 +455,11 @@ fn run(cli: &Cli) -> i32 {
             artifacts: None,
         };
         let report = render_report(&verdict, &ctx);
-        match write_artifacts(&out_dir, &rust, &csharp, &verdict, &report) {
+        let sides = SidePair {
+            rust: &rust,
+            csharp: &csharp,
+        };
+        match write_artifacts(&out_dir, sides, &verdict, &report) {
             Ok(()) => {
                 written = Some(ArtifactPaths {
                     directory: out_dir.display().to_string(),
@@ -791,7 +801,11 @@ mod tests {
         let rust = SideResult::ok(r#"{"a":1}"#);
         let csharp = SideResult::failed(3, "nope");
         let verdict = compare("diff", &rust, &csharp, &oracle_diff::normalize_builtin);
-        write_artifacts(&dir, &rust, &csharp, &verdict, "report").unwrap();
+        let sides = SidePair {
+            rust: &rust,
+            csharp: &csharp,
+        };
+        write_artifacts(&dir, sides, &verdict, "report").unwrap();
 
         for name in ARTIFACT_FILES {
             if name.ends_with(".normalized.json") {
