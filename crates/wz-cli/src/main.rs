@@ -1613,7 +1613,9 @@ fn compute_png_ref_sha256(
     let rgba_pixels = match tex_fmt {
         TextureFormat::Unknown => decompress_zlib(&raw_payload).unwrap_or(raw_payload),
         fmt => {
-            // 멀티페이지(기본 0페이지) 및 RGB565 scale=16 업스케일링 규칙 적용
+            // 멀티페이지(기본 0페이지) 및 RGB565 scale=16 업스케일링 규칙 적용.
+            // 함정: 실패를 raw 바이트로 마스킹하면 C# 오라클과의 비교가 무의미해진다
+            // — 실패는 실패로 뽑아야 한다.
             decode_raw_page_to_rgba8(
                 fmt,
                 png_ref.width as u32,
@@ -1623,8 +1625,7 @@ fn compute_png_ref_sha256(
                 0,
                 &raw_payload,
             )
-            .map(|(_, _, px)| px)
-            .unwrap_or_else(|_| decompress_zlib(&raw_payload).unwrap_or(raw_payload))
+            .map(|(_, _, px)| px)?
         }
     };
 

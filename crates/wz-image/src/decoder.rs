@@ -26,6 +26,82 @@ pub fn decompress_zlib(compressed: &[u8]) -> Result<Vec<u8>> {
     Ok(decompressed)
 }
 
+/// 원본 `Wz_Png.UnsafeOpenRead` (`Wz_Png.cs:141-166`) 호환 압축 해제.
+///
+/// # 함정: 스트림이 **완결되지 않았을 수 있다** (BFINAL=0, Z_SYNC_FLUSH 종료)
+///
+/// 실전 2026 클라이언트 (KMST777/1206 계열) 검증 결과, 캔버스 페이로드의
+/// deflate 블록은 `BFINAL=0` 로 끝난다 — **마지막 블록 플래그와 adler32 가
+/// 없다.** .NET `DeflateStream` 은 남은 입력이 끝나면 그대로 돌려주므로
+/// 통과하지만, `flate2::ZlibDecoder` 는 "incomplete stream" 로 실패한다.
+/// 원본이 `ZlibDecoder` 가 아닌 **raw `DeflateStream`** 을 쓰는 이유가 이것이다
+/// (`78 9C` 헤더를 직접 소비한 뒤 raw deflate 로 이어서 읽는다).
+///
+/// 따라서 여기서는 C# 과 동일하게:
+/// 1. 엄격 경로([`decompress_zlib`])를 먼저 시도한다 — 완결 스트림은 그대로 통과.
+/// 2. 실패 시 C# 경로 재현: `78 9C` 헤더 2바이트를 소비한 뒤 **raw inflate**,
+///    입력이 소진되면 그 시점까지 해제한 바이트를 그대로 쓴다.
+///    (`expected` 보다 적게 나오면 진짜 오류.)
+///
+/// `expected` 는 요청 페이지들의 압축 해제 후 바이트 수다.
+/// `78 9C` 가 아닌 스트림은 원본이 청크 암호화 경로로 보내므로 여기서 오류로
+/// 마무리한다 (EncKeys 유도가 아직 `wz_image` 에는 없다).
+pub fn decompress_zlib_compat(compressed: &[u8], expected: usize) -> Result<Vec<u8>> {
+    if let Ok(v) = decompress_zlib(compressed) {
+        if v.len() >= expected {
+            return Ok(v);
+        }
+    }
+
+    if compressed.len() < 2 || compressed[..2] != [0x78, 0x9C] {
+        return Err(WzImageError::Inflate {
+            offset: 0,
+            source: std::io::Error::other("zlib 헤더 78 9C 가 아니다 — 청크 암호화 경로 미구현"),
+        }
+        .into());
+    }
+    raw_inflate_tolerant(&compressed[2..], expected)
+}
+
+/// raw deflate 해제 — 입력이 소진되면 **거기까지의 출력을 정상으로 취급한다.**
+///
+/// `.NET DeflateStream.Read` 의 동작 재현: 스트림 종료자(BFINAL=1 블록)가
+/// 없어도 이미 해제한 바이트는 유효하다. (Z_SYNC_FLUSH 가 낸
+/// `00 00 FF FF` 는 별도의 데이터가 아니라 빈 stored 블록이므로
+/// 디코더가 자연스럽게 소비한다.)
+fn raw_inflate_tolerant(input: &[u8], expected: usize) -> Result<Vec<u8>> {
+    use flate2::{Decompress, FlushDecompress, Status};
+
+    let mut d = Decompress::new(false);
+    let mut out = vec![0u8; expected.max(1) + 64];
+    let mut in_pos = 0usize;
+    let mut out_pos = 0usize;
+
+    while in_pos < input.len() && out_pos < expected {
+        if out_pos == out.len() {
+            out.resize(out.len() * 2, 0);
+        }
+        let status = d
+            .decompress(&input[in_pos..], &mut out[out_pos..], FlushDecompress::None)
+            .map_err(|e| WzImageError::Inflate {
+                offset: in_pos as u64,
+                source: std::io::Error::other(e),
+            })?;
+        let produced = d.total_out() as usize - out_pos;
+        out_pos += produced;
+        in_pos += d.total_in() as usize - in_pos;
+
+        if status == Status::StreamEnd
+            || in_pos >= input.len()   // 입력 소진: .NET 처럼 여기까지의 바이트를 쓴다
+            || produced == 0           // 진행 없는 BufError → 데이터 오류
+        {
+            break;
+        }
+    }
+    out.truncate(out_pos);
+    Ok(out)
+}
+
 /// RGBA8 픽셀 버퍼(`src_w * src_h * 4` 바이트)를 가로 `scale_x`배, 세로 `scale_y`배 최근접 이웃 확장한다.
 ///
 /// 원본 `ImageCodec.ScalePixels` (`ImageCodec.cs:97-126`) 대응.
@@ -162,7 +238,51 @@ pub fn decode_raw_page_to_rgba8(
     page: u32,
     raw_compressed: &[u8],
 ) -> Result<(u32, u32, Vec<u8>)> {
-    let decompressed = decompress_zlib(raw_compressed)?;
+    // 요청 페이지 범위만큼 필요한 압축 해제 후 바이트 수.
+    let layout = TextureLayout::for_png(format, scale, width, height).ok_or(
+        WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale,
+        },
+    )?;
+    let bytes_per_page = if format == TextureFormat::Bc7 {
+        bc7_data_size(width, height).ok_or(WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale,
+        })?
+    } else {
+        layout.bytes_per_page
+    };
+    let total_pages = if pages > 0 {
+        pages as usize
+    } else {
+        1
+    };
+    let total_pages_usize = bytes_per_page
+        .checked_mul(total_pages)
+        .ok_or(WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale,
+        })?;
+
+    let decompressed = match decompress_zlib_compat(raw_compressed, total_pages_usize) {
+        Ok(v) => v,
+        Err(e) => {
+            // 합성 코퍼스처럼 data 가 "압축이 완전 풀린" 상태로 저장된 경우도
+            // 있다 — raw 로 간주해 디코딩을 다시 시도한다.
+            if raw_compressed.len() >= total_pages_usize {
+                raw_compressed.to_vec()
+            } else {
+                return Err(e);
+            }
+        }
+    };
     decode_page_to_rgba8(format, width, height, scale, pages, page, &decompressed)
 }
 
@@ -701,6 +821,45 @@ mod tests {
         assert_eq!((sw, sh), (16, 16));
         assert_eq!(scaled.len(), 16 * 16 * 4);
         assert!(scaled.iter().all(|&b| b == 255));
+    }
+
+    /// 실전 2026 클라이언트 (KMST 계열) 금고 회귀 테스트.
+    ///
+    /// 실측 바이트 (`Item/Cash/Cash_000.wz`, 1x1 ARGB4444 캔버스, dataLen=11):
+    /// ```text
+    /// 78 9c 62 60 00 00 00 00 ff ff
+    /// ```
+    /// `BFINAL=0` — 마지막 deflate 블록 플래그와 adler32 가 없는 **비완결** 스트림
+    /// (Z_SYNC_FLUSH 종료). .NET `DeflateStream` 기준으로는 디코딩 2바이트가 나온다.
+    #[test]
+    fn sync_flush_terminated_stream_is_decodable() {
+        let raw = [0x78, 0x9C, 0x62, 0x60, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF];
+
+        // 완결 스트림이 아니므로 strict 경로는 실패해야 한다.
+        assert!(decompress_zlib(&raw).is_err());
+
+        // compat 경로: raw deflate 로 2바이트(1x1 ARGB4444) 해제.
+        let out = decompress_zlib_compat(&raw, 2).unwrap();
+        assert_eq!(out, vec![0x00, 0x00]);
+
+        // 디코더 전체 경로: 1x1 ARGB4444 → RGBA8 투명 픽셀.
+        let (_, _, rgba) =
+            decode_raw_page_to_rgba8(TextureFormat::Argb4444, 1, 1, 0, 0, 0, &raw).unwrap();
+        assert_eq!(rgba, vec![0, 0, 0, 0]);
+    }
+
+    /// 완결 스트림은 strict 경로 그대로 통과해야 한다 (레거시 WZ 호환).
+    #[test]
+    fn complete_stream_prefers_strict_path() {
+        let complete = {
+            let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
+            e.write_all(&[0x00, 0x00]).unwrap();
+            e.finish().unwrap()
+        };
+        assert_eq!(
+            decompress_zlib_compat(&complete, 2).unwrap(),
+            decompress_zlib(&complete).unwrap()
+        );
     }
 }
 

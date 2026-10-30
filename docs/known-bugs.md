@@ -57,6 +57,7 @@ Rust 테스트로 고정한다.
 | T20 | `float`(0x04) 값은 **압축 int** 로 읽고 IEEE-754 비트 패턴으로 해석 | `WzBinaryReader.cs:81-86` | `corpus_builder::tests::float_uses_compressed_int_not_raw` |
 | T21 | `Canvas.dataLen` 은 **비압축** i32 이고 **플래그 바이트를 포함** | `Wz_Image.cs:301` | `corpus_builder::tests::canvas_data_len_is_readable_from_tail` |
 | T22 | 청크 암호화는 **청크마다 키스트림 오프셋 0 리셋** | `ChunkedEncryptedInputStream.cs:73-83` | `corpus_builder` chunked 경로 |
+| T23 | **캔버스 zlib 스트림은 완결되지 않았을 수 있다.** 2026 실전 클라이언트(KMST1206 계열) 검증: deflate 블록이 `BFINAL=0` 로 끝나고 adler32 없이 Z_SYNC_FLUSH (`00 00 FF FF`) 로 종료. .NET `DeflateStream` 을 raw 로 쓰는 원본은 통과, `ZlibDecoder` 는 "incomplete stream" | 2026-10-30 전 코퍼스 실측 (792개 WZ / 461만 캔버스, 초기 전체 실패 → 수정 후 전부 성공) | `wz_image::decompress_zlib_compat` / `wz-image` `sync_flush_terminated_stream_is_decodable` |
 
 ---
 
