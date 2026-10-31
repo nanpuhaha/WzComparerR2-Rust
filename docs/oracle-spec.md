@@ -136,6 +136,86 @@ C# 은 `IEnumerable<CompareDifference>` 스트림이고 Rust 도 스트림이어
 **차이 나는 이유는 항상 원인 파악 가능한 형태여야 한다.**
 `"0.1% off"` 같은 반올림 차이가 나면 어디서 틀렸는지 찾을 수 없다.
 
+### op: `avatar` / `timeline` (#26, #27 — 규약 문서 `.scratch/oracle-completion/avatar-timeline-wayfinding.md`)
+
+```bash
+wz oracle timeline --wz A.wz --node walk1 [--path 이미지명]
+                   [--canvas-wz CanvasWZ] [--interpol-ms 90]
+WzComparerR2.Oracle timeline --wz A.wz --node walk1 [--path 이미지명]
+                   [--canvas-wz CanvasWZ] [--interpol-ms 90]
+
+wz oracle avatar --body-wz A.wz [--body 00002000.img] --canvas-wz C.wz
+                 --zmap-wz B.wz [--zmap zmap.img] --action walk1 [--frame 0] [--elapsed 0]
+WzComparerR2.Oracle avatar   --body-wz A.wz ...   # 동일 인자
+```
+
+```jsonc
+// op: timeline
+{
+  "result": {
+    "node": "walk1",
+    "frame_count": 4,
+    "cycle_ms": 720,                       // Σ 정규화 delay
+    "frames": [
+      {
+        "frame": 0,
+        "delay_ms": 180,                   // 0 → 120, abs (T16)
+        "a0": 255, "a1": 255,              // 없으면 255 (T17)
+        "children": [
+          { "name": "body", "type": "canvas",
+            "outlink": "Character/_Canvas/00002000.img/walk1/0/body",
+            "w": 27, "h": 32, "sha256": "…" },          // 실캔버스 RGBA8 해시
+          { "name": "face", "type": "short", "value": 1 },
+          { "name": "delay", "type": "int",   "value": 180 }
+        ]
+      }
+    ],
+    "samples": [                            // interpol-ms > 0 일 때만
+      { "frame": 0, "elapsed_ms": 0,   "alpha": 255 },
+      { "frame": 0, "elapsed_ms": 90,  "alpha": 255 }
+    ]
+  }
+}
+```
+
+```jsonc
+// op: avatar
+{
+  "result": {
+    "image":   { "w": 27, "h": 41 },           // 레이어 rect 유니온 바운딩 박스
+    "sha256":  "…",                            // 합성 RGBA8 (w*h*4) 해시
+    "layers":  [
+      {
+        "name": "body",
+        "z": "body",                           // 문자열 | null (정수 z 이면 숫자)
+        "z_index": 99,                         // 규칙: IndexOf, miss → Count;
+                                               // 정수 z: <0 → Count-z, ≥0 → -1-z
+        "outlink": "…",
+        "w": 27, "h": 32,
+        "origin": [19, 32],
+        "sha256": "…"                          // 레이어 RGBA8 해시
+      }
+      // z_index 오름차순 순서 = 합성 순서 (2D painter's algorithm)
+    ],
+    "frames": { "delay_ms": 180, "a0": 255, "a1": 255 }
+  }
+}
+```
+
+**합성 수학 (양측 동일 구현 필수 — C# 도 문자 그대로):**
+
+```text
+eff = (sa * ea + 127) / 255
+rgb = (src*eff + 127)/255 + (dst*(255-eff) + 127)/255   # 채널별, 255 포화
+a   = eff + (da*(255-eff) + 127)/255
+그림 위치 = move(프레임 move 벡터) - origin(canvas origin)
+```
+
+- GDI+/wgpu 를 **사용하지 않는다** — 정수 수학 소프트웨어 합성기만.
+- SHA-256 는 엄격 비교 (퍼지 해시 금지).
+- outlink 해석 규칙: 문자열의 `.img` 로 끝나는 마지막 세그먼트가 이미지,
+  이후 경로가 img 내부 노드.
+
 ## 우선순위 (리포트 §10.2 표 그대로)
 
 | 순위 | op | 왜 |
@@ -222,6 +302,7 @@ diff -u /tmp/csharp.s.json /tmp/rust.s.json
 |---|---|
 | 스키마 정의 | ✅ 본 문서 |
 | 합성 코퍼스 생성기 | ✅ `tools/corpus-builder` (100 파일, 결정성 검증됨) |
-| Rust `oracle` 서브커맨드 | ⏳ Phase 1 완료 후 (컨테이너 파서가 필요) |
-| C# `WzComparerR2.Oracle` | ⬜ 착수 필요 (Phase 1 병행) |
-| `scripts/differential.sh` | ⬜ Phase 1.12 |
+| Rust `oracle` 서브커맨드 | ✅ tree/diff/image/tooltip/stats/expr/patch/map-scene + **avatar/timeline (#26/#27)** |
+| C# `WzComparerR2.Oracle` | ⏳ tree/image/tooltip/stats/expr 구현, avatar/timeline 은 exit-3 스텁 (#31 규약 문서 참조) |
+| `scripts/differential.sh` | ✅ (#29) |
+| 실전 코퍼스 벌크 검증 | ✅ 2026 클라이언트 792개 WZ / 캔버스 4,610,672개 전부 (커밋 `b8f38b1`, `cargo run -p wz-cli --example bulk_scan`) |

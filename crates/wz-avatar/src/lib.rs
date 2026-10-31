@@ -5,9 +5,11 @@
 
 use std::sync::Arc;
 
+pub mod compose;
 pub mod frame;
 pub mod prism;
 pub mod scene;
+pub use compose::{bounding_box, compose, ComposeError, ComposedFrame, LayerSource};
 pub use frame::FrameTiming;
 pub use prism::{apply_prism_rgba8, PrismData};
 pub use scene::{AvatarBatch, AvatarScene, AvatarVertex};

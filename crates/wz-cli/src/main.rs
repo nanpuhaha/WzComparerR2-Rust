@@ -272,6 +272,64 @@ enum OracleAction {
         patch: PathBuf,
     },
 
+    /// 애니메이션 프레임 병합(정규화) 및 알파 보간 표준 JSON 덤프 (#27)
+    Timeline {
+        /// WZ 파일 경로
+        #[arg(long)]
+        wz: PathBuf,
+
+        /// 이미지 이름 (생략하면 첫 이미지 엔트리)
+        #[arg(long)]
+        path: Option<String>,
+
+        /// img 내부 액션 노드 (예: walk1)
+        #[arg(long)]
+        node: String,
+
+        /// 실캔버스 해석용 _Canvas 그룹 WZ (outlink 복호화)
+        #[arg(long)]
+        canvas_wz: Option<PathBuf>,
+
+        /// 알파 보간 샘플 간격(ms). 0 이면 생략
+        #[arg(long, default_value_t = 0)]
+        interpol_ms: u32,
+    },
+
+    /// 아바타 프레임 합성 및 RGBA8 SHA-256 표준 JSON 덤프 (#26)
+    Avatar {
+        /// 본체(액션) WZ 파일 경로
+        #[arg(long)]
+        body_wz: PathBuf,
+
+        /// 본체 이미지 이름 (생략하면 첫 이미지 엔트리, 예: 00002000.img)
+        #[arg(long)]
+        body: Option<String>,
+
+        /// 실캔버스(_outlink) 해석용 _Canvas 그룹 WZ
+        #[arg(long)]
+        canvas_wz: PathBuf,
+
+        /// zmap.img 를 가진 WZ 경로
+        #[arg(long)]
+        zmap_wz: PathBuf,
+
+        /// zmap 이미지 이름 (생략하면 zmap.img)
+        #[arg(long)]
+        zmap: Option<String>,
+
+        /// 액션 노드 이름 (예: walk1)
+        #[arg(long)]
+        action: String,
+
+        /// 프레임 인덱스
+        #[arg(long, default_value_t = 0)]
+        frame: u32,
+
+        /// 진행 플랫폼 보간 지점 (ms, 0..=delay). 생략하면 프레임 시작 a0
+        #[arg(long, default_value_t = 0)]
+        elapsed: u32,
+    },
+
     /// 맵 씬 물리 구조 및 발판/포탈/라이프 표준 JSON 덤프
     MapScene {
         /// WZ 파일 경로
@@ -1295,6 +1353,32 @@ fn cmd_oracle(action: OracleAction) -> Result<(), Box<dyn std::error::Error>> {
         OracleAction::Expr { expr, args } => cmd_oracle_expr(&expr, &args),
         OracleAction::Patch { patch } => cmd_oracle_patch(&patch),
         OracleAction::MapScene { wz, map } => cmd_oracle_mapscene(&wz, &map),
+        OracleAction::Timeline {
+            wz,
+            path,
+            node,
+            canvas_wz,
+            interpol_ms,
+        } => cmd_oracle_timeline(&wz, path.as_deref(), &node, canvas_wz.as_deref(), interpol_ms),
+        OracleAction::Avatar {
+            body_wz,
+            body,
+            canvas_wz,
+            zmap_wz,
+            zmap,
+            action,
+            frame,
+            elapsed,
+        } => cmd_oracle_avatar(&AvatarParams {
+            body_wz: &body_wz,
+            body_img: body.as_deref(),
+            canvas_wz: &canvas_wz,
+            zmap_wz: &zmap_wz,
+            zmap_img: zmap.as_deref(),
+            action: &action,
+            frame,
+            elapsed,
+        }),
     }
 }
 
@@ -2204,9 +2288,587 @@ fn cmd_oracle_mapscene(
     Ok(())
 }
 
+// ── oracle avatar / timeline (#26, #27) ─────────────────────────────────────
+// 규약: `.scratch/oracle-completion/avatar-timeline-wayfinding.md` (Ticket 31).
+// C# 오라클이 같은 수학/스키마를 문자 그대로 구현하는 계약 지점이다.
+
+/// 함정: 중첩 `Property` 는 children 이 아니라 value 안에 들어간다
+/// (`parse_extended` → `ImageValue::Property`).
+/// 프레임/액션 노드의 "실제 자식" 을 통일해서 꺼낸다.
+fn children_of(node: &wz_core::image::Node) -> &[wz_core::image::Node] {
+    if !node.children.is_empty() {
+        return &node.children;
+    }
+    match &node.value {
+        Some(wz_core::image::ImageValue::Property(inner)) => &inner.children,
+        _ => &[],
+    }
+}
+
+struct ResolvedCanvas {
+    w: u32,
+    h: u32,
+    sha256: String,
+    /// avatar 합성용 RGBA8 — timeline 은 해시만 쓴다.
+    rgba: Vec<u8>,
+}
+
+/// `_outlink` 문자열을 실캔버스로 분해: 이미지 이름 + 이미지 내부 경로.
+///
+/// 형태: `<그룹경로>/<이미지.img>/<내부노드…>`. `.img` 로 끝나는 **마지막**
+/// 세그먼트를 이미지로 본다.
+fn split_outlink(raw: &str) -> Option<(&str, Vec<&str>)> {
+    let segs: Vec<&str> = raw.split('/').filter(|s| !s.is_empty()).collect();
+    let img_idx = segs
+        .iter()
+        .rposition(|s| s.to_ascii_lowercase().ends_with(".img"))?;
+    Some((segs[img_idx], segs[img_idx + 1..].to_vec()))
+}
+
+/// PngRef 의 픽셀을 RGBA8 로 디코딩하고 SHA-256 을 붙인다.
+///
+/// `oracle image` 해시 경로와 동일한 디코더 호출 — `78 9C` 비완결
+/// (sync-flush) 스트림은 `decode_raw_page_to_rgba8` 내부 compat 경로가
+/// 처리한다 (커밋 `b8f38b1`).
+fn decode_canvas_pixels(
+    png: &wz_core::image::PngRef,
+    src: &std::sync::Arc<dyn wz_pool::ByteSource>,
+) -> Result<ResolvedCanvas, Box<dyn std::error::Error>> {
+    use wz_image::TextureFormat;
+
+    let raw_payload = png.extract_raw_bytes(src)?;
+    let fmt = TextureFormat::from_u32(png.format as u32);
+    let rgba = match fmt {
+        TextureFormat::Unknown => {
+            // 미해석 포맷: zlib 해제만 시도, 실패 시 검정 픽셀로 진행한다.
+            // (크래시로 검증을 중단하는 것보다 "미해석" 표시가 낫다.)
+            match wz_image::decompress_zlib(&raw_payload) {
+                Ok(v) => v,
+                Err(_) => vec![0u8; (png.width.max(1) * png.height.max(1) * 4) as usize],
+            }
+        }
+        _ => wz_image::decode_raw_page_to_rgba8(
+            fmt,
+            png.width as u32,
+            png.height as u32,
+            png.scale as u32,
+            png.pages as u32,
+            0,
+            &raw_payload,
+        )?
+        .2,
+    };
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(&rgba);
+    Ok(ResolvedCanvas {
+        w: png.width as u32,
+        h: png.height as u32,
+        sha256: format!("{:x}", hasher.finalize()),
+        rgba,
+    })
+}
+
+/// canvas-wz 아카이브에서 `_outlink` 로 실캔버스를 찾아 픽셀을 푼다.
+fn resolve_outlink(
+    canvas_archive: &wz_core::WzArchive,
+    outlink: &str,
+) -> Result<ResolvedCanvas, Box<dyn std::error::Error>> {
+    let (img_name, sub) = split_outlink(outlink)
+        .ok_or(format!("outlink 안에 .img 세그먼트가 없다: {outlink}"))?;
+    let tree = canvas_archive.read_tree()?;
+    let entry = find_image_entry_in_dirtree(&tree, img_name)
+        .ok_or(format!("_Canvas WZ 에 이미지가 없다: {outlink}"))?;
+    let off = entry.offset.ok_or("outlink 이미지 오프셋 미해결")?;
+    let root = canvas_archive.parse_image_at(off)?;
+    let target = find_sub_node(&root, &sub)?;
+    let png = extract_png_ref(target)
+        .ok_or(format!("outlink 경로가 Canvas 가 아니다: {outlink}"))?;
+    decode_canvas_pixels(&png, canvas_archive.source())
+}
+
+/// Canvas 노드의 sub_property(mini property)에서 계층 메타를 읽는다.
+///
+/// C# `AvatarCanvas.cs:748-794` 대응: `z`(문자열 또는 int), `origin`, `map`,
+/// `_outlink`.
+struct FrameLayer {
+    name: String,
+    canvas: ResolvedCanvas,
+    origin: wz_avatar::Point,
+    /// z 문자열 (본체 더미의 `z` 가 문자열이었다)
+    z: Option<String>,
+    /// `z` 가 int 로 표현된 경우 (C# `skin.ZIndex`)
+    z_int: Option<i32>,
+    outlink: Option<String>,
+}
+
+/// 프레임 노드의 자식 Canvas 들을 레이어로 복호화한다.
+///
+/// 더미(1x1 + `_outlink`) 캔버스는 canvas-wz 로 풀고, outlink 없는 실캔버스는
+/// 자기 아카이브에서 바로 푼다. 프레임의 `move` 벡터도 같이 돌려준다.
+fn collect_frame_layers(
+    frame_node: &wz_core::image::Node,
+    archive: &wz_core::WzArchive,
+    canvas_archive: Option<&wz_core::WzArchive>,
+) -> Result<(Vec<FrameLayer>, Option<wz_avatar::Point>), Box<dyn std::error::Error>> {
+    let src = archive.source();
+    let mut layers: Vec<FrameLayer> = Vec::new();
+
+    for child in children_of(frame_node) {
+        let Some(wz_core::image::ImageValue::Png(png)) = &child.value else {
+            continue;
+        };
+        let sub = png.sub_property.as_ref();
+        let mut origin = wz_avatar::Point::new(0, 0);
+        let mut z: Option<String> = None;
+        let mut z_int: Option<i32> = None;
+        if let Some(sub) = sub {
+            for ch in &sub.children {
+                match (ch.name.as_ref(), &ch.value) {
+                    ("origin", Some(wz_core::image::ImageValue::Vector(v))) => {
+                        origin = wz_avatar::Point::new(v.x, v.y)
+                    }
+                    ("z", Some(wz_core::image::ImageValue::Str(s))) => {
+                        z = Some(s.to_string())
+                    }
+                    ("z", Some(wz_core::image::ImageValue::Int(i))) => z_int = Some(*i),
+                    _ => {}
+                }
+            }
+        }
+        let outlink = sub.and_then(|s| {
+            s.children.iter().find_map(|c| match &c.value {
+                Some(wz_core::image::ImageValue::Str(v))
+                    if c.name.as_ref() == "_outlink" => Some(v.to_string()),
+                _ => None,
+            })
+        });
+
+        let canvas = match (&outlink, canvas_archive) {
+            (Some(link), Some(c_archive)) => resolve_outlink(c_archive, link)?,
+            (Some(_), None) => {
+                return Err("outlink 캔버스가 있지만 canvas-wz 가 제공되지 않았다".into());
+            }
+            (None, _) => decode_canvas_pixels(png, src)?,
+        };
+        layers.push(FrameLayer {
+            name: child.name.to_string(),
+            canvas,
+            origin,
+            z,
+            z_int,
+            outlink,
+        });
+    }
+
+    // 프레임 수준 `move` — 원본 C# `ActionFrame.Move`
+    let move_vec = children_of(frame_node).iter().find_map(|ch| {
+        match (ch.name.as_ref(), &ch.value) {
+            ("move", Some(wz_core::image::ImageValue::Vector(v))) => {
+                Some(wz_avatar::Point::new(v.x, v.y))
+            }
+            _ => None,
+        }
+    });
+
+    Ok((layers, move_vec))
+}
+
+/// 프레임의 지연/알파 정규화 (`wz_avatar::FrameTiming`, known-bugs T16/T17).
+fn frame_timing_from(frame_node: &wz_core::image::Node) -> wz_avatar::FrameTiming {
+    let mut delay = None;
+    let mut a0 = None;
+    let mut a1 = None;
+    for ch in children_of(frame_node) {
+        let iv = match &ch.value {
+            Some(wz_core::image::ImageValue::Int(i)) => Some(*i),
+            _ => None,
+        };
+        match (ch.name.as_ref(), iv) {
+            ("delay", Some(i)) => delay = Some(i),
+            ("a0", Some(i)) => a0 = Some(i),
+            ("a1", Some(i)) => a1 = Some(i),
+            _ => {}
+        }
+    }
+    wz_avatar::FrameTiming::from_raw(delay, a0, a1)
+}
+
+/// 아바타 z-index 규칙 — C# `AvatarCanvas.cs:980-991` 원문 재현.
+///
+/// 문자열 z: `IndexOf(z)`, 찾지 못하면 `Count`.
+/// 정수 z: `z < 0 → Count - z`, `z >= 0 → -1 - z`.
+/// 둘 다 없으면 `Count`.
+fn avatar_z_priority(zmap_len: usize, zmap: &wz_avatar::ZMap, layer: &FrameLayer) -> i32 {
+    let count = zmap_len as i32;
+    if let Some(z) = &layer.z {
+        zmap.index_of(z).map(|i| i.min(i32::MAX as usize) as i32).unwrap_or(count)
+    } else if let Some(zi) = layer.z_int {
+        if zi < 0 {
+            count - zi
+        } else {
+            -1 - zi
+        }
+    } else {
+        count
+    }
+}
+
+fn scalar_value_json(
+    name: &str,
+    value: &wz_core::image::ImageValue,
+) -> serde_json::Value {
+    use wz_core::image::ImageValue as V;
+
+    let mut m = serde_json::Map::new();
+    m.insert("name".into(), serde_json::Value::String(name.to_string()));
+    m.insert(
+        "type".into(),
+        serde_json::Value::String(value.type_name().into()),
+    );
+    match value {
+        V::Str(s) => m.insert("value".into(), serde_json::Value::String(s.to_string())),
+        V::Short(v) => m.insert("value".into(), serde_json::Value::Number((*v).into())),
+        V::Int(v) => m.insert("value".into(), serde_json::Value::Number((*v).into())),
+        V::Long(v) => m.insert("value".into(), serde_json::Value::Number((*v).into())),
+        V::Uint(v) => {
+            m.insert("value".into(), serde_json::Value::Number((*v as u64).into()))
+        }
+        V::Float(v) => m.insert(
+            "value".into(),
+            serde_json::Number::from_f64(*v as f64)
+                .map(serde_json::Value::Number)
+                .unwrap_or(serde_json::Value::Null),
+        ),
+        V::Double(v) => m.insert(
+            "value".into(),
+            serde_json::Number::from_f64(*v)
+                .map(serde_json::Value::Number)
+                .unwrap_or(serde_json::Value::Null),
+        ),
+        V::Bool(b) => m.insert("value".into(), serde_json::Value::Bool(*b)),
+        V::Null => m.insert("value".into(), serde_json::Value::Null),
+        V::Vector(v) => m.insert(
+            "value".into(),
+            serde_json::Value::Array(vec![
+                serde_json::Value::Number(v.x.into()),
+                serde_json::Value::Number(v.y.into()),
+            ]),
+        ),
+        _ => None,
+    };
+    serde_json::Value::Object(m)
+}
+
+fn cmd_oracle_timeline(
+    wz_path: &std::path::Path,
+    img_name: Option<&str>,
+    node_path: &str,
+    canvas_wz_path: Option<&std::path::Path>,
+    interpol_ms: u32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_core::WzArchive;
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let entry = match img_name {
+        Some(name) => find_image_entry_in_dirtree(&tree, name)
+            .ok_or(format!("디렉터리 트리에서 이미지를 찾을 수 없습니다: {name}"))?,
+        None => tree
+            .root
+            .entries
+            .iter()
+            .chain(tree.blocks.iter().flat_map(|b| &b.entries))
+            .find(|e| e.node_type == wz_core::dirtree::node_type::IMAGE)
+            .cloned()
+            .ok_or("WZ 아카이브에 이미지가 없습니다")?,
+    };
+    let off = entry.offset.ok_or("이미지 오프셋이 유효하지 않습니다")?;
+    let img_root = archive.parse_image_at(off)?;
+
+    let parts: Vec<&str> = node_path.split('/').filter(|s| !s.is_empty()).collect();
+    let action_node = find_sub_node(&img_root, &parts)?;
+
+    let canvas_archive = match canvas_wz_path {
+        Some(p) => Some(WzArchive::open(p)?),
+        None => None,
+    };
+
+    let timings: Vec<wz_avatar::FrameTiming> =
+        children_of(action_node).iter().map(frame_timing_from).collect();
+    let cycle_ms: u64 = timings.iter().map(|t| t.delay_ms as u64).sum();
+
+    let mut frames = Vec::new();
+    let mut samples = Vec::new();
+    for (idx, (frame_node, timing)) in
+        children_of(action_node).iter().zip(timings.iter()).enumerate()
+    {
+        let (layers, _move) =
+            collect_frame_layers(frame_node, &archive, canvas_archive.as_ref())?;
+
+        let mut children = Vec::new();
+        for ch in children_of(frame_node) {
+            match &ch.value {
+                Some(wz_core::image::ImageValue::Png(_)) => {
+                    let layer = layers
+                        .iter()
+                        .find(|l| l.name == ch.name.as_ref())
+                        .ok_or("프레임 자식과 레이어가 맞지 않는다")?;
+                    children.push(serde_json::json!({
+                        "name": ch.name.as_ref(),
+                        "type": "canvas",
+                        "outlink": layer.outlink,
+                        "w": layer.canvas.w,
+                        "h": layer.canvas.h,
+                        "sha256": layer.canvas.sha256,
+                    }));
+                }
+                Some(v) => children.push(scalar_value_json(ch.name.as_ref(), v)),
+                None => children.push(serde_json::json!({
+                    "name": ch.name.as_ref(),
+                    "type": "property",
+                })),
+            }
+        }
+
+        let mut frame_json = serde_json::Map::new();
+        frame_json.insert("frame".into(), serde_json::Value::Number(idx.into()));
+        frame_json.insert(
+            "delay_ms".into(),
+            serde_json::Value::Number(timing.delay_ms.into()),
+        );
+        frame_json.insert("a0".into(), serde_json::Value::Number(timing.a0.into()));
+        frame_json.insert("a1".into(), serde_json::Value::Number(timing.a1.into()));
+        frame_json.insert("children".into(), serde_json::Value::Array(children));
+        frames.push(serde_json::Value::Object(frame_json));
+
+        if interpol_ms > 0 {
+            for elapsed in (0..=timing.delay_ms).step_by(interpol_ms.max(1) as usize) {
+                samples.push(serde_json::json!({
+                    "frame": idx,
+                    "elapsed_ms": elapsed,
+                    "alpha": timing.alpha_at(elapsed),
+                }));
+            }
+        }
+    }
+
+    let mut doc = oracle_envelope("timeline", archive.detection());
+    let mut res = serde_json::Map::new();
+    res.insert(
+        "node".into(),
+        serde_json::Value::String(node_path.to_string()),
+    );
+    res.insert(
+        "frame_count".into(),
+        serde_json::Value::Number(children_of(action_node).len().into()),
+    );
+    res.insert("cycle_ms".into(), serde_json::Value::Number(cycle_ms.into()));
+    res.insert("frames".into(), serde_json::Value::Array(frames));
+    if interpol_ms > 0 {
+        res.insert("samples".into(), serde_json::Value::Array(samples));
+    }
+    doc.insert("result".into(), serde_json::Value::Object(res));
+
+    println!("{}", serde_json::to_string_pretty(&doc)?);
+    Ok(())
+}
+
+/// `wz oracle avatar` 인자 묶음 (clippy too-many-arguments — CLI 인자가 8개라 구조체로 뭉친 것).
+struct AvatarParams<'a> {
+    body_wz: &'a std::path::Path,
+    body_img: Option<&'a str>,
+    canvas_wz: &'a std::path::Path,
+    zmap_wz: &'a std::path::Path,
+    zmap_img: Option<&'a str>,
+    action: &'a str,
+    frame: u32,
+    elapsed: u32,
+}
+
+fn cmd_oracle_avatar(params: &AvatarParams) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_core::WzArchive;
+
+    let AvatarParams {
+        body_wz,
+        body_img,
+        canvas_wz: canvas_wz_path,
+        zmap_wz,
+        zmap_img,
+        action,
+        frame: frame_idx,
+        elapsed,
+    } = *params;
+    let body_archive = WzArchive::open(body_wz)?;
+    let canvas_archive = WzArchive::open(canvas_wz_path)?;
+    let zmap_archive = WzArchive::open(zmap_wz)?;
+
+    let tree = zmap_archive.read_tree()?;
+    let zname = zmap_img.unwrap_or("zmap.img");
+    let zentry = find_image_entry_in_dirtree(&tree, zname)
+        .ok_or(format!("zmap WZ 에서 이미지를 찾지 못했다: {zname}"))?;
+    let zoff = zentry.offset.ok_or("zmap 이미지 오프셋 미해결")?;
+    let zmap_root = zmap_archive.parse_image_at(zoff)?;
+    let zmap_order: Vec<String> = children_of(&zmap_root)
+        .iter()
+        .map(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Str(s)) => s.to_string(),
+            _ => c.name.to_string(),
+        })
+        .collect();
+    let zmap_len = zmap_order.len();
+    let zmap = wz_avatar::ZMap::new(zmap_order);
+
+    let body_tree = body_archive.read_tree()?;
+    let body_entry = match body_img {
+        Some(name) => find_image_entry_in_dirtree(&body_tree, name)
+            .ok_or(format!("본체 WZ 에 이미지가 없다: {name}"))?,
+        None => body_tree
+            .root
+            .entries
+            .iter()
+            .chain(body_tree.blocks.iter().flat_map(|b| &b.entries))
+            .find(|e| e.node_type == wz_core::dirtree::node_type::IMAGE)
+            .cloned()
+            .ok_or("본체 WZ 에 이미지가 없다")?,
+    };
+    let body_off = body_entry.offset.ok_or("본체 이미지 오프셋 미해결")?;
+    let body_root = body_archive.parse_image_at(body_off)?;
+
+    let parts: Vec<&str> = action.split('/').filter(|s| !s.is_empty()).collect();
+    let action_node = find_sub_node(&body_root, &parts)?;
+    let action_frames = children_of(action_node);
+    if action_frames.is_empty() {
+        return Err(format!("액션 노드에 프레임이 없다: {action}").into());
+    }
+    let frame_node = action_frames
+        .get(frame_idx as usize)
+        .ok_or(format!(
+            "프레임 {frame_idx} 없다 (전체 {})",
+            action_frames.len()
+        ))?;
+
+    let timing = frame_timing_from(frame_node);
+    let alpha = timing.alpha_at(elapsed.min(timing.delay_ms));
+    let (mut layers, move_vec) =
+        collect_frame_layers(frame_node, &body_archive, Some(&canvas_archive))?;
+
+    // 렌더 순서: z 규칙 오름차순 (stable — 같은 우선순위는 트리 순서 유지)
+    layers.sort_by_key(|l| avatar_z_priority(zmap_len, &zmap, l));
+
+    let sources: Vec<wz_avatar::LayerSource<'_>> = layers
+        .iter()
+        .map(|l| {
+            let mut pos = wz_avatar::Point::new(-l.origin.x, -l.origin.y);
+            if let Some(mv) = move_vec {
+                pos = wz_avatar::Point::new(pos.x + mv.x, pos.y + mv.y);
+            }
+            wz_avatar::LayerSource {
+                rgba: &l.canvas.rgba,
+                width: l.canvas.w,
+                height: l.canvas.h,
+                pos,
+                alpha,
+            }
+        })
+        .collect();
+    let composed = wz_avatar::compose(&sources)?;
+
+    let mut doc = oracle_envelope("avatar", body_archive.detection());
+    let mut res = serde_json::Map::new();
+    res.insert(
+        "image".into(),
+        serde_json::json!({ "w": composed.width, "h": composed.height }),
+    );
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(&composed.rgba);
+    res.insert(
+        "sha256".into(),
+        serde_json::Value::String(format!("{:x}", hasher.finalize())),
+    );
+    let layer_json: Vec<serde_json::Value> = layers
+        .iter()
+        .map(|l| {
+            let z_json = match (&l.z, &l.z_int) {
+                (Some(z), _) => serde_json::Value::String(z.clone()),
+                (None, Some(zi)) => serde_json::Value::Number((*zi).into()),
+                (None, None) => serde_json::Value::Null,
+            };
+            serde_json::json!({
+                "name": l.name,
+                "z": z_json,
+                "z_index": avatar_z_priority(zmap_len, &zmap, l),
+                "outlink": l.outlink,
+                "w": l.canvas.w,
+                "h": l.canvas.h,
+                "origin": [l.origin.x, l.origin.y],
+                "sha256": l.canvas.sha256,
+            })
+        })
+        .collect();
+    res.insert("layers".into(), serde_json::Value::Array(layer_json));
+    res.insert(
+        "frames".into(),
+        serde_json::json!({
+            "delay_ms": timing.delay_ms,
+            "a0": timing.a0,
+            "a1": timing.a1,
+        }),
+    );
+    doc.insert("result".into(), serde_json::Value::Object(res));
+
+    println!("{}", serde_json::to_string_pretty(&doc)?);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn split_outlink_takes_last_img_segment() {
+        // 실측 값 (2026 클라이언트): 더미 캔버스 sub_property의 `_outlink`
+        let raw = "Character/_Canvas/00002000.img/KeiraRP_AquaVortex/10/body";
+        assert_eq!(
+            split_outlink(raw).unwrap(),
+            ("00002000.img", vec!["KeiraRP_AquaVortex", "10", "body"])
+        );
+
+        // .img 없음 → None
+        assert_eq!(split_outlink("Character/_Canvas/00002000"), None);
+    }
+
+    #[test]
+    fn avatar_z_priority_matches_csharp_rule() {
+        use wz_avatar::ZMap;
+        let zmap = ZMap::new(vec!["body".into(), "arm".into(), "head".into()]);
+        let mk = |name: &str, z: Option<String>, z_int: Option<i32>| FrameLayer {
+            name: name.to_string(),
+            canvas: ResolvedCanvas {
+                w: 0,
+                h: 0,
+                sha256: String::new(),
+                rgba: vec![],
+            },
+            origin: wz_avatar::Point::new(0, 0),
+            z,
+            z_int,
+            outlink: None,
+        };
+        // 문자열 z: IndexOf; miss면 Count (C# AvatarCanvas.cs:982-986)
+        assert_eq!(avatar_z_priority(3, &zmap, &mk("a", Some("body".into()), None)), 0);
+        assert_eq!(avatar_z_priority(3, &zmap, &mk("a", Some("head".into()), None)), 2);
+        assert_eq!(
+            avatar_z_priority(3, &zmap, &mk("a", Some("unknownZ".into()), None)),
+            3
+        );
+        // 정수 z: <0 → Count - z, >=0 → -1 - z (C# AvatarCanvas.cs:990)
+        assert_eq!(avatar_z_priority(3, &zmap, &mk("a", None, Some(-2))), 3 - (-2));
+        assert_eq!(avatar_z_priority(3, &zmap, &mk("a", None, Some(5))), -1 - 5);
+        // z 둘 다 없다 → Count
+        assert_eq!(avatar_z_priority(3, &zmap, &mk("a", None, None)), 3);
+    }
 
     #[test]
     fn test_oracle_dirtree_json_schema() {
