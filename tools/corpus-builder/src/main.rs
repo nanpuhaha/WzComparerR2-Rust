@@ -13,7 +13,7 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
-use corpus_builder::{texture_corpus, ContainerHeader, WzBuilder};
+use corpus_builder::{tex_format, texture_corpus, ContainerHeader, WzBuilder};
 use wz_core::crypto::aes::AesKeyStream;
 
 fn main() {
@@ -268,6 +268,105 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
         fs::write(out.join("dirtree_pkg1.wz"), &file)?;
         manifest.push(("dirtree_pkg1.wz".into(), file.len(), "dirtree/pkg1".into()));
+    }
+
+    // ── 실제 이미지 본문을 가진 PKG1 컨테이너 ────────────────────────────
+    //
+    // `dirtree_pkg1.wz` 의 이미지 오프셋은 0x5A 패딩을 가리킨다 — 디렉터리
+    // 트리 파싱만 검증할 수 있고 `image`/`stats` 오라클은 돌릴 수 없다
+    // (#28 KNOWN GAP 4). 여기서는 진짜 이미지 본문을 넣은 컨테이너를 만든다.
+    //
+    // 레이아웃은 **연속**이다 (하위 블록 사이 64바이트 패딩 없음) — 실제 WZ 와
+    // 같은 배치라 C# `Wz_File.GetDirTree` 의 순차 읽기가 어긋나지 않는다.
+    {
+        use wz_core::offset::OffsetCalc;
+        let hv = wz_core::verify::compute_pkg1_hash_version(777);
+        let calc = wz_core::offset::Pkg1OffsetCalc::new(60, hv);
+
+        // canvas.img: root Property { caption:int, canvas:Canvas }
+        let canvas_body = {
+            let mut b = WzBuilder::new();
+            let root = b.root_property_begin();
+            b.value_int("caption", 1);
+            // 4x4 ARGB8888 — 픽셀 값은 결정적이기만 하면 된다.
+            let texels: Vec<u8> = (0..4 * 4 * 4)
+                .map(|i| (i as u8).wrapping_mul(17).wrapping_add(3))
+                .collect();
+            b.canvas_plain("canvas", 4, 4, tex_format::ARGB8888, 0, 1, &texels);
+            b.root_property_end(root, 2);
+            b.into_vec()
+        };
+
+        // 01000000.img: root Property { info:Property { ... } } — oracle stats
+        let gear_body = {
+            let mut b = WzBuilder::new();
+            let root = b.root_property_begin();
+            let info = b.property_begin("info");
+            b.value_int("reqLevel", 10);
+            b.value_int("reqJob", 0);
+            b.value_int("incSTR", 3);
+            b.value_int("incDEX", 1);
+            b.value_int("incINT", 0);
+            b.value_int("incLUK", 2);
+            b.value_int("tuc", 7);
+            b.value_int("price", 1000);
+            b.value_string("islot", "Cp");
+            b.value_string("vslot", "Cp");
+            b.property_end(info, 10);
+            b.root_property_end(root, 1);
+            b.into_vec()
+        };
+
+        let bodies: [(&str, &[u8]); 2] = [
+            ("canvas.img", &canvas_body),
+            ("01000000.img", &gear_body),
+        ];
+        let entries: Vec<corpus_builder::DirEntrySpec> = bodies
+            .iter()
+            .map(|(name, body)| corpus_builder::DirEntrySpec::image(name, body.len() as i32))
+            .collect();
+
+        // 1차: 블록 길이와 각 오프셋 필드 위치를 얻는다 (해시 값은 길이에 영향 없음)
+        let (root_block, positions) =
+            corpus_builder::dir_block_pkg1_with_positions(&entries, &[0; 2]);
+        let base = 60usize;
+        let mut targets = Vec::with_capacity(bodies.len());
+        let mut cursor = base + root_block.len();
+        for (_, body) in &bodies {
+            targets.push(cursor as u32);
+            cursor += body.len();
+        }
+
+        // 2차: 실제 이미지 오프셋으로 해시 오프셋을 채운다
+        let hashed: Vec<u32> = positions
+            .iter()
+            .zip(&targets)
+            .map(|(&pos, &target)| calc.encode_offset((base + pos) as u32, target))
+            .collect();
+        let (root_block, _) = corpus_builder::dir_block_pkg1_with_positions(&entries, &hashed);
+
+        let mut file = vec![0u8; cursor];
+        file[base..base + root_block.len()].copy_from_slice(&root_block);
+        let mut at = base + root_block.len();
+        for (_, body) in &bodies {
+            file[at..at + body.len()].copy_from_slice(body);
+            at += body.len();
+        }
+
+        file[0..4].copy_from_slice(b"PKG1");
+        let data_size = (file.len() - base) as i64;
+        file[4..12].copy_from_slice(&data_size.to_le_bytes());
+        file[12..16].copy_from_slice(&(base as i32).to_le_bytes());
+        for b in file[16..base].iter_mut() {
+            *b = b' ';
+        }
+
+        fs::write(out.join("props_pkg1.wz"), &file)?;
+        manifest.push((
+            "props_pkg1.wz".into(),
+            file.len(),
+            "props/pkg1".into(),
+        ));
     }
 
     // 컨테이너 헤더 (감지 계층 테스트용 — 전체 writer 는 Phase 1.3)

@@ -96,6 +96,18 @@ WzComparerR2.Oracle stats  --wz A.wz --gear 01000000
 **정렬 규칙**: 이름은 `natural_cmp` (Windows `StrCmpLogicalW` 등가) 로.
 근사하면 안 된다 (리포트 §12 R4).
 
+이미지 노드의 디렉터리 메타데이터는 `image` 객체로 나간다:
+
+```jsonc
+{ "name": "00002000.img", "type": "Image",
+  "image": { "len": 231, "cs32": 305419896 } }
+```
+
+`offset` 은 **넣지 않는다.** C# `Wz_File.ReadDirTree` 는 `ReadContext.OffsetCalc`
+가 있을 때만 `img.Offset` 을 채우는데 그 컨텍스트는 PKG2 경로에서만 설정된다 —
+PKG1 이미지의 오프셋은 C# 쪽에서 구조적으로 알 수 없다 (#28 리포트 ②).
+한쪽만 낼 수 있는 필드를 비교 대상에 두면 `tree` 게이트가 영원히 빨간불이 된다.
+
 ### op: `image`
 
 ```jsonc
@@ -257,20 +269,20 @@ a   = eff + (da*(255-eff) + 127)/255
 ## 차이 비교 스크립트
 
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
-# 사용: scripts/differential.sh <op> [args...]
-OP="$1"; shift
-wz oracle "$OP" "$@" --format json > /tmp/rust.json
-dotnet run --project ../WzComparerR2.Oracle -- "$OP" "$@" --format json > /tmp/csharp.json
-# 키 순서 무관 비교 + 줄바꿈 정규화
-jq -S . /tmp/rust.json    > /tmp/rust.s.json
-jq -S . /tmp/csharp.json > /tmp/csharp.s.json
-diff -u /tmp/csharp.s.json /tmp/rust.s.json
+# 도구 옵션은 <op> 앞에 둔다. <op> 뒤의 인자는 양쪽 오라클에 그대로 전달된다.
+scripts/differential.sh --csharp-repo /path/to/WzComparerR2 tree --wz A.wz
+scripts/differential.sh --csharp-repo /path/to/WzComparerR2 expr --expr "7/2"
 ```
 
 **jq 정규화(키 정렬)를 반드시 거친다.** C# 과 Rust 의 JSON 직렬화 순서는 다르므로
 그대로 diff 하면 100% 실패한다. 비교 대상은 **값**이어야 한다.
+
+종료 코드: `0` 일치 / `1` 불일치 / `2` 도구 사용법 오류 / `3` 비교 불가 /
+`4` 하네스 오류. `3` 은 "돌리지 못했다"이고 `1` 은 "돌렸는데 다르다"다 — 이 둘을
+섞으면 스텁이 영원히 실패로 보인다.
+
+동작 방식·불일치 리포트 형식·`jq` 폴백은 `docs/differential.md` 에 있다.
+CI 실행은 `.github/workflows/differential-ci.yml` (`workflow_dispatch` 전용, #33).
 
 ## 결정성 요구
 
@@ -301,8 +313,9 @@ diff -u /tmp/csharp.s.json /tmp/rust.s.json
 | 항목 | 상태 |
 |---|---|
 | 스키마 정의 | ✅ 본 문서 |
-| 합성 코퍼스 생성기 | ✅ `tools/corpus-builder` (100 파일, 결정성 검증됨) |
+| 합성 코퍼스 생성기 | ✅ `tools/corpus-builder` (106 파일, 결정성 검증됨). `dirtree_pkg1.wz`(디렉터리 트리) + `props_pkg1.wz`(캔버스/장비 이미지 본문) |
 | Rust `oracle` 서브커맨드 | ✅ tree/diff/image/tooltip/stats/expr/patch/map-scene + **avatar/timeline (#26/#27)** |
 | C# `WzComparerR2.Oracle` | ⏳ tree/image/tooltip/stats/expr 구현, avatar/timeline 은 exit-3 스텁 (#31 규약 문서 참조) |
-| `scripts/differential.sh` | ✅ (#29) |
+| `scripts/differential.sh` | ✅ (#29) 판정은 `tools/oracle-diff` |
+| GitHub Actions 차분 CI | ✅ `.github/workflows/differential-ci.yml` (#33, 수동 `workflow_dispatch` 전용) |
 | 실전 코퍼스 벌크 검증 | ✅ 2026 클라이언트 792개 WZ / 캔버스 4,610,672개 전부 (커밋 `b8f38b1`, `cargo run -p wz-cli --example bulk_scan`) |

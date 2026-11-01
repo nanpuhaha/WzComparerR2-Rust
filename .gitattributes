@@ -1,0 +1,3 @@
+# Windows 체크아웃에서 CRLF 로 바뀌면 `bash scripts/differential.sh` 가
+# `\r` 을 명령 이름의 일부로 읽어 즉시 죽는다. 셸 스크립트는 항상 LF.
+*.sh text eol=lf

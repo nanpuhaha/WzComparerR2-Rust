@@ -1,0 +1,341 @@
+name: differential-ci
+
+# 이슈 #33 — 수동 실행 전용 차분 검증 파이프라인.
+#
+# 자동 push/PR 트리거를 두지 **않는 것이 의도다**:
+#   * C# 오라클은 이 저장소에 없다 (`docs/oracle-spec.md` 의 `## C# 참조 핀`).
+#     저장소 URL·ref 를 워크플로우에 하드코딩하면 재현이 아니라 추측이 된다.
+#   * .NET Windows 데스크톱 빌드는 분 단위로 비싸고, 오라클 대조는 모든 커밋에
+#     필요한 검사가 아니다.
+# 상시 회귀 방지는 `rust-gates` 잡이 담당한다(C# 없이 돈다). 오라클 대조는
+# 사람이 필요할 때 `csharp_repository` 를 채워 돌린다.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ops:
+        description: 'Gate op 목록 (공백 구분: tree image stats expr)'
+        required: false
+        default: 'tree image stats expr'
+        type: string
+      csharp_repository:
+        description: 'C# 오라클 저장소 (owner/name). 비우면 차분 잡을 건너뛴다.'
+        required: false
+        default: ''
+        type: string
+      csharp_ref:
+        description: 'C# 체크아웃 ref (핀 커밋 또는 오라클 브랜치)'
+        required: false
+        default: 'oracle-harness'
+        type: string
+      csharp_project:
+        description: '오라클 csproj 경로 (C# 저장소 루트 기준)'
+        required: false
+        default: 'WzComparerR2.Oracle/WzComparerR2.Oracle.csproj'
+        type: string
+      dotnet_version:
+        description: '.NET SDK 버전 (오라클 TFM 은 net8.0-windows, 더 새 SDK 로도 빌드된다)'
+        required: false
+        default: '8.0.x'
+        type: string
+      normalizer:
+        description: 'JSON 정규화기 (jq 는 스펙 그대로, builtin 은 내장 폴백)'
+        required: false
+        default: 'jq'
+        type: choice
+        options:
+          - jq
+          - auto
+          - builtin
+      fail_on_mismatch:
+        description: '불일치(exit 1)·비교 불가(exit 3)를 실패로 볼지'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: differential-ci-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ── 1. C# 없이 도는 게이트 ────────────────────────────────────────────
+  # 여기서 빨간불이면 오라클을 돌릴 이유가 없다. 값비싼 C# 빌드보다 먼저 끝난다.
+  rust-gates:
+    name: Rust gates (C# 없음)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust 툴체인 (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: differential-ci-windows-gates
+
+      - name: cargo test --workspace
+        run: cargo test --workspace
+
+      - name: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo-deny 설치
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+
+      - name: cargo deny check
+        run: cargo deny check
+
+      # 결정성(§4.1 원칙 6): 같은 커밋에서 두 번 돌린 산출물이 바이트 단위로
+      # 같아야 한다. 하드코딩한 체크섬을 두지 않는 이유는 코퍼스에 파일을
+      # 추가할 때마다 상수가 낡기 때문이다 — 대조는 항상 실행 중에 한다.
+      - name: 합성 코퍼스 빌드 + 결정성 2회 대조
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target
+          cargo run -q -p corpus-builder -- --out target/corpus-a --json
+          cargo run -q -p corpus-builder -- --out target/corpus-b > /dev/null
+
+          if ! diff -r --brief target/corpus-a target/corpus-b; then
+            echo "::error::corpus-builder 출력이 비결정적이다 (두 번의 빌드가 다르다)"
+            exit 1
+          fi
+
+          # #33 이 기대는 두 컨테이너가 실제로 나왔는지 확인한다.
+          # dirtree_pkg1.wz 는 디렉터리 트리용, props_pkg1.wz 는 image/stats 용.
+          for f in dirtree_pkg1.wz props_pkg1.wz; do
+            test -s "target/corpus-a/$f" || { echo "::error::코퍼스에 $f 가 없다"; exit 1; }
+          done
+
+          mv target/corpus-a target/corpus
+          rm -rf target/corpus-b
+
+      # C# 이 없어도 "Rust 쪽 오라클이 스스로 일관적인가"는 검증할 수 있다.
+      # 여기서 깨지면 차분은 원인 파악이 불가능한 상태로 시작한다.
+      - name: Rust 오라클 자기검증 (JSON 형태)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build -q -p wz-cli --bin wz
+          WZ="$(cygpath -w "$PWD/target/corpus/props_pkg1.wz" 2>/dev/null || echo "$PWD/target/corpus/props_pkg1.wz")"
+          WZ_BIN="$(cygpath -w "$PWD/target/debug/wz.exe" 2>/dev/null || echo "$PWD/target/debug/wz.exe")"
+
+          check() {
+            local op="$1"; shift
+            "$WZ_BIN" oracle "$op" "$@" > "target/selfcheck-$op.json"
+            python scripts/check-oracle-json.py "$op" "target/selfcheck-$op.json"
+          }
+
+          check tree  --wz "$WZ"
+          check image --wz "$WZ" --path canvas.img/canvas --format sha256
+          check stats --wz "$WZ" --gear 01000000
+          check expr  --expr "7/2"
+
+      - name: 차분 잡 생략 안내
+        if: ${{ inputs.csharp_repository == '' }}
+        shell: bash
+        run: |
+          {
+            echo "### differential 잡 생략됨"
+            echo
+            echo "\`csharp_repository\` 입력이 비어 있다. Rust 게이트만 돌았다."
+            echo "오라클 대조까지 하려면 이 워크플로우를 \`csharp_repository\`/\`csharp_ref\` 와 함께 다시 실행한다."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 합성 코퍼스 아티팩트
+        uses: actions/upload-artifact@v4
+        with:
+          name: corpus
+          path: target/corpus
+          if-no-files-found: error
+          retention-days: 14
+
+  # ── 2. C# 오라클과의 차분 ─────────────────────────────────────────────
+  # `csharp_repository` 가 주어졌을 때만 돈다. Rust 쪽 게이트가 이미 초록인
+  # 상태에서만 시작하므로, 여기서 나오는 차이는 Rust 회귀가 아니라 **계약 차이**다.
+  differential:
+    name: differential (Rust ↔ C#)
+    needs: rust-gates
+    if: ${{ inputs.csharp_repository != '' }}
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust 툴체인 (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: differential-ci-windows-diff
+
+      - name: .NET SDK (.NET 8.0 Windows 데스크톱)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      - name: Rust 오라클·판정기 빌드
+        run: |
+          cargo build -p wz-cli --bin wz
+          cargo build -p oracle-diff
+
+      - name: 합성 코퍼스 내려받기
+        uses: actions/download-artifact@v4
+        with:
+          name: corpus
+          path: target/corpus
+
+      - name: jq 설치 (--normalizer jq 일 때)
+        if: ${{ inputs.normalizer == 'jq' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v jq >/dev/null 2>&1; then
+            jq --version
+          else
+            choco install jq -y --no-progress
+            jq --version
+          fi
+
+      - name: C# 오라클 체크아웃 (핀)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.csharp_repository }}
+          ref: ${{ inputs.csharp_ref }}
+          path: csharp
+          fetch-depth: 1
+          token: ${{ secrets.CSHARP_REPO_TOKEN || github.token }}
+
+      - name: C# 오라클 빌드
+        shell: bash
+        working-directory: csharp
+        env:
+          CSHARP_PROJECT: ${{ inputs.csharp_project }}
+        run: |
+          set -euo pipefail
+          dotnet --version
+          dotnet build "$CSHARP_PROJECT" -c Debug
+          git rev-parse --short HEAD
+
+      - name: 오라클 dll 경로 확정
+        shell: bash
+        run: |
+          set -euo pipefail
+          dll="$(find csharp -path '*/bin/Debug/*' -name 'WzComparerR2.Oracle.dll' | head -n 1)"
+          if [ -z "$dll" ]; then
+            echo "::error::WzComparerR2.Oracle.dll 을 찾지 못했다 (dotnet build 산출물 확인)"
+            exit 4
+          fi
+          echo "dll: $dll"
+          echo "CSHARP_DLL=$(cygpath -w "$dll" 2>/dev/null || echo "$dll")" >> "$GITHUB_ENV"
+
+      # ── Gate op 차분 ────────────────────────────────────────────────
+      # 종료 코드는 `docs/differential.md` 의 계약을 그대로 쓴다:
+      #   0 일치 / 1 불일치 / 2 도구 사용법 오류 / 3 비교 불가 / 4 하네스 오류
+      # 2 와 4 는 `fail_on_mismatch` 와 무관하게 항상 실패다 — 그건 계약이
+      # 아니라 하네스가 깨진 상태이기 때문이다.
+      - name: scripts/differential.sh (Gate op)
+        shell: bash
+        env:
+          OPS: ${{ inputs.ops }}
+          NORMALIZER: ${{ inputs.normalizer }}
+          FAIL_ON_MISMATCH: ${{ inputs.fail_on_mismatch }}
+          CSHARP_REPOSITORY: ${{ inputs.csharp_repository }}
+          CSHARP_REF: ${{ inputs.csharp_ref }}
+        run: |
+          set -uo pipefail
+
+          to_win() { cygpath -w "$1" 2>/dev/null || echo "$1"; }
+
+          CORPUS="$(to_win "$PWD/target/corpus")"
+          WZ="$CORPUS\\props_pkg1.wz"
+          WZ_BIN="$(to_win "$PWD/target/debug/wz.exe")"
+          OUT_DIR="$(to_win "$PWD/target/oracle-diff")"
+          mkdir -p target/oracle-diff
+
+          fail=0
+          rows=""
+
+          for op in $OPS; do
+            case "$op" in
+              tree)  args=(--wz "$WZ") ;;
+              image) args=(--wz "$WZ" --path canvas.img/canvas --format sha256) ;;
+              stats) args=(--wz "$WZ" --gear 01000000) ;;
+              expr)  args=(--expr "7/2") ;;
+              *)
+                echo "::error::알 수 없는 op: $op"
+                rows+="| \`$op\` | - | 알 수 없는 op |"$'\n'
+                fail=1
+                continue
+                ;;
+            esac
+
+            echo "::group::differential $op"
+            bash scripts/differential.sh \
+              --csharp-dll "$CSHARP_DLL" \
+              --wz-bin "$WZ_BIN" \
+              --no-build-csharp \
+              --normalizer "$NORMALIZER" \
+              --out-dir "$OUT_DIR" \
+              "$op" "${args[@]}"
+            code=$?
+            echo "::endgroup::"
+
+            case "$code" in
+              0) verdict="일치" ;;
+              1) verdict="**불일치**" ;;
+              2) verdict="하네스: 도구 사용법 오류" ;;
+              3) verdict="비교 불가 (C# 스텁 또는 op 표)" ;;
+              4) verdict="하네스 오류" ;;
+              *) verdict="알 수 없는 종료 코드" ;;
+            esac
+            rows+="| \`$op\` | $code | $verdict |"$'\n'
+
+            case "$code" in
+              0) ;;
+              1|3)
+                if [ "$FAIL_ON_MISMATCH" = "true" ]; then
+                  fail=1
+                else
+                  echo "::warning::$op 종료 코드 $code — fail_on_mismatch=false 라 실패로 처리하지 않는다"
+                fi
+                ;;
+              *)
+                fail=1
+                ;;
+            esac
+          done
+
+          {
+            echo "### 차분 결과 (\`$CSHARP_REPOSITORY\` @ \`$CSHARP_REF\`)"
+            echo
+            echo "| op | exit | 판정 |"
+            echo "|---|---:|---|"
+            printf '%s' "$rows"
+            echo
+            echo "정규화기: \`$NORMALIZER\` · 판정 기준: \`docs/differential.md\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # 산출물(target/oracle-diff/*)은 실패해도 업로드된다. 다음 사람이
+          # 같은 실패를 재현하는 대신 `--replay` 로 바로 다시 판정할 수 있다.
+          exit "$fail"
+
+      - name: 차분 리포트 아티팩트
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-diff-${{ github.run_id }}
+          path: |
+            target/oracle-diff/**
+            target/corpus/manifest.json
+          if-no-files-found: warn
+          retention-days: 30

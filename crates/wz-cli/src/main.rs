@@ -1494,12 +1494,12 @@ fn build_dir_block_children(
         } else {
             entry_obj.insert("type".into(), serde_json::Value::String("Image".into()));
             let mut img_info = serde_json::Map::new();
-            img_info.insert(
-                "offset".into(),
-                e.offset
-                    .map(|o| serde_json::Value::Number(o.into()))
-                    .unwrap_or(serde_json::Value::Null),
-            );
+            // `offset` 은 **의도적으로 넣지 않는다**. C# `Wz_File.ReadDirTree` 는
+            // `ReadContext.OffsetCalc` 가 있을 때만 `img.Offset` 을 채우는데 그
+            // 컨텍스트는 PKG2 경로에서만 설정된다 — PKG1 에서는 항상 0 이라
+            // 오라클이 키 자체를 비운다 (#28 리포트 ②). 한쪽만 낼 수 있는 필드를
+            // 비교 대상에 두면 `tree` 게이트가 영원히 빨간불이 된다.
+            // 사람이 보는 `wz tree` 는 별도 경로(`@<offset>`)라 영향이 없다.
             img_info.insert(
                 "len".into(),
                 serde_json::Value::Number(e.data_len.into()),
