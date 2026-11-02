@@ -69,6 +69,61 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         }
     }
 
+    // StringLinker 정보 표시 (gear/item/skill/map/mob/npc)
+    if let Some(sel) = state.selected.clone() {
+        if let Some(tree) = &state.tree {
+            let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
+            if let Some(e) = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)) {
+                if e.node_type == 4 {
+                    let id_str = name.trim_end_matches(".img");
+                    // 숫자 ID 시도
+                    if let Ok(id) = id_str.parse::<i32>() {
+                        if let Some(linker) = &state.string_linker {
+                            if let Some(sr) = linker.get_by_id(id) {
+                                ui.separator();
+                                ui.heading("StringLinker");
+                                if !sr.name.is_empty() {
+                                    ui.label(format!("이름: {}", sr.name));
+                                }
+                                if let Some(desc) = &sr.desc {
+                                    if !desc.is_empty() {
+                                        ui.label(format!("설명: {}", desc));
+                                    }
+                                }
+                                if let Some(pdesc) = &sr.pdesc {
+                                    if !pdesc.is_empty() {
+                                        ui.label(format!("pdesc: {}", pdesc));
+                                    }
+                                }
+                                if !sr.skill_h.is_empty() {
+                                    ui.label("스킬 H:");
+                                    for h in &sr.skill_h {
+                                        ui.label(format!("  {}", h));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // 문자열 키 시도 (skill ID like "0000012")
+                    if let Some(linker) = &state.string_linker {
+                        if let Some(sr) = linker.string_skill_str.get(id_str) {
+                            ui.separator();
+                            ui.heading("StringLinker (str key)");
+                            if !sr.name.is_empty() {
+                                ui.label(format!("이름: {}", sr.name));
+                            }
+                            if let Some(desc) = &sr.desc {
+                                if !desc.is_empty() {
+                                    ui.label(format!("설명: {}", desc));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     ui.separator();
     ui.heading("맵 (PoC 2.5)");
     ui.horizontal(|ui| {
