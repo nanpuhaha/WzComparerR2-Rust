@@ -67,9 +67,20 @@ pub fn poll_load_result(state: &mut AppState, ctx: &egui::Context) {
         Ok(LoadMsg::Loaded { tree }) => {
             state.status = format!("로드 완료: {} 엔트리(루트)", tree.root.entries.len());
             state.archive = state.shared_archive.lock().unwrap().clone();
+            // 맵 WZ 자동 로드: 첫 이미지 엔트리를 map_path 로 설정하고 로드한다.
+            let first_img = tree.root.entries.iter().find(|e| e.node_type == nt::IMAGE);
+            if let Some(e) = first_img {
+                if let Some(name) = &e.name {
+                    state.map_path = name.to_string();
+                }
+            }
             state.tree = Some(tree);
             state.loading = false;
             state.load_rx = None;
+            // 자동 맵 로드 (이미지 엔트리가 있을 때)
+            if state.archive.is_some() && state.tree.as_ref().map(|t| t.root.entries.iter().any(|e| e.node_type == nt::IMAGE)).unwrap_or(false) {
+                load_map_by_path(state);
+            }
             ctx.request_repaint();
         }
         Ok(LoadMsg::Failed(e)) => {

@@ -68,9 +68,13 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             for (i, (tx, ty, tw, th, _)) in state.map_tile_images.iter().enumerate() {
                 layers.push(Layer { z: -500, key: GpuKey(100 + i as u32), x: *tx as f32, y: *ty as f32, w: *tw as f32, h: *th as f32 });
             }
-            // objects: z = ObjItem.z (state 에 저장 안 함 → 0 기본). 여기서는 0.
+            // objects: z = ObjItem.z (current_map 에서 조회)
             for (i, (ox, oy, ow, oh, _)) in state.map_obj_images.iter().enumerate() {
-                layers.push(Layer { z: 0, key: GpuKey(200 + i as u32), x: *ox as f32, y: *oy as f32, w: *ow as f32, h: *oh as f32 });
+                let z = state.current_map.as_ref()
+                    .and_then(|m| m.objects.get(i))
+                    .map(|o| o.z)
+                    .unwrap_or(0);
+                layers.push(Layer { z, key: GpuKey(200 + i as u32), x: *ox as f32, y: *oy as f32, w: *ow as f32, h: *oh as f32 });
             }
             // back (front): z = +1000 — front 플래그는 map_back_image 에 없으므로 생략.
 
@@ -85,21 +89,16 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                 let _ = rc.create_texture(GpuKey(200 + i as u32), *ow, *oh, opx);
             }
 
-            // back image quad (z=-1000) — pos/size 를 layers 에서 가져옴
-            if let Some((bw, bh, _)) = &state.map_back_image {
-                // find back layer's z
-                let back_z = -1000;
-                batch.push_quad(GpuKey(2), [0.0, 0.0, *bw as f32, *bh as f32], back_z as f32,
-                    [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
-            }
-            // sort remaining by z
-            let mut sorted: Vec<&Layer> = layers.iter().filter(|l| l.key.0 >= 100).collect();
+            // 모든 레이어를 z 순서로 정렬해 push (painter's algorithm).
+            // back 은 z=-1000 으로 layers 에 이미 들어 있다.
+            let mut sorted: Vec<&Layer> = layers.iter().collect();
             sorted.sort_by_key(|l| l.z);
             for l in sorted {
-                if l.key.0 < 200 {
-                    // tile
-                    batch.push_quad(l.key, [l.x, l.y, l.w, l.h], l.z as f32,
-                        [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
+                if l.key.0 == 2 {
+                    if let Some((bw, bh, _)) = &state.map_back_image {
+                        batch.push_quad(l.key, [0.0, 0.0, *bw as f32, *bh as f32], l.z as f32,
+                            [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
+                    }
                 } else {
                     batch.push_quad(l.key, [l.x, l.y, l.w, l.h], l.z as f32,
                         [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
