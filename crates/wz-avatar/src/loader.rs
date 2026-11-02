@@ -680,4 +680,29 @@ mod tests {
         assert_eq!(part_z_tag("lHand"), "arm");
         assert_eq!(part_z_tag("rHand"), "arm");
     }
+
+    #[test]
+    fn loader_loads_expected_parts() {
+        let char_wz = "<WZ_DATA_ROOT>/Character/Character.wz";
+        if !std::path::Path::new(char_wz).exists() {
+            return;
+        }
+        let av = load_from_character_wz(std::path::Path::new(char_wz))
+            .expect("loader should return Some on real Character.wz");
+        // 최소 8 파트 (body, arm, head, ear variants, cap)
+        assert!(av.parts.len() >= 8, "expected >= 8 parts, got {}", av.parts.len());
+        // body 파트가 있어야 한다
+        assert!(av.parts.iter().any(|p| p.slot == "body"), "body part missing");
+        // head 파트가 있어야 한다
+        assert!(av.parts.iter().any(|p| p.slot == "head"), "head part missing");
+        // cap 파트가 있어야 한다
+        assert!(av.parts.iter().any(|p| p.slot == "cap"), "cap part missing");
+        // zmap 이 표준 순서를 포함해야 한다
+        assert!(av.zmap.index_of("body").is_some(), "zmap missing body");
+        assert!(av.zmap.index_of("head").is_some(), "zmap missing head");
+        // batch 렌더링이 동작해야 한다
+        let batch = av.scene.build_batch(&av.root_bone);
+        assert!(batch.layer_count >= av.parts.len(), "layer_count < parts count");
+        assert!(batch.vertex_count() > 0, "no vertices generated");
+    }
 }
