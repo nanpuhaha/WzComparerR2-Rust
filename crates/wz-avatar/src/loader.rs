@@ -876,6 +876,31 @@ mod tests {
     }
 
     #[test]
+    fn load_equipment_item_works() {
+        let data_root = std::path::Path::new("<WZ_DATA_ROOT>");
+        if !data_root.exists() { return; }
+        // Cap item 1000000
+        let cap_path = data_root.join("Cap").join("_Canvas").join("_Canvas_000.wz");
+        if cap_path.exists() {
+            let result = load_equipment_item(&cap_path, 1000000);
+            assert!(result.is_some(), "cap item should load");
+            let (slot, w, h, rgba) = result.unwrap();
+            assert_eq!(slot, "Cap");
+            assert!(w > 0 && h > 0);
+            assert_eq!(rgba.len(), (w * h * 4) as usize);
+        }
+        // Coat item 1040000
+        let coat_path = data_root.join("Coat").join("_Canvas").join("_Canvas_000.wz");
+        if coat_path.exists() {
+            let result = load_equipment_item(&coat_path, 1040000);
+            assert!(result.is_some(), "coat item should load");
+            let (slot, w, h, _rgba) = result.unwrap();
+            assert_eq!(slot, "Coat");
+            assert!(w > 0 && h > 0);
+        }
+    }
+
+    #[test]
     fn loader_loads_expected_parts() {
         let char_wz = "<WZ_DATA_ROOT>/Character/Character.wz";
         if !std::path::Path::new(char_wz).exists() {
