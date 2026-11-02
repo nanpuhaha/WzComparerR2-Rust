@@ -447,6 +447,41 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
     })
 }
 
+/// 장비 슬롯 → 디렉토리 이름 매핑.
+pub fn slot_dir_name(slot: &str) -> Option<&'static str> {
+    match slot {
+        "Cap" => Some("Cap"),
+        "Coat" => Some("Coat"),
+        "Longcoat" => Some("Longcoat"),
+        "Pants" => Some("Pants"),
+        "Shoes" => Some("Shoes"),
+        "Glove" => Some("Glove"),
+        "Cape" => Some("Cape"),
+        "Weapon" => Some("Weapon"),
+        "Shield" | "SubWeapon" => Some("Shield"),
+        "FaceAccessory" => Some("Accessory"),
+        _ => None,
+    }
+}
+
+/// 아이템 ID → 슬롯 이름 추론 (MapleStory 8자리 ID 규칙).
+pub fn item_id_to_slot(id: i32) -> Option<&'static str> {
+    let prefix = id / 100000;
+    match prefix {
+        100 => Some("Cap"),
+        104 => Some("Coat"),
+        105 => Some("Longcoat"),
+        106 => Some("Pants"),
+        107 => Some("Shoes"),
+        108 => Some("Glove"),
+        109 => Some("Shield"),
+        110 => Some("Cape"),
+        130 | 131 | 132 | 133 | 134 | 136 | 137 | 138 | 140..=159 => Some("Weapon"),
+        _ => None,
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
