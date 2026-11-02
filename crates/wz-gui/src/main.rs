@@ -89,16 +89,13 @@ impl eframe::App for PocApp {
                 }
                 2 => {
                     async_io::load_map_by_path(&mut self.state);
-                    self.smoke_phase = 25; // wait for images
-                }
-                25 => {
-                    async_io::poll_map_images(&mut self.state, ui.ctx());
-                    self.smoke_wait_frames += 1;
-                    if self.state.map_images_rx.is_none() {
-                        self.smoke_phase = 3;
-                    } else if self.smoke_wait_frames > 600 {
-                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                    // 동기적으로 이미지 로딩 완료를 기다린다 (스모크 모드 전용)
+                    let mut waited = 0u32;
+                    while self.state.map_images_rx.is_some() && waited < 3000 {
+                        async_io::poll_map_images(&mut self.state, ui.ctx());
+                        waited += 1;
                     }
+                    self.smoke_phase = 3;
                 }
                 3 => {
                     // 뷰포트 렌더 (texture 생성)

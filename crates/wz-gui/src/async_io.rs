@@ -138,7 +138,7 @@ pub fn poll_map_images(state: &mut AppState, ctx: &egui::Context) {
     let Some(rx) = &state.map_images_rx else { return; };
     match rx.try_recv() {
         Ok(imgs) => {
-            state.map_back_image = imgs.back;
+            // back 은 이미 동기적으로 로드되었으므로 덮어쓰지 않는다.
             state.map_tile_images = imgs.tiles;
             state.map_obj_images = imgs.objs;
             state.map_images_rx = None;
@@ -309,6 +309,33 @@ pub fn load_map_by_path(state: &mut AppState) {
         None
     };
     state.map_back_image = back_img;
+
+    // 타일/오브젝트 이미지는 워커 스레드에서 로드한다 (UI 블로킹 방지).
+    if let Some(root) = data_root.clone() {
+        let tiles_clone = map.tiles.clone();
+        let objs_clone = map.objects.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        state.map_images_rx = Some(rx);
+        std::thread::spawn(move || {
+            let mut tiles = Vec::new();
+            for tile in tiles_clone.iter() {
+                if let Some((w, h, rgba)) = load_canvas_image(&root, "Tile", &tile.t_s, &format!("{}/{}", tile.u, tile.no)) {
+                    tiles.push((tile.x, tile.y, w, h, rgba));
+                }
+            }
+            let mut objs = Vec::new();
+            for obj in &objs_clone {
+                let inner = format!("{}/{}/{}/0", obj.l0, obj.l1, obj.l2);
+                if let Some((w, h, rgba)) = load_canvas_image(&root, "Obj", &obj.o_s, &inner) {
+                    objs.push((obj.x, obj.y, w, h, rgba));
+                }
+            }
+            let _ = tx.send(crate::state::MapImages {
+                tiles,
+                objs,
+            });
+        });
+    }
 
     state.map_status = format!(
         "map_id={:?} bgm={:?} town={} fh={} portals={} life={} back={} obj={} tile={} (back_img={})",

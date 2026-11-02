@@ -15,7 +15,6 @@ use wz_render::camera::Camera2D;
 
 /// 맵 이미지 로딩 결과 (워커 스레드 → UI 스레드).
 pub struct MapImages {
-    pub back: Option<(u32, u32, Vec<u8>)>,
     pub tiles: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub objs: Vec<(i32, i32, u32, u32, Vec<u8>)>,
 }
