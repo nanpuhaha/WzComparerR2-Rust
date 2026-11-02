@@ -57,7 +57,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
 }
 
 fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
-    ui.label("29개 슬롯 (PoC 3.5 — Body 이미지 로딩)");
+    ui.label("29개 슬롯 (PoC 3.8 — 10 파트 로딩)");
     egui::ScrollArea::vertical().max_height(120.0).show(ui, |ui| {
         for (i, slot) in AVATAR_SLOTS.iter().enumerate() {
             ui.horizontal(|ui| {
@@ -69,7 +69,7 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
     if ui.button("Body 이미지 로드 (Character.wz)").clicked() {
         async_io::load_avatar_body(state);
     }
-    if ui.button("아바타 로드 (loader, 5 파트)").clicked() {
+    if ui.button("아바타 로드 (loader, 10 파트)").clicked() {
         async_io::load_avatar_from_loader(state);
     }
     if ui.button("아바타 렌더 (오프스크린)").clicked() {
