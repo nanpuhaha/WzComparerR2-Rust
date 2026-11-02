@@ -727,6 +727,34 @@ pub fn decode_to_rgba8(
     Ok(output)
 }
 
+/// `PngRef` + 바이트 소스 → RGBA8 픽셀.
+///
+/// GUI/CLI 가 `extract_raw_bytes` + `TextureFormat::from_u32` + `decode_raw_page_to_rgba8`
+/// 를 매번 조합하지 않도록 한 곳에 가둔다 (아키텍처 감사 §3.3 deepening).
+pub fn decode_png_ref_to_rgba(
+    png_ref: &PngRef,
+    src: &std::sync::Arc<dyn wz_pool::ByteSource>,
+) -> wz_error::Result<(u32, u32, Vec<u8>)> {
+    let raw_payload = png_ref.extract_raw_bytes(src)?;
+
+    let tex_fmt = TextureFormat::from_u32(png_ref.format as u32);
+    match tex_fmt {
+        TextureFormat::Unknown => Ok((png_ref.width as u32, png_ref.height as u32, raw_payload)),
+        fmt => {
+            let (w, h, px) = decode_raw_page_to_rgba8(
+                fmt,
+                png_ref.width as u32,
+                png_ref.height as u32,
+                png_ref.scale as u32,
+                png_ref.pages as u32,
+                0,
+                &raw_payload,
+            )?;
+            Ok((w, h, px))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -861,34 +889,5 @@ mod tests {
             decompress_zlib_compat(&complete, 2).unwrap(),
             decompress_zlib(&complete).unwrap()
         );
-    }
-}
-
-
-/// `PngRef` + 바이트 소스 → RGBA8 픽셀.
-///
-/// GUI/CLI 가 `extract_raw_bytes` + `TextureFormat::from_u32` + `decode_raw_page_to_rgba8`
-/// 를 매번 조합하지 않도록 한 곳에 가둔다 (아키텍처 감사 §3.3 deepening).
-pub fn decode_png_ref_to_rgba(
-    png_ref: &PngRef,
-    src: &std::sync::Arc<dyn wz_pool::ByteSource>,
-) -> wz_error::Result<(u32, u32, Vec<u8>)> {
-    let raw_payload = png_ref.extract_raw_bytes(src)?;
-
-    let tex_fmt = TextureFormat::from_u32(png_ref.format as u32);
-    match tex_fmt {
-        TextureFormat::Unknown => Ok((png_ref.width as u32, png_ref.height as u32, raw_payload)),
-        fmt => {
-            let (w, h, px) = decode_raw_page_to_rgba8(
-                fmt,
-                png_ref.width as u32,
-                png_ref.height as u32,
-                png_ref.scale as u32,
-                png_ref.pages as u32,
-                0,
-                &raw_payload,
-            )?;
-            Ok((w, h, px))
-        }
     }
 }
