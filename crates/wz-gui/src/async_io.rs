@@ -600,6 +600,7 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
     match wz_avatar::load_from_character_wz(std::path::Path::new(char_wz)) {
         Some(av) => {
             state.avatar_status = format!("로드: {} 파트", av.parts.len());
+            state.avatar_loaded_parts = av.parts.iter().map(|p| (p.slot.clone(), p.width, p.height)).collect();
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
             }

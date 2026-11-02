@@ -213,6 +213,14 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
     if ui.button("아바타 로드 (loader, 14 파트)").clicked() {
         async_io::load_avatar_from_loader(state);
     }
+    // 로드된 파트 목록
+    if !state.avatar_loaded_parts.is_empty() {
+        ui.separator();
+        ui.label(format!("로드된 파트 ({}):", state.avatar_loaded_parts.len()));
+        for (i, (slot, w, h)) in state.avatar_loaded_parts.iter().enumerate() {
+            ui.label(format!("  {}: {} ({}x{})", i, slot, w, h));
+        }
+    }
     // 로드된 파트 목록 표시
     if state.avatar_rendered.is_some() || state.avatar_image.is_some() {
         ui.label(format!("렌더링된 파트: {}", state.avatar_status));
