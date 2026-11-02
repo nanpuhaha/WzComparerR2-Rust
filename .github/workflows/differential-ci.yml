@@ -164,6 +164,18 @@ jobs:
             echo "오라클 대조까지 하려면 이 워크플로우를 \`csharp_repository\`/\`csharp_ref\` 와 함께 다시 실행한다."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # 헤드리스 맵 렌더 스모크 (실전 WZ fixture 가 있을 때만)
+      - name: map_render_smoke (캐시된 WZ fixture 가 있을 때만)
+        shell: bash
+        run: |
+          set -euo pipefail
+          FIXTURE="${{ runner.temp }}/Map0_000.wz"
+          if [ ! -f "$FIXTURE" ]; then
+            echo "::notice::WZ fixture 가 없어 map_render_smoke 를 건너뜁니다."
+            exit 0
+          fi
+          cargo run -q -p wz-cli --example map_render_smoke -- "$FIXTURE"
+
       - name: 합성 코퍼스 아티팩트
         uses: actions/upload-artifact@v4
         with:
@@ -204,6 +216,7 @@ jobs:
           if [ ! -f "$FIXTURE" ]; then
             echo "::notice::WZ fixture 가 없어 GUI 스모크를 건너뜁니다."
             echo "로컬에서 'cargo run -p wz-cli --example map_render_smoke -- <Map0_000.wz>' 로 검증하세요."
+            echo "GUI 렌더 경로는 --smoke 모드로 로컬에서 검증 가능합니다."
             exit 0
           fi
           xvfb-run -a ./target/debug/wz-gui --smoke "$FIXTURE"
