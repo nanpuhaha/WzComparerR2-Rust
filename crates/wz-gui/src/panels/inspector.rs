@@ -63,7 +63,11 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
             ui.horizontal(|ui| {
                 ui.label(format!("{:>2}. {}", i, slot));
                 if i < 10 {
-                    ui.label(egui::RichText::new("loaded").color(egui::Color32::GREEN));
+                    let mut checked = state.avatar_selected_slots.contains(&i);
+                    if ui.checkbox(&mut checked, "렌더").changed() {
+                        if checked { state.avatar_selected_slots.insert(i); }
+                        else { state.avatar_selected_slots.remove(&i); }
+                    }
                 } else {
                     ui.label(egui::RichText::new("(empty)").weak());
                 }
