@@ -544,6 +544,31 @@ pub fn extract_first_canvas(node: &wz_core::image::Node) -> Option<wz_core::imag
 }
 
 
+/// 장비 아이템을 로드하여 (slot_name, width, height, rgba) 를 반환한다.
+/// wz_path: Character/{Slot}/_Canvas/_Canvas_000.wz 경로
+/// item_id: 장비 아이템 ID (8자리)
+pub fn load_equipment_item(
+    wz_path: &std::path::Path,
+    item_id: i32,
+) -> Option<(String, u32, u32, Vec<u8>)> {
+    use wz_core::WzArchive;
+    let arch = WzArchive::open(wz_path).ok()?;
+    let tree = arch.read_tree().ok()?;
+    let file_name = format!("{:08}.img", item_id);
+    let entry = tree.root.entries.iter().find(|e| {
+        e.node_type == 4 && e.name.as_deref() == Some(file_name.as_str())
+    })?;
+    let off = entry.offset?;
+    let node = arch.parse_image_at(off).ok()?;
+    let png = extract_first_canvas(&node)?;
+    let file_src = wz_pool::FileSource::open(wz_path).ok()?;
+    let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
+    let (w, h, rgba) = decode_png_ref_to_rgba(&png, &src).ok()?;
+    let slot = item_id_to_slot(item_id).unwrap_or("Unknown").to_string();
+    Some((slot, w, h, rgba))
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
