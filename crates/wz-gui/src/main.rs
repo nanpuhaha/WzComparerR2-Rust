@@ -16,10 +16,12 @@ use wz_core::WzArchive;
 use wz_core::dirtree::{DirTree, RawEntry};
 use wz_core::dirtree::node_type as nt;
 use wz_core::image::{ImageValue, Node as ImageNode};
+use wz_db::MapData;
 use wz_render::camera::Camera2D;
 use wz_render::atlas::AtlasShelfPacker;
 use wz_render::batch::SpriteBatch;
 use wz_render::GpuKey;
+use glam::Vec2;
 
 // ── 로딩 메시지 ───────────────────────────────────────────────────────
 
@@ -59,6 +61,9 @@ struct AppState {
     // 현재 이미지 뷰어 상태
     current_image_path: Option<String>,
     current_image_info: Option<String>,
+    // PoC 2.5: 맵
+    current_map: Option<MapData>,
+    map_status: String,
     // PoC 2: 맵 뷰포트
     camera: Camera2D,
     viewport_texture: Option<TextureHandle>,
@@ -85,6 +90,8 @@ impl Default for AppState {
             image_textures: HashMap::new(),
             current_image_path: None,
             current_image_info: None,
+            current_map: None,
+            map_status: "맵 ID 를 입력하고 'Load Map'".into(),
             camera: Camera2D::new(512.0, 512.0),
             viewport_texture: None,
             viewport_dirty: true,
@@ -423,6 +430,38 @@ fn load_image_view(state: &mut AppState, path: &str) {
     state.current_image_path = Some(path.to_string());
 }
 
+fn load_map_from_selection(state: &mut AppState) {
+    let Some(sel) = state.selected.clone() else { return; };
+    let Some(tree) = &state.tree else { return; };
+    let Some(archive) = state.shared_archive.lock().unwrap().clone() else { return; };
+    let name = sel.split('/').filter(|s| !s.is_empty()).last().unwrap_or("");
+    let Some(e) = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)) else {
+        state.map_status = format!("엔트리 없음: {name}");
+        return;
+    };
+    let Some(off) = e.offset else {
+        state.map_status = "오프셋 없음".into();
+        return;
+    };
+    let Ok(node) = archive.parse_image_at(off) else {
+        state.map_status = "이미지 파싱 실패".into();
+        return;
+    };
+    let map = MapData::parse_from_node(&node);
+    let fh_count = map.footholds.len();
+    let portal_count = map.portals.len();
+    let life_count = map.life.len();
+    let bgm = map.info.bgm.clone().unwrap_or_default();
+    let town = map.info.town;
+    state.map_status = format!(
+        "map_id={:?} bgm={} town={} footholds={} portals={} life={}",
+        map.info.map_id, bgm, town, fh_count, portal_count, life_count
+    );
+    state.current_map = Some(map);
+    state.viewport_dirty = true;
+}
+
+
 fn find_entry(tree: &DirTree, name: &str) -> Option<RawEntry> {
     tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)).cloned()
 }
@@ -472,13 +511,22 @@ fn render_inspector(ui: &mut egui::Ui, state: &mut AppState) {
         if let Some(info) = &state.current_image_info {
             ui.label(info);
         }
-        if let Some(tex) = state.image_textures.get(path) {
-            ui.add(egui::Image::new(tex).max_width(512.0));
-        } else {
-            ui.label("(텍스처 없음 — PoC 1 은 메타데이터만 표시)");
-        }
     } else {
         ui.label("이미지 노드를 선택하세요.");
+    }
+
+    ui.separator();
+    ui.heading("맵 (PoC 2.5)");
+    if ui.button("선택 노드를 맵으로 로드").clicked() {
+        load_map_from_selection(state);
+    }
+    ui.label(&state.map_status);
+    if let Some(m) = &state.current_map {
+        ui.label(format!("bgm: {:?}", m.info.bgm));
+        ui.label(format!("town/swim/fly: {} / {} / {}", m.info.town, m.info.swim, m.info.fly));
+        if let Some(vr) = m.info.vrect {
+            ui.label(format!("vrect: {:?}", vr));
+        }
     }
 }
 
@@ -569,6 +617,21 @@ fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
     } else {
         ui.label("(뷰포트 렌더링 대기)");
     }
+
+    // 맵이 로드됐으면 발판을 뷰포트 위에 선으로 그린다.
+    if let Some(m) = &state.current_map {
+        let painter = ui.painter();
+        let rect = resp.rect;
+        for fh in &m.footholds {
+            let s1 = state.camera.world_to_screen(Vec2::new(fh.x1 as f32, fh.y1 as f32));
+            let s2 = state.camera.world_to_screen(Vec2::new(fh.x2 as f32, fh.y2 as f32));
+            let p1 = egui::pos2(rect.min.x + s1.x, rect.min.y + s1.y);
+            let p2 = egui::pos2(rect.min.x + s2.x, rect.min.y + s2.y);
+            painter.line_segment([p1, p2], egui::Stroke::new(1.5, egui::Color32::GREEN));
+        }
+        ui.label(format!("발판 {}개 표시", m.footholds.len()));
+    }
+
     ui.label(format!("카메라: pos=({:.1},{:.1}) zoom={:.2}  (드래그=팬, 휠=줌)",
         state.camera.center.x, state.camera.center.y, state.camera.zoom));
 }
