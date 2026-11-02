@@ -69,12 +69,21 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
     if ui.button("Body 이미지 로드 (Character.wz)").clicked() {
         async_io::load_avatar_body(state);
     }
+    if ui.button("아바타 렌더 (오프스크린)").clicked() {
+        async_io::render_avatar_body(state);
+    }
     ui.label(&state.avatar_status);
     if let Some((w, h, rgba)) = &state.avatar_image {
         let ci = egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
         let tex = ui.ctx().load_texture("avatar_body", ci, egui::TextureOptions::LINEAR);
         ui.add(egui::Image::new(&tex).max_width(200.0));
         ui.label(format!("Body: {}x{}", w, h));
+    }
+    if let Some((w, h, rgba)) = &state.avatar_rendered {
+        let ci = egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
+        let tex = ui.ctx().load_texture("avatar_rendered", ci, egui::TextureOptions::LINEAR);
+        ui.add(egui::Image::new(&tex).max_width(200.0));
+        ui.label(format!("Rendered: {}x{}", w, h));
     }
 }
 

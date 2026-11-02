@@ -534,3 +534,48 @@ fn load_image_view(state: &mut AppState, path: &str) {
     }
     state.current_image_path = Some(path.to_string());
 }
+
+// ── 아바타 렌더링 (PoC 3.6) ──────────────────────────────────────────
+
+pub fn render_avatar_body(state: &mut AppState) {
+    let Some((w, h, rgba)) = state.avatar_image.clone() else {
+        state.avatar_status = "Body 이미지를 먼저 로드하세요".into();
+        return;
+    };
+    use std::sync::Arc;
+    use wz_avatar::{AvatarScene, Bone, SkinLayer, ZMap};
+    use wz_render::{camera::Camera2D, device::RenderContext, GpuKey};
+
+    let zmap = Arc::new(ZMap::new(vec!["body".into()]));
+    let scene = AvatarScene::new(zmap);
+
+    let mut root = Bone::new("@root");
+    let mut skin = SkinLayer::new("body");
+    skin.z = "body".into();
+    skin.width = w;
+    skin.height = h;
+    root.append_bone(skin, "navel", wz_avatar::Point::new(0, 0));
+
+    let batch_ab = scene.build_batch(&root);
+    let sprite_batch = batch_ab.into_sprite_batch(GpuKey(1));
+
+    let mut rc = match RenderContext::new_headless() {
+        Ok(r) => r,
+        Err(e) => { state.avatar_status = format!("RenderContext 실패: {e}"); return; }
+    };
+    if let Err(e) = rc.create_texture(GpuKey(1), w, h, &rgba) {
+        state.avatar_status = format!("텍스처 업로드 실패: {e}");
+        return;
+    }
+    let cam = Camera2D::new(w as f32, h as f32);
+    let uniforms = cam.build_uniforms(0.0, 0.0);
+    match rc.render_to_rgba(w, h, &sprite_batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
+        Ok(out) => {
+            state.avatar_status = format!("아바타 렌더 완료: {}x{}", w, h);
+            state.avatar_rendered = Some((w, h, out));
+        }
+        Err(e) => {
+            state.avatar_status = format!("렌더 실패: {e}");
+        }
+    }
+}
