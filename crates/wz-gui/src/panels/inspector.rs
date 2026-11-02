@@ -155,8 +155,12 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
     if ui.button("Body 이미지 로드 (Character.wz)").clicked() {
         async_io::load_avatar_body(state);
     }
-    if ui.button("아바타 로드 (loader, 10 파트)").clicked() {
+    if ui.button("아바타 로드 (loader, 14 파트)").clicked() {
         async_io::load_avatar_from_loader(state);
+    }
+    // 로드된 파트 목록 표시
+    if state.avatar_rendered.is_some() || state.avatar_image.is_some() {
+        ui.label(format!("렌더링된 파트: {}", state.avatar_status));
     }
     if ui.button("아바타 렌더 (오프스크린, 선택 파트)").clicked() {
         async_io::render_avatar_body(state);
