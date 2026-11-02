@@ -103,7 +103,7 @@ fn main() {
     }
     // tiles
     let mut tile_count = 0;
-    for (i, tile) in map.tiles.iter().take(15).enumerate() {
+    for (i, tile) in map.tiles.iter().enumerate() {
         if let Some((w, h, px)) = load_canvas_image(&data_root, "Tile", &tile.t_s, &format!("{}/{}", tile.u, tile.no)) {
             let key = GpuKey(100 + i as u32);
             rc.create_texture(key, w, h, &px).expect("tex");
@@ -113,7 +113,7 @@ fn main() {
     }
     // objs
     let mut obj_count = 0;
-    for (i, obj) in map.objects.iter().take(15).enumerate() {
+    for (i, obj) in map.objects.iter().enumerate() {
         let inner = format!("{}/{}/{}/0", obj.l0, obj.l1, obj.l2);
         if let Some((w, h, px)) = load_canvas_image(&data_root, "Obj", &obj.o_s, &inner) {
             let key = GpuKey(200 + i as u32);
@@ -126,7 +126,10 @@ fn main() {
 
     let cam = Camera2D::new(800.0, 600.0);
     let uniforms = cam.build_uniforms(0.0, 0.0);
+    let t0 = std::time::Instant::now();
     let rgba = rc.render_to_rgba(800, 600, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]).expect("render");
+    let elapsed = t0.elapsed();
+    println!("render time: {:?}", elapsed);
 
     assert_eq!(rgba.len(), 800 * 600 * 4);
     let mut non_zero = 0usize;
@@ -135,6 +138,6 @@ fn main() {
 
     let mut colors = std::collections::HashSet::new();
     for chunk in rgba.chunks(4) { colors.insert((chunk[0], chunk[1], chunk[2])); }
-    println!("SMOKE OK: {}x{} rendered, {} non-zero bytes, {} distinct colors", 800, 600, non_zero, colors.len());
     println!("layers loaded: back={} tile={} obj={}", back_count, tile_count, obj_count);
+    println!("SMOKE OK: {}x{} rendered, {} non-zero bytes, {} distinct colors", 800, 600, non_zero, colors.len());
 }
