@@ -58,16 +58,27 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
 
 fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
     ui.label("29개 슬롯 (PoC 3.9 — 10 파트 로딩 + 렌더)");
-    egui::ScrollArea::vertical().max_height(160.0).show(ui, |ui| {
+    egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
         for (i, slot) in AVATAR_SLOTS.iter().enumerate() {
             ui.horizontal(|ui| {
                 ui.label(format!("{:>2}. {}", i, slot));
                 if i < 10 {
-                    let mut checked = state.avatar_selected_slots.contains(&i);
-                    if ui.checkbox(&mut checked, "렌더").changed() {
-                        if checked { state.avatar_selected_slots.insert(i); }
-                        else { state.avatar_selected_slots.remove(&i); }
-                    }
+                    // 슬롯 선택 드롭다운 (PoC 3.9)
+                    let mut sel = state.avatar_slot_selection[i];
+                    let preview = if sel == usize::MAX { "없음".to_string() } else { format!("Part {}", sel) };
+                    egui::ComboBox::from_id_salt(format!("slot_{}", i))
+                        .selected_text(preview)
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_value(&mut sel, usize::MAX, "없음").changed() {
+                                state.avatar_slot_selection[i] = sel;
+                            }
+                            for j in 0..10usize {
+                                if ui.selectable_value(&mut sel, j, format!("Part {}", j)).changed() {
+                                    state.avatar_slot_selection[i] = sel;
+                                }
+                            }
+                        });
+                    state.avatar_slot_selection[i] = sel;
                 } else {
                     ui.label(egui::RichText::new("(empty)").weak());
                 }
