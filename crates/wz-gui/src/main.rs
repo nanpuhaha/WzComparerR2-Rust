@@ -16,6 +16,10 @@ use wz_core::WzArchive;
 use wz_core::dirtree::{DirTree, RawEntry};
 use wz_core::dirtree::node_type as nt;
 use wz_core::image::{ImageValue, Node as ImageNode};
+use wz_render::camera::Camera2D;
+use wz_render::atlas::AtlasShelfPacker;
+use wz_render::batch::SpriteBatch;
+use wz_render::GpuKey;
 
 // ── 로딩 메시지 ───────────────────────────────────────────────────────
 
@@ -55,6 +59,13 @@ struct AppState {
     // 현재 이미지 뷰어 상태
     current_image_path: Option<String>,
     current_image_info: Option<String>,
+    // PoC 2: 맵 뷰포트
+    camera: Camera2D,
+    viewport_texture: Option<TextureHandle>,
+    viewport_dirty: bool,
+    viewport_size: (u32, u32),
+    viewport_dragging: bool,
+    viewport_last_pos: Option<egui::Pos2>,
     // 로딩
     loading: bool,
     load_rx: Option<mpsc::Receiver<LoadMsg>>,
@@ -74,6 +85,12 @@ impl Default for AppState {
             image_textures: HashMap::new(),
             current_image_path: None,
             current_image_info: None,
+            camera: Camera2D::new(512.0, 512.0),
+            viewport_texture: None,
+            viewport_dirty: true,
+            viewport_size: (512, 512),
+            viewport_dragging: false,
+            viewport_last_pos: None,
             loading: false,
             load_rx: None,
             status: "WZ 파일을 열어 주세요 (Ctrl+O)".into(),
@@ -130,6 +147,9 @@ impl eframe::App for PocApp {
         // 우측: 인스펙터 + 이미지 뷰어
         egui::CentralPanel::default().show(ui, |ui| {
             render_inspector(ui, &mut self.state);
+            ui.separator();
+            ui.heading("맵 뷰포트 (PoC 2)");
+            render_viewport(ui, &mut self.state);
         });
     }
 }
@@ -456,6 +476,97 @@ fn render_inspector(ui: &mut egui::Ui, state: &mut AppState) {
     } else {
         ui.label("이미지 노드를 선택하세요.");
     }
+}
+
+// ── 맵 뷰포트 (PoC 2) ────────────────────────────────────────────────
+
+fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
+    // 마우스 입력 처리: 드래그=팬, 스크롤=줌
+    let resp = ui.allocate_response(
+        egui::vec2(state.viewport_size.0 as f32, state.viewport_size.1 as f32),
+        egui::Sense::click_and_drag(),
+    );
+    if resp.dragged() {
+        if let Some(pos) = resp.interact_pointer_pos() {
+            if let Some(last) = state.viewport_last_pos {
+                let dx = pos.x - last.x;
+                let dy = pos.y - last.y;
+                // 카메라 팬: 화면 이동을 월드 이동으로 변환 (줌 반영)
+                state.camera.center.x -= dx / state.camera.zoom;
+                state.camera.center.y -= dy / state.camera.zoom;
+                state.viewport_dirty = true;
+            }
+            state.viewport_last_pos = Some(pos);
+            state.viewport_dragging = true;
+        }
+    } else {
+        state.viewport_dragging = false;
+        state.viewport_last_pos = None;
+    }
+    if resp.hovered() {
+        let scroll = ui.input(|i| i.smooth_scroll_delta.y);
+        if scroll != 0.0 {
+            let factor = if scroll > 0.0 { 1.1 } else { 1.0 / 1.1 };
+            state.camera.zoom = (state.camera.zoom * factor).clamp(0.1, 10.0);
+            state.viewport_dirty = true;
+        }
+    }
+
+    // 더티면 오프스크린 재렌더
+    if state.viewport_dirty {
+        state.viewport_dirty = false;
+        let (w, h) = state.viewport_size;
+        let mut rc = match wz_render::RenderContext::new_headless() {
+            Ok(r) => r,
+            Err(_) => {
+                state.current_image_info = Some("RenderContext 생성 실패".into());
+                return;
+            }
+        };
+        // 1x1 흰색 아틀라스
+        let mut packer = AtlasShelfPacker::new(64, 64);
+        let white = vec![255u8; 64 * 64 * 4];
+        let slot = packer.allocate_and_write(1, 1, &[255, 255, 255, 255]).unwrap();
+        let atlas_key = slot.key;
+        let atlas_w = 64u32;
+        let atlas_h = 64u32;
+        for page in packer.pages() {
+            let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
+        }
+        let _ = white;
+
+        // 데모 그리드: 5x5 색상 쿼드
+        let mut batch = SpriteBatch::new();
+        for gx in -2..=2i32 {
+            for gy in -2..=2i32 {
+                let color = [
+                    0.3 + (gx as f32 + 2.0) * 0.12,
+                    0.3 + (gy as f32 + 2.0) * 0.12,
+                    0.6,
+                    1.0,
+                ];
+                let x = gx as f32 * 40.0 - 20.0;
+                let y = gy as f32 * 40.0 - 20.0;
+                batch.push_quad(atlas_key, [x, y, 36.0, 36.0], 0.0,
+                    slot.rect.uv(atlas_w, atlas_h), color);
+            }
+        }
+        batch.finish();
+
+        let uniforms = state.camera.build_uniforms(0.0, 0.0);
+        if let Ok(rgba) = rc.render_to_rgba(w, h, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
+            let ci = egui::ColorImage::from_rgba_unmultiplied([w as usize, h as usize], &rgba);
+            state.viewport_texture = Some(ui.ctx().load_texture("viewport", ci, egui::TextureOptions::LINEAR));
+        }
+    }
+
+    if let Some(tex) = &state.viewport_texture {
+        ui.add(egui::Image::new(tex).max_width(state.viewport_size.0 as f32));
+    } else {
+        ui.label("(뷰포트 렌더링 대기)");
+    }
+    ui.label(format!("카메라: pos=({:.1},{:.1}) zoom={:.2}  (드래그=팬, 휠=줌)",
+        state.camera.center.x, state.camera.center.y, state.camera.zoom));
 }
 
 // ── main ──────────────────────────────────────────────────────────────
