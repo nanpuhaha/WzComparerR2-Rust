@@ -30,6 +30,32 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label("이미지 노드를 선택하세요.");
     }
 
+    // 선택된 노드가 gear item 이면 스탯 표시
+    if let Some(sel) = state.selected.clone() {
+        if let Some(tree) = &state.tree {
+            let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
+            if let Some(e) = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)) {
+                if e.node_type == 4 {
+                    // 이미지 엔트리 — parse + gear props
+                    if let Some(arch) = state.shared_archive.lock().unwrap().clone() {
+                        if let Some(off) = e.offset {
+                            if let Ok(node) = arch.parse_image_at(off) {
+                                let props = wz_db::extract_gear_props(&node);
+                                if !props.is_empty() {
+                                    ui.separator();
+                                    ui.heading("스탯");
+                                    for (k, v) in &props {
+                                        ui.label(format!("{}: {}", k, v));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     ui.separator();
     ui.heading("맵 (PoC 2.5)");
     ui.horizontal(|ui| {
