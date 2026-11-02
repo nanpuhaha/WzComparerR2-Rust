@@ -45,7 +45,7 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
     let mut root = Bone::new("@root");
 
     // _Canvas_000.wz 의 처음 5개 이미지를 슬롯으로 로드한다 (PoC).
-    for (i, img_entry) in tree.root.entries.iter().filter(|e| e.node_type == nt::IMAGE).take(5).enumerate() {
+    for (i, img_entry) in tree.root.entries.iter().filter(|e| e.node_type == nt::IMAGE).take(10).enumerate() {
         let Some(off) = img_entry.offset else { continue; };
         let Ok(node) = arch.parse_image_at(off) else { continue; };
         let slot_name = format!("Slot{}", i);
