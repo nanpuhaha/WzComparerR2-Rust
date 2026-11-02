@@ -491,6 +491,45 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
         }
     }
 
+    // 5. Weapon 슬롯 로딩 (PoC: _Canvas_000.wz 첫 아이템)
+    let weapon_canvas_path = char_root.join("Weapon").join("_Canvas").join("_Canvas_000.wz");
+    if weapon_canvas_path.exists() {
+        if let Ok(arch) = WzArchive::open(&weapon_canvas_path) {
+            if let Ok(tree) = arch.read_tree() {
+                if let Some(entry) = tree.root.entries.first() {
+                    if let Some(off) = entry.offset {
+                        if let Ok(node) = arch.parse_image_at(off) {
+                            // stand1 액션의 첫 프레임에서 canvas 추출
+                            let mut weapon_png = None;
+                            let stand1 = node.children.iter().find(|c| c.name.as_ref() == "stand1");
+                            if let Some(s1) = stand1 {
+                                if let Some(frame) = s1.children.first() {
+                                    weapon_png = extract_first_canvas(frame);
+                                }
+                            }
+                            if weapon_png.is_none() {
+                                weapon_png = extract_first_canvas(&node);
+                            }
+                            if let Some(png) = weapon_png {
+                                if let Ok(fs) = wz_pool::FileSource::open(&weapon_canvas_path) {
+                                    let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(fs);
+                                    if let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&png, &src) {
+                                        let mut skin = SkinLayer::new("weapon".to_string());
+                                        skin.z = "weapon".to_string();
+                                        skin.width = w;
+                                        skin.height = h;
+                                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                                        parts.push(AvatarPart { slot: "weapon".to_string(), width: w, height: h, rgba });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     if parts.is_empty() {
         return None;
     }
