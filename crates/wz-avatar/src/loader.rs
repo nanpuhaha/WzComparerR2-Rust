@@ -273,14 +273,19 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
     let off = img_entry.offset?;
     let node = arch.parse_image_at(off).ok()?;
 
-    // 첫 액션 찾기
-    let action = node.children.first().or_else(|| {
-        if let Some(wz_core::image::ImageValue::Property(p)) = &node.value {
-            p.children.first()
-        } else {
-            None
-        }
-    })?;
+    // 표준 액션 우선 선택 (stand1 > alert > 첫 번째)
+    let action = node.children.iter().find(|c| c.name.as_ref() == "stand1")
+        .or_else(|| node.children.iter().find(|c| c.name.as_ref() == "alert"))
+        .or_else(|| node.children.first())
+        .or_else(|| {
+            if let Some(wz_core::image::ImageValue::Property(p)) = &node.value {
+                p.children.iter().find(|c| c.name.as_ref() == "stand1")
+                    .or_else(|| p.children.iter().find(|c| c.name.as_ref() == "alert"))
+                    .or_else(|| p.children.first())
+            } else {
+                None
+            }
+        })?;
     // 첫 프레임
     let frame = action.children.first().or_else(|| {
         if let Some(wz_core::image::ImageValue::Property(p)) = &action.value {
