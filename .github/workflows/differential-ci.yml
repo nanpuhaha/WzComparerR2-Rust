@@ -86,6 +86,15 @@ jobs:
       - name: cargo clippy --workspace --all-targets -- -D warnings
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+      # GUI 크레이트 (독립 패키지, 워크스페이스 밖) — 컴파일만 확인.
+      # eframe/wgpu 는 빌드에 디스플레이가 필요하지 않다.
+      - name: GUI 빌드 (wz-gui)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --manifest-path crates/wz-gui/Cargo.toml
+          cargo clippy --manifest-path crates/wz-gui/Cargo.toml -- -D warnings
+
       - name: cargo-deny 설치
         uses: taiki-e/install-action@v2
         with:
