@@ -596,52 +596,6 @@ pub fn cmd_oracle_tooltip(
     println!("{}", serde_json::to_string_pretty(&doc)?);
     Ok(())
 }
-pub fn extract_gear_stats_from_node(node: &wz_core::image::Node) -> serde_json::Map<String, serde_json::Value> {
-    use wz_core::image::ImageValue;
-    use wz_core::text::sort_natural;
-
-    let info_node = node
-        .children
-        .iter()
-        .find(|c| c.name.as_ref() == "info")
-        .or_else(|| {
-            if let Some(ImageValue::Property(inner)) = &node.value {
-                inner.children.iter().find(|c| c.name.as_ref() == "info")
-            } else {
-                None
-            }
-        })
-        .unwrap_or(node);
-
-    let mut children: Vec<&wz_core::image::Node> = info_node.children.iter().collect();
-    if let Some(ImageValue::Property(inner)) = &info_node.value {
-        children.extend(inner.children.iter());
-    }
-    sort_natural(&mut children, |c| c.name.as_ref());
-
-    let mut props = serde_json::Map::new();
-    for ch in children {
-        let val = match &ch.value {
-            Some(ImageValue::Short(v)) => serde_json::Value::Number((*v).into()),
-            Some(ImageValue::Int(v)) => serde_json::Value::Number((*v).into()),
-            Some(ImageValue::Long(v)) => serde_json::Value::Number((*v).into()),
-            Some(ImageValue::Uint(v)) => serde_json::Value::Number((*v).into()),
-            Some(ImageValue::Float(v)) => serde_json::Number::from_f64(*v as f64)
-                .map(serde_json::Value::Number)
-                .unwrap_or(serde_json::Value::Null),
-            Some(ImageValue::Double(v)) => serde_json::Number::from_f64(*v)
-                .map(serde_json::Value::Number)
-                .unwrap_or(serde_json::Value::Null),
-            Some(ImageValue::Bool(v)) => serde_json::Value::Bool(*v),
-            Some(ImageValue::Str(s) | ImageValue::Uol(s)) => {
-                serde_json::Value::String(s.to_string())
-            }
-            _ => continue,
-        };
-        props.insert(ch.name.to_string(), val);
-    }
-    props
-}
 pub fn cmd_oracle_stats(
     wz_path: &std::path::Path,
     gear_id: &str,
@@ -667,7 +621,7 @@ pub fn cmd_oracle_stats(
     let off = entry.offset.ok_or("장비 이미지 오프셋이 없습니다")?;
     let img_root = archive.parse_image_at(off)?;
 
-    let props = extract_gear_stats_from_node(&img_root);
+    let props = wz_db::extract_gear_props(&img_root);
 
     let mut doc = oracle_envelope("stats", detection);
     if let Some(prop_key) = prop_filter {

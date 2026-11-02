@@ -12,6 +12,7 @@ authors.workspace = true
 wz-error.workspace = true
 wz-core.workspace = true
 wz-pool.workspace = true
+serde_json.workspace = true
 
 [lints.rust]
 unsafe_code = "deny"
