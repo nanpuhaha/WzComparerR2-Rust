@@ -858,6 +858,29 @@ mod tests {
     }
 
     #[test]
+    fn load_avatar_with_equipment_custom_ids() {
+        let data_root = std::path::Path::new("<WZ_DATA_ROOT>");
+        if !data_root.exists() { return; }
+        // Load with specific equipment IDs
+        let equipment = vec![
+            ("Cap".to_string(), 1000002),
+            ("Coat".to_string(), 1040002),
+            ("Pants".to_string(), 1060000),
+            ("Shoes".to_string(), 1070000),
+            ("Glove".to_string(), 1080000),
+            ("Cape".to_string(), 1102000),
+        ];
+        let av = load_avatar_with_equipment(data_root, 2000, &equipment);
+        if let Some(av) = av {
+            // Should have body + head + 6 equipment = at least 8 parts
+            assert!(av.parts.len() >= 8, "expected >= 8 parts, got {}", av.parts.len());
+            let batch = av.scene.build_batch(&av.root_bone);
+            assert!(batch.layer_count > 0);
+            assert!(batch.vertex_count() > 0);
+        }
+    }
+
+    #[test]
     fn load_avatar_with_equipment_works() {
         let data_root = std::path::Path::new("<WZ_DATA_ROOT>");
         if !data_root.exists() { return; }
