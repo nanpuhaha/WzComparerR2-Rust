@@ -486,19 +486,8 @@ use wz_core::image::ImageValue;
         let Some(pr) = find_png(&node) else { continue; };
         let file_src = wz_pool::FileSource::open(&path).ok()?;
         let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
-        let raw = pr.extract_raw_bytes(&src).ok()?;
-        let fmt = TextureFormat::from_u32(pr.format as u32);
-        let rgba = match fmt {
-            TextureFormat::Unknown => raw,
-            f => {
-                let (_, _, px) = decode_raw_page_to_rgba8(
-                    f, pr.width as u32, pr.height as u32, pr.scale as u32,
-                    pr.pages as u32, 0, &raw,
-                ).ok()?;
-                px
-            }
-        };
-        return Some((pr.width as u32, pr.height as u32, rgba));
+        let (w, h, rgba) = wz_image::decode_png_ref_to_rgba(&pr, &src).ok()?;
+        return Some((w, h, rgba));
     }
     None
 }
