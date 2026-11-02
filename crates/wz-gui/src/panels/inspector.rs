@@ -47,6 +47,19 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                                     for (k, v) in &props {
                                         ui.label(format!("{}: {}", k, v));
                                     }
+                                    // StringLinker 툴팁 자동 표시
+                                    let id_str = name.trim_end_matches(".img");
+                                    if let Ok(id) = id_str.parse::<i32>() {
+                                        if let Some(linker) = &state.string_linker {
+                                            if let Some(tooltip) = linker.format_tooltip(id) {
+                                                ui.separator();
+                                                ui.label("아이템 정보:");
+                                                for line in tooltip.lines() {
+                                                    ui.label(line);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
