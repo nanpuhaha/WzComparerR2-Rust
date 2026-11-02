@@ -1,0 +1,161 @@
+# 아키텍처 감사 — mattpocock improve-codebase-architecture 적용 (#32 후속)
+
+> 기준 스킬: `codebase-design` (deep modules, seams, deletion test, dependency categories).
+> 대상: 워크스페이스 9개 크레이트 + 2개 도구 + GUI.
+> 목적: 얕은(shallow) 모듈을 찾아 깊게(deep) 만들 계획을 세우고, 우선순위가 높은 것부터 실행한다.
+
+---
+
+## 1. 용어 (스킬 어휘)
+
+- **Module**: 인터페이스+구현을 가진 것 (함수/클래스/패키지/슬라이스).
+- **Interface**: 호출자가 알아야 할 모든 것 (시그니처 + 불변식/순서/에러/성능).
+- **Depth**: 인터페이스 대비 구현의 양. 깊은 모듈 = 작은 인터페이스 + 많은 구현.
+- **Seam**: 구현을 바꾸지 않고 동작을 바꿀 수 있는 위치.
+- **Adapter**: seam 에서 인터페이스를 만족하는 구체물.
+- **Deletion test**: 모듈을 삭제했을 때 복잡도가 사라지면 pass-through, N 호출자에 재출현하면 가치 있음.
+
+---
+
+## 2. 크레이트별 depth 평가
+
+| 크레이트 | 라인 | Depth | 평가 |
+|---|---:|---|---|
+| `wz-error` | 203 | 깊음 | 단일 에러 어휘. 인터페이스 작음, 구현(변환 impl) 많음. ✅ |
+| `wz-pool` | 1402 | 깊음 | ByteSource trait + Memory/File/Mmap/Window 어댑터. Seam 이 명확 (trait). ✅ 4개 어댑터 → 실제 seam. |
+| `wz-core` | 11389 | 깊음 | WzArchive::open/read_tree/parse_image_at 가 작은 인터페이스 뒤에 포맷 전체를 숨김. ✅ |
+| `wz-image` | 1910 | 중간 | decode_* 함수들이 개별. `TextureFormat::from_u32` + decode_raw_page_to_rgba8 조합이 호출자에 노출됨. ⚠️ |
+| `wz-render` | 2491 | 깊음 | RenderContext 하나의 인터페이스 뒤에 wgpu 전체. ADR-4 로 경계 엄격. ✅ |
+| `wz-db` | 2967 | 깊음 | Arena + QueryEngine + StringLinker + MapData. 인터페이스가 NodeId 핸들로 작음. ✅ |
+| `wz-diff` | 487 | 중간 | DiffEngine. 작지만 얕음 — CLI 가 직접 호출. ⚠️ |
+| `wz-avatar` | 1267 | 중간 | AvatarScene/Canvas. **WZ→avatar 로더가 없음** (기능 갭, 아키텍처 아님). |
+| `wz-cli` | 3026 | **얕음** | `main.rs` 한 파일에 30+ `cmd_*` 함수. 모듈 경계 없음. 🔴 |
+| `wz-gui` | 853 | **얕음** | `main.rs` 한 파일에 상태+패널+IO+렌더. 🔴 |
+
+---
+
+## 3. 얕은 모듈 / 개선 후보
+
+### 3.1 `wz-cli/src/main.rs` (3026줄) — 가장 큰 문제
+
+**증상**: `main.rs` 가 파서(clap), 디스패치(match), 30+ `cmd_*` 핸들러, 헬퍼(`find_image_entry_in_dirtree`, `build_arena_from_archive`, `extract_png_ref`, `extract_gear_stats_from_node`), 테스트를 한 파일에 담는다.
+
+**Deletion test**: `cmd_avatar`, `cmd_oracle_*` 를 삭제하면 CLI 가 기능을 잃는다 → 가치 있음. 하지만 *파일 분할*은 가치 있음 (locality).
+
+**권장 deepening**: `commands/` 디렉터리로 분할.
+```
+crates/wz-cli/src/
+├── main.rs          (clap 파서 + dispatch 만, ~100줄)
+├── commands/
+│   ├── mod.rs
+│   ├── tree.rs, image.rs, diff.rs, dump.rs
+│   ├── avatar.rs, query.rs, oracle.rs
+│   └── corpus.rs
+├── helpers.rs       (find_image_entry_in_dirtree, build_arena_from_archive, extract_*)
+└── oracle/          (이미 oracle 서브커맨드가 흩어짐 → 모듈화)
+```
+- 인터페이스: `pub fn run(cli: Cli) -> Result<(), Box<dyn Error>>`.
+- 각 command 모듈은 `pub fn execute(args) -> Result`.
+- **Seam**: command trait? 한 어댑터(CLI)만 있으므로 seam 은 가상 — 도입하지 않는다 (스킬 원칙: "One adapter means a hypothetical seam"). 그냥 함수 분할.
+
+### 3.2 `wz-gui/src/main.rs` (853줄) — 단일 파일
+
+**증상**: `AppState`, `LoadMsg`, `TreeRow`, `PocApp`, `render_*`, `load_*`, `find_*` 가 한 파일.
+
+**권장 deepening**: `docs/gui-architecture.md` §3.1 의 구조로 분할.
+```
+crates/wz-gui/src/
+├── main.rs          (eframe 진입점, ~30줄)
+├── app.rs           (PocApp: eframe::App)
+├── state.rs         (AppState, LoadMsg, TreeRow)
+├── panels/          (tree_panel, inspector, viewport, avatar_panel)
+├── async_io.rs      (open_file_dialog, poll_load_result, load_map_*, load_back_image)
+└── render_bridge.rs (render_offscreen_triangle, render_viewport)
+```
+- 인터페이스: `AppState` 가 단일 진실 소스 (이미 설계됨). 패널은 `&mut AppState` 를 받는 함수.
+
+### 3.3 `wz-image` decode API — 얕은 인터페이스
+
+**증상**: 호출자가 `TextureFormat::from_u32`, `extract_raw_bytes`, `decode_raw_page_to_rgba8` 를 조합해야 한다. GUI 의 `load_back_image` 가 이 조합을 다시 구현했다.
+
+**권장 deepening**: `wz-image` 에 고수준 함수 추가.
+```rust
+pub fn decode_png_ref_to_rgba(png_ref: &PngRef, src: &Arc<dyn ByteSource>) -> Result<(u32,u32,Vec<u8>), ImageError>;
+```
+- 이 함수 하나가 raw 추출 + 포맷 분기 + 디코딩을 숨긴다.
+- GUI 의 `load_back_image` 가 이 함수를 쓰도록 → 중복 제거, locality 향상.
+
+### 3.4 `wz-avatar` — WZ 로더 부재 (기능 갭)
+
+**증상**: `AvatarScene`/`Bone`/`SkinLayer` 가 데이터 구조만 있고, WZ → avatar 변환 로더가 없다. CLI `cmd_avatar` 는 합성 레이어를 쓴다.
+
+**권장**: `wz-avatar` 에 `AvatarLoader` 모듈 추가 (또는 `wz-db` 에). 이는 아키텍처 개선이 아니라 기능 추가. 별도 티켓.
+
+### 3.5 `wz-core` DirTree 파싱 — depth 양호
+
+`DirTreeParser::parse` 의 `blocks` + 커서 규칙이 호출자(CLI, GUI)에 누출된다 (`build_arena_from_archive` 가 커서를 재구현). 
+
+**권장 deepening**: `WzArchive` 에 `read_tree_flat()` 또는 `Arena::from_archive()` 를 추가해 커서 규칙을 한 곳에 가둔다. `build_arena_from_archive` 는 `wz-db` 로 이동.
+
+### 3.6 `wz-db::Arena` — find_child 의 "마지막 매치" 규칙
+
+문서화는 잘 되어 있다. 인터페이스가 작다. ✅ 깊음.
+
+---
+
+## 4. 의존성 카테고리 (DEEPENING.md 기준)
+
+| 의존성 | 카테고리 | seam 전략 |
+|---|---|---|
+| `wz-pool::ByteSource` | in-process (trait) | 이미 seam. 4 어댑터. ✅ |
+| `wgpu` (render) | true external | `RenderContext` 가 어댑터. GUI 는 `new_headless` 만 씀 — 서페이스 모드 추가 시 seam. |
+| `eframe/egui` | true external | GUI 크레이트가 직접 의존. PoC 단계라 OK. |
+| `rfd` (파일 다이얼로그) | true external | `open_file_dialog` 가 직접 호출. 얕음 — `FilePicker` port 후보 (2 어댑터: native + headless test). |
+| 파일시스템 (WZ 로딩) | local-substitutable | `WzArchive::open` 이 직접 fs. 테스트는 합성 코퍼스로 대체. ✅ |
+
+---
+
+## 5. 실행 계획 (우선순위)
+
+### P0 (즉시, 가치 높음)
+1. **`wz-image::decode_png_ref_to_rgba` 추가** + GUI `load_back_image` 를 이 함수로 교체. (§3.3)
+2. **`WzArchive` 에 `build_arena()` / `read_tree_flat()` 추가**, CLI/GUI 의 `build_arena_from_archive` 를 `wz-db` 로 이동. (§3.5)
+
+### P1 (GUI 완성 전)
+3. `wz-gui` 를 `panels/` + `state.rs` + `async_io.rs` + `render_bridge.rs` 로 분할. (§3.2)
+4. `wz-cli` 를 `commands/` 로 분할. (§3.1)
+
+### P2 (기능)
+5. `wz-avatar` 에 WZ→avatar 로더 추가 (별도 티켓).
+6. `FilePicker` port (native + headless) — 테스트 가능하게.
+
+### P3 (CI/품질)
+7. GUI 빌드를 CI `rust-gates` 에 `--no-default-features` 로 추가.
+8. `cargo clippy` 0 경고 유지 (현재 wz-gui 에 dead_code 경고 1개).
+
+---
+
+## 6. 삭제 테스트 결과
+
+- `cmd_avatar` 의 합성 레이어 로직: 삭제하면 avatar 데모가 사라짐 → 가치 있음. 하지만 `wz-avatar` 크레이트가 WZ 로더를 갖추면 이 합성 로직은 테스트 픽스처로 이동해야 한다.
+- `build_arena_from_archive`: CLI/GUI 양쪽에서 중복. 삭제하면 둘 다 깨짐 → 가치 있음. `wz-db` 로 이동이 맞다.
+- `load_back_image` (GUI): `wz-image` 고수준 함수가 생기면 삭제 가능 → 현재는 pass-through 에 가까움. P0 에서 제거.
+
+---
+
+## 7. PoC 3.5 (아바타) 상태
+
+아바타 WZ 로더가 코드베이스에 **존재하지 않는다**. `AvatarScene`/`Bone`/`SkinLayer` 는 데이터 구조만 있고, WZ → avatar 변환은 미구현. CLI `cmd_avatar` 는 합성 레이어를 쓴다.
+
+따라서 PoC 3.5 의 "실제 장비 로딩"은 새 기능 구현이지 GUI 와이어링이 아니다. 별도 티켓으로 분리하고, GUI 쪽은 데모 렌더(합성 아바타)를 표시하도록 유지한다. 이는 아키텍처 감사 §3.4 와 일치한다.
+
+---
+
+## 8. 결론
+
+- **깊은 모듈**: `wz-core`, `wz-pool`, `wz-render`, `wz-db`, `wz-error` — 인터페이스가 작고 구현이 많다. ✅
+- **얕은 모듈**: `wz-cli` (3026줄 단일 파일), `wz-gui` (853줄 단일 파일), `wz-image` (decode 조합 노출).
+- **P0 2건** (`decode_png_ref_to_rgba`, `WzArchive::build_arena`) 을 이번 세션에서 실행한다.
+- P1~P3 는 후속 세션.
+MD
+echo "written"
