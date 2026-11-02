@@ -459,6 +459,38 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
         }
     }
 
+    // 4. 추가 장비 슬롯 로딩 (PoC: 각 슬롯의 첫 번째 아이템)
+    let char_root = char_wz_path.parent().unwrap_or(char_wz_path);
+    let slots = ["Coat", "Pants", "Shoes", "Glove", "Cape"];
+    for slot_name in &slots {
+        let canvas_path = char_root.join(slot_name).join("_Canvas").join("_Canvas_000.wz");
+        if !canvas_path.exists() { continue; }
+        if let Ok(arch) = WzArchive::open(&canvas_path) {
+            if let Ok(tree) = arch.read_tree() {
+                if let Some(entry) = tree.root.entries.first() {
+                    if let Some(off) = entry.offset {
+                        if let Ok(node) = arch.parse_image_at(off) {
+                            if let Some(png) = extract_first_canvas(&node) {
+                                if let Ok(fs) = wz_pool::FileSource::open(&canvas_path) {
+                                    let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(fs);
+                                    if let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&png, &src) {
+                                        let z_tag = part_z_tag(slot_name);
+                                        let mut skin = SkinLayer::new(slot_name.to_lowercase());
+                                        skin.z = z_tag;
+                                        skin.width = w;
+                                        skin.height = h;
+                                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                                        parts.push(AvatarPart { slot: slot_name.to_lowercase(), width: w, height: h, rgba });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     if parts.is_empty() {
         return None;
     }
