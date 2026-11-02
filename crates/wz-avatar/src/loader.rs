@@ -81,3 +81,29 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
 
     Some(LoadedAvatar { parts, root_bone: root, zmap, scene })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn loader_returns_parts_on_real_character_wz() {
+        let char_wz = "<WZ_DATA_ROOT>/Character/Character.wz";
+        if !std::path::Path::new(char_wz).exists() {
+            // CI 환경에는 실전 WZ 가 없다 — 건너뛴다.
+            return;
+        }
+        let av = load_from_character_wz(std::path::Path::new(char_wz))
+            .expect("loader should return Some on real Character.wz");
+        assert!(!av.parts.is_empty(), "at least one part loaded");
+        assert!(!av.root_bone.children.is_empty() || av.parts.is_empty());
+        for p in &av.parts {
+            assert!(p.width > 0 && p.height > 0);
+            assert_eq!(p.rgba.len(), (p.width * p.height * 4) as usize);
+        }
+        // batch 빌드가 동작해야 한다
+        let batch = av.scene.build_batch(&av.root_bone);
+        assert!(batch.layer_count > 0);
+        assert!(batch.vertex_count() > 0);
+    }
+}
