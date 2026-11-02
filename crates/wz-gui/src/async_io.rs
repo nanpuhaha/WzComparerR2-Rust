@@ -531,88 +531,73 @@ pub fn render_avatar_body(state: &mut AppState) {
         state.avatar_status = "Body 이미지를 먼저 로드하세요".into();
         return;
     };
-    use std::sync::Arc;
-    use wz_avatar::{AvatarScene, Bone, SkinLayer, ZMap};
-    use wz_render::{camera::Camera2D, device::RenderContext, GpuKey};
-
-    let zmap = Arc::new(ZMap::new(vec!["body".into()]));
-    let scene = AvatarScene::new(zmap);
-
-    let mut root = Bone::new("@root");
-    let mut skin = SkinLayer::new("body");
-    skin.z = "body".into();
-    skin.width = w;
-    skin.height = h;
-    root.append_bone(skin, "navel", wz_avatar::Point::new(0, 0));
-
-    let batch_ab = scene.build_batch(&root);
-    let sprite_batch = batch_ab.into_sprite_batch(GpuKey(1));
+    use wz_render::{atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D, device::RenderContext};
 
     let mut rc = match RenderContext::new_headless() {
         Ok(r) => r,
         Err(e) => { state.avatar_status = format!("RenderContext 실패: {e}"); return; }
     };
-    if let Err(e) = rc.create_texture(GpuKey(1), w, h, &rgba) {
-        state.avatar_status = format!("텍스처 업로드 실패: {e}");
-        return;
+    let mut packer = AtlasShelfPacker::new(w.max(1), h.max(1));
+    let slot = match packer.allocate_and_write(w, h, &rgba) {
+        Some(s) => s,
+        None => { state.avatar_status = "아틀라스 할당 실패".into(); return; }
+    };
+    for page in packer.pages() {
+        let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
     }
+    let mut batch = SpriteBatch::new();
+    batch.push_atlas_quad(slot.key, [0.0, 0.0, w as f32, h as f32], 0.0, &slot.rect, (w, h), [1.0, 1.0, 1.0, 1.0]);
+    batch.finish();
+
     let cam = Camera2D::new(w as f32, h as f32);
     let uniforms = cam.build_uniforms(0.0, 0.0);
-    match rc.render_to_rgba(w, h, &sprite_batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
+    match rc.render_to_rgba(w, h, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
         Ok(out) => {
             state.avatar_status = format!("아바타 렌더 완료: {}x{}", w, h);
             state.avatar_rendered = Some((w, h, out));
         }
-        Err(e) => {
-            state.avatar_status = format!("렌더 실패: {e}");
-        }
+        Err(e) => { state.avatar_status = format!("렌더 실패: {e}"); }
     }
 }
-
-
-// ── 아바타 로더 (PoC 3.7) ────────────────────────────────────────────
 
 pub fn load_avatar_from_loader(state: &mut AppState) {
     let char_wz = "<WZ_DATA_ROOT>/Character/Character.wz";
     match wz_avatar::load_from_character_wz(std::path::Path::new(char_wz)) {
         Some(av) => {
             state.avatar_status = format!("로드: {} 파트", av.parts.len());
-            // 첫 파트를 이미지로 저장
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
             }
-            // 렌더
-            use wz_avatar::{AvatarScene, Bone, SkinLayer, ZMap};
-            use std::sync::Arc;
-            use wz_render::{camera::Camera2D, device::RenderContext, GpuKey};
-            let mut root = Bone::new("@root");
+            // 아틀라스 패킹 + 다중 파트 렌더
+            use wz_render::{atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D, device::RenderContext};
+            let mut packer = AtlasShelfPacker::new(512, 512);
+            let mut slots = Vec::new();
             for part in &av.parts {
-                let mut skin = SkinLayer::new(part.slot.clone());
-                skin.z = part.slot.clone();
-                skin.width = part.width;
-                skin.height = part.height;
-                root.append_bone(skin, "navel", wz_avatar::Point::new(0, 0));
-            }
-            let zmap = Arc::new(ZMap::new(av.parts.iter().map(|p| p.slot.clone()).collect()));
-            let scene = AvatarScene::new(zmap);
-            let batch_ab = scene.build_batch(&root);
-            // 단일 텍스처 (첫 파트) 로 렌더
-            if let Some(first) = av.parts.first() {
-                let mut rc = match RenderContext::new_headless() {
-                    Ok(r) => r,
-                    Err(e) => { state.avatar_status = format!("RC 실패: {e}"); return; }
-                };
-                let _ = rc.create_texture(GpuKey(1), first.width, first.height, &first.rgba);
-                let sprite_batch = batch_ab.into_sprite_batch(GpuKey(1));
-                let cam = Camera2D::new(first.width as f32, first.height as f32);
-                let uniforms = cam.build_uniforms(0.0, 0.0);
-                match rc.render_to_rgba(first.width, first.height, &sprite_batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
-                    Ok(out) => {
-                        state.avatar_status = format!("렌더 완료: {} 파트, {}x{}", av.parts.len(), first.width, first.height);
-                        state.avatar_rendered = Some((first.width, first.height, out));
-                    }
-                    Err(e) => { state.avatar_status = format!("렌더 실패: {e}"); }
+                if let Some(slot) = packer.allocate_and_write(part.width, part.height, &part.rgba) {
+                    slots.push((part, slot));
                 }
+            }
+            let mut rc = match RenderContext::new_headless() {
+                Ok(r) => r,
+                Err(e) => { state.avatar_status = format!("RC 실패: {e}"); return; }
+            };
+            for page in packer.pages() {
+                let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
+            }
+            let mut batch = SpriteBatch::new();
+            for (part, slot) in &slots {
+                batch.push_atlas_quad(slot.key, [0.0, 0.0, part.width as f32, part.height as f32], 0.0, &slot.rect, (512, 512), [1.0, 1.0, 1.0, 1.0]);
+            }
+            batch.finish();
+            let (rw, rh) = (256u32, 256u32);
+            let cam = Camera2D::new(rw as f32, rh as f32);
+            let uniforms = cam.build_uniforms(0.0, 0.0);
+            match rc.render_to_rgba(rw, rh, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
+                Ok(out) => {
+                    state.avatar_status = format!("렌더 완료: {} 파트, {}x{}", av.parts.len(), rw, rh);
+                    state.avatar_rendered = Some((rw, rh, out));
+                }
+                Err(e) => { state.avatar_status = format!("렌더 실패: {e}"); }
             }
         }
         None => {
