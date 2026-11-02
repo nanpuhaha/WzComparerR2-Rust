@@ -392,7 +392,7 @@ pub fn load_map_tiles(state: &mut AppState) {
     state.map_tile_images.clear();
     state.map_obj_images.clear();
     let (Some(map), Some(root)) = (state.current_map.as_ref(), state.data_root.as_ref()) else { return; };
-    for tile in map.tiles.iter().take(50) {
+    for tile in map.tiles.iter().take(100) {
         if let Some((w, h, rgba)) = load_canvas_image(root, "Tile", &tile.t_s, &format!("{}/{}", tile.u, tile.no)) {
             state.map_tile_images.push((tile.x, tile.y, w, h, rgba));
         }
@@ -402,7 +402,7 @@ pub fn load_map_tiles(state: &mut AppState) {
 
 pub fn load_map_objs(state: &mut AppState) {
     let (Some(map), Some(root)) = (state.current_map.as_ref(), state.data_root.as_ref()) else { return; };
-    for obj in map.objects.iter().take(50) {
+    for obj in map.objects.iter().take(100) {
         let inner = format!("{}/{}/{}/0", obj.l0, obj.l1, obj.l2);
         if let Some((w, h, rgba)) = load_canvas_image(root, "Obj", &obj.o_s, &inner) {
             state.map_obj_images.push((obj.x, obj.y, w, h, rgba));
@@ -571,10 +571,18 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             // 아틀라스 패킹 + 다중 파트 렌더
             use wz_render::{atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D, device::RenderContext};
             let mut packer = AtlasShelfPacker::new(512, 512);
+            // 선택된 슬롯만 렌더한다 (PoC 3.9: 29슬롯 선택)
+            let selected: Vec<usize> = if state.avatar_selected_slots.is_empty() {
+                (0..av.parts.len()).collect()
+            } else {
+                state.avatar_selected_slots.iter().copied().collect()
+            };
             let mut slots = Vec::new();
-            for part in &av.parts {
-                if let Some(slot) = packer.allocate_and_write(part.width, part.height, &part.rgba) {
-                    slots.push((part, slot));
+            for &i in &selected {
+                if let Some(part) = av.parts.get(i) {
+                    if let Some(slot) = packer.allocate_and_write(part.width, part.height, &part.rgba) {
+                        slots.push((part, slot));
+                    }
                 }
             }
             let mut rc = match RenderContext::new_headless() {
