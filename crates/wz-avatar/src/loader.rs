@@ -317,6 +317,34 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
             }
             None
         }
+
+        // z-tag: WZ 노드에 "z" 자식이 있으면 사용, 없으면 이름 기반 추론
+        let z_tag = if let Some(wz_core::image::ImageValue::Property(p)) = &pn.value {
+            // Property 내부에서 z 찾기
+            p.children.iter().find(|c| c.name.as_ref() == "z")
+                .and_then(|z| match &z.value {
+                    Some(wz_core::image::ImageValue::Str(s)) => Some((**s).to_string()),
+                    Some(wz_core::image::ImageValue::Int(_v)) => None, // int z → z_index
+                    _ => None,
+                })
+                .unwrap_or_else(|| part_z_tag(pn.name.as_ref()))
+        } else {
+            // Png 노드: 형제 노드에서 z 찾기 (부모 프레임에서)
+            part_z_tag(pn.name.as_ref())
+        };
+
+        // z_index: WZ 노드에 "z" 자식이 Int 이면 사용
+        let z_index = if let Some(wz_core::image::ImageValue::Property(p)) = &pn.value {
+            p.children.iter().find(|c| c.name.as_ref() == "z")
+                .and_then(|z| match &z.value {
+                    Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
+                    _ => None,
+                })
+                .unwrap_or(-2)
+        } else {
+            -2
+        };
+
         let Some(pr) = find_png(pn) else { continue; };
         let file_src = wz_pool::FileSource::open(&canvas_path).ok()?;
         let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
@@ -325,11 +353,11 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
         };
 
         let slot_name = pn.name.to_string();
-        let z_tag = part_z_tag(&slot_name);
         let anchor = part_anchor(&slot_name);
 
         let mut skin = SkinLayer::new(slot_name.clone());
         skin.z = z_tag;
+        skin.z_index = z_index;
         skin.width = w;
         skin.height = h;
         root.append_bone(skin, anchor, crate::Point::new(0, 0));
