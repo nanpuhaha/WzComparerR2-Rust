@@ -1252,50 +1252,6 @@ fn parse_prop_filter(spec: &str) -> Option<wz_db::ValueRule> {
     None
 }
 
-fn build_arena_from_archive(
-    archive: &wz_core::WzArchive,
-    tree: &wz_core::dirtree::DirTree,
-) -> wz_db::Arena {
-    let mut arena = wz_db::Arena::with_root("");
-    let root = arena.root();
-    let mut block_cursor = 0usize;
-    populate_arena_block(
-        &mut arena,
-        root,
-        &tree.root,
-        &tree.blocks,
-        &mut block_cursor,
-        archive,
-    );
-    arena
-}
-
-fn populate_arena_block(
-    arena: &mut wz_db::Arena,
-    parent: wz_db::NodeId,
-    block: &wz_core::dirtree::DirBlock,
-    blocks: &[wz_core::dirtree::DirBlock],
-    block_cursor: &mut usize,
-    archive: &wz_core::WzArchive,
-) {
-    use wz_core::dirtree::node_type;
-
-    for e in &block.entries {
-        let name = e.name.as_deref().unwrap_or("");
-        let child_id = arena.add_node(parent, name, None);
-        if e.node_type == node_type::DIRECTORY {
-            if let Some(sub_block) = blocks.get(*block_cursor) {
-                *block_cursor += 1;
-                populate_arena_block(arena, child_id, sub_block, blocks, block_cursor, archive);
-            }
-        } else if let Some(off) = e.offset {
-            if let Ok(img_root) = archive.parse_image_at(off) {
-                arena.ingest_image(child_id, &img_root);
-            }
-        }
-    }
-}
-
 fn cmd_query(
     wz_path: &std::path::Path,
     name_pattern: &str,
@@ -1306,8 +1262,7 @@ fn cmd_query(
     use wz_db::{execute_query, QueryRule, StringComparisonMode, DEFAULT_MAX_RESULTS};
 
     let archive = WzArchive::open(wz_path)?;
-    let tree = archive.read_tree()?;
-    let arena = build_arena_from_archive(&archive, &tree);
+    let (arena, _) = wz_db::Arena::from_archive(&archive);
 
     let mut rule = QueryRule::target(StringComparisonMode::Contains, name_pattern);
     rule.search_descendants = true;
@@ -1943,9 +1898,8 @@ fn cmd_oracle_tooltip(
     use wz_db::StringLinker;
 
     let archive = WzArchive::open(wz_path)?;
-    let tree = archive.read_tree()?;
     let detection = archive.detection();
-    let arena = build_arena_from_archive(&archive, &tree);
+    let (arena, _) = wz_db::Arena::from_archive(&archive);
 
     let mut linker = StringLinker::new();
     linker.load_string_wz(&arena, arena.root());

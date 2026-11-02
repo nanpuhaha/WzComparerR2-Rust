@@ -14,6 +14,8 @@
 
 use std::sync::Arc;
 
+use wz_core::WzArchive;
+use wz_core::dirtree;
 use wz_core::image::{ImageValue, Node as WzNode};
 
 use crate::node::{NodeEntry, NodeId, NodeValue, RawDataRef};
@@ -52,6 +54,19 @@ impl Arena {
             a.ingest(root, ch);
         }
         (a, root)
+    }
+
+    /// `WzArchive` 의 디렉터리 트리를 arena 로 옮긴다.
+    ///
+    /// `wz-core` 의 `DirTree` + `blocks` 커서 규칙을 **이 한 곳에서만**
+    /// 다룬다. CLI/GUI 가 커서 규칙을 재구현하지 않도록 한다.
+    pub fn from_archive(archive: &WzArchive) -> (Self, NodeId) {
+        let tree = archive.read_tree().expect("read_tree");
+        let mut arena = Self::with_root("");
+        let root = arena.root();
+        let mut block_cursor = 0usize;
+        populate_arena_block(&mut arena, root, &tree.root, &tree.blocks, &mut block_cursor, archive);
+        (arena, root)
     }
 
     pub fn root(&self) -> NodeId {
@@ -314,5 +329,34 @@ fn convert_back(v: &NodeValue) -> ImageValue {
         NodeValue::Video(r) => ImageValue::Video(r.clone()),
         NodeValue::Sound(s) => ImageValue::Sound(s.clone()),
         NodeValue::Convex(c) => ImageValue::Convex(c.clone()),
+    }
+}
+
+
+// ── 내부 헬퍼: DirTree → Arena 커서 순회 (CLI/GUI 에서 이동) ─────────
+
+fn populate_arena_block(
+    arena: &mut Arena,
+    parent: NodeId,
+    block: &dirtree::DirBlock,
+    blocks: &[dirtree::DirBlock],
+    block_cursor: &mut usize,
+    archive: &WzArchive,
+) {
+    use wz_core::dirtree::node_type;
+
+    for e in &block.entries {
+        let name = e.name.as_deref().unwrap_or("");
+        let child_id = arena.add_node(parent, name, None);
+        if e.node_type == node_type::DIRECTORY {
+            if let Some(sub_block) = blocks.get(*block_cursor) {
+                *block_cursor += 1;
+                populate_arena_block(arena, child_id, sub_block, blocks, block_cursor, archive);
+            }
+        } else if let Some(off) = e.offset {
+            if let Ok(img_root) = archive.parse_image_at(off) {
+                arena.ingest_image(child_id, &img_root);
+            }
+        }
     }
 }
