@@ -530,6 +530,44 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
         }
     }
 
+    // 6. 나머지 슬롯 로딩 (PoC: 각 슬롯의 첫 번째 아이템)
+    let remaining_slots = [
+        ("Accessory", "accessory"),
+        ("Face", "face"),
+        ("Hair", "hair"),
+        ("Ring", "ring"),
+        ("PetEquip", "petequip"),
+        ("TamingMob", "tamingmob"),
+    ];
+    for (dir_name, slot_name) in &remaining_slots {
+        let canvas_path = char_root.join(dir_name).join("_Canvas").join("_Canvas_000.wz");
+        if !canvas_path.exists() { continue; }
+        if let Ok(arch) = WzArchive::open(&canvas_path) {
+            if let Ok(tree) = arch.read_tree() {
+                if let Some(entry) = tree.root.entries.first() {
+                    if let Some(off) = entry.offset {
+                        if let Ok(node) = arch.parse_image_at(off) {
+                            if let Some(png) = extract_first_canvas(&node) {
+                                if let Ok(fs) = wz_pool::FileSource::open(&canvas_path) {
+                                    let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(fs);
+                                    if let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&png, &src) {
+                                        let z_tag = part_z_tag(slot_name);
+                                        let mut skin = SkinLayer::new(slot_name.to_string());
+                                        skin.z = z_tag;
+                                        skin.width = w;
+                                        skin.height = h;
+                                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                                        parts.push(AvatarPart { slot: slot_name.to_string(), width: w, height: h, rgba });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     if parts.is_empty() {
         return None;
     }
@@ -846,7 +884,7 @@ mod tests {
         let av = load_from_character_wz(std::path::Path::new(char_wz))
             .expect("loader should return Some on real Character.wz");
         // 최소 8 파트 (body, arm, head, ear variants, cap)
-        assert!(av.parts.len() >= 8, "expected >= 8 parts, got {}", av.parts.len());
+        assert!(av.parts.len() >= 14, "expected >= 14 parts, got {}", av.parts.len());
         // body 파트가 있어야 한다
         assert!(av.parts.iter().any(|p| p.slot == "body"), "body part missing");
         // head 파트가 있어야 한다
