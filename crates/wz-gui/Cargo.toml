@@ -26,6 +26,7 @@ wz-db = { path = "../../crates/wz-db" }
 wz-avatar = { path = "../../crates/wz-avatar" }
 eframe = { version = "0.37", features = ["wgpu"] }
 egui = "0.37"
+rfd = "0.15"
 wgpu = "30"
 bytemuck = "1"
 

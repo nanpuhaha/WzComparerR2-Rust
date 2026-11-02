@@ -33,7 +33,7 @@ pub fn rol32(x: u32, n: u32) -> u32 {
 }
 
 /// 오프셋 계산기.
-pub trait OffsetCalc {
+pub trait OffsetCalc: Send + Sync {
     /// 파일 내 위치 → 실제 데이터 오프셋.
     fn calc_offset(&self, file_pos: u32, hashed_offset: u32) -> u32;
 

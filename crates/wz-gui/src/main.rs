@@ -1,20 +1,470 @@
-// wz-gui — Phase 8 데스크톱 GUI PoC 0.
+// wz-gui — Phase 8 데스크톱 GUI PoC 1.
 //
-// 목표: "egui + wgpu 30 가 컴파일되고 뜨는가" 를 실측으로 확인한다.
-//   - eframe 윈도우가 뜬다.
-//   - egui 가 텍스트/도형을 그린다.
-//   - wz-render (헤드리스 RenderContext) 가 오프스크린으로 삼각형을 렌더하고
-//     그 결과를 egui 텍스처로 표시한다 (wgpu 통합 경로 검증).
-//
-// 이 바이너리는 PoC 0 의 게이트다. PoC 1 부터 WZ 트리 브라우저를 얹는다.
+// PoC 0 (egui+wgpu 컴파일/윈도우) 위에 WZ 트리 브라우저를 얹는다.
+//   - rfd 네이티브 다이얼로그로 WZ 파일 열기 (워커 스레드, UI 비블로킹)
+//   - DirTree 를 가상 스크롤 트리 뷰로 표시 (expand/collapse)
+//   - 이미지 엔트리 확장 시 parse_image_at 로 하위 노드 지연 로드
+//   - 선택된 이미지의 첫 캔버스를 CPU 디코딩 → egui 텍스처로 표시
+//   - 프로퍼티 인스펙터 (이름/타입/크기/체크섬/오프셋)
 
-use eframe::egui;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex, mpsc};
+use std::thread;
+
+use egui::TextureHandle;
+use wz_core::WzArchive;
+use wz_core::dirtree::{DirTree, RawEntry};
+use wz_core::dirtree::node_type as nt;
+use wz_core::image::{ImageValue, Node as ImageNode};
+
+// ── 로딩 메시지 ───────────────────────────────────────────────────────
+
+enum LoadMsg {
+    Loaded { tree: DirTree },
+    Failed(String),
+}
+
+// ── 트리 행 ───────────────────────────────────────────────────────────
+
+#[derive(Clone)]
+struct TreeRow {
+    depth: usize,
+    name: String,
+    kind: String,        // "dir" | "img" | "prop" | "canvas"
+    path: String,        // 고유 키 (확장/선택에 사용)
+    expandable: bool,
+    expanded: bool,
+    offset: Option<u64>,
+    data_len: i32,
+    cs32: i32,
+}
+
+// ── 앱 상태 ───────────────────────────────────────────────────────────
+
+struct AppState {
+    archive: Option<Arc<WzArchive>>,
+    shared_archive: Arc<Mutex<Option<Arc<WzArchive>>>>,
+    tree: Option<DirTree>,
+    // 확장된 이미지 엔트리 → 파싱된 하위 (name, type) 캐시
+    image_children: HashMap<String, Vec<(String, String)>>,
+    // 확장된 경로 집합
+    expanded: HashSet<String>,
+    selected: Option<String>,
+    // 디코딩된 이미지 텍스처 캐시 (경로 → 텍스처)
+    image_textures: HashMap<String, TextureHandle>,
+    // 현재 이미지 뷰어 상태
+    current_image_path: Option<String>,
+    current_image_info: Option<String>,
+    // 로딩
+    loading: bool,
+    load_rx: Option<mpsc::Receiver<LoadMsg>>,
+    status: String,
+    search: String,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            archive: None,
+            shared_archive: Arc::new(Mutex::new(None)),
+            tree: None,
+            image_children: HashMap::new(),
+            expanded: HashSet::new(),
+            selected: None,
+            image_textures: HashMap::new(),
+            current_image_path: None,
+            current_image_info: None,
+            loading: false,
+            load_rx: None,
+            status: "WZ 파일을 열어 주세요 (Ctrl+O)".into(),
+            search: String::new(),
+        }
+    }
+}
+
+struct PocApp {
+    state: AppState,
+}
+
+impl Default for PocApp {
+    fn default() -> Self {
+        Self { state: AppState::default() }
+    }
+}
+
+// ── eframe App ────────────────────────────────────────────────────────
+
+impl eframe::App for PocApp {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // 로딩 결과 폴링
+        poll_load_result(&mut self.state, ui.ctx());
+
+        // 메뉴바
+        egui::Panel::top("menubar").show(ui, |ui| {
+            ui.horizontal(|ui| {
+                if ui.button("열기 (Ctrl+O)").clicked() {
+                    open_file_dialog(&mut self.state);
+                }
+                if self.state.loading {
+                    ui.spinner();
+                    ui.label(&self.state.status);
+                } else {
+                    ui.label(&self.state.status);
+                }
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(format!("wz-gui PoC 1"));
+                });
+            });
+        });
+
+        // 좌측: 트리 뷰어
+        egui::Panel::left("tree_panel")
+            .default_size(320.0)
+            .show(ui, |ui| {
+                ui.label("WZ 트리");
+                ui.text_edit_singleline(&mut self.state.search);
+                ui.separator();
+                render_tree_panel(ui, &mut self.state);
+            });
+
+        // 우측: 인스펙터 + 이미지 뷰어
+        egui::CentralPanel::default().show(ui, |ui| {
+            render_inspector(ui, &mut self.state);
+        });
+    }
+}
+
+// ── 파일 열기 ─────────────────────────────────────────────────────────
+
+fn open_file_dialog(state: &mut AppState) {
+    if state.loading {
+        return;
+    }
+    let picked = rfd::FileDialog::new()
+        .add_filter("WZ files", &["wz"])
+        .add_filter("All files", &["*"])
+        .pick_file();
+    let Some(path) = picked else { return; };
+
+    state.loading = true;
+    state.status = format!("로딩 중: {}", path.display());
+    state.tree = None;
+    state.archive = None;
+    *state.shared_archive.lock().unwrap() = None;
+    state.image_children.clear();
+    state.expanded.clear();
+    state.selected = None;
+    state.image_textures.clear();
+
+    let shared = state.shared_archive.clone();
+    let (tx, rx) = mpsc::channel();
+    state.load_rx = Some(rx);
+
+    thread::spawn(move || {
+        let result = (|| -> Result<DirTree, String> {
+            let archive = WzArchive::open(&path).map_err(|e| format!("open: {e}"))?;
+            let tree = archive.read_tree().map_err(|e| format!("read_tree: {e}"))?;
+            *shared.lock().unwrap() = Some(Arc::new(archive));
+            Ok(tree)
+        })();
+        let msg = match result {
+            Ok(t) => LoadMsg::Loaded { tree: t },
+            Err(e) => LoadMsg::Failed(e),
+        };
+        let _ = tx.send(msg);
+    });
+}
+
+fn poll_load_result(state: &mut AppState, ctx: &egui::Context) {
+    let Some(rx) = &state.load_rx else { return; };
+    match rx.try_recv() {
+        Ok(LoadMsg::Loaded { tree }) => {
+            state.status = format!("로드 완료: {} 엔트리(루트)", tree.root.entries.len());
+            state.archive = state.shared_archive.lock().unwrap().clone();
+            state.tree = Some(tree);
+            state.loading = false;
+            state.load_rx = None;
+            ctx.request_repaint();
+        }
+        Ok(LoadMsg::Failed(e)) => {
+            state.status = format!("로드 실패: {e}");
+            state.loading = false;
+            state.load_rx = None;
+        }
+        Err(mpsc::TryRecvError::Empty) => {}
+        Err(mpsc::TryRecvError::Disconnected) => {
+            state.loading = false;
+            state.load_rx = None;
+        }
+    }
+}
+
+// ── 트리 뷰어 ─────────────────────────────────────────────────────────
+
+fn render_tree_panel(ui: &mut egui::Ui, state: &mut AppState) {
+    if state.tree.is_none() {
+        ui.label("WZ 파일을 열어 주세요.");
+        return;
+    }
+    let tree = state.tree.clone().unwrap();
+    let archive = state.shared_archive.lock().unwrap().clone();
+
+    // 보이는 행 계산 (DFS, 확장 상태 반영)
+    let mut rows: Vec<TreeRow> = Vec::new();
+    build_rows(&mut rows, &tree, archive.as_deref(), state, 0, "", "");
+    // 검색 필터
+    if !state.search.is_empty() {
+        let q = state.search.to_lowercase();
+        rows.retain(|r| r.name.to_lowercase().contains(&q));
+    }
+
+    let row_height = 18.0;
+    egui::ScrollArea::vertical()
+        .auto_shrink([false, false])
+        .show_rows(ui, row_height, rows.len(), |ui, range| {
+            for row in &rows[range] {
+                render_row(ui, state, row);
+            }
+        });
+}
+
+fn build_rows(
+    rows: &mut Vec<TreeRow>,
+    tree: &DirTree,
+    archive: Option<&WzArchive>,
+    state: &mut AppState,
+    depth: usize,
+    parent_path: &str,
+    _parent_block: &str,
+) {
+    for (i, e) in tree.root.entries.iter().enumerate() {
+        let name = e.name.clone().unwrap_or_else(|| format!("<ref@{}>", e.file_pos).into());
+        let path = if parent_path.is_empty() {
+            format!("/{}", name)
+        } else {
+            format!("{}/{}", parent_path, name)
+        };
+        let kind = match e.node_type {
+            nt::DIRECTORY => "dir",
+            nt::IMAGE => "img",
+            nt::IMAGE_NAMED_BY_REF => "img*",
+            _ => "entry",
+        };
+        let expandable = e.node_type == nt::DIRECTORY || e.node_type == nt::IMAGE;
+        let expanded = state.expanded.contains(&path);
+
+        rows.push(TreeRow {
+            depth,
+            name: name.to_string(),
+            kind: kind.to_string(),
+            path: path.clone(),
+            expandable,
+            expanded,
+            offset: e.offset,
+            data_len: e.data_len,
+            cs32: e.cs32,
+        });
+
+        if expanded {
+            // 디렉터리: DirTree 에는 하위 블록이 별도로 있다 — CLI 는 blocks 리스트를
+            // 쓴다. PoC 1 에서는 단일 블록만 보여준다 (단순화).
+            if e.node_type == nt::IMAGE {
+                // 이미지 파싱 (캐시)
+                if !state.image_children.contains_key(&path) {
+                    let children = parse_image_children(archive, e);
+                    state.image_children.insert(path.clone(), children);
+                }
+                if let Some(children) = state.image_children.get(&path) {
+                    for (cn, ct) in children {
+                        rows.push(TreeRow {
+                            depth: depth + 1,
+                            name: cn.clone(),
+                            kind: ct.clone(),
+                            path: format!("{}/{}", path, cn),
+                            expandable: false,
+                            expanded: false,
+                            offset: None,
+                            data_len: 0,
+                            cs32: 0,
+                        });
+                    }
+                }
+            }
+        }
+        let _ = i;
+    }
+    // blocks (하위 디렉터리) 는 PoC 1 에서 생략 — 단일 루트만 표시.
+}
+
+fn parse_image_children(archive: Option<&WzArchive>, e: &RawEntry) -> Vec<(String, String)> {
+    let Some(arch) = archive else { return vec![]; };
+    let Some(off) = e.offset else { return vec![]; };
+    let Ok(node) = arch.parse_image_at(off) else { return vec![]; };
+    let mut out = Vec::new();
+    // root Property 의 children
+    if let Some(ImageValue::Property(p)) = &node.value {
+        for c in &p.children {
+            out.push((c.name.to_string(), value_kind(c)));
+        }
+    }
+    for c in &node.children {
+        out.push((c.name.to_string(), value_kind(c)));
+    }
+    out
+}
+
+fn value_kind(n: &ImageNode) -> String {
+    match &n.value {
+        Some(ImageValue::Png(_)) => "canvas".into(),
+        Some(ImageValue::Property(_)) => "prop".into(),
+        Some(ImageValue::Int(_)) | Some(ImageValue::Short(_)) | Some(ImageValue::Long(_))
+        | Some(ImageValue::Uint(_)) | Some(ImageValue::Float(_)) | Some(ImageValue::Double(_))
+        | Some(ImageValue::Bool(_)) => "val".into(),
+        Some(ImageValue::Str(_)) => "str".into(),
+        Some(ImageValue::Vector(_)) => "vec".into(),
+        Some(ImageValue::Uol(_)) => "uol".into(),
+        _ => "node".into(),
+    }
+}
+
+fn render_row(ui: &mut egui::Ui, state: &mut AppState, row: &TreeRow) {
+    ui.horizontal(|ui| {
+        // 들여쓰기
+        ui.add_space((row.depth as f32) * 14.0);
+        if row.expandable {
+            let label = if row.expanded { "▼" } else { "▶" };
+            if ui.small_button(label).clicked() {
+                if row.expanded {
+                    state.expanded.remove(&row.path);
+                } else {
+                    state.expanded.insert(row.path.clone());
+                }
+            }
+        } else {
+            ui.add_space(18.0);
+        }
+        let selected = state.selected.as_deref() == Some(row.path.as_str());
+        let text = format!("{}  [{}]", row.name, row.kind);
+        if ui.selectable_label(selected, text).clicked() {
+            state.selected = Some(row.path.clone());
+            // 이미지면 뷰어 갱신
+            if row.kind == "img" {
+                load_image_view(state, &row.path);
+            }
+        }
+    });
+}
+
+// ── 이미지 뷰어 ───────────────────────────────────────────────────────
+
+fn load_image_view(state: &mut AppState, path: &str) {
+    if state.image_textures.contains_key(path) {
+        state.current_image_path = Some(path.to_string());
+        return;
+    }
+    // 경로에서 이미지 엔트리를 찾아 파싱
+    let Some(tree) = &state.tree else { return; };
+    let archive = state.shared_archive.lock().unwrap().clone();
+    let Some(archive) = archive else { return; };
+    // 경로에서 이름 추출 (마지막 세그먼트)
+    let name = path.split('/').filter(|s| !s.is_empty()).last().unwrap_or("");
+    // 트리에서 해당 엔트리 찾기
+    let entry = find_entry(tree, name);
+    let Some(e) = entry else {
+        state.current_image_info = Some(format!("엔트리를 찾을 수 없음: {name}"));
+        return;
+    };
+    let Some(off) = e.offset else {
+        state.current_image_info = Some("오프셋 없음".into());
+        return;
+    };
+    let Ok(node) = archive.parse_image_at(off) else {
+        state.current_image_info = Some("이미지 파싱 실패".into());
+        return;
+    };
+    // 첫 캔버스 찾기
+    let png_ref = extract_png_ref(&node);
+    let Some(pr) = png_ref else {
+        state.current_image_info = Some("캔버스 없음".into());
+        state.current_image_path = Some(path.to_string());
+        return;
+    };
+    // 디코딩
+    // PoC 1 은 메타데이터만 표시한다. 실제 픽셀 디코딩은 PoC 2(맵 뷰포트)에서
+    // archive 의 raw texels 를 읽어 decode_page_to_rgba8 로 처리한다.
+    state.current_image_info = Some(format!(
+        "canvas: {}x{} format={} scale={} pages={}",
+        pr.width, pr.height, pr.format, pr.scale, pr.pages
+    ));
+    state.current_image_path = Some(path.to_string());
+}
+
+fn find_entry(tree: &DirTree, name: &str) -> Option<RawEntry> {
+    tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)).cloned()
+}
+
+fn extract_png_ref(node: &ImageNode) -> Option<wz_core::image::PngRef> {
+    if let Some(ImageValue::Png(p)) = &node.value {
+        return Some(p.clone());
+    }
+    for ch in &node.children {
+        if let Some(p) = extract_png_ref(ch) {
+            return Some(p);
+        }
+    }
+    if let Some(ImageValue::Property(p)) = &node.value {
+        if let Some(res) = extract_png_ref(p) {
+            return Some(res);
+        }
+    }
+    None
+}
+
+// ── 인스펙터 ──────────────────────────────────────────────────────────
+
+fn render_inspector(ui: &mut egui::Ui, state: &mut AppState) {
+    ui.heading("인스펙터");
+    if let Some(sel) = &state.selected.clone() {
+        ui.label(format!("선택: {sel}"));
+        // 선택된 엔트리의 메타데이터 찾기
+        if let Some(tree) = &state.tree {
+            let name = sel.split('/').filter(|s| !s.is_empty()).last().unwrap_or("");
+            if let Some(e) = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)) {
+                ui.label(format!("타입: {}", e.node_type));
+                ui.label(format!("data_len: {}", e.data_len));
+                ui.label(format!("cs32: {}", e.cs32));
+                ui.label(format!("file_pos: {}", e.file_pos));
+                ui.label(format!("offset: {:?}", e.offset));
+            }
+        }
+    } else {
+        ui.label("노드를 선택하세요.");
+    }
+
+    ui.separator();
+    ui.heading("이미지 뷰어");
+    if let Some(path) = &state.current_image_path {
+        ui.label(format!("이미지: {path}"));
+        if let Some(info) = &state.current_image_info {
+            ui.label(info);
+        }
+        if let Some(tex) = state.image_textures.get(path) {
+            ui.add(egui::Image::new(tex).max_width(512.0));
+        } else {
+            ui.label("(텍스처 없음 — PoC 1 은 메타데이터만 표시)");
+        }
+    } else {
+        ui.label("이미지 노드를 선택하세요.");
+    }
+}
+
+// ── main ──────────────────────────────────────────────────────────────
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([900.0, 600.0])
-            .with_title("WzComparerR2-Rust GUI PoC 0"),
+            .with_inner_size([1100.0, 700.0])
+            .with_title("WzComparerR2-Rust GUI PoC 1"),
         ..Default::default()
     };
     eframe::run_native(
@@ -22,63 +472,4 @@ fn main() -> eframe::Result<()> {
         options,
         Box::new(|_cc| Ok(Box::new(PocApp::default()))),
     )
-}
-
-#[derive(Default)]
-struct PocApp {
-    // 오프스크린 렌더 결과를 egui 텍스처로 캐시한다.
-    texture: Option<egui::TextureHandle>,
-    // 한 번만 렌더하도록 한다 (매 프레임 GPU 작업 방지).
-    rendered_once: bool,
-}
-
-impl eframe::App for PocApp {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let ctx = ui.ctx().clone();
-        egui::CentralPanel::default().show(ui, |ui| {
-            ui.heading("WzComparerR2-Rust GUI PoC 0");
-            ui.label("egui + wgpu 30 통합 검증 중…");
-
-            let rect = ui.available_rect_before_wrap();
-            let painter = ui.painter();
-            let center = rect.center();
-            let r = 60.0;
-            painter.circle_filled(center, r, egui::Color32::from_rgb(80, 160, 220));
-            painter.text(
-                center,
-                egui::Align2::CENTER_CENTER,
-                "egui OK",
-                egui::FontId::proportional(16.0),
-                egui::Color32::WHITE,
-            );
-
-            if !self.rendered_once {
-                self.rendered_once = true;
-                if let Some(tex) = render_offscreen_triangle(&ctx) {
-                    self.texture = Some(tex);
-                }
-            }
-            if let Some(tex) = &self.texture {
-                ui.add(egui::Image::new(tex).max_width(256.0));
-                ui.label("↑ wz-render 오프스크린 렌더 결과 (wgpu 30)");
-            } else {
-                ui.label("⚠ wz-render 오프스크린 렌더 실패 (로그 확인)");
-            }
-        });
-    }
-}
-
-/// wz-render 의 헤드리스 경로로 256×256 RGBA 삼각형을 렌더한다.
-/// 실패하면 None — PoC 0 에서는 화면에 "render failed" 로 드러난다.
-fn render_offscreen_triangle(ctx: &egui::Context) -> Option<egui::TextureHandle> {
-    use wz_render::{batch::SpriteBatch, camera::Camera2D, device::RenderContext};
-
-    let mut rc = RenderContext::new_headless().ok()?;
-    let batch = SpriteBatch::new();
-    let cam = Camera2D::new(256.0, 256.0);
-    let uniforms = cam.build_uniforms(0.0, 0.0);
-    let rgba = rc.render_to_rgba(256, 256, &batch, &uniforms, [0.1, 0.1, 0.15, 1.0]).ok()?;
-
-    let color_image = egui::ColorImage::from_rgba_unmultiplied([256, 256], &rgba);
-    Some(ctx.load_texture("offscreen", color_image, egui::TextureOptions::LINEAR))
 }
