@@ -78,6 +78,35 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     }
 
     ui.separator();
+    ui.heading("StringLinker (툴팁)");
+    ui.label(&state.string_linker_status);
+    if ui.button("String.wz 로드").clicked() {
+        async_io::load_string_linker(state);
+    }
+    // 선택된 gear item 의 툴팁 표시
+    if let Some(sel) = state.selected.clone() {
+        if let Some(tree) = &state.tree {
+            let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
+            if let Some(e) = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)) {
+                if e.node_type == 4 {
+                    let id_str = name.trim_end_matches(".img");
+                    if let Ok(id) = id_str.parse::<i32>() {
+                        if let Some(linker) = &state.string_linker {
+                            if let Some(tooltip) = linker.format_tooltip(id) {
+                                ui.separator();
+                                ui.label("툴팁:");
+                                for line in tooltip.lines() {
+                                    ui.label(line);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    ui.separator();
     ui.heading("아바타 (PoC 3.5)");
     show_avatar(ui, state);
 }

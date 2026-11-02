@@ -648,3 +648,32 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
         }
     }
 }
+
+// ── StringLinker 로드 ─────────────────────────────────────────────────
+
+pub fn load_string_linker(state: &mut AppState) {
+    let Some(data_root) = state.data_root.clone() else {
+        state.string_linker_status = "data_root 가 설정되지 않았습니다".into();
+        return;
+    };
+    let string_wz = data_root.join("String").join("String.wz");
+    if !string_wz.exists() {
+        state.string_linker_status = format!("String.wz 없음: {}", string_wz.display());
+        return;
+    }
+    match (|| -> Result<wz_db::StringLinker, String> {
+        let archive = WzArchive::open(&string_wz).map_err(|e| format!("open: {e}"))?;
+        let (arena, _) = wz_db::Arena::from_archive(&archive);
+        let mut linker = wz_db::StringLinker::new();
+        linker.load_string_wz(&arena, arena.root());
+        Ok(linker)
+    })() {
+        Ok(linker) => {
+            state.string_linker_status = format!("StringLinker 로드 완료 (eqp: {})", linker.string_eqp.len());
+            state.string_linker = Some(linker);
+        }
+        Err(e) => {
+            state.string_linker_status = format!("StringLinker 로드 실패: {e}");
+        }
+    }
+}
