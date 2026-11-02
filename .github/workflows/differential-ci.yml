@@ -95,6 +95,10 @@ jobs:
           cargo build --manifest-path crates/wz-gui/Cargo.toml --no-default-features
           cargo clippy --manifest-path crates/wz-gui/Cargo.toml --no-default-features -- -D warnings
 
+      # GUI 스모크: 합성 코퍼스로는 맵 구조가 없어 실행하지 않는다.
+      # 실제 WZ 가 있는 환경(개발자 로컬)에서만 --smoke 로 검증한다.
+      # CI 에서 GUI 렌더 경로를 검증하려면 xvfb-run (Linux) + 캐시된 WZ fixture 가 필요하다.
+
       - name: cargo-deny 설치
         uses: taiki-e/install-action@v2
         with:
