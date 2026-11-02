@@ -1,17 +1,21 @@
 //! WZ → Avatar 로더.
 //!
-//! `Character.wz` 의 슬롯 디렉터리(Body, Cap, Hair, ...) 에서 첫 번째
-//! `.img` 를 찾아 이미지를 디코딩하고, `Bone`/`SkinLayer`/`ZMap` 으로
-//! 조립한다. GUI 아바타 패널과 CLI `cmd_avatar` 가 공유한다.
+//! `Character/_Canvas/_Canvas_000.wz` 에서 첫 번째 이미지의 첫 프레임을 파싱해
+//! 모든 파트 (body, head, hair, arm, ...) 를 로드한다.
+//!
+//! WZ 포맷은 origin/anchor/z/map 프로퍼티를 저장하지 않으므로,
+//! 앵커/프리즘/zmap 정밀도는 C# CharaSim 참조 구현이 필요하다.
+//! 현재 로더는 PoC 수준: 이미지 캔버스를 로드해 SkinLayer (width/height) +
+//! Bone + ZMap + AvatarScene 을 조립하고 렌더한다.
 
 use std::sync::Arc;
 
 use wz_core::WzArchive;
-use wz_core::dirtree::node_type as nt;
 use wz_core::image::Node as ImageNode;
 use wz_image::decode_png_ref_to_rgba;
 
 use crate::{AvatarScene, Bone, SkinLayer, ZMap};
+
 
 /// 로드된 아바타 파트.
 #[derive(Debug)]
@@ -30,27 +34,41 @@ pub struct LoadedAvatar {
     pub scene: AvatarScene,
 }
 
-/// `Character.wz` 에서 아바타 파트를 로드한다.
-///
-/// 각 슬롯 디렉터리의 **첫 번째** `.img` 만 로드한다 (PoC).
-/// 반환값이 `None` 이면 WZ 를 열 수 없거나 Body 이미지가 없다.
+
+
 pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAvatar> {
-    // Character.wz 는 438 바이트짜리 컨테이너 인덱스다. 실제 이미지는
-    // Character/_Canvas/_Canvas_000.wz 에 있다.
+    // Character.wz 는 컨테이너 인덱스다. 실제 이미지는 _Canvas/_Canvas_000.wz 에 있다.
     let canvas_path = char_wz_path.parent()?.join("_Canvas").join("_Canvas_000.wz");
     let arch = WzArchive::open(&canvas_path).ok()?;
     let tree = arch.read_tree().ok()?;
 
+    let img_entry = tree.root.entries.iter().find(|e| e.node_type == 4)?;
+    let off = img_entry.offset?;
+    let node = arch.parse_image_at(off).ok()?;
+
+    // 첫 액션 찾기
+    let action = node.children.first().or_else(|| {
+        if let Some(wz_core::image::ImageValue::Property(p)) = &node.value {
+            p.children.first()
+        } else { None }
+    })?;
+    // 첫 프레임
+    let frame = action.children.first().or_else(|| {
+        if let Some(wz_core::image::ImageValue::Property(p)) = &action.value {
+            p.children.first()
+        } else { None }
+    })?;
+
+    // 프레임의 모든 파트 (body, head, hair, arm, etc.) 로드
+    let mut part_nodes: Vec<&ImageNode> = frame.children.iter().collect();
+    if let Some(wz_core::image::ImageValue::Property(p)) = &frame.value {
+        part_nodes.extend(p.children.iter());
+    }
+
     let mut parts: Vec<AvatarPart> = Vec::new();
     let mut root = Bone::new("@root");
 
-    // _Canvas_000.wz 의 처음 5개 이미지를 슬롯으로 로드한다 (PoC).
-    for (i, img_entry) in tree.root.entries.iter().filter(|e| e.node_type == nt::IMAGE).take(10).enumerate() {
-        let Some(off) = img_entry.offset else { continue; };
-        let Ok(node) = arch.parse_image_at(off) else { continue; };
-        let slot_name = img_entry.name.clone().unwrap_or_else(|| format!("Slot{}", i).into()).to_string();
-        let slot_name = slot_name.trim_end_matches(".img").to_string();
-
+    for pn in part_nodes {
         fn find_png(n: &ImageNode) -> Option<wz_core::image::PngRef> {
             use wz_core::image::ImageValue;
             if let Some(ImageValue::Png(p)) = &n.value { return Some(p.clone()); }
@@ -58,11 +76,12 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
             if let Some(ImageValue::Property(p)) = &n.value { if let Some(res) = find_png(p) { return Some(res); } }
             None
         }
-        let Some(pr) = find_png(&node) else { continue; };
+        let Some(pr) = find_png(pn) else { continue; };
         let file_src = wz_pool::FileSource::open(&canvas_path).ok()?;
         let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
         let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&pr, &src) else { continue; };
 
+        let slot_name = pn.name.to_string();
         let mut skin = SkinLayer::new(slot_name.clone());
         skin.z = slot_name.clone();
         skin.width = w;
@@ -91,18 +110,15 @@ mod tests {
     fn loader_returns_parts_on_real_character_wz() {
         let char_wz = "<WZ_DATA_ROOT>/Character/Character.wz";
         if !std::path::Path::new(char_wz).exists() {
-            // CI 환경에는 실전 WZ 가 없다 — 건너뛴다.
             return;
         }
         let av = load_from_character_wz(std::path::Path::new(char_wz))
             .expect("loader should return Some on real Character.wz");
         assert!(!av.parts.is_empty(), "at least one part loaded");
-        assert!(!av.root_bone.children.is_empty() || av.parts.is_empty());
         for p in &av.parts {
             assert!(p.width > 0 && p.height > 0);
             assert_eq!(p.rgba.len(), (p.width * p.height * 4) as usize);
         }
-        // batch 빌드가 동작해야 한다
         let batch = av.scene.build_batch(&av.root_bone);
         assert!(batch.layer_count > 0);
         assert!(batch.vertex_count() > 0);
