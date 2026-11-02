@@ -68,6 +68,7 @@ struct AppState {
     map_status: String,
     map_back_image: Option<(u32, u32, Vec<u8>)>,
     data_root: Option<std::path::PathBuf>,
+    map_tile_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     // PoC 3.5: 아바타
     avatar_image: Option<(u32, u32, Vec<u8>)>,
     avatar_status: String,
@@ -101,6 +102,7 @@ impl Default for AppState {
             current_map: None,
             map_back_image: None,
             data_root: None,
+            map_tile_images: Vec::new(),
             map_status: "맵 ID 를 입력하고 'Load Map'".into(),
             avatar_image: None,
             avatar_status: "Body 이미지를 로드하세요".into(),
@@ -523,30 +525,58 @@ fn find_data_root(_map_path: &str) -> Option<std::path::PathBuf> {
     None
 }
 
-fn load_back_image(data_root: &std::path::Path, b_s: &str) -> Option<(u32, u32, Vec<u8>)> {
+fn load_canvas_image(
+    data_root: &std::path::Path,
+    subdir: &str,
+    canvas_name: &str,
+    inner_path: &str,
+) -> Option<(u32, u32, Vec<u8>)> {
     use wz_core::WzArchive;
-use wz_core::image::ImageValue;
-    use wz_image::decoder::decode_raw_page_to_rgba8;
-    use wz_image::TextureFormat;
+    use wz_core::image::ImageValue;
+    use wz_image::decode_png_ref_to_rgba;
 
-    // Back/_Canvas/_Canvas_*.wz 중 b_s.img 를 포함한 파일을 찾는다.
-    let canvas_dir = data_root.join("Map").join("Back").join("_Canvas");
+    let canvas_dir = data_root.join("Map").join(subdir).join("_Canvas");
     let entries = std::fs::read_dir(&canvas_dir).ok()?;
+    let img_name = format!("{}.img", canvas_name);
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) != Some("wz") { continue; }
         let Ok(arch) = WzArchive::open(&path) else { continue; };
         let Ok(tree) = arch.read_tree() else { continue; };
-        // 루트 엔트리에서 {b_s}.img 또는 {b_s} 찾기
-        let name_img = format!("{}.img", b_s);
         let e = tree.root.entries.iter().find(|e| {
-            e.name.as_deref() == Some(b_s) || e.name.as_deref() == Some(name_img.as_str())
+            e.name.as_deref() == Some(canvas_name) || e.name.as_deref() == Some(img_name.as_str())
         });
         let Some(e) = e else { continue; };
         let Some(off) = e.offset else { continue; };
         let Ok(node) = arch.parse_image_at(off) else { continue; };
-        // 첫 PngRef 찾기
+
+        // inner_path 로 내려가기 (예: "enH0/0")
+        let segs: Vec<&str> = inner_path.split('/').filter(|s| !s.is_empty()).collect();
+        // inner_path 가 비어 있으면 node 자체에서 PngRef 추출
+        let target = if segs.is_empty() {
+            &node
+        } else {
+            // segs 를 따라 내려간다
+            let mut cur = &node;
+            let mut ok = true;
+            for seg in &segs {
+                let next = if let Some(ImageValue::Property(p)) = &cur.value {
+                    p.children.iter().find(|c| c.name.as_ref() == *seg)
+                        .or_else(|| cur.children.iter().find(|c| c.name.as_ref() == *seg))
+                } else {
+                    cur.children.iter().find(|c| c.name.as_ref() == *seg)
+                };
+                match next {
+                    Some(n) => cur = n,
+                    None => { ok = false; break; }
+                }
+            }
+            if !ok { continue; }
+            cur
+        };
+
         fn find_png(n: &wz_core::image::Node) -> Option<wz_core::image::PngRef> {
+            use wz_core::image::ImageValue;
             if let Some(ImageValue::Png(p)) = &n.value { return Some(p.clone()); }
             for c in &n.children {
                 if let Some(p) = find_png(c) { return Some(p); }
@@ -556,15 +586,30 @@ use wz_core::image::ImageValue;
             }
             None
         }
-        let Some(pr) = find_png(&node) else { continue; };
+        let Some(pr) = find_png(target) else { continue; };
         let file_src = wz_pool::FileSource::open(&path).ok()?;
         let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
-        let (w, h, rgba) = wz_image::decode_png_ref_to_rgba(&pr, &src).ok()?;
-        return Some((w, h, rgba));
+        if let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(&pr, &src) {
+            return Some((w, h, rgba));
+        }
     }
     None
 }
 
+fn load_back_image(data_root: &std::path::Path, b_s: &str) -> Option<(u32, u32, Vec<u8>)> {
+    load_canvas_image(data_root, "Back", b_s, "")
+}
+
+fn load_map_tiles(state: &mut AppState) {
+    state.map_tile_images.clear();
+    let (Some(map), Some(root)) = (state.current_map.as_ref(), state.data_root.as_ref()) else { return; };
+    for tile in map.tiles.iter().take(15) {
+        if let Some((w, h, rgba)) = load_canvas_image(root, "Tile", &tile.t_s, &format!("{}/{}", tile.u, tile.no)) {
+            state.map_tile_images.push((tile.x, tile.y, w, h, rgba));
+        }
+    }
+    state.viewport_dirty = true;
+}
 
 fn load_map_by_path(state: &mut AppState) {
     let path_for_data = state.map_path.clone();
@@ -602,6 +647,7 @@ fn load_map_by_path(state: &mut AppState) {
         None
     };
     state.map_back_image = back_img;
+    load_map_tiles(state);
 
     state.map_status = format!(
         "map_id={:?} bgm={:?} town={} fh={} portals={} life={} back={} obj={} tile={} (back_img={})",
@@ -643,6 +689,7 @@ fn load_map_from_selection(state: &mut AppState) {
         map.info.map_id, bgm, town, fh_count, portal_count, life_count
     );
     state.current_map = Some(map);
+    load_map_tiles(state);
     state.viewport_dirty = true;
 }
 
@@ -816,14 +863,22 @@ fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         }
         let _ = white;
 
-        // 데모 그리드 또는 맵 백그라운드 이미지
+        // 데모 그리드 / 백그라운드 / 타일
         let mut batch = SpriteBatch::new();
-        if let Some((bw, bh, bpx)) = &state.map_back_image {
-            // 백그라운드 이미지를 별도 텍스처로 업로드
-            let back_key = GpuKey(2);
-            let _ = rc.create_texture(back_key, *bw, *bh, bpx);
-            batch.push_quad(back_key, [0.0, 0.0, *bw as f32, *bh as f32], 0.0,
-                [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
+        if state.map_back_image.is_some() || !state.map_tile_images.is_empty() {
+            if let Some((bw, bh, bpx)) = &state.map_back_image {
+                let back_key = GpuKey(2);
+                let _ = rc.create_texture(back_key, *bw, *bh, bpx);
+                batch.push_quad(back_key, [0.0, 0.0, *bw as f32, *bh as f32], 0.0,
+                    [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
+            }
+            // 타일 (최대 15개)
+            for (i, (tx, ty, tw, th, tpx)) in state.map_tile_images.iter().enumerate() {
+                let key = GpuKey(100 + i as u32);
+                let _ = rc.create_texture(key, *tw, *th, tpx);
+                batch.push_quad(key, [*tx as f32, *ty as f32, *tw as f32, *th as f32], 0.0,
+                    [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
+            }
         } else {
             for gx in -2..=2i32 {
                 for gy in -2..=2i32 {
