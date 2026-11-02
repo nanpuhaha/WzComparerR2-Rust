@@ -187,15 +187,26 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
                 ui.label(format!("{:>2}. {:<15}", i, slot));
                 if i < 10 {
                     let mut sel = state.avatar_slot_selection[i];
-                    let preview = if sel == usize::MAX { "없음".to_string() } else { format!("Part {}", sel) };
+                    let preview = if sel == usize::MAX {
+                        "없음".to_string()
+                    } else if let Some((name, _, _)) = state.avatar_loaded_parts.get(sel) {
+                        format!("{} ({})", name, sel)
+                    } else {
+                        format!("Part {}", sel)
+                    };
                     egui::ComboBox::from_id_salt(format!("slot_{}", i))
                         .selected_text(preview)
                         .show_ui(ui, |ui| {
                             if ui.selectable_value(&mut sel, usize::MAX, "없음").changed() {
                                 state.avatar_slot_selection[i] = sel;
                             }
-                            for j in 0..10usize {
-                                if ui.selectable_value(&mut sel, j, format!("Part {}", j)).changed() {
+                            for j in 0..state.avatar_loaded_parts.len() {
+                                let label = if let Some((name, _, _)) = state.avatar_loaded_parts.get(j) {
+                                    format!("{} ({})", name, j)
+                                } else {
+                                    format!("Part {}", j)
+                                };
+                                if ui.selectable_value(&mut sel, j, label).changed() {
                                     state.avatar_slot_selection[i] = sel;
                                 }
                             }
