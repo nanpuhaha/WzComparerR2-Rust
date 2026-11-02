@@ -100,11 +100,19 @@ impl eframe::App for PocApp {
                 3 => {
                     // 뷰포트 렌더 (texture 생성)
                     viewport::show(ui, &mut self.state);
-                    // texture 가 생겼으면 저장 후 종료
+                    // 아바타 렌더도 스모크에 포함한다
+                    if self.state.avatar_image.is_none() {
+                        async_io::load_avatar_body(&mut self.state);
+                    }
+                    if self.state.avatar_image.is_some() && self.state.avatar_rendered.is_none() {
+                        async_io::render_avatar_body(&mut self.state);
+                    }
+                    // texture 가 생겼으면 성공으로 간주하고 종료한다.
                     if self.state.viewport_texture.is_some() {
-                        // PNG 저장은 egui texture 에서 직접 못 뽑으므로, offscreen render 를
-                        // 다시 수행한다. 여기서는 성공으로 간주하고 종료한다.
                         println!("SMOKE OK: viewport texture produced");
+                        if self.state.avatar_rendered.is_some() {
+                            println!("SMOKE OK: avatar rendered");
+                        }
                         self.smoke_phase = 4;
                         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }
