@@ -241,7 +241,15 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label(format!("렌더링된 파트: {}", state.avatar_status));
     }
     if ui.button("아바타 렌더 (오프스크린, 선택 파트)").clicked() {
-        async_io::render_avatar_body(state);
+        // 드롭다운 선택 → avatar_selected_slots 동기화
+        state.avatar_selected_slots.clear();
+        for i in 0..29usize {
+            let sel = state.avatar_slot_selection[i];
+            if sel != usize::MAX {
+                state.avatar_selected_slots.insert(sel);
+            }
+        }
+        async_io::load_avatar_from_loader(state);
     }
     ui.label(&state.avatar_status);
     if let Some((w, h, rgba)) = &state.avatar_image {
