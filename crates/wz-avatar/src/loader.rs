@@ -482,6 +482,32 @@ pub fn item_id_to_slot(id: i32) -> Option<&'static str> {
 }
 
 
+/// 장비 아이템 이미지에서 첫 번째 Canvas 를 추출한다.
+/// WZ 구조: item.img → action (default/backDefault) → [frame] → Canvas
+pub fn extract_first_canvas(node: &wz_core::image::Node) -> Option<wz_core::image::PngRef> {
+    use wz_core::image::ImageValue;
+    // 직접 Canvas
+    if let Some(ImageValue::Png(p)) = &node.value {
+        return Some(p.clone());
+    }
+    // Property → 첫 번째 자식 재귀
+    if let Some(ImageValue::Property(p)) = &node.value {
+        for child in &p.children {
+            if let Some(png) = extract_first_canvas(child) {
+                return Some(png);
+            }
+        }
+    }
+    // children 직접 탐색
+    for child in &node.children {
+        if let Some(png) = extract_first_canvas(child) {
+            return Some(png);
+        }
+    }
+    None
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
