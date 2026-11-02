@@ -640,6 +640,144 @@ pub fn load_equipment_item(
 }
 
 
+/// 장비 아이템 ID 목록으로 아바타를 로드한다.
+/// data_root: MapleStory Data 디렉터리 경로
+/// equipment: (slot_name, item_id) 쌍의 목록
+pub fn load_avatar_with_equipment(
+    data_root: &std::path::Path,
+    body_skin: i32,
+    equipment: &[(String, i32)],
+) -> Option<LoadedAvatar> {
+    // Body 로드 (0000{skin}00.img)
+    let body_dir = data_root.join("Character");
+    let canvas_dir = body_dir.join("_Canvas");
+    let canvas_path = canvas_dir.join("_Canvas_000.wz");
+    if !canvas_path.exists() { return None; }
+
+    let arch = WzArchive::open(&canvas_path).ok()?;
+    let tree = arch.read_tree().ok()?;
+
+    let mut parts: Vec<AvatarPart> = Vec::new();
+    let mut root = Bone::new("@root");
+
+    // Body: 0000{skin}00.img (skin=2000 → 00002000.img)
+    let body_img_name = format!("{:08}.img", body_skin);
+    if let Some(entry) = tree.root.entries.iter().find(|e| {
+        e.node_type == 4 && e.name.as_deref() == Some(body_img_name.as_str())
+    }) {
+        if let Some(off) = entry.offset {
+            if let Ok(node) = arch.parse_image_at(off) {
+                // stand1 액션 우선
+                let action = node.children.iter().find(|c| c.name.as_ref() == "stand1")
+                    .or_else(|| node.children.iter().find(|c| c.name.as_ref() == "alert"))
+                    .or_else(|| node.children.first());
+                if let Some(act) = action {
+                    let frame = act.children.first();
+                    if let Some(f) = frame {
+                        let mut part_nodes: Vec<&wz_core::image::Node> = f.children.iter().collect();
+                        if let Some(wz_core::image::ImageValue::Property(p)) = &f.value {
+                            part_nodes.extend(p.children.iter());
+                        }
+                        for pn in part_nodes {
+                            fn find_png(n: &wz_core::image::Node) -> Option<wz_core::image::PngRef> {
+                                use wz_core::image::ImageValue;
+                                if let Some(ImageValue::Png(p)) = &n.value { return Some(p.clone()); }
+                                for c in &n.children { if let Some(p) = find_png(c) { return Some(p); } }
+                                if let Some(ImageValue::Property(p)) = &n.value { if let Some(res) = find_png(p) { return Some(res); } }
+                                None
+                            }
+                            let Some(pr) = find_png(pn) else { continue; };
+                            let file_src = wz_pool::FileSource::open(&canvas_path).ok()?;
+                            let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
+                            let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&pr, &src) else { continue; };
+                            let slot_name = pn.name.to_string();
+                            let z_tag = part_z_tag(&slot_name);
+                            let mut skin = SkinLayer::new(slot_name.clone());
+                            skin.z = z_tag;
+                            skin.width = w;
+                            skin.height = h;
+                            root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                            parts.push(AvatarPart { slot: slot_name, width: w, height: h, rgba });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Head 로드
+    // Head is in the same canvas file (00012000.img)
+    if let Some(head_entry) = tree.root.entries.iter().find(|e| {
+        e.node_type == 4 && e.name.as_deref() == Some("00012000.img")
+    }) {
+        if let Some(off) = head_entry.offset {
+            if let Ok(head_node) = arch.parse_image_at(off) {
+                let head_action = head_node.children.iter().find(|c| c.name.as_ref() == "front")
+                    .or_else(|| head_node.children.iter().find(|c| c.name.as_ref() == "back"))
+                    .or_else(|| head_node.children.first());
+                if let Some(ha) = head_action {
+                    let mut head_parts: Vec<&wz_core::image::Node> = ha.children.iter().collect();
+                    if let Some(wz_core::image::ImageValue::Property(p)) = &ha.value {
+                        head_parts.extend(p.children.iter());
+                    }
+                    for pn in head_parts {
+                        fn find_png2(n: &wz_core::image::Node) -> Option<wz_core::image::PngRef> {
+                            use wz_core::image::ImageValue;
+                            if let Some(ImageValue::Png(p)) = &n.value { return Some(p.clone()); }
+                            for c in &n.children { if let Some(p) = find_png2(c) { return Some(p); } }
+                            if let Some(ImageValue::Property(p)) = &n.value { if let Some(res) = find_png2(p) { return Some(res); } }
+                            None
+                        }
+                        let Some(pr) = find_png2(pn) else { continue; };
+                        let file_src = wz_pool::FileSource::open(&canvas_path).ok()?;
+                        let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
+                        let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&pr, &src) else { continue; };
+                        let slot_name = pn.name.to_string();
+                        let z_tag = part_z_tag(&slot_name);
+                        let mut skin = SkinLayer::new(slot_name.clone());
+                        skin.z = z_tag;
+                        skin.width = w;
+                        skin.height = h;
+                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                        parts.push(AvatarPart { slot: slot_name, width: w, height: h, rgba });
+                    }
+                }
+            }
+        }
+    }
+
+    // Equipment 로드
+    for (slot, item_id) in equipment {
+        if let Some(dir) = slot_dir_name(slot) {
+            let equip_canvas_path = data_root.join("Character").join(dir).join("_Canvas").join("_Canvas_000.wz");
+            if equip_canvas_path.exists() {
+                if let Some((_, w, h, rgba)) = load_equipment_item(&equip_canvas_path, *item_id) {
+                    let z_tag = part_z_tag(slot);
+                    let mut skin = SkinLayer::new(slot.to_lowercase());
+                    skin.z = z_tag;
+                    skin.width = w;
+                    skin.height = h;
+                    root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                    parts.push(AvatarPart { slot: slot.to_lowercase(), width: w, height: h, rgba });
+                }
+            }
+        }
+    }
+
+    if parts.is_empty() { return None; }
+
+    let mut zmap_order: Vec<String> = STANDARD_ZMAP.iter().map(|s| s.to_string()).collect();
+    for p in &parts {
+        let zt = part_z_tag(&p.slot);
+        if !zmap_order.contains(&zt) { zmap_order.push(zt); }
+    }
+    let zmap = std::sync::Arc::new(ZMap::new(zmap_order));
+    let scene = AvatarScene::new(zmap.clone());
+
+    Some(LoadedAvatar { parts, root_bone: root, zmap, scene })
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -679,6 +817,24 @@ mod tests {
         assert_eq!(part_z_tag("arm"), "arm");
         assert_eq!(part_z_tag("lHand"), "arm");
         assert_eq!(part_z_tag("rHand"), "arm");
+    }
+
+    #[test]
+    fn load_avatar_with_equipment_works() {
+        let data_root = std::path::Path::new("<WZ_DATA_ROOT>");
+        if !data_root.exists() { return; }
+        let equipment = vec![
+            ("Cap".to_string(), 1000000),
+            ("Coat".to_string(), 1040000),
+        ];
+        let av = load_avatar_with_equipment(data_root, 2000, &equipment);
+        if let Some(av) = av {
+            assert!(!av.parts.is_empty(), "at least one part loaded");
+            // body + head + cap + coat
+            assert!(av.parts.len() >= 4, "expected >= 4 parts, got {}", av.parts.len());
+            let batch = av.scene.build_batch(&av.root_bone);
+            assert!(batch.layer_count > 0);
+        }
     }
 
     #[test]
