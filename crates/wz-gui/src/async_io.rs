@@ -263,6 +263,7 @@ pub fn load_map_by_path(state: &mut AppState) {
     };
     state.map_back_image = back_img;
     load_map_tiles(state);
+    load_map_objs(state);
 
     state.map_status = format!(
         "map_id={:?} bgm={:?} town={} fh={} portals={} life={} back={} obj={} tile={} (back_img={})",
@@ -304,6 +305,7 @@ pub fn load_map_from_selection(state: &mut AppState) {
     );
     state.current_map = Some(map);
     load_map_tiles(state);
+    load_map_objs(state);
     state.viewport_dirty = true;
 }
 
@@ -377,6 +379,7 @@ pub fn load_canvas_image(
 
 pub fn load_map_tiles(state: &mut AppState) {
     state.map_tile_images.clear();
+    state.map_obj_images.clear();
     let (Some(map), Some(root)) = (state.current_map.as_ref(), state.data_root.as_ref()) else { return; };
     for tile in map.tiles.iter().take(15) {
         if let Some((w, h, rgba)) = load_canvas_image(root, "Tile", &tile.t_s, &format!("{}/{}", tile.u, tile.no)) {
@@ -385,6 +388,18 @@ pub fn load_map_tiles(state: &mut AppState) {
     }
     state.viewport_dirty = true;
 }
+
+pub fn load_map_objs(state: &mut AppState) {
+    let (Some(map), Some(root)) = (state.current_map.as_ref(), state.data_root.as_ref()) else { return; };
+    for obj in map.objects.iter().take(15) {
+        let inner = format!("{}/{}/{}/0", obj.l0, obj.l1, obj.l2);
+        if let Some((w, h, rgba)) = load_canvas_image(root, "Obj", &obj.o_s, &inner) {
+            state.map_obj_images.push((obj.x, obj.y, w, h, rgba));
+        }
+    }
+    state.viewport_dirty = true;
+}
+
 
 pub fn load_avatar_body(state: &mut AppState) {
     let char_root = "<WZ_DATA_ROOT>/Character";

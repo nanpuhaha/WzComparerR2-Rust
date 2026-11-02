@@ -68,6 +68,12 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                 batch.push_quad(key, [*tx as f32, *ty as f32, *tw as f32, *th as f32], 0.0,
                     [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
             }
+            for (i, (ox, oy, ow, oh, opx)) in state.map_obj_images.iter().enumerate() {
+                let key = GpuKey(200 + i as u32);
+                let _ = rc.create_texture(key, *ow, *oh, opx);
+                batch.push_quad(key, [*ox as f32, *oy as f32, *ow as f32, *oh as f32], 0.0,
+                    [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
+            }
         } else {
             for gx in -2..=2i32 {
                 for gy in -2..=2i32 {
@@ -110,7 +116,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             let p2 = egui::pos2(rect.min.x + s2.x, rect.min.y + s2.y);
             painter.line_segment([p1, p2], egui::Stroke::new(1.5, egui::Color32::GREEN));
         }
-        ui.label(format!("발판 {}개, 타일 {}개 표시", m.footholds.len(), state.map_tile_images.len()));
+        ui.label(format!("발판 {}개, 타일 {}개, 오브젝트 {}개 표시", m.footholds.len(), state.map_tile_images.len(), state.map_obj_images.len()));
     }
 
     ui.label(format!("카메라: pos=({:.1},{:.1}) zoom={:.2}  (드래그=팬, 휠=줌)",
