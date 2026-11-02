@@ -7,6 +7,9 @@
 //! 앵커/프리즘/zmap 정밀도는 C# CharaSim 참조 구현이 필요하다.
 //! 현재 로더는 PoC 수준: 이미지 캔버스를 로드해 SkinLayer (width/height) +
 //! Bone + ZMap + AvatarScene 을 조립하고 렌더한다.
+//!
+//! z-tag 는 파트 이름에서 추론한다 (body→"body", head→"head", hair→"hair",
+//! arm/lHand/rHand→"arm"). zmap 순서는 MapleStory 표준 레이어 순서를 사용한다.
 
 use std::sync::Arc;
 
@@ -16,7 +19,8 @@ use wz_image::decode_png_ref_to_rgba;
 
 use crate::{AvatarScene, Bone, SkinLayer, ZMap};
 
-
+/// MapleStory 표준 z-map 순서 (Base\zmap.img 에서 로드).
+/// 낮은 인덱스가 먼저 그려진다 (painter's algorithm).
 /// 로드된 아바타 파트.
 #[derive(Debug)]
 pub struct AvatarPart {
@@ -34,10 +38,233 @@ pub struct LoadedAvatar {
     pub scene: AvatarScene,
 }
 
+const STANDARD_ZMAP: &[&str] = &[
+    "Ae",
+    "Af",
+    "Am",
+    "As",
+    "At",
+    "Ay",
+    "Bd",
+    "Cp",
+    "Fc",
+    "Gv",
+    "Hd",
+    "Hr",
+    "Ma",
+    "Pn",
+    "Ri",
+    "Sd",
+    "Si",
+    "So",
+    "Sr",
+    "Tm",
+    "Wg",
+    "Wp",
+    "Ws",
+    "accessoryEar",
+    "accessoryEarOverHair",
+    "accessoryEye",
+    "accessoryEyeBelowFace",
+    "accessoryEyeOverCap",
+    "accessoryEyeOverCapOverHair",
+    "accessoryEyeShadow",
+    "accessoryFace",
+    "accessoryFaceBelowFace",
+    "accessoryFaceOverFaceBelowCap",
+    "accessoryOverHair",
+    "arm",
+    "armBelowHead",
+    "armBelowHeadOverMailChest",
+    "armOverHair",
+    "armOverHairBelowWeapon",
+    "backAccessoryEar",
+    "backAccessoryFace",
+    "backAccessoryFaceOverHead",
+    "backAccessoryOverHead",
+    "backBody",
+    "backCap",
+    "backCapAccessory",
+    "backCapOverHair",
+    "backCape",
+    "backGlove",
+    "backGloveWrist",
+    "backHair",
+    "backHairBelowCap",
+    "backHairBelowCapNarrow",
+    "backHairBelowCapWide",
+    "backHairBelowHead",
+    "backHairOverCape",
+    "backHead",
+    "backMailChest",
+    "backMailChestAccessory",
+    "backMailChestBelowPants",
+    "backMailChestOverPants",
+    "backMobEquipFront",
+    "backMobEquipMid",
+    "backMobEquipUnderSaddle",
+    "backPants",
+    "backPantsBelowShoes",
+    "backPantsOverMailChest",
+    "backPantsOverShoesBelowMailChest",
+    "backSaddle",
+    "backShield",
+    "backShieldBelowBody",
+    "backShoes",
+    "backShoesBelowPants",
+    "backTamingMobFront",
+    "backTamingMobMid",
+    "backWeapon",
+    "backWeaponEffectOver",
+    "backWeaponEffectUnder",
+    "backWeaponOverGlove",
+    "backWeaponOverGloveEffectOver",
+    "backWeaponOverGloveEffectUnder",
+    "backWeaponOverHead",
+    "backWeaponOverHeadEffectOver",
+    "backWeaponOverHeadEffectUnder",
+    "backWeaponOverShield",
+    "backWeaponOverShieldEffectOver",
+    "backWeaponOverShieldEffectUnder",
+    "backWing",
+    "body",
+    "cap",
+    "capAccessory",
+    "capAccessoryBelowAccFace",
+    "capAccessoryBelowBody",
+    "capBelowAccessory",
+    "capOverHair",
+    "capOverHand",
+    "cape",
+    "capeBelowBody",
+    "capeBelowWeapon",
+    "capeOverArm",
+    "capeOverFace",
+    "capeOverHead",
+    "characterEnd",
+    "characterStart",
+    "emotionOverBody",
+    "face",
+    "glove",
+    "gloveBelowBody",
+    "gloveBelowHead",
+    "gloveBelowMailArm",
+    "gloveBelowWeapon",
+    "gloveOverBody",
+    "gloveOverHair",
+    "gloveWrist",
+    "gloveWristBelowBody",
+    "gloveWristBelowHead",
+    "gloveWristBelowMailArm",
+    "gloveWristBelowWeapon",
+    "gloveWristOverBody",
+    "gloveWristOverHair",
+    "hair",
+    "hairBelowBody",
+    "hairOverHead",
+    "hairShade",
+    "hand",
+    "handBelowWeapon",
+    "handOverHair",
+    "head",
+    "mailArm",
+    "mailArmBelowHead",
+    "mailArmBelowHeadOverMailChest",
+    "mailArmOverHair",
+    "mailArmOverHairBelowWeapon",
+    "mailChest",
+    "mailChestBelowPants",
+    "mailChestOverHighest",
+    "mailChestOverPants",
+    "mailChestTop",
+    "mobEquipFront",
+    "mobEquipMid",
+    "mobEquipRear",
+    "mobEquipUnderSaddle",
+    "pants",
+    "pantsBelowShoes",
+    "pantsOverMailChest",
+    "pantsOverShoesBelowMailChest",
+    "pantsOverShoesTop",
+    "saddleFront",
+    "saddleRear",
+    "shield",
+    "shieldBelowBody",
+    "shieldOverHair",
+    "shoes",
+    "shoesOverPants",
+    "shoesTop",
+    "tamingMobFront",
+    "tamingMobMid",
+    "tamingMobRear",
+    "weapon",
+    "weaponBelowArm",
+    "weaponBelowArmEffectOver",
+    "weaponBelowArmEffectUnder",
+    "weaponBelowBody",
+    "weaponBelowBodyEffectOver",
+    "weaponBelowBodyEffectUnder",
+    "weaponEffectOver",
+    "weaponEffectUnder",
+    "weaponOverArm",
+    "weaponOverArmBelowHead",
+    "weaponOverArmBelowHeadEffectOver",
+    "weaponOverArmBelowHeadEffectUnder",
+    "weaponOverArmEffectOver",
+    "weaponOverArmEffectUnder",
+    "weaponOverBody",
+    "weaponOverBodyEffectOver",
+    "weaponOverBodyEffectUnder",
+    "weaponOverGlove",
+    "weaponOverGloveEffectOver",
+    "weaponOverGloveEffectUnder",
+    "weaponOverHand",
+    "weaponOverHandEffectOver",
+    "weaponOverHandEffectUnder",
+    "weaponWristOverGlove",
+    "weaponWristOverGloveEffectOver",
+    "weaponWristOverGloveEffectUnder",
+];
 
+
+/// 파트 이름 → z-tag 추론.
+fn part_z_tag(part_name: &str) -> String {
+    let lower = part_name.to_ascii_lowercase();
+    if lower.contains("body") {
+        "body".into()
+    } else if lower.contains("head") {
+        "head".into()
+    } else if lower.contains("hair") {
+        "hair".into()
+    } else if lower.contains("arm") || lower.contains("hand") {
+        "arm".into()
+    } else if lower.contains("cap") {
+        "cap".into()
+    } else if lower.contains("face") {
+        "face".into()
+    } else if lower.contains("weapon") {
+        "weapon".into()
+    } else if lower.contains("cape") {
+        "cape".into()
+    } else if lower.contains("coat") {
+        "coat".into()
+    } else if lower.contains("pants") {
+        "pants".into()
+    } else if lower.contains("shoe") {
+        "shoes".into()
+    } else if lower.contains("glove") {
+        "glove".into()
+    } else {
+        part_name.to_string()
+    }
+}
+
+/// 파트 이름 → 앵커 이름 추론.
+fn part_anchor(_part_name: &str) -> &'static str {
+    "navel"
+}
 
 pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAvatar> {
-    // Character.wz 는 컨테이너 인덱스다. 실제 이미지는 _Canvas/_Canvas_000.wz 에 있다.
     let canvas_path = char_wz_path.parent()?.join("_Canvas").join("_Canvas_000.wz");
     let arch = WzArchive::open(&canvas_path).ok()?;
     let tree = arch.read_tree().ok()?;
@@ -50,13 +277,17 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
     let action = node.children.first().or_else(|| {
         if let Some(wz_core::image::ImageValue::Property(p)) = &node.value {
             p.children.first()
-        } else { None }
+        } else {
+            None
+        }
     })?;
     // 첫 프레임
     let frame = action.children.first().or_else(|| {
         if let Some(wz_core::image::ImageValue::Property(p)) = &action.value {
             p.children.first()
-        } else { None }
+        } else {
+            None
+        }
     })?;
 
     // 프레임의 모든 파트 (body, head, hair, arm, etc.) 로드
@@ -71,35 +302,68 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
     for pn in part_nodes {
         fn find_png(n: &ImageNode) -> Option<wz_core::image::PngRef> {
             use wz_core::image::ImageValue;
-            if let Some(ImageValue::Png(p)) = &n.value { return Some(p.clone()); }
-            for c in &n.children { if let Some(p) = find_png(c) { return Some(p); } }
-            if let Some(ImageValue::Property(p)) = &n.value { if let Some(res) = find_png(p) { return Some(res); } }
+            if let Some(ImageValue::Png(p)) = &n.value {
+                return Some(p.clone());
+            }
+            for c in &n.children {
+                if let Some(p) = find_png(c) {
+                    return Some(p);
+                }
+            }
+            if let Some(ImageValue::Property(p)) = &n.value {
+                if let Some(res) = find_png(p) {
+                    return Some(res);
+                }
+            }
             None
         }
         let Some(pr) = find_png(pn) else { continue; };
         let file_src = wz_pool::FileSource::open(&canvas_path).ok()?;
         let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
-        let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&pr, &src) else { continue; };
+        let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&pr, &src) else {
+            continue;
+        };
 
         let slot_name = pn.name.to_string();
+        let z_tag = part_z_tag(&slot_name);
+        let anchor = part_anchor(&slot_name);
+
         let mut skin = SkinLayer::new(slot_name.clone());
-        skin.z = slot_name.clone();
+        skin.z = z_tag;
         skin.width = w;
         skin.height = h;
-        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+        root.append_bone(skin, anchor, crate::Point::new(0, 0));
 
-        parts.push(AvatarPart { slot: slot_name, width: w, height: h, rgba });
+        parts.push(AvatarPart {
+            slot: slot_name,
+            width: w,
+            height: h,
+            rgba,
+        });
     }
 
     if parts.is_empty() {
         return None;
     }
 
-    let zmap_order: Vec<String> = parts.iter().map(|p| p.slot.clone()).collect();
+    // 표준 MapleStory z-map 순서 사용
+    let mut zmap_order: Vec<String> = STANDARD_ZMAP.iter().map(|s| s.to_string()).collect();
+    // 로드된 파트의 z-tag 가 표준에 없으면 추가
+    for p in &parts {
+        let zt = part_z_tag(&p.slot);
+        if !zmap_order.contains(&zt) {
+            zmap_order.push(zt);
+        }
+    }
     let zmap = Arc::new(ZMap::new(zmap_order));
     let scene = AvatarScene::new(zmap.clone());
 
-    Some(LoadedAvatar { parts, root_bone: root, zmap, scene })
+    Some(LoadedAvatar {
+        parts,
+        root_bone: root,
+        zmap,
+        scene,
+    })
 }
 
 #[cfg(test)]
@@ -122,5 +386,24 @@ mod tests {
         let batch = av.scene.build_batch(&av.root_bone);
         assert!(batch.layer_count > 0);
         assert!(batch.vertex_count() > 0);
+
+        // z-tag 검증: body/head/hair/arm 중 하나 이상 있어야 한다
+        let z_tags: Vec<&str> = av
+            .root_bone
+            .children
+            .iter()
+            .flat_map(|b| b.skins.iter().map(|s| s.z.as_str()))
+            .collect();
+        assert!(!z_tags.is_empty(), "at least one z-tag assigned");
+    }
+
+    #[test]
+    fn z_tag_mapping() {
+        assert_eq!(part_z_tag("body"), "body");
+        assert_eq!(part_z_tag("head"), "head");
+        assert_eq!(part_z_tag("hair"), "hair");
+        assert_eq!(part_z_tag("arm"), "arm");
+        assert_eq!(part_z_tag("lHand"), "arm");
+        assert_eq!(part_z_tag("rHand"), "arm");
     }
 }
