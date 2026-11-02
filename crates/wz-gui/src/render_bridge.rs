@@ -55,24 +55,55 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         }
 
         let mut batch = SpriteBatch::new();
-        if state.map_back_image.is_some() || !state.map_tile_images.is_empty() {
+        if state.map_back_image.is_some() || !state.map_tile_images.is_empty() || !state.map_obj_images.is_empty() {
+            // z-order 정렬: 모든 레이어를 (z, key, pos, wh) 로 수집한 뒤 z 오름차순으로 push.
+            // wz-render 는 깊이 테스트 없이 painter's algorithm 이므로 push 순서가 z 순서다.
+            struct Layer { z: i32, key: GpuKey, x: f32, y: f32, w: f32, h: f32 }
+            let mut layers: Vec<Layer> = Vec::new();
+            // back (non-front): z = -1000
+            if state.map_back_image.is_some() {
+                layers.push(Layer { z: -1000, key: GpuKey(2), x: 0.0, y: 0.0, w: 0.0, h: 0.0 });
+            }
+            // tiles: z = -500 (TileItem 에 z 없음, 기본)
+            for (i, (tx, ty, tw, th, _)) in state.map_tile_images.iter().enumerate() {
+                layers.push(Layer { z: -500, key: GpuKey(100 + i as u32), x: *tx as f32, y: *ty as f32, w: *tw as f32, h: *th as f32 });
+            }
+            // objects: z = ObjItem.z (state 에 저장 안 함 → 0 기본). 여기서는 0.
+            for (i, (ox, oy, ow, oh, _)) in state.map_obj_images.iter().enumerate() {
+                layers.push(Layer { z: 0, key: GpuKey(200 + i as u32), x: *ox as f32, y: *oy as f32, w: *ow as f32, h: *oh as f32 });
+            }
+            // back (front): z = +1000 — front 플래그는 map_back_image 에 없으므로 생략.
+
+            // 텍스처 업로드
             if let Some((bw, bh, bpx)) = &state.map_back_image {
-                let back_key = GpuKey(2);
-                let _ = rc.create_texture(back_key, *bw, *bh, bpx);
-                batch.push_quad(back_key, [0.0, 0.0, *bw as f32, *bh as f32], 0.0,
+                let _ = rc.create_texture(GpuKey(2), *bw, *bh, bpx);
+            }
+            for (i, (_, _, tw, th, tpx)) in state.map_tile_images.iter().enumerate() {
+                let _ = rc.create_texture(GpuKey(100 + i as u32), *tw, *th, tpx);
+            }
+            for (i, (_, _, ow, oh, opx)) in state.map_obj_images.iter().enumerate() {
+                let _ = rc.create_texture(GpuKey(200 + i as u32), *ow, *oh, opx);
+            }
+
+            // back image quad (z=-1000) — pos/size 를 layers 에서 가져옴
+            if let Some((bw, bh, _)) = &state.map_back_image {
+                // find back layer's z
+                let back_z = -1000;
+                batch.push_quad(GpuKey(2), [0.0, 0.0, *bw as f32, *bh as f32], back_z as f32,
                     [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
             }
-            for (i, (tx, ty, tw, th, tpx)) in state.map_tile_images.iter().enumerate() {
-                let key = GpuKey(100 + i as u32);
-                let _ = rc.create_texture(key, *tw, *th, tpx);
-                batch.push_quad(key, [*tx as f32, *ty as f32, *tw as f32, *th as f32], 0.0,
-                    [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
-            }
-            for (i, (ox, oy, ow, oh, opx)) in state.map_obj_images.iter().enumerate() {
-                let key = GpuKey(200 + i as u32);
-                let _ = rc.create_texture(key, *ow, *oh, opx);
-                batch.push_quad(key, [*ox as f32, *oy as f32, *ow as f32, *oh as f32], 0.0,
-                    [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
+            // sort remaining by z
+            let mut sorted: Vec<&Layer> = layers.iter().filter(|l| l.key.0 >= 100).collect();
+            sorted.sort_by_key(|l| l.z);
+            for l in sorted {
+                if l.key.0 < 200 {
+                    // tile
+                    batch.push_quad(l.key, [l.x, l.y, l.w, l.h], l.z as f32,
+                        [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
+                } else {
+                    batch.push_quad(l.key, [l.x, l.y, l.w, l.h], l.z as f32,
+                        [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
+                }
             }
         } else {
             for gx in -2..=2i32 {
