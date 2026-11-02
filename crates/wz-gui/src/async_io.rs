@@ -413,30 +413,19 @@ pub fn load_map_objs(state: &mut AppState) {
 
 
 pub fn load_avatar_body(state: &mut AppState) {
-    let char_root = "<WZ_DATA_ROOT>/Character";
-    let char_wz = std::path::PathBuf::from(char_root).join("Character.wz");
-    let Ok(arch) = WzArchive::open(&char_wz) else {
-        state.avatar_status = "Character.wz 열기 실패".into();
+    // Character/_Canvas/_Canvas_000.wz 에서 첫 번째 이미지를 로드한다.
+    let canvas_path = "<WZ_DATA_ROOT>/Character/_Canvas/_Canvas_000.wz";
+    let cp = std::path::PathBuf::from(canvas_path);
+    let Ok(arch) = WzArchive::open(&cp) else {
+        state.avatar_status = "Character _Canvas 열기 실패".into();
         return;
     };
     let Ok(tree) = arch.read_tree() else {
         state.avatar_status = "트리 읽기 실패".into();
         return;
     };
-    let body_idx = match tree.root.entries.iter().position(|e| e.name.as_deref() == Some("Body")) {
-        Some(i) => i,
-        None => { state.avatar_status = "Body 디렉터리 없음".into(); return; }
-    };
-    let mut cursor = 0usize;
-    for e in &tree.root.entries[..body_idx] {
-        if e.node_type == nt::DIRECTORY { cursor += 1; }
-    }
-    let Some(sub) = tree.blocks.get(cursor) else {
-        state.avatar_status = "Body 하위 블록 없음".into();
-        return;
-    };
-    let Some(img_entry) = sub.entries.iter().find(|e| e.node_type == nt::IMAGE) else {
-        state.avatar_status = "Body 이미지 없음".into();
+    let Some(img_entry) = tree.root.entries.iter().find(|e| e.node_type == nt::IMAGE) else {
+        state.avatar_status = "이미지 없음".into();
         return;
     };
     let Some(off) = img_entry.offset else {
@@ -458,7 +447,7 @@ pub fn load_avatar_body(state: &mut AppState) {
         state.avatar_status = "캔버스 없음".into();
         return;
     };
-    let file_src = match wz_pool::FileSource::open(&char_wz) { Ok(f) => f, Err(_) => { state.avatar_status = "파일 열기 실패".into(); return; } };
+    let file_src = match wz_pool::FileSource::open(&cp) { Ok(f) => f, Err(_) => { state.avatar_status = "파일 열기 실패".into(); return; } };
     let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
     match wz_image::decode_png_ref_to_rgba(&pr, &src) {
         Ok((w, h, rgba)) => {
@@ -576,6 +565,58 @@ pub fn render_avatar_body(state: &mut AppState) {
         }
         Err(e) => {
             state.avatar_status = format!("렌더 실패: {e}");
+        }
+    }
+}
+
+
+// ── 아바타 로더 (PoC 3.7) ────────────────────────────────────────────
+
+pub fn load_avatar_from_loader(state: &mut AppState) {
+    let char_wz = "<WZ_DATA_ROOT>/Character/Character.wz";
+    match wz_avatar::load_from_character_wz(std::path::Path::new(char_wz)) {
+        Some(av) => {
+            state.avatar_status = format!("로드: {} 파트", av.parts.len());
+            // 첫 파트를 이미지로 저장
+            if let Some(first) = av.parts.first() {
+                state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
+            }
+            // 렌더
+            use wz_avatar::{AvatarScene, Bone, SkinLayer, ZMap};
+            use std::sync::Arc;
+            use wz_render::{camera::Camera2D, device::RenderContext, GpuKey};
+            let mut root = Bone::new("@root");
+            for part in &av.parts {
+                let mut skin = SkinLayer::new(part.slot.clone());
+                skin.z = part.slot.clone();
+                skin.width = part.width;
+                skin.height = part.height;
+                root.append_bone(skin, "navel", wz_avatar::Point::new(0, 0));
+            }
+            let zmap = Arc::new(ZMap::new(av.parts.iter().map(|p| p.slot.clone()).collect()));
+            let scene = AvatarScene::new(zmap);
+            let batch_ab = scene.build_batch(&root);
+            // 단일 텍스처 (첫 파트) 로 렌더
+            if let Some(first) = av.parts.first() {
+                let mut rc = match RenderContext::new_headless() {
+                    Ok(r) => r,
+                    Err(e) => { state.avatar_status = format!("RC 실패: {e}"); return; }
+                };
+                let _ = rc.create_texture(GpuKey(1), first.width, first.height, &first.rgba);
+                let sprite_batch = batch_ab.into_sprite_batch(GpuKey(1));
+                let cam = Camera2D::new(first.width as f32, first.height as f32);
+                let uniforms = cam.build_uniforms(0.0, 0.0);
+                match rc.render_to_rgba(first.width, first.height, &sprite_batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
+                    Ok(out) => {
+                        state.avatar_status = format!("렌더 완료: {} 파트, {}x{}", av.parts.len(), first.width, first.height);
+                        state.avatar_rendered = Some((first.width, first.height, out));
+                    }
+                    Err(e) => { state.avatar_status = format!("렌더 실패: {e}"); }
+                }
+            }
+        }
+        None => {
+            state.avatar_status = "아바타 로드 실패".into();
         }
     }
 }
