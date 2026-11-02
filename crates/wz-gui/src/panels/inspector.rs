@@ -57,13 +57,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
 }
 
 fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
-    ui.label("29개 슬롯 (PoC 3.9 — 10 파트 로딩 + 렌더)");
-    egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+    ui.label("29개 슬롯 (드롭다운 선택)");
+    egui::ScrollArea::vertical().max_height(240.0).show(ui, |ui| {
         for (i, slot) in AVATAR_SLOTS.iter().enumerate() {
             ui.horizontal(|ui| {
-                ui.label(format!("{:>2}. {}", i, slot));
+                ui.label(format!("{:>2}. {:<15}", i, slot));
                 if i < 10 {
-                    // 슬롯 선택 드롭다운 (PoC 3.9)
                     let mut sel = state.avatar_slot_selection[i];
                     let preview = if sel == usize::MAX { "없음".to_string() } else { format!("Part {}", sel) };
                     egui::ComboBox::from_id_salt(format!("slot_{}", i))
@@ -91,7 +90,7 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
     if ui.button("아바타 로드 (loader, 10 파트)").clicked() {
         async_io::load_avatar_from_loader(state);
     }
-    if ui.button("아바타 렌더 (오프스크린, 10 파트)").clicked() {
+    if ui.button("아바타 렌더 (오프스크린, 선택 파트)").clicked() {
         async_io::render_avatar_body(state);
     }
     ui.label(&state.avatar_status);
@@ -99,6 +98,7 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
         let ci = egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
         let tex = ui.ctx().load_texture("avatar_body", ci, egui::TextureOptions::LINEAR);
         ui.add(egui::Image::new(&tex).max_width(120.0));
+        ui.label(format!("Body: {}x{}", w, h));
     }
     if let Some((w, h, rgba)) = &state.avatar_rendered {
         let ci = egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
@@ -107,6 +107,7 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label(format!("Rendered: {}x{}", w, h));
     }
 }
+
 
 const AVATAR_SLOTS: [&str; 29] = [
     "Body", "Head", "Face", "Hair", "Cap", "Coat", "Longcoat", "Pants", "Shoes",
