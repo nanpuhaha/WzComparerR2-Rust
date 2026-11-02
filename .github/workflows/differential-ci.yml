@@ -172,6 +172,43 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # ── 1b. GUI 스모크 (Linux + xvfb, 헤드리스) ─────────────────────────
+  # GUI 가 실제 WZ 를 열어 뷰포트 텍스처를 생성하는지 검증한다.
+  # 캐시된 WZ fixture 가 없으면 건너뛴다 (CI 에는 실전 WZ 가 없다).
+  gui-smoke:
+    name: GUI smoke (headless)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust 툴체인 (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: gui-smoke-linux
+
+      - name: GUI 빌드 (wz-gui)
+        run: cargo build --manifest-path crates/wz-gui/Cargo.toml --no-default-features
+
+      - name: xvfb 설치
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: GUI 스모크 (캐시된 WZ fixture 가 있을 때만)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 캐시된 WZ fixture 경로 (GitHub Actions cache 또는 artifact)
+          FIXTURE="${{ runner.temp }}/Map0_000.wz"
+          if [ ! -f "$FIXTURE" ]; then
+            echo "::notice::WZ fixture 가 없어 GUI 스모크를 건너뜁니다."
+            echo "로컬에서 'cargo run -p wz-cli --example map_render_smoke -- <Map0_000.wz>' 로 검증하세요."
+            exit 0
+          fi
+          xvfb-run -a ./target/debug/wz-gui --smoke "$FIXTURE"
+          echo "GUI smoke OK"
+
   # ── 2. C# 오라클과의 차분 ─────────────────────────────────────────────
   # `csharp_repository` 가 주어졌을 때만 돈다. Rust 쪽 게이트가 이미 초록인
   # 상태에서만 시작하므로, 여기서 나오는 차이는 Rust 회귀가 아니라 **계약 차이**다.
