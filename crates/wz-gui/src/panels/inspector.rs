@@ -143,6 +143,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         if let Some(vr) = m.info.vrect {
             ui.label(format!("vrect: {:?}", vr));
         }
+        ui.label(format!("footholds: {}, portals: {}, life: {}, bg: {}, obj: {}, tile: {}",
+            m.footholds.len(), m.portals.len(), m.life.len(),
+            m.backgrounds.len(), m.objects.len(), m.tiles.len()));
+        ui.label(format!("ladders/ropes: {}", m.ladders_ropes.len()));
     }
 
     ui.separator();
