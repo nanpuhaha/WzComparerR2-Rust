@@ -48,7 +48,8 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
     for (i, img_entry) in tree.root.entries.iter().filter(|e| e.node_type == nt::IMAGE).take(10).enumerate() {
         let Some(off) = img_entry.offset else { continue; };
         let Ok(node) = arch.parse_image_at(off) else { continue; };
-        let slot_name = format!("Slot{}", i);
+        let slot_name = img_entry.name.clone().unwrap_or_else(|| format!("Slot{}", i).into()).to_string();
+        let slot_name = slot_name.trim_end_matches(".img").to_string();
 
         fn find_png(n: &ImageNode) -> Option<wz_core::image::PngRef> {
             use wz_core::image::ImageValue;
