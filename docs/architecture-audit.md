@@ -179,3 +179,46 @@ GUI 아바타 패널에 29슬롯 목록 + 10개 로드된 파트에 체크박스
 '아바타 로드 (loader, 10 파트)' + '아바타 렌더 (오프스크린, 10 파트)' 버튼 +
 Body 이미지/렌더 결과 나란히 표시. 29슬롯 드롭다운(장비 선택) 은 장비 ID →
 이미지 매핑 로직 (C# CharaSim) 이 필요해 미구현.
+
+---
+
+## 10. WZ→avatar 로더 — WZ 포맷 조사 결과 (2026-11-03)
+
+`Character/_Canvas/_Canvas_000.wz` 의 이미지 노드 (예: `00002001.img`) 구조:
+
+```
+00002001.img (Property)
+  alert (Property)
+    0 (Property)
+      arm (Canvas, WxH)
+      body (Canvas, WxH)
+      lHand (Canvas, WxH)
+      rHand (Canvas, WxH)
+    1 (Property)
+      ...
+```
+
+**origin/map/z 프로퍼티가 없다.** 캔버스 노드에 children 이 없고, 프레임 노드에도
+origin/map/z 가 없다. CanvasHeader.scale 도 0이다.
+
+C# `WzComparerR2` 의 `CharaSim`/`Avatar` 렌더러가 앵커(navel, brow, neck)와
+z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져온다.
+
+### 결론
+
+- WZ 포맷은 **픽셀 데이터만** 저장한다. 앵커/프리즘/zmap 은 WZ 에 없다.
+- C# `CharaSim` 소스 (`WzComparerR2/CharaSim/`, `WzComparerR2/AvatarCommon/`) 가
+  이 계산 로직을 구현한다.
+- **현재 Rust 포트에 이 로직이 없고**, C# 참조 소스가 없어 포팅 불가.
+- 현재 로더 (`wz-avatar::loader`) 는 PoC 수준: 이미지 캔버스를 로드해
+  `SkinLayer` (width/height) + `Bone` + `ZMap` + `AvatarScene` 을 조립하고 렌더한다.
+  앵커/프리즘/zmap 정밀도는 C# 참조 확보 후 별도 티켓.
+
+### 사용 가능한 C# 참조 (클론됨)
+
+`/tmp/csharp_ref/` (seotbeo/WzComparerR2, branch seotbeo_main):
+- `WzComparerR2/AvatarCommon/` — Bone, Skin, AvatarCanvas, AvatarCanvasManager, Action, ActionFrame, Prism, PrismData
+- `WzComparerR2/CharaSim/` — CharaProp, CharaSim 등
+- `WzComparerR2.Avatar/` — UI 레이어
+
+이 소스를 Rust 포트에 통합하면 앵커/프리즘/zmap 정밀도를 구현할 수 있다.
