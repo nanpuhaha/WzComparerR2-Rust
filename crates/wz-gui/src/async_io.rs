@@ -309,8 +309,6 @@ pub fn load_map_by_path(state: &mut AppState) {
         None
     };
     state.map_back_image = back_img;
-    load_map_tiles(state);
-    load_map_objs(state);
 
     state.map_status = format!(
         "map_id={:?} bgm={:?} town={} fh={} portals={} life={} back={} obj={} tile={} (back_img={})",
@@ -341,19 +339,17 @@ pub fn load_map_from_selection(state: &mut AppState) {
         return;
     };
     let map = MapData::parse_from_node(&node);
-    let fh_count = map.footholds.len();
-    let portal_count = map.portals.len();
-    let life_count = map.life.len();
-    let bgm = map.info.bgm.clone().unwrap_or_default();
-    let town = map.info.town;
     state.map_status = format!(
-        "map_id={:?} bgm={} town={} footholds={} portals={} life={}",
-        map.info.map_id, bgm, town, fh_count, portal_count, life_count
+        "map_id={:?} bgm={:?} town={} fh={} portals={} life={}",
+        map.info.map_id, map.info.bgm, map.info.town,
+        map.footholds.len(), map.portals.len(), map.life.len()
     );
+    // map_path 를 갱신하고 load_map_by_path 로 이미지 로딩을 위임한다.
+    state.map_path = name.to_string();
     state.current_map = Some(map);
-    load_map_tiles(state);
-    load_map_objs(state);
-    state.viewport_dirty = true;
+    // 이미지 로딩은 load_map_by_path 의 워커가 처리한다.
+    // (map_path 가 설정되어 있으므로 그대로 호출)
+    load_map_by_path(state);
 }
 
 pub fn load_back_image(data_root: &std::path::Path, b_s: &str) -> Option<(u32, u32, Vec<u8>)> {
@@ -423,30 +419,6 @@ pub fn load_canvas_image(
     }
     None
 }
-
-pub fn load_map_tiles(state: &mut AppState) {
-    state.map_tile_images.clear();
-    state.map_obj_images.clear();
-    let (Some(map), Some(root)) = (state.current_map.as_ref(), state.data_root.as_ref()) else { return; };
-    for tile in map.tiles.iter() {
-        if let Some((w, h, rgba)) = load_canvas_image(root, "Tile", &tile.t_s, &format!("{}/{}", tile.u, tile.no)) {
-            state.map_tile_images.push((tile.x, tile.y, w, h, rgba));
-        }
-    }
-    state.viewport_dirty = true;
-}
-
-pub fn load_map_objs(state: &mut AppState) {
-    let (Some(map), Some(root)) = (state.current_map.as_ref(), state.data_root.as_ref()) else { return; };
-    for obj in map.objects.iter() {
-        let inner = format!("{}/{}/{}/0", obj.l0, obj.l1, obj.l2);
-        if let Some((w, h, rgba)) = load_canvas_image(root, "Obj", &obj.o_s, &inner) {
-            state.map_obj_images.push((obj.x, obj.y, w, h, rgba));
-        }
-    }
-    state.viewport_dirty = true;
-}
-
 
 pub fn load_avatar_body(state: &mut AppState) {
     // Character/_Canvas/_Canvas_000.wz 에서 첫 번째 이미지를 로드한다.
