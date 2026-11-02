@@ -68,6 +68,9 @@ struct AppState {
     map_status: String,
     map_back_image: Option<(u32, u32, Vec<u8>)>,
     data_root: Option<std::path::PathBuf>,
+    // PoC 3.5: 아바타
+    avatar_image: Option<(u32, u32, Vec<u8>)>,
+    avatar_status: String,
     // PoC 2: 맵 뷰포트
     camera: Camera2D,
     viewport_texture: Option<TextureHandle>,
@@ -99,6 +102,8 @@ impl Default for AppState {
             map_back_image: None,
             data_root: None,
             map_status: "맵 ID 를 입력하고 'Load Map'".into(),
+            avatar_image: None,
+            avatar_status: "Body 이미지를 로드하세요".into(),
             camera: Camera2D::new(512.0, 512.0),
             viewport_texture: None,
             viewport_dirty: true,
@@ -435,6 +440,74 @@ fn load_image_view(state: &mut AppState, path: &str) {
         pr.width, pr.height, pr.format, pr.scale, pr.pages
     ));
     state.current_image_path = Some(path.to_string());
+}
+
+
+fn load_avatar_body(state: &mut AppState) {
+    // Character.wz 에서 첫 번째 Body 이미지를 찾아 디코딩한다.
+    let char_root = "<WZ_DATA_ROOT>/Character";
+    let char_wz = std::path::PathBuf::from(char_root).join("Character.wz");
+    let Ok(arch) = wz_core::WzArchive::open(&char_wz) else {
+        state.avatar_status = "Character.wz 열기 실패".into();
+        return;
+    };
+    let Ok(tree) = arch.read_tree() else {
+        state.avatar_status = "트리 읽기 실패".into();
+        return;
+    };
+    // Body 디렉터리 찾기
+    let body_entry = tree.root.entries.iter().find(|e| e.name.as_deref() == Some("Body"));
+    let Some(_body_entry) = body_entry else {
+        state.avatar_status = "Body 디렉터리 없음".into();
+        return;
+    };
+    // Body 디렉터리의 첫 이미지 찾기 (blocks 커서: Body 는 몇 번째 디렉터리인가)
+    let body_idx = tree.root.entries.iter().position(|e| e.name.as_deref() == Some("Body")).unwrap();
+    let mut cursor = 0usize;
+    for e in &tree.root.entries[..body_idx] {
+        if e.node_type == wz_core::dirtree::node_type::DIRECTORY { cursor += 1; }
+    }
+    let Some(sub) = tree.blocks.get(cursor) else {
+        state.avatar_status = "Body 하위 블록 없음".into();
+        return;
+    };
+    let first_img = sub.entries.iter().find(|e| e.node_type == wz_core::dirtree::node_type::IMAGE);
+    let Some(img_entry) = first_img else {
+        state.avatar_status = "Body 이미지 없음".into();
+        return;
+    };
+    let Some(off) = img_entry.offset else {
+        state.avatar_status = "오프셋 없음".into();
+        return;
+    };
+    let Ok(node) = arch.parse_image_at(off) else {
+        state.avatar_status = "이미지 파싱 실패".into();
+        return;
+    };
+    // 첫 PngRef 찾기
+    fn find_png(n: &wz_core::image::Node) -> Option<wz_core::image::PngRef> {
+        use wz_core::image::ImageValue;
+        if let Some(ImageValue::Png(p)) = &n.value { return Some(p.clone()); }
+        for c in &n.children { if let Some(p) = find_png(c) { return Some(p); } }
+        if let Some(ImageValue::Property(p)) = &n.value { if let Some(res) = find_png(p) { return Some(res); } }
+        None
+    }
+    let Some(pr) = find_png(&node) else {
+        state.avatar_status = "캔버스 없음".into();
+        return;
+    };
+    let file_src = match wz_pool::FileSource::open(&char_wz) { Ok(f) => f, Err(_) => { state.avatar_status = "파일 열기 실패".into(); return; } };
+    let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
+    match wz_image::decode_png_ref_to_rgba(&pr, &src) {
+        Ok((w, h, rgba)) => {
+            state.avatar_status = format!("Body 이미지 로드: {}x{} ({} bytes)", w, h, rgba.len());
+            state.avatar_image = Some((w, h, rgba));
+            state.viewport_dirty = true;
+        }
+        Err(e) => {
+            state.avatar_status = format!("디코딩 실패: {e}");
+        }
+    }
 }
 
 
@@ -808,8 +881,8 @@ const AVATAR_SLOTS: [&str; 29] = [
     "Ring4", "Pet", "TamingMob", "Mechanic", "Android", "Effect", "Extra",
 ];
 
-fn render_avatar_panel(ui: &mut egui::Ui, _state: &mut AppState) {
-    ui.label("29개 슬롯 (PoC 3 UI 셸 — 장비 로딩은 PoC 3.5)");
+fn render_avatar_panel(ui: &mut egui::Ui, state: &mut AppState) {
+    ui.label("29개 슬롯 (PoC 3.5 — Body 이미지 로딩)");
     egui::ScrollArea::vertical().max_height(120.0).show(ui, |ui| {
         for (i, slot) in AVATAR_SLOTS.iter().enumerate() {
             ui.horizontal(|ui| {
@@ -818,10 +891,16 @@ fn render_avatar_panel(ui: &mut egui::Ui, _state: &mut AppState) {
             });
         }
     });
-    if ui.button("데모 아바타 렌더 (오프스크린)").clicked() {
-        // PoC 3.5 에서 실제 장비 로딩 + AvatarScene 으로 교체한다.
+    if ui.button("Body 이미지 로드 (Character.wz)").clicked() {
+        load_avatar_body(state);
     }
-    ui.label("PoC 3 게이트: 장비 교체 시 100ms 이내 렌더 — PoC 3.5 에서 검증.");
+    ui.label(&state.avatar_status);
+    if let Some((w, h, rgba)) = &state.avatar_image {
+        let ci = egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
+        let tex = ui.ctx().load_texture("avatar_body", ci, egui::TextureOptions::LINEAR);
+        ui.add(egui::Image::new(&tex).max_width(200.0));
+        ui.label(format!("Body: {}x{}", w, h));
+    }
 }
 
 
