@@ -159,3 +159,23 @@ pub fn decode_png_ref_to_rgba(png_ref: &PngRef, src: &Arc<dyn ByteSource>) -> Re
 - P1~P3 는 후속 세션.
 MD
 echo "written"
+---
+
+## 9. PoC 3.9 / WZ→avatar loader — 블로커 기록
+
+`Character/_Canvas/_Canvas_000.wz` 의 이미지 노드 (예: `00002000.img`) 는
+`FS_Guitar_Stand_M` → `0` → `body` (Canvas) 구조만 가진다. **origin/anchor/z/map
+프로퍼티가 없다.** C# `CharaSim`/`Avatar` 렌더러가 이 값을 별도로 계산하거나
+다른 WZ (Base/zmap.img) 에서 가져온다.
+
+따라서 "앵커/프리즘/zmap 정밀도" 는 C# 참조 구현 없이 구현할 수 없다.
+현재 로더 (`wz-avatar::loader`) 는 PoC 수준으로 이미지 캔버스를 로드해
+`SkinLayer` (width/height) + `Bone` + `ZMap` + `AvatarScene` 을 조립하고
+렌더한다. 정밀도 향상은 C# 소스 확보 후 별도 티켓.
+
+### PoC 3.9 (29슬롯 선택 UI) 상태
+
+GUI 아바타 패널에 29슬롯 목록 + 10개 로드된 파트에 체크박스 (렌더 대상 선택) +
+'아바타 로드 (loader, 10 파트)' + '아바타 렌더 (오프스크린, 10 파트)' 버튼 +
+Body 이미지/렌더 결과 나란히 표시. 29슬롯 드롭다운(장비 선택) 은 장비 ID →
+이미지 매핑 로직 (C# CharaSim) 이 필요해 미구현.
