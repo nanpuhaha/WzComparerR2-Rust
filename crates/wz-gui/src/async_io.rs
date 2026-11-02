@@ -183,32 +183,6 @@ pub fn value_kind(n: &ImageNode) -> String {
 }
 
 
-pub fn find_entry_by_path(tree: &DirTree, path: &str) -> Option<RawEntry> {
-    let segs: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
-    if segs.is_empty() { return None; }
-    let mut cursor = 0usize;
-    let mut block = &tree.root;
-    for (i, seg) in segs.iter().enumerate() {
-        let idx = block.entries.iter().position(|e| {
-            e.name.as_deref() == Some(seg)
-                || e.name.as_deref() == Some(&format!("{}.img", seg))
-        })?;
-        for e in &block.entries[..idx] {
-            if e.node_type == nt::DIRECTORY { cursor += 1; }
-        }
-        let entry = block.entries[idx].clone();
-        if i == segs.len() - 1 { return Some(entry); }
-        if entry.node_type == nt::DIRECTORY {
-            let sub = tree.blocks.get(cursor)?;
-            cursor += 1;
-            block = sub;
-        } else {
-            return None;
-        }
-    }
-    None
-}
-
 pub fn extract_png_ref(node: &ImageNode) -> Option<wz_core::image::PngRef> {
     if let Some(ImageValue::Png(p)) = &node.value {
         return Some(p.clone());
@@ -241,21 +215,17 @@ pub fn find_data_root(_map_path: &str) -> Option<std::path::PathBuf> {
 
 pub fn load_map_by_path(state: &mut AppState) {
     let path_for_data = state.map_path.clone();
-    let Some(tree) = &state.tree else {
+    if state.tree.is_none() {
         state.map_status = "WZ 파일을 먼저 열어 주세요".into();
         return;
-    };
+    }
     let Some(archive) = state.shared_archive.lock().unwrap().clone() else {
         state.map_status = "아카이브 없음".into();
         return;
     };
     let path = state.map_path.clone();
-    let Some(e) = find_entry_by_path(tree, &path) else {
+    let Some(off) = archive.find_entry_offset(&path) else {
         state.map_status = format!("엔트리 없음: {path}");
-        return;
-    };
-    let Some(off) = e.offset else {
-        state.map_status = "오프셋 없음".into();
         return;
     };
     let Ok(node) = archive.parse_image_at(off) else {

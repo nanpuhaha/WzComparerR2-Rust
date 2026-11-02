@@ -157,6 +157,42 @@ impl WzArchive {
         }
     }
 
+    /// 경로("Map0/000010000" 또는 "Map0/000010000.img")로 디렉터리 엔트리를 찾아
+    /// 그 오프셋을 반환한다.
+    ///
+    /// `DirTree` + `blocks` 커서 규칙을 **이 한 곳에서만** 다룬다.
+    /// CLI/GUI 가 커서 규칙을 재구현하지 않도록 한다 (아키텍처 감사 §3.5).
+    pub fn find_entry_offset(&self, path: &str) -> Option<u64> {
+        let tree = self.read_tree().ok()?;
+        let segs: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+        if segs.is_empty() { return None; }
+        let mut cursor = 0usize;
+        let mut block = &tree.root;
+        for (i, seg) in segs.iter().enumerate() {
+            let idx = block.entries.iter().position(|e| {
+                e.name.as_deref() == Some(seg)
+                    || e.name.as_deref() == Some(&format!("{}.img", seg))
+            })?;
+            for e in &block.entries[..idx] {
+                if e.node_type == crate::dirtree::node_type::DIRECTORY {
+                    cursor += 1;
+                }
+            }
+            let entry = &block.entries[idx];
+            if i == segs.len() - 1 {
+                return entry.offset;
+            }
+            if entry.node_type == crate::dirtree::node_type::DIRECTORY {
+                let sub = tree.blocks.get(cursor)?;
+                cursor += 1;
+                block = sub;
+            } else {
+                return None;
+            }
+        }
+        None
+    }
+
     /// Parses an image node hierarchy at the specified file offset.
     pub fn parse_image_at(&self, offset: u64) -> WzResult<Node> {
         let len = self.src.len()?;
