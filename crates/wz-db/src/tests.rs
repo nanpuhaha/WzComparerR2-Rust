@@ -400,3 +400,28 @@ fn string_linker_indexes_consume_and_eqp_with_uol() {
     assert_eq!(linker.format_tooltip(1000000).as_deref(), Some("가죽 모자"));
 }
 
+
+#[test]
+fn string_linker_real_wz() {
+    use crate::linker::StringLinker;
+    use crate::Arena;
+    use wz_core::WzArchive;
+
+    let path = "<WZ_DATA_ROOT>/String/String_000.wz";
+    if !std::path::Path::new(path).exists() {
+        return;
+    }
+    let arch = WzArchive::open(std::path::Path::new(path)).unwrap();
+    let (arena, root) = Arena::from_archive(&arch);
+    let mut linker = StringLinker::new();
+    assert!(linker.load_string_wz(&arena, root));
+    // Should have parsed some eqp, skill, map, mob, npc strings
+    assert!(!linker.string_eqp.is_empty(), "eqp should not be empty");
+    assert!(!linker.string_skill.is_empty() || !linker.string_skill_str.is_empty(), "skill should not be empty");
+    assert!(!linker.string_map.is_empty(), "map should not be empty");
+    assert!(!linker.string_mob.is_empty(), "mob should not be empty");
+    assert!(!linker.string_npc.is_empty(), "npc should not be empty");
+    // format_tooltip should work for a known item
+    let tooltip = linker.format_tooltip(1000000);
+    assert!(tooltip.is_some(), "tooltip for 1000000 should exist");
+}
