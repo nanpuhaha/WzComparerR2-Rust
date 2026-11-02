@@ -61,6 +61,42 @@ pub fn open_file_dialog(state: &mut AppState) {
     });
 }
 
+pub fn open_file_dialog_with_path(state: &mut AppState, path: std::path::PathBuf) {
+    if state.loading { return; }
+    state.loading = true;
+    state.status = format!("로딩 중: {}", path.display());
+    state.tree = None;
+    state.archive = None;
+    *state.shared_archive.lock().unwrap() = None;
+    state.image_children.clear();
+    state.expanded.clear();
+    state.selected = None;
+    state.image_textures.clear();
+    state.map_back_image = None;
+    state.map_tile_images.clear();
+    state.map_obj_images.clear();
+    state.current_map = None;
+    state.avatar_image = None;
+
+    let shared = state.shared_archive.clone();
+    let (tx, rx) = std::sync::mpsc::channel();
+    state.load_rx = Some(rx);
+
+    std::thread::spawn(move || {
+        let result = (|| -> Result<DirTree, String> {
+            let archive = WzArchive::open(&path).map_err(|e| format!("open: {e}"))?;
+            let tree = archive.read_tree().map_err(|e| format!("read_tree: {e}"))?;
+            *shared.lock().unwrap() = Some(std::sync::Arc::new(archive));
+            Ok(tree)
+        })();
+        let msg = match result {
+            Ok(t) => crate::state::LoadMsg::Loaded { tree: t },
+            Err(e) => crate::state::LoadMsg::Failed(e),
+        };
+        let _ = tx.send(msg);
+    });
+}
+
 pub fn poll_load_result(state: &mut AppState, ctx: &egui::Context) {
     let Some(rx) = &state.load_rx else { return; };
     match rx.try_recv() {

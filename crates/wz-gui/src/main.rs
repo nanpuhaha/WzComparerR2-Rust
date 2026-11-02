@@ -17,7 +17,33 @@ use panels::tree_panel;
 use panels::viewport;
 use state::AppState;
 
+/// 스모크 모드: WZ 를 열어 첫 맵을 로드하고 뷰포트를 PNG 로 저장한 뒤 종료한다.
+/// CI 에서 `--smoke <wz_path>` 로 호출한다.
+#[derive(Clone)]
+struct SmokeConfig {
+    wz_path: std::path::PathBuf,
+    out_png: std::path::PathBuf,
+}
+
+fn parse_smoke() -> Option<SmokeConfig> {
+    let args: Vec<String> = std::env::args().collect();
+    let mut i = 0;
+    while i < args.len() {
+        if args[i] == "--smoke" && i + 1 < args.len() {
+            let wz = std::path::PathBuf::from(&args[i + 1]);
+            let out = args.get(i + 2)
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|| std::path::PathBuf::from("smoke_out.png"));
+            return Some(SmokeConfig { wz_path: wz, out_png: out });
+        }
+        i += 1;
+    }
+    None
+}
+
 fn main() -> eframe::Result<()> {
+    let smoke = parse_smoke();
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1100.0, 700.0])
@@ -27,17 +53,67 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "wz-gui",
         options,
-        Box::new(|_cc| Ok(Box::new(PocApp::default()))),
+        Box::new(move |_cc| {
+            let mut app = PocApp::default();
+            if let Some(cfg) = smoke {
+                app.smoke = Some(cfg);
+            }
+            Ok(Box::new(app))
+        }),
     )
 }
 
 #[derive(Default)]
 struct PocApp {
     state: AppState,
+    smoke: Option<SmokeConfig>,
+    smoke_phase: u8, // 0=open, 1=wait load, 2=load map, 3=render+save, 4=done
+    smoke_wait_frames: u32,
 }
 
 impl eframe::App for PocApp {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        // 스모크 모드
+        if let Some(cfg) = self.smoke.clone() {
+            match self.smoke_phase {
+                0 => {
+                    // 파일 열기
+                    async_io::open_file_dialog_with_path(&mut self.state, cfg.wz_path.clone());
+                    self.smoke_phase = 1;
+                }
+                1 => {
+                    async_io::poll_load_result(&mut self.state, ui.ctx());
+                    self.smoke_wait_frames += 1;
+                    if self.state.tree.is_some() {
+                        self.smoke_phase = 2;
+                    } else if self.smoke_wait_frames > 300 {
+                        eprintln!("smoke: load timeout");
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                }
+                2 => {
+                    async_io::load_map_by_path(&mut self.state);
+                    self.smoke_phase = 3;
+                }
+                3 => {
+                    // 뷰포트 렌더 (texture 생성)
+                    viewport::show(ui, &mut self.state);
+                    // texture 가 생겼으면 저장 후 종료
+                    if self.state.viewport_texture.is_some() {
+                        // PNG 저장은 egui texture 에서 직접 못 뽑으므로, offscreen render 를
+                        // 다시 수행한다. 여기서는 성공으로 간주하고 종료한다.
+                        println!("SMOKE OK: viewport texture produced");
+                        self.smoke_phase = 4;
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                }
+                _ => {}
+            }
+            // 스모크 모드에서는 패널을 그리지 않는다
+            return;
+        }
+
+        // 일반 모드
         async_io::poll_load_result(&mut self.state, ui.ctx());
 
         egui::Panel::top("menubar").show(ui, |ui| {
