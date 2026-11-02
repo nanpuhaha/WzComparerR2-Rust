@@ -375,6 +375,54 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
         });
     }
 
+    // 2. Head 이미지 (00012000.img) 에서 head/face/hair 파트 로드
+    let head_img_name = "00012000.img";
+    if let Some(head_entry) = tree.root.entries.iter().find(|e| {
+        e.node_type == 4 && e.name.as_deref() == Some(head_img_name)
+    }) {
+        if let Some(off) = head_entry.offset {
+            if let Ok(head_node) = arch.parse_image_at(off) {
+                // front 액션 우선
+                let head_action = head_node.children.iter().find(|c| c.name.as_ref() == "front")
+                    .or_else(|| head_node.children.iter().find(|c| c.name.as_ref() == "back"))
+                    .or_else(|| head_node.children.first());
+
+                if let Some(ha) = head_action {
+                    // head action 의 자식이 Canvas 이면 직접 로드
+                    let mut head_parts: Vec<&ImageNode> = ha.children.iter().collect();
+                    if let Some(wz_core::image::ImageValue::Property(p)) = &ha.value {
+                        head_parts.extend(p.children.iter());
+                    }
+
+                    for pn in head_parts {
+                        fn find_png2(n: &ImageNode) -> Option<wz_core::image::PngRef> {
+                            use wz_core::image::ImageValue;
+                            if let Some(ImageValue::Png(p)) = &n.value { return Some(p.clone()); }
+                            for c in &n.children { if let Some(p) = find_png2(c) { return Some(p); } }
+                            if let Some(ImageValue::Property(p)) = &n.value { if let Some(res) = find_png2(p) { return Some(res); } }
+                            None
+                        }
+                        let Some(pr) = find_png2(pn) else { continue; };
+                        let file_src = wz_pool::FileSource::open(&canvas_path).ok()?;
+                        let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
+                        let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&pr, &src) else { continue; };
+
+                        let slot_name = pn.name.to_string();
+                        let z_tag = part_z_tag(&slot_name);
+
+                        let mut skin = SkinLayer::new(slot_name.clone());
+                        skin.z = z_tag;
+                        skin.width = w;
+                        skin.height = h;
+                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+
+                        parts.push(AvatarPart { slot: slot_name, width: w, height: h, rgba });
+                    }
+                }
+            }
+        }
+    }
+
     if parts.is_empty() {
         return None;
     }
