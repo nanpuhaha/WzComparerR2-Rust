@@ -22,7 +22,6 @@ use state::AppState;
 #[derive(Clone)]
 struct SmokeConfig {
     wz_path: std::path::PathBuf,
-    out_png: std::path::PathBuf,
 }
 
 fn parse_smoke() -> Option<SmokeConfig> {
@@ -31,10 +30,7 @@ fn parse_smoke() -> Option<SmokeConfig> {
     while i < args.len() {
         if args[i] == "--smoke" && i + 1 < args.len() {
             let wz = std::path::PathBuf::from(&args[i + 1]);
-            let out = args.get(i + 2)
-                .map(std::path::PathBuf::from)
-                .unwrap_or_else(|| std::path::PathBuf::from("smoke_out.png"));
-            return Some(SmokeConfig { wz_path: wz, out_png: out });
+            return Some(SmokeConfig { wz_path: wz });
         }
         i += 1;
     }
@@ -72,7 +68,7 @@ struct PocApp {
 }
 
 impl eframe::App for PocApp {
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         // 스모크 모드
         if let Some(cfg) = self.smoke.clone() {
             match self.smoke_phase {
@@ -83,17 +79,26 @@ impl eframe::App for PocApp {
                 }
                 1 => {
                     async_io::poll_load_result(&mut self.state, ui.ctx());
+        async_io::poll_map_images(&mut self.state, ui.ctx());
                     self.smoke_wait_frames += 1;
                     if self.state.tree.is_some() {
                         self.smoke_phase = 2;
                     } else if self.smoke_wait_frames > 300 {
-                        eprintln!("smoke: load timeout");
                         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 }
                 2 => {
                     async_io::load_map_by_path(&mut self.state);
-                    self.smoke_phase = 3;
+                    self.smoke_phase = 25; // wait for images
+                }
+                25 => {
+                    async_io::poll_map_images(&mut self.state, ui.ctx());
+                    self.smoke_wait_frames += 1;
+                    if self.state.map_images_rx.is_none() {
+                        self.smoke_phase = 3;
+                    } else if self.smoke_wait_frames > 600 {
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
                 }
                 3 => {
                     // 뷰포트 렌더 (texture 생성)
@@ -115,6 +120,7 @@ impl eframe::App for PocApp {
 
         // 일반 모드
         async_io::poll_load_result(&mut self.state, ui.ctx());
+        async_io::poll_map_images(&mut self.state, ui.ctx());
 
         egui::Panel::top("menubar").show(ui, |ui| {
             ui.horizontal(|ui| {

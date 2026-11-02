@@ -32,6 +32,7 @@ pub fn open_file_dialog(state: &mut AppState) {
     state.status = format!("로딩 중: {}", path.display());
     state.tree = None;
     state.archive = None;
+    state.archive_path = Some(path.clone());
     *state.shared_archive.lock().unwrap() = None;
     state.image_children.clear();
     state.expanded.clear();
@@ -67,6 +68,7 @@ pub fn open_file_dialog_with_path(state: &mut AppState, path: std::path::PathBuf
     state.status = format!("로딩 중: {}", path.display());
     state.tree = None;
     state.archive = None;
+    state.archive_path = Some(path.clone());
     *state.shared_archive.lock().unwrap() = None;
     state.image_children.clear();
     state.expanded.clear();
@@ -128,6 +130,24 @@ pub fn poll_load_result(state: &mut AppState, ctx: &egui::Context) {
         Err(mpsc::TryRecvError::Disconnected) => {
             state.loading = false;
             state.load_rx = None;
+        }
+    }
+}
+
+pub fn poll_map_images(state: &mut AppState, ctx: &egui::Context) {
+    let Some(rx) = &state.map_images_rx else { return; };
+    match rx.try_recv() {
+        Ok(imgs) => {
+            state.map_back_image = imgs.back;
+            state.map_tile_images = imgs.tiles;
+            state.map_obj_images = imgs.objs;
+            state.map_images_rx = None;
+            state.viewport_dirty = true;
+            ctx.request_repaint();
+        }
+        Err(mpsc::TryRecvError::Empty) => {}
+        Err(mpsc::TryRecvError::Disconnected) => {
+            state.map_images_rx = None;
         }
     }
 }
@@ -238,7 +258,18 @@ pub fn extract_png_ref(node: &ImageNode) -> Option<wz_core::image::PngRef> {
 
 // ── 맵 로딩 ───────────────────────────────────────────────────────────
 
-pub fn find_data_root(_map_path: &str) -> Option<std::path::PathBuf> {
+pub fn find_data_root(archive_path: Option<&std::path::Path>) -> Option<std::path::PathBuf> {
+    // archive_path 에서 "Data" 디렉터리를 찾는다.
+    if let Some(p) = archive_path {
+        let mut cur = p.to_path_buf();
+        while let Some(parent) = cur.parent() {
+            if parent.file_name().and_then(|s| s.to_str()) == Some("Data") {
+                return Some(parent.to_path_buf());
+            }
+            cur = parent.to_path_buf();
+        }
+    }
+    // 폴백: 일반적인 설치 경로
     let candidates = [
         "<WZ_DATA_ROOT>",
     ];
@@ -250,7 +281,6 @@ pub fn find_data_root(_map_path: &str) -> Option<std::path::PathBuf> {
 }
 
 pub fn load_map_by_path(state: &mut AppState) {
-    let path_for_data = state.map_path.clone();
     if state.tree.is_none() {
         state.map_status = "WZ 파일을 먼저 열어 주세요".into();
         return;
@@ -270,7 +300,7 @@ pub fn load_map_by_path(state: &mut AppState) {
     };
     let map = MapData::parse_from_node(&node);
 
-    let data_root = find_data_root(&path_for_data);
+    let data_root = find_data_root(state.archive_path.as_deref());
     state.data_root = data_root.clone();
 
     let back_img = if let (Some(root), Some(first)) = (data_root.as_ref(), map.backgrounds.first()) {

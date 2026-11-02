@@ -13,6 +13,13 @@ use wz_core::dirtree::DirTree;
 use wz_db::MapData;
 use wz_render::camera::Camera2D;
 
+/// 맵 이미지 로딩 결과 (워커 스레드 → UI 스레드).
+pub struct MapImages {
+    pub back: Option<(u32, u32, Vec<u8>)>,
+    pub tiles: Vec<(i32, i32, u32, u32, Vec<u8>)>,
+    pub objs: Vec<(i32, i32, u32, u32, Vec<u8>)>,
+}
+
 // ── 로딩 메시지 ───────────────────────────────────────────────────────
 
 pub enum LoadMsg {
@@ -36,6 +43,7 @@ pub struct TreeRow {
 
 pub struct AppState {
     pub archive: Option<Arc<WzArchive>>,
+    pub archive_path: Option<std::path::PathBuf>,
     pub shared_archive: Arc<Mutex<Option<Arc<WzArchive>>>>,
     pub tree: Option<DirTree>,
     pub image_children: HashMap<String, Vec<(String, String)>>,
@@ -51,6 +59,7 @@ pub struct AppState {
     pub map_tile_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub map_obj_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub map_status: String,
+    pub map_images_rx: Option<mpsc::Receiver<MapImages>>,
     pub avatar_image: Option<(u32, u32, Vec<u8>)>,
     pub avatar_status: String,
     pub avatar_rendered: Option<(u32, u32, Vec<u8>)>,
@@ -72,6 +81,7 @@ impl Default for AppState {
     fn default() -> Self {
         Self {
             archive: None,
+            archive_path: None,
             shared_archive: Arc::new(Mutex::new(None)),
             tree: None,
             image_children: HashMap::new(),
@@ -87,6 +97,7 @@ impl Default for AppState {
             map_tile_images: Vec::new(),
             map_obj_images: Vec::new(),
             map_status: "맵 ID 를 입력하고 'Load Map'".into(),
+            map_images_rx: None,
             avatar_image: None,
             avatar_status: "Body 이미지를 로드하세요".into(),
             avatar_rendered: None,
