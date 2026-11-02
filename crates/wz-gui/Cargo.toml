@@ -21,6 +21,7 @@ path = "src/main.rs"
 [dependencies]
 wz-core = { path = "../../crates/wz-core" }
 wz-image = { path = "../../crates/wz-image" }
+wz-pool = { path = "../../crates/wz-pool" }
 wz-render = { path = "../../crates/wz-render" }
 wz-db = { path = "../../crates/wz-db" }
 wz-avatar = { path = "../../crates/wz-avatar" }

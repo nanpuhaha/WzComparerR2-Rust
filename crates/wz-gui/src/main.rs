@@ -13,6 +13,7 @@ use std::thread;
 
 use egui::TextureHandle;
 use wz_core::WzArchive;
+use wz_pool;
 use wz_core::dirtree::{DirTree, RawEntry};
 use wz_core::dirtree::node_type as nt;
 use wz_core::image::{ImageValue, Node as ImageNode};
@@ -62,8 +63,11 @@ struct AppState {
     current_image_path: Option<String>,
     current_image_info: Option<String>,
     // PoC 2.5: 맵
+    map_path: String,
     current_map: Option<MapData>,
     map_status: String,
+    map_back_image: Option<(u32, u32, Vec<u8>)>,
+    data_root: Option<std::path::PathBuf>,
     // PoC 2: 맵 뷰포트
     camera: Camera2D,
     viewport_texture: Option<TextureHandle>,
@@ -90,7 +94,10 @@ impl Default for AppState {
             image_textures: HashMap::new(),
             current_image_path: None,
             current_image_info: None,
+            map_path: "Map0/000010000".into(),
             current_map: None,
+            map_back_image: None,
+            data_root: None,
             map_status: "맵 ID 를 입력하고 'Load Map'".into(),
             camera: Camera2D::new(512.0, 512.0),
             viewport_texture: None,
@@ -430,6 +437,122 @@ fn load_image_view(state: &mut AppState, path: &str) {
     state.current_image_path = Some(path.to_string());
 }
 
+
+fn find_data_root(_map_path: &str) -> Option<std::path::PathBuf> {
+    // GUI 는 archive 경로를 아직 보관하지 않는다. 일반적인 설치 경로를 시도한다.
+    let candidates = [
+        "<WZ_DATA_ROOT>",
+    ];
+    for c in candidates {
+        let p = std::path::PathBuf::from(c);
+        if p.join("Map").exists() { return Some(p); }
+    }
+    None
+}
+
+fn load_back_image(data_root: &std::path::Path, b_s: &str) -> Option<(u32, u32, Vec<u8>)> {
+    use wz_core::WzArchive;
+use wz_core::image::ImageValue;
+    use wz_image::decoder::decode_raw_page_to_rgba8;
+    use wz_image::TextureFormat;
+
+    // Back/_Canvas/_Canvas_*.wz 중 b_s.img 를 포함한 파일을 찾는다.
+    let canvas_dir = data_root.join("Map").join("Back").join("_Canvas");
+    let entries = std::fs::read_dir(&canvas_dir).ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") { continue; }
+        let Ok(arch) = WzArchive::open(&path) else { continue; };
+        let Ok(tree) = arch.read_tree() else { continue; };
+        // 루트 엔트리에서 {b_s}.img 또는 {b_s} 찾기
+        let name_img = format!("{}.img", b_s);
+        let e = tree.root.entries.iter().find(|e| {
+            e.name.as_deref() == Some(b_s) || e.name.as_deref() == Some(name_img.as_str())
+        });
+        let Some(e) = e else { continue; };
+        let Some(off) = e.offset else { continue; };
+        let Ok(node) = arch.parse_image_at(off) else { continue; };
+        // 첫 PngRef 찾기
+        fn find_png(n: &wz_core::image::Node) -> Option<wz_core::image::PngRef> {
+            if let Some(ImageValue::Png(p)) = &n.value { return Some(p.clone()); }
+            for c in &n.children {
+                if let Some(p) = find_png(c) { return Some(p); }
+            }
+            if let Some(ImageValue::Property(p)) = &n.value {
+                if let Some(res) = find_png(p) { return Some(res); }
+            }
+            None
+        }
+        let Some(pr) = find_png(&node) else { continue; };
+        let file_src = wz_pool::FileSource::open(&path).ok()?;
+        let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
+        let raw = pr.extract_raw_bytes(&src).ok()?;
+        let fmt = TextureFormat::from_u32(pr.format as u32);
+        let rgba = match fmt {
+            TextureFormat::Unknown => raw,
+            f => {
+                let (_, _, px) = decode_raw_page_to_rgba8(
+                    f, pr.width as u32, pr.height as u32, pr.scale as u32,
+                    pr.pages as u32, 0, &raw,
+                ).ok()?;
+                px
+            }
+        };
+        return Some((pr.width as u32, pr.height as u32, rgba));
+    }
+    None
+}
+
+
+fn load_map_by_path(state: &mut AppState) {
+    let path_for_data = state.map_path.clone();
+    let Some(tree) = &state.tree else {
+        state.map_status = "WZ 파일을 먼저 열어 주세요".into();
+        return;
+    };
+    let Some(archive) = state.shared_archive.lock().unwrap().clone() else {
+        state.map_status = "아카이브 없음".into();
+        return;
+    };
+    let path = state.map_path.clone();
+    let Some(e) = find_entry_by_path(tree, &path) else {
+        state.map_status = format!("엔트리 없음: {path}");
+        return;
+    };
+    let Some(off) = e.offset else {
+        state.map_status = "오프셋 없음".into();
+        return;
+    };
+    let Ok(node) = archive.parse_image_at(off) else {
+        state.map_status = "이미지 파싱 실패".into();
+        return;
+    };
+    let map = MapData::parse_from_node(&node);
+
+    // 데이터 루트 추정 (Map WZ 경로에서 "Data" 디렉터리까지 거슬러 올라간다).
+    let data_root = find_data_root(&path_for_data);
+    state.data_root = data_root.clone();
+
+    // 첫 번째 백그라운드 이미지 로드 (PoC 2.6: Back WZ → 디코딩 → 텍스처).
+    let back_img = if let (Some(root), Some(first)) = (data_root.as_ref(), map.backgrounds.first()) {
+        load_back_image(root, &first.b_s)
+    } else {
+        None
+    };
+    state.map_back_image = back_img;
+
+    state.map_status = format!(
+        "map_id={:?} bgm={:?} town={} fh={} portals={} life={} back={} obj={} tile={} (back_img={})",
+        map.info.map_id, map.info.bgm, map.info.town,
+        map.footholds.len(), map.portals.len(), map.life.len(),
+        map.backgrounds.len(), map.objects.len(), map.tiles.len(),
+        state.map_back_image.is_some()
+    );
+    state.current_map = Some(map);
+    state.viewport_dirty = true;
+}
+
+
 fn load_map_from_selection(state: &mut AppState) {
     let Some(sel) = state.selected.clone() else { return; };
     let Some(tree) = &state.tree else { return; };
@@ -459,6 +582,43 @@ fn load_map_from_selection(state: &mut AppState) {
     );
     state.current_map = Some(map);
     state.viewport_dirty = true;
+}
+
+
+
+/// 경로("Map0/000010000" 또는 "Map0/000010000.img")로 DirTree 엔트리를 찾는다.
+/// 디렉터리 하위 블록은 build_arena 와 동일한 커서 규칙으로 추적한다.
+fn find_entry_by_path(tree: &DirTree, path: &str) -> Option<RawEntry> {
+    let segs: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+    if segs.is_empty() { return None; }
+    let mut cursor = 0usize;
+    let mut block = &tree.root;
+    for (i, seg) in segs.iter().enumerate() {
+        // 현재 블록에서 세그먼트 찾기 (.img 유무 모두 시도)
+        let idx = block.entries.iter().position(|e| {
+            e.name.as_deref() == Some(seg)
+                || e.name.as_deref() == Some(&format!("{}.img", seg))
+        })?;
+        // 대상 이전의 디렉터리 엔트리 수만큼 커서를 전진시킨다
+        // (build_arena 와 동일한 DFS 커서 규칙).
+        for e in &block.entries[..idx] {
+            if e.node_type == nt::DIRECTORY {
+                cursor += 1;
+            }
+        }
+        let entry = block.entries[idx].clone();
+        if i == segs.len() - 1 {
+            return Some(entry);
+        }
+        if entry.node_type == nt::DIRECTORY {
+            let sub = tree.blocks.get(cursor)?;
+            cursor += 1;
+            block = sub;
+        } else {
+            return None;
+        }
+    }
+    None
 }
 
 
@@ -517,6 +677,13 @@ fn render_inspector(ui: &mut egui::Ui, state: &mut AppState) {
 
     ui.separator();
     ui.heading("맵 (PoC 2.5)");
+    ui.horizontal(|ui| {
+        ui.label("맵 경로:");
+        ui.text_edit_singleline(&mut state.map_path);
+        if ui.button("Load Map").clicked() {
+            load_map_by_path(state);
+        }
+    });
     if ui.button("선택 노드를 맵으로 로드").clicked() {
         load_map_from_selection(state);
     }
@@ -587,20 +754,28 @@ fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         }
         let _ = white;
 
-        // 데모 그리드: 5x5 색상 쿼드
+        // 데모 그리드 또는 맵 백그라운드 이미지
         let mut batch = SpriteBatch::new();
-        for gx in -2..=2i32 {
-            for gy in -2..=2i32 {
-                let color = [
-                    0.3 + (gx as f32 + 2.0) * 0.12,
-                    0.3 + (gy as f32 + 2.0) * 0.12,
-                    0.6,
-                    1.0,
-                ];
-                let x = gx as f32 * 40.0 - 20.0;
-                let y = gy as f32 * 40.0 - 20.0;
-                batch.push_quad(atlas_key, [x, y, 36.0, 36.0], 0.0,
-                    slot.rect.uv(atlas_w, atlas_h), color);
+        if let Some((bw, bh, bpx)) = &state.map_back_image {
+            // 백그라운드 이미지를 별도 텍스처로 업로드
+            let back_key = GpuKey(2);
+            let _ = rc.create_texture(back_key, *bw, *bh, bpx);
+            batch.push_quad(back_key, [0.0, 0.0, *bw as f32, *bh as f32], 0.0,
+                [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
+        } else {
+            for gx in -2..=2i32 {
+                for gy in -2..=2i32 {
+                    let color = [
+                        0.3 + (gx as f32 + 2.0) * 0.12,
+                        0.3 + (gy as f32 + 2.0) * 0.12,
+                        0.6,
+                        1.0,
+                    ];
+                    let x = gx as f32 * 40.0 - 20.0;
+                    let y = gy as f32 * 40.0 - 20.0;
+                    batch.push_quad(atlas_key, [x, y, 36.0, 36.0], 0.0,
+                        slot.rect.uv(atlas_w, atlas_h), color);
+                }
             }
         }
         batch.finish();
