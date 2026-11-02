@@ -150,6 +150,10 @@ impl eframe::App for PocApp {
             ui.separator();
             ui.heading("맵 뷰포트 (PoC 2)");
             render_viewport(ui, &mut self.state);
+
+            ui.separator();
+            ui.heading("아바타 (PoC 3)");
+            render_avatar_panel(ui, &mut self.state);
         });
     }
 }
@@ -568,6 +572,31 @@ fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
     ui.label(format!("카메라: pos=({:.1},{:.1}) zoom={:.2}  (드래그=팬, 휠=줌)",
         state.camera.center.x, state.camera.center.y, state.camera.zoom));
 }
+// ── 아바타 패널 (PoC 3) ────────────────────────────────────────────────
+
+const AVATAR_SLOTS: [&str; 29] = [
+    "Body", "Head", "Face", "Hair", "Cap", "Longcoat", "Pants", "Shoes",
+    "Glove", "Cape", "Shield", "Weapon", "SubWeapon", "Earrings", "EyeAccessory",
+    "FaceAccessory", "Pendant", "Belt", "Medal", "Ring1", "Ring2", "Ring3",
+    "Ring4", "Pet", "TamingMob", "Mechanic", "Android", "Effect", "Extra",
+];
+
+fn render_avatar_panel(ui: &mut egui::Ui, _state: &mut AppState) {
+    ui.label("29개 슬롯 (PoC 3 UI 셸 — 장비 로딩은 PoC 3.5)");
+    egui::ScrollArea::vertical().max_height(120.0).show(ui, |ui| {
+        for (i, slot) in AVATAR_SLOTS.iter().enumerate() {
+            ui.horizontal(|ui| {
+                ui.label(format!("{:>2}. {}", i, slot));
+                ui.label(egui::RichText::new("(empty)").weak());
+            });
+        }
+    });
+    if ui.button("데모 아바타 렌더 (오프스크린)").clicked() {
+        // PoC 3.5 에서 실제 장비 로딩 + AvatarScene 으로 교체한다.
+    }
+    ui.label("PoC 3 게이트: 장비 교체 시 100ms 이내 렌더 — PoC 3.5 에서 검증.");
+}
+
 
 // ── main ──────────────────────────────────────────────────────────────
 
