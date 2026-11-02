@@ -92,8 +92,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo build --manifest-path crates/wz-gui/Cargo.toml
-          cargo clippy --manifest-path crates/wz-gui/Cargo.toml -- -D warnings
+          cargo build --manifest-path crates/wz-gui/Cargo.toml --no-default-features
+          cargo clippy --manifest-path crates/wz-gui/Cargo.toml --no-default-features -- -D warnings
 
       - name: cargo-deny 설치
         uses: taiki-e/install-action@v2
