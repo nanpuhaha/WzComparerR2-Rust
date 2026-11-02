@@ -392,7 +392,7 @@ pub fn load_map_tiles(state: &mut AppState) {
     state.map_tile_images.clear();
     state.map_obj_images.clear();
     let (Some(map), Some(root)) = (state.current_map.as_ref(), state.data_root.as_ref()) else { return; };
-    for tile in map.tiles.iter().take(15) {
+    for tile in map.tiles.iter().take(50) {
         if let Some((w, h, rgba)) = load_canvas_image(root, "Tile", &tile.t_s, &format!("{}/{}", tile.u, tile.no)) {
             state.map_tile_images.push((tile.x, tile.y, w, h, rgba));
         }
@@ -402,7 +402,7 @@ pub fn load_map_tiles(state: &mut AppState) {
 
 pub fn load_map_objs(state: &mut AppState) {
     let (Some(map), Some(root)) = (state.current_map.as_ref(), state.data_root.as_ref()) else { return; };
-    for obj in map.objects.iter().take(15) {
+    for obj in map.objects.iter().take(50) {
         let inner = format!("{}/{}/{}/0", obj.l0, obj.l1, obj.l2);
         if let Some((w, h, rgba)) = load_canvas_image(root, "Obj", &obj.o_s, &inner) {
             state.map_obj_images.push((obj.x, obj.y, w, h, rgba));
