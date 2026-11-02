@@ -423,6 +423,42 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
         }
     }
 
+    // 3. 장비 아이템 로딩 (PoC: Cap 1000000)
+    let char_root = char_wz_path.parent().unwrap_or(char_wz_path);
+    let cap_canvas_path = char_root.join("Cap").join("_Canvas").join("_Canvas_000.wz");
+    if cap_canvas_path.exists() {
+        if let Ok(cap_arch) = WzArchive::open(&cap_canvas_path) {
+            if let Ok(cap_tree) = cap_arch.read_tree() {
+                // 아이템 ID 1000000 → 파일명 01000000.img
+                let item_name = "01000000.img";
+                if let Some(entry) = cap_tree.root.entries.iter().find(|e| {
+                    e.node_type == 4 && e.name.as_deref() == Some(item_name)
+                }) {
+                    if let Some(off) = entry.offset {
+                        if let Ok(item_node) = cap_arch.parse_image_at(off) {
+                            if let Some(png) = extract_first_canvas(&item_node) {
+                                let file_src = wz_pool::FileSource::open(&cap_canvas_path).ok();
+                                if let Some(fs) = file_src {
+                                    let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(fs);
+                                    if let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&png, &src) {
+                                        let slot_name = "cap".to_string();
+                                        let z_tag = part_z_tag(&slot_name);
+                                        let mut skin = SkinLayer::new(slot_name.clone());
+                                        skin.z = z_tag;
+                                        skin.width = w;
+                                        skin.height = h;
+                                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                                        parts.push(AvatarPart { slot: slot_name, width: w, height: h, rgba });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     if parts.is_empty() {
         return None;
     }
