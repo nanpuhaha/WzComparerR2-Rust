@@ -189,7 +189,7 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
         for (i, slot) in AVATAR_SLOTS.iter().enumerate() {
             ui.horizontal(|ui| {
                 ui.label(format!("{:>2}. {:<15}", i, slot));
-                if i < 10 {
+                if i < state.avatar_loaded_parts.len().min(29) {
                     let mut sel = state.avatar_slot_selection[i];
                     let preview = if sel == usize::MAX {
                         "없음".to_string()
