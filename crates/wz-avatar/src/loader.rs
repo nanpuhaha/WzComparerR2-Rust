@@ -19,6 +19,8 @@ use wz_image::decode_png_ref_to_rgba;
 
 use crate::{AvatarScene, Bone, SkinLayer, ZMap};
 
+use crate::zmap::STANDARD_ZMAP;
+
 /// MapleStory 표준 z-map 순서 (Base\zmap.img 에서 로드).
 /// 낮은 인덱스가 먼저 그려진다 (painter's algorithm).
 /// 로드된 아바타 파트.
@@ -38,193 +40,6 @@ pub struct LoadedAvatar {
     pub scene: AvatarScene,
 }
 
-const STANDARD_ZMAP: &[&str] = &[
-    "Ae",
-    "Af",
-    "Am",
-    "As",
-    "At",
-    "Ay",
-    "Bd",
-    "Cp",
-    "Fc",
-    "Gv",
-    "Hd",
-    "Hr",
-    "Ma",
-    "Pn",
-    "Ri",
-    "Sd",
-    "Si",
-    "So",
-    "Sr",
-    "Tm",
-    "Wg",
-    "Wp",
-    "Ws",
-    "accessoryEar",
-    "accessoryEarOverHair",
-    "accessoryEye",
-    "accessoryEyeBelowFace",
-    "accessoryEyeOverCap",
-    "accessoryEyeOverCapOverHair",
-    "accessoryEyeShadow",
-    "accessoryFace",
-    "accessoryFaceBelowFace",
-    "accessoryFaceOverFaceBelowCap",
-    "accessoryOverHair",
-    "arm",
-    "armBelowHead",
-    "armBelowHeadOverMailChest",
-    "armOverHair",
-    "armOverHairBelowWeapon",
-    "backAccessoryEar",
-    "backAccessoryFace",
-    "backAccessoryFaceOverHead",
-    "backAccessoryOverHead",
-    "backBody",
-    "backCap",
-    "backCapAccessory",
-    "backCapOverHair",
-    "backCape",
-    "backGlove",
-    "backGloveWrist",
-    "backHair",
-    "backHairBelowCap",
-    "backHairBelowCapNarrow",
-    "backHairBelowCapWide",
-    "backHairBelowHead",
-    "backHairOverCape",
-    "backHead",
-    "backMailChest",
-    "backMailChestAccessory",
-    "backMailChestBelowPants",
-    "backMailChestOverPants",
-    "backMobEquipFront",
-    "backMobEquipMid",
-    "backMobEquipUnderSaddle",
-    "backPants",
-    "backPantsBelowShoes",
-    "backPantsOverMailChest",
-    "backPantsOverShoesBelowMailChest",
-    "backSaddle",
-    "backShield",
-    "backShieldBelowBody",
-    "backShoes",
-    "backShoesBelowPants",
-    "backTamingMobFront",
-    "backTamingMobMid",
-    "backWeapon",
-    "backWeaponEffectOver",
-    "backWeaponEffectUnder",
-    "backWeaponOverGlove",
-    "backWeaponOverGloveEffectOver",
-    "backWeaponOverGloveEffectUnder",
-    "backWeaponOverHead",
-    "backWeaponOverHeadEffectOver",
-    "backWeaponOverHeadEffectUnder",
-    "backWeaponOverShield",
-    "backWeaponOverShieldEffectOver",
-    "backWeaponOverShieldEffectUnder",
-    "backWing",
-    "body",
-    "cap",
-    "capAccessory",
-    "capAccessoryBelowAccFace",
-    "capAccessoryBelowBody",
-    "capBelowAccessory",
-    "capOverHair",
-    "capOverHand",
-    "cape",
-    "capeBelowBody",
-    "capeBelowWeapon",
-    "capeOverArm",
-    "capeOverFace",
-    "capeOverHead",
-    "characterEnd",
-    "characterStart",
-    "emotionOverBody",
-    "face",
-    "glove",
-    "gloveBelowBody",
-    "gloveBelowHead",
-    "gloveBelowMailArm",
-    "gloveBelowWeapon",
-    "gloveOverBody",
-    "gloveOverHair",
-    "gloveWrist",
-    "gloveWristBelowBody",
-    "gloveWristBelowHead",
-    "gloveWristBelowMailArm",
-    "gloveWristBelowWeapon",
-    "gloveWristOverBody",
-    "gloveWristOverHair",
-    "hair",
-    "hairBelowBody",
-    "hairOverHead",
-    "hairShade",
-    "hand",
-    "handBelowWeapon",
-    "handOverHair",
-    "head",
-    "mailArm",
-    "mailArmBelowHead",
-    "mailArmBelowHeadOverMailChest",
-    "mailArmOverHair",
-    "mailArmOverHairBelowWeapon",
-    "mailChest",
-    "mailChestBelowPants",
-    "mailChestOverHighest",
-    "mailChestOverPants",
-    "mailChestTop",
-    "mobEquipFront",
-    "mobEquipMid",
-    "mobEquipRear",
-    "mobEquipUnderSaddle",
-    "pants",
-    "pantsBelowShoes",
-    "pantsOverMailChest",
-    "pantsOverShoesBelowMailChest",
-    "pantsOverShoesTop",
-    "saddleFront",
-    "saddleRear",
-    "shield",
-    "shieldBelowBody",
-    "shieldOverHair",
-    "shoes",
-    "shoesOverPants",
-    "shoesTop",
-    "tamingMobFront",
-    "tamingMobMid",
-    "tamingMobRear",
-    "weapon",
-    "weaponBelowArm",
-    "weaponBelowArmEffectOver",
-    "weaponBelowArmEffectUnder",
-    "weaponBelowBody",
-    "weaponBelowBodyEffectOver",
-    "weaponBelowBodyEffectUnder",
-    "weaponEffectOver",
-    "weaponEffectUnder",
-    "weaponOverArm",
-    "weaponOverArmBelowHead",
-    "weaponOverArmBelowHeadEffectOver",
-    "weaponOverArmBelowHeadEffectUnder",
-    "weaponOverArmEffectOver",
-    "weaponOverArmEffectUnder",
-    "weaponOverBody",
-    "weaponOverBodyEffectOver",
-    "weaponOverBodyEffectUnder",
-    "weaponOverGlove",
-    "weaponOverGloveEffectOver",
-    "weaponOverGloveEffectUnder",
-    "weaponOverHand",
-    "weaponOverHandEffectOver",
-    "weaponOverHandEffectUnder",
-    "weaponWristOverGlove",
-    "weaponWristOverGloveEffectOver",
-    "weaponWristOverGloveEffectUnder",
-];
 
 
 /// 파트 이름 → z-tag 추론.
@@ -265,11 +80,18 @@ fn part_anchor(_part_name: &str) -> &'static str {
 }
 
 pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAvatar> {
+    load_from_character_wz_with_skin(char_wz_path, 2000)
+}
+
+pub fn load_from_character_wz_with_skin(char_wz_path: &std::path::Path, body_skin: i32) -> Option<LoadedAvatar> {
     let canvas_path = char_wz_path.parent()?.join("_Canvas").join("_Canvas_000.wz");
     let arch = WzArchive::open(&canvas_path).ok()?;
     let tree = arch.read_tree().ok()?;
 
-    let img_entry = tree.root.entries.iter().find(|e| e.node_type == 4)?;
+    let body_img_name = format!("{:08}.img", body_skin);
+    let img_entry = tree.root.entries.iter().find(|e| {
+        e.node_type == 4 && e.name.as_deref() == Some(body_img_name.as_str())
+    }).or_else(|| tree.root.entries.iter().find(|e| e.node_type == 4))?;
     let off = img_entry.offset?;
     let node = arch.parse_image_at(off).ok()?;
 
@@ -436,7 +258,7 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
                 }) {
                     if let Some(off) = entry.offset {
                         if let Ok(item_node) = cap_arch.parse_image_at(off) {
-                            if let Some(png) = extract_first_canvas(&item_node) {
+                            if let Some(png) = item_node.first_canvas() {
                                 let file_src = wz_pool::FileSource::open(&cap_canvas_path).ok();
                                 if let Some(fs) = file_src {
                                     let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(fs);
@@ -470,7 +292,7 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
                 if let Some(entry) = tree.root.entries.first() {
                     if let Some(off) = entry.offset {
                         if let Ok(node) = arch.parse_image_at(off) {
-                            if let Some(png) = extract_first_canvas(&node) {
+                            if let Some(png) = node.first_canvas() {
                                 if let Ok(fs) = wz_pool::FileSource::open(&canvas_path) {
                                     let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(fs);
                                     if let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&png, &src) {
@@ -504,11 +326,11 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
                             let stand1 = node.children.iter().find(|c| c.name.as_ref() == "stand1");
                             if let Some(s1) = stand1 {
                                 if let Some(frame) = s1.children.first() {
-                                    weapon_png = extract_first_canvas(frame);
+                                    weapon_png = frame.first_canvas();
                                 }
                             }
                             if weapon_png.is_none() {
-                                weapon_png = extract_first_canvas(&node);
+                                weapon_png = node.first_canvas();
                             }
                             if let Some(png) = weapon_png {
                                 if let Ok(fs) = wz_pool::FileSource::open(&weapon_canvas_path) {
@@ -547,7 +369,7 @@ pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAv
                 if let Some(entry) = tree.root.entries.first() {
                     if let Some(off) = entry.offset {
                         if let Ok(node) = arch.parse_image_at(off) {
-                            if let Some(png) = extract_first_canvas(&node) {
+                            if let Some(png) = node.first_canvas() {
                                 if let Ok(fs) = wz_pool::FileSource::open(&canvas_path) {
                                     let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(fs);
                                     if let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&png, &src) {
@@ -629,30 +451,6 @@ pub fn item_id_to_slot(id: i32) -> Option<&'static str> {
 
 /// 장비 아이템 이미지에서 첫 번째 Canvas 를 추출한다.
 /// WZ 구조: item.img → action (default/backDefault) → [frame] → Canvas
-pub fn extract_first_canvas(node: &wz_core::image::Node) -> Option<wz_core::image::PngRef> {
-    use wz_core::image::ImageValue;
-    // 직접 Canvas
-    if let Some(ImageValue::Png(p)) = &node.value {
-        return Some(p.clone());
-    }
-    // Property → 첫 번째 자식 재귀
-    if let Some(ImageValue::Property(p)) = &node.value {
-        for child in &p.children {
-            if let Some(png) = extract_first_canvas(child) {
-                return Some(png);
-            }
-        }
-    }
-    // children 직접 탐색
-    for child in &node.children {
-        if let Some(png) = extract_first_canvas(child) {
-            return Some(png);
-        }
-    }
-    None
-}
-
-
 /// 장비 아이템을 로드하여 (slot_name, width, height, rgba) 를 반환한다.
 /// wz_path: Character/{Slot}/_Canvas/_Canvas_000.wz 경로
 /// item_id: 장비 아이템 ID (8자리)
@@ -669,7 +467,7 @@ pub fn load_equipment_item(
     })?;
     let off = entry.offset?;
     let node = arch.parse_image_at(off).ok()?;
-    let png = extract_first_canvas(&node)?;
+    let png = node.first_canvas()?;
     let file_src = wz_pool::FileSource::open(wz_path).ok()?;
     let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
     let (w, h, rgba) = decode_png_ref_to_rgba(&png, &src).ok()?;

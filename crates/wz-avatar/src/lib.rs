@@ -7,13 +7,16 @@ use std::sync::Arc;
 
 pub mod compose;
 pub mod frame;
+pub mod frame_layers;
 pub mod prism;
 pub mod loader;
 pub mod scene;
+pub mod zmap;
 pub use compose::{bounding_box, compose, ComposeError, ComposedFrame, LayerSource};
 pub use frame::FrameTiming;
 pub use prism::{apply_prism_rgba8, PrismData};
-pub use loader::{load_from_character_wz, load_avatar_with_equipment, load_equipment_item, AvatarPart, LoadedAvatar};
+pub use loader::{load_from_character_wz, load_from_character_wz_with_skin, load_avatar_with_equipment, load_equipment_item, AvatarPart, LoadedAvatar};
+pub use frame_layers::{FrameLayer, ResolvedCanvas, collect_frame_layers, avatar_z_priority, decode_canvas_pixels, resolve_outlink, split_outlink};
 pub use scene::{AvatarBatch, AvatarScene, AvatarVertex};
 
 /// 29 predefined avatar equipment and component slots.

@@ -263,6 +263,41 @@ impl Node {
     pub fn count(&self) -> usize {
         1 + self.children.iter().map(|c| c.count()).sum::<usize>()
     }
+
+    /// 이 노드의 **객체 자식** 슬라이스를 반환한다.
+    ///
+    /// `value` 가 `Property` 인 경우 그 프로퍼티의 자식을, 아니면
+    /// 직접 자식을 돌려준다. 오라클/아바타 프레임 수집 등에서 사용한다.
+    pub fn object_children(&self) -> &[Node] {
+        match &self.value {
+            Some(ImageValue::Property(p)) => &p.children,
+            _ => &self.children,
+        }
+    }
+
+    /// 이 서브트리에서 **첫 번째** `ImageValue::Png` 캔버스를 깊이 우선으로 찾는다.
+    ///
+    /// 순서: 노드 자신의 값 → 직접 자식 → (값이 `Property` 인 경우) 프로퍼티 자식.
+    /// GUI/아바타/오라클이 공유하는 **단일 캔버스 탐색 규칙**이다.
+    /// (로컬 복사본을 만들지 말고 이 메서드를 사용한다.)
+    pub fn first_canvas(&self) -> Option<PngRef> {
+        if let Some(ImageValue::Png(p)) = &self.value {
+            return Some(p.clone());
+        }
+        for ch in &self.children {
+            if let Some(p) = ch.first_canvas() {
+                return Some(p);
+            }
+        }
+        if let Some(ImageValue::Property(p)) = &self.value {
+            for ch in &p.children {
+                if let Some(pp) = ch.first_canvas() {
+                    return Some(pp);
+                }
+            }
+        }
+        None
+    }
 }
 
 /// 이미지 파서.

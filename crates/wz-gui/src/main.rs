@@ -12,6 +12,7 @@ mod panels;
 mod render_bridge;
 mod state;
 
+use panels::catalog;
 use panels::inspector;
 use panels::tree_panel;
 use panels::viewport;
@@ -152,6 +153,8 @@ impl eframe::App for PocApp {
 
         egui::CentralPanel::default().show(ui, |ui| {
             inspector::show(ui, &mut self.state);
+            ui.separator();
+            catalog::show(ui, &mut self.state);
             ui.separator();
             ui.heading("맵 뷰포트");
             viewport::show(ui, &mut self.state);

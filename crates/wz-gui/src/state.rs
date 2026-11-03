@@ -12,6 +12,7 @@ use wz_core::WzArchive;
 use wz_core::dirtree::DirTree;
 use wz_db::MapData;
 use wz_render::camera::Camera2D;
+use wz_render::GpuKey;
 
 /// 맵 이미지 로딩 결과 (워커 스레드 → UI 스레드).
 pub struct MapImages {
@@ -68,9 +69,15 @@ pub struct AppState {
     pub avatar_slot_selection: [usize; 29],
     pub avatar_loaded_parts: Vec<(String, u32, u32)>,
     pub avatar_equipment_input: String,
+    pub avatar_body_skin: i32,
     pub camera: Camera2D,
     pub viewport_texture: Option<TextureHandle>,
     pub viewport_dirty: bool,
+    /// 맵 데이터가 바뀌었을 때만 true. 카메라만 바뀔 때는 false.
+    pub viewport_map_dirty: bool,
+    /// 캐시된 레이어 쿼드 (key, [x,y,w,h], z). 맵 데이터가 바뀔 때만 재구축.
+    pub viewport_cached_layers: Vec<(GpuKey, [f32; 4], f32)>,
+    pub viewport_cached_has_back: bool,
     pub viewport_size: (u32, u32),
     pub viewport_dragging: bool,
     pub viewport_last_pos: Option<egui::Pos2>,
@@ -110,9 +117,13 @@ impl Default for AppState {
             avatar_slot_selection: [usize::MAX; 29],
             avatar_loaded_parts: Vec::new(),
             avatar_equipment_input: String::new(),
+            avatar_body_skin: 2000,
             camera: Camera2D::new(512.0, 512.0),
             viewport_texture: None,
             viewport_dirty: true,
+            viewport_map_dirty: true,
+            viewport_cached_layers: Vec::new(),
+            viewport_cached_has_back: false,
             viewport_size: (512, 512),
             viewport_dragging: false,
             viewport_last_pos: None,

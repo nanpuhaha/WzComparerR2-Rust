@@ -54,31 +54,35 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
         }
 
-        let mut batch = SpriteBatch::new();
-        if state.map_back_image.is_some() || !state.map_tile_images.is_empty() || !state.map_obj_images.is_empty() {
-            // z-order 정렬: 모든 레이어를 (z, key, pos, wh) 로 수집한 뒤 z 오름차순으로 push.
-            // wz-render 는 깊이 테스트 없이 painter's algorithm 이므로 push 순서가 z 순서다.
-            struct Layer { z: i32, key: GpuKey, x: f32, y: f32, w: f32, h: f32 }
-            let mut layers: Vec<Layer> = Vec::new();
-            // back (non-front): z = -1000
-            if state.map_back_image.is_some() {
-                layers.push(Layer { z: -1000, key: GpuKey(2), x: 0.0, y: 0.0, w: 0.0, h: 0.0 });
+        // 맵 데이터가 바뀌었을 때만 레이어 쿼드를 재구축한다 (캐시).
+        if state.viewport_map_dirty {
+            state.viewport_map_dirty = false;
+            state.viewport_cached_layers.clear();
+            state.viewport_cached_has_back = false;
+            if state.map_back_image.is_some() || !state.map_tile_images.is_empty() || !state.map_obj_images.is_empty() {
+                state.viewport_cached_has_back = state.map_back_image.is_some();
+                // back (non-front): z = -1000
+                if state.map_back_image.is_some() {
+                    state.viewport_cached_layers.push((GpuKey(2), [0.0, 0.0, 0.0, 0.0], -1000.0));
+                }
+                // tiles: z = -500
+                for (i, (tx, ty, tw, th, _)) in state.map_tile_images.iter().enumerate() {
+                    state.viewport_cached_layers.push((GpuKey(100 + i as u32), [*tx as f32, *ty as f32, *tw as f32, *th as f32], -500.0));
+                }
+                // objects: z = ObjItem.z
+                for (i, (ox, oy, ow, oh, _)) in state.map_obj_images.iter().enumerate() {
+                    let z = state.current_map.as_ref()
+                        .and_then(|m| m.objects.get(i))
+                        .map(|o| o.z)
+                        .unwrap_or(0) as f32;
+                    state.viewport_cached_layers.push((GpuKey(200 + i as u32), [*ox as f32, *oy as f32, *ow as f32, *oh as f32], z));
+                }
             }
-            // tiles: z = -500 (TileItem 에 z 없음, 기본)
-            for (i, (tx, ty, tw, th, _)) in state.map_tile_images.iter().enumerate() {
-                layers.push(Layer { z: -500, key: GpuKey(100 + i as u32), x: *tx as f32, y: *ty as f32, w: *tw as f32, h: *th as f32 });
-            }
-            // objects: z = ObjItem.z (current_map 에서 조회)
-            for (i, (ox, oy, ow, oh, _)) in state.map_obj_images.iter().enumerate() {
-                let z = state.current_map.as_ref()
-                    .and_then(|m| m.objects.get(i))
-                    .map(|o| o.z)
-                    .unwrap_or(0);
-                layers.push(Layer { z, key: GpuKey(200 + i as u32), x: *ox as f32, y: *oy as f32, w: *ow as f32, h: *oh as f32 });
-            }
-            // back (front): z = +1000 — front 플래그는 map_back_image 에 없으므로 생략.
+        }
 
-            // 텍스처 업로드
+        let mut batch = SpriteBatch::new();
+        if !state.viewport_cached_layers.is_empty() || state.viewport_cached_has_back {
+            // 텍스처 업로드 (새 RenderContext 이므로 매 렌더 필요)
             if let Some((bw, bh, bpx)) = &state.map_back_image {
                 let _ = rc.create_texture(GpuKey(2), *bw, *bh, bpx);
             }
@@ -88,23 +92,22 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             for (i, (_, _, ow, oh, opx)) in state.map_obj_images.iter().enumerate() {
                 let _ = rc.create_texture(GpuKey(200 + i as u32), *ow, *oh, opx);
             }
-
-            // 모든 레이어를 z 순서로 정렬해 push (painter's algorithm).
-            // back 은 z=-1000 으로 layers 에 이미 들어 있다.
-            let mut sorted: Vec<&Layer> = layers.iter().collect();
-            sorted.sort_by_key(|l| l.z);
-            for l in sorted {
-                if l.key.0 == 2 {
+            // 캐시된 레이어를 z 순서로 정렬해 push
+            let mut sorted: Vec<&(GpuKey, [f32; 4], f32)> = state.viewport_cached_layers.iter().collect();
+            sorted.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal));
+            for (key, rect, z) in sorted {
+                if key.0 == 2 {
                     if let Some((bw, bh, _)) = &state.map_back_image {
-                        batch.push_quad(l.key, [0.0, 0.0, *bw as f32, *bh as f32], l.z as f32,
+                        batch.push_quad(*key, [0.0, 0.0, *bw as f32, *bh as f32], *z,
                             [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
                     }
                 } else {
-                    batch.push_quad(l.key, [l.x, l.y, l.w, l.h], l.z as f32,
+                    batch.push_quad(*key, *rect, *z,
                         [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]);
                 }
             }
-        } else {
+        } else if state.map_back_image.is_none() && state.map_tile_images.is_empty() && state.map_obj_images.is_empty() {
+            // 그리드 폴백
             for gx in -2..=2i32 {
                 for gy in -2..=2i32 {
                     let color = [
