@@ -686,3 +686,80 @@ pub fn load_string_linker(state: &mut AppState) {
         }
     }
 }
+
+// ── 아바타 장비 로딩 ─────────────────────────────────────────────────
+
+pub fn load_avatar_with_equipment_input(state: &mut AppState) {
+    let input = state.avatar_equipment_input.clone();
+    if input.trim().is_empty() {
+        state.avatar_status = "장비 ID를 입력하세요 (예: Cap:1000000,Coat:1040000)".into();
+        return;
+    }
+    let data_root = match state.data_root.clone() {
+        Some(r) => r,
+        None => {
+            state.avatar_status = "data_root 가 설정되지 않았습니다".into();
+            return;
+        }
+    };
+    // 파싱: "Slot:ID,Slot:ID" 형식
+    let mut equipment: Vec<(String, i32)> = Vec::new();
+    for part in input.split(',') {
+        let part = part.trim();
+        if part.is_empty() { continue; }
+        let mut split = part.split(':');
+        let slot = split.next().unwrap_or("").trim().to_string();
+        let id_str = split.next().unwrap_or("").trim();
+        if slot.is_empty() || id_str.is_empty() { continue; }
+        if let Ok(id) = id_str.parse::<i32>() {
+            equipment.push((slot, id));
+        }
+    }
+    if equipment.is_empty() {
+        state.avatar_status = "유효한 장비 ID가 없습니다".into();
+        return;
+    }
+    match wz_avatar::load_avatar_with_equipment(&data_root, 2000, &equipment) {
+        Some(av) => {
+            state.avatar_status = format!("장비 로드: {} 파트", av.parts.len());
+            state.avatar_loaded_parts = av.parts.iter().map(|p| (p.slot.clone(), p.width, p.height)).collect();
+            if let Some(first) = av.parts.first() {
+                state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
+            }
+            // 아틀라스 패킹 + 렌더
+            use wz_render::{atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D, device::RenderContext};
+            let mut packer = AtlasShelfPacker::new(512, 512);
+            let mut slots = Vec::new();
+            for part in &av.parts {
+                if let Some(slot) = packer.allocate_and_write(part.width, part.height, &part.rgba) {
+                    slots.push((part, slot));
+                }
+            }
+            let mut rc = match RenderContext::new_headless() {
+                Ok(r) => r,
+                Err(e) => { state.avatar_status = format!("RC 실패: {e}"); return; }
+            };
+            for page in packer.pages() {
+                let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
+            }
+            let mut batch = SpriteBatch::new();
+            for (part, slot) in &slots {
+                batch.push_atlas_quad(slot.key, [0.0, 0.0, part.width as f32, part.height as f32], 0.0, &slot.rect, (512, 512), [1.0, 1.0, 1.0, 1.0]);
+            }
+            batch.finish();
+            let (rw, rh) = (256u32, 256u32);
+            let cam = Camera2D::new(rw as f32, rh as f32);
+            let uniforms = cam.build_uniforms(0.0, 0.0);
+            match rc.render_to_rgba(rw, rh, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
+                Ok(out) => {
+                    state.avatar_status = format!("렌더 완료: {} 파트, {}x{}", av.parts.len(), rw, rh);
+                    state.avatar_rendered = Some((rw, rh, out));
+                }
+                Err(e) => { state.avatar_status = format!("렌더 실패: {e}"); }
+            }
+        }
+        None => {
+            state.avatar_status = "장비 로드 실패".into();
+        }
+    }
+}

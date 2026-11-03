@@ -228,6 +228,14 @@ fn show_avatar(ui: &mut egui::Ui, state: &mut AppState) {
     if ui.button("아바타 로드 (loader, 14 파트)").clicked() {
         async_io::load_avatar_from_loader(state);
     }
+    ui.horizontal(|ui| {
+        ui.label("장비:");
+        ui.text_edit_singleline(&mut state.avatar_equipment_input);
+        if ui.button("장비 로드").clicked() {
+            async_io::load_avatar_with_equipment_input(state);
+        }
+    });
+    ui.label("형식: Cap:1000000,Coat:1040000,Pants:1060000");
     // 로드된 파트 목록
     if !state.avatar_loaded_parts.is_empty() {
         ui.separator();

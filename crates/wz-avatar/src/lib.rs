@@ -13,7 +13,7 @@ pub mod scene;
 pub use compose::{bounding_box, compose, ComposeError, ComposedFrame, LayerSource};
 pub use frame::FrameTiming;
 pub use prism::{apply_prism_rgba8, PrismData};
-pub use loader::{load_from_character_wz, AvatarPart, LoadedAvatar};
+pub use loader::{load_from_character_wz, load_avatar_with_equipment, load_equipment_item, AvatarPart, LoadedAvatar};
 pub use scene::{AvatarBatch, AvatarScene, AvatarVertex};
 
 /// 29 predefined avatar equipment and component slots.
