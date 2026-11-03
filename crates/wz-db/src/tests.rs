@@ -425,3 +425,32 @@ fn string_linker_real_wz() {
     let tooltip = linker.format_tooltip(1000000);
     assert!(tooltip.is_some(), "tooltip for 1000000 should exist");
 }
+
+
+#[test]
+fn string_linker_skill_info_real_wz() {
+    use crate::linker::StringLinker;
+    use crate::Arena;
+    use wz_core::WzArchive;
+
+    let path = "<WZ_DATA_ROOT>/String/String_000.wz";
+    if !std::path::Path::new(path).exists() {
+        return;
+    }
+    let arch = WzArchive::open(std::path::Path::new(path)).unwrap();
+    let (arena, root) = Arena::from_archive(&arch);
+    let mut linker = StringLinker::new();
+    assert!(linker.load_string_wz(&arena, root));
+    // Should have skill strings
+    assert!(!linker.string_skill.is_empty() || !linker.string_skill_str.is_empty(), "skill strings should not be empty");
+    // Try to get a skill tooltip
+    // Skill IDs are like 0000012 (12), 0000073 (73), etc.
+    for (id, sr) in &linker.string_skill {
+        if !sr.name.is_empty() {
+            // Verify format_tooltip works
+            let tooltip = linker.format_tooltip(*id);
+            assert!(tooltip.is_some(), "tooltip for skill {} should exist", id);
+            break;
+        }
+    }
+}
