@@ -9,6 +9,7 @@ members = [
     "crates/wz-db",
     "crates/wz-diff",
     "crates/wz-avatar",
+    "crates/wz-gui",
     "crates/wz-cli",
     "tools/corpus-builder",
     "tools/oracle-diff",
