@@ -67,7 +67,7 @@ pub struct AppState {
     pub avatar_rendered: Option<(u32, u32, Vec<u8>)>,
     pub avatar_selected_slots: std::collections::HashSet<usize>,
     pub avatar_slot_selection: [usize; 29],
-    pub avatar_loaded_parts: Vec<(String, u32, u32)>,
+    pub avatar_loaded_parts: Vec<(String, u32, u32, Vec<u8>)>,
     pub avatar_equipment_input: String,
     pub avatar_body_skin: i32,
     pub camera: Camera2D,

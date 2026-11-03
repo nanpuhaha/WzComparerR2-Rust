@@ -11,7 +11,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                     let mut sel = state.avatar_slot_selection[i];
                     let preview = if sel == usize::MAX {
                         "없음".to_string()
-                    } else if let Some((name, _, _)) = state.avatar_loaded_parts.get(sel) {
+                    } else if let Some((name, _, _, _)) = state.avatar_loaded_parts.get(sel) {
                         format!("{} ({})", name, sel)
                     } else {
                         format!("Part {}", sel)
@@ -23,7 +23,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                                 state.avatar_slot_selection[i] = sel;
                             }
                             for j in 0..state.avatar_loaded_parts.len() {
-                                let label = if let Some((name, _, _)) = state.avatar_loaded_parts.get(j) {
+                                let label = if let Some((name, _, _, _)) = state.avatar_loaded_parts.get(j) {
                                     format!("{} ({})", name, j)
                                 } else {
                                     format!("Part {}", j)
@@ -57,7 +57,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     if !state.avatar_loaded_parts.is_empty() {
         ui.separator();
         ui.label(format!("로드된 파트 ({}):", state.avatar_loaded_parts.len()));
-        for (i, (slot, w, h)) in state.avatar_loaded_parts.iter().enumerate() {
+        for (i, (slot, w, h, _)) in state.avatar_loaded_parts.iter().enumerate() {
             ui.label(format!("  {}: {} ({}x{})", i, slot, w, h));
         }
     }
@@ -72,7 +72,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                 state.avatar_selected_slots.insert(sel);
             }
         }
-        async_io::load_avatar_from_loader(state);
+        async_io::render_loaded_avatar(state);
     }
     ui.label(&state.avatar_status);
     if let Some((w, h, rgba)) = &state.avatar_image {

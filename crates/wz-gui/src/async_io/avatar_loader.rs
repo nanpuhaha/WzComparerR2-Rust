@@ -15,7 +15,7 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
     match wz_avatar::load_from_character_wz_with_skin(std::path::Path::new(char_wz), state.avatar_body_skin) {
         Some(av) => {
             state.avatar_status = format!("로드: {} 파트", av.parts.len());
-            state.avatar_loaded_parts = av.parts.iter().map(|p| (p.slot.clone(), p.width, p.height)).collect();
+            state.avatar_loaded_parts = av.parts.iter().map(|p| (p.slot.clone(), p.width, p.height, p.rgba.clone())).collect();
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
             }
@@ -100,7 +100,7 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
     match wz_avatar::load_avatar_with_equipment(&data_root, 2000, &equipment) {
         Some(av) => {
             state.avatar_status = format!("장비 로드: {} 파트", av.parts.len());
-            state.avatar_loaded_parts = av.parts.iter().map(|p| (p.slot.clone(), p.width, p.height)).collect();
+            state.avatar_loaded_parts = av.parts.iter().map(|p| (p.slot.clone(), p.width, p.height, p.rgba.clone())).collect();
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
             }
@@ -142,3 +142,47 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
     }
 }
 
+
+pub fn render_loaded_avatar(state: &mut AppState) {
+    if state.avatar_loaded_parts.is_empty() {
+        state.avatar_status = "로드된 파트가 없습니다".into();
+        return;
+    }
+    use wz_render::{atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D, device::RenderContext};
+    let mut packer = AtlasShelfPacker::new(512, 512);
+    let selected: Vec<usize> = if state.avatar_selected_slots.is_empty() {
+        (0..state.avatar_loaded_parts.len()).collect()
+    } else {
+        state.avatar_selected_slots.iter().copied().collect()
+    };
+    let mut slots = Vec::new();
+    for &i in &selected {
+        if let Some((_slot, w, h, rgba)) = state.avatar_loaded_parts.get(i) {
+            if let Some(s) = packer.allocate_and_write(*w, *h, rgba) {
+                slots.push((*w, *h, s));
+            }
+        }
+    }
+    let mut rc = match RenderContext::new_headless() {
+        Ok(r) => r,
+        Err(e) => { state.avatar_status = format!("RC 실패: {e}"); return; }
+    };
+    for page in packer.pages() {
+        let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
+    }
+    let mut batch = SpriteBatch::new();
+    for (w, h, slot) in &slots {
+        batch.push_atlas_quad(slot.key, [0.0, 0.0, *w as f32, *h as f32], 0.0, &slot.rect, (512, 512), [1.0, 1.0, 1.0, 1.0]);
+    }
+    batch.finish();
+    let (rw, rh) = (256u32, 256u32);
+    let cam = Camera2D::new(rw as f32, rh as f32);
+    let uniforms = cam.build_uniforms(0.0, 0.0);
+    match rc.render_to_rgba(rw, rh, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
+        Ok(out) => {
+            state.avatar_status = format!("렌더 완료: {} 파트, {}x{}", slots.len(), rw, rh);
+            state.avatar_rendered = Some((rw, rh, out));
+        }
+        Err(e) => { state.avatar_status = format!("렌더 실패: {e}"); }
+    }
+}
