@@ -10,6 +10,3 @@ Data
 # 로컬 환경 설정
 .env
 .env.*
-
-# wz-gui 는 워크스페이스 멤버이므로 루트 Cargo.lock 을 사용한다.
-crates/wz-gui/Cargo.lock

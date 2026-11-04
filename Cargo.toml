@@ -9,11 +9,16 @@ members = [
     "crates/wz-db",
     "crates/wz-diff",
     "crates/wz-avatar",
-    "crates/wz-gui",
     "crates/wz-cli",
     "tools/corpus-builder",
     "tools/oracle-diff",
 ]
+
+# wz-gui 는 eframe/wgpu/rfd 의 무거운 의존성과 자체 Cargo.lock 을 가진
+# 독립 패키지다. 워크스페이스 게이트(cargo deny/test/clippy)에 GUI 의존성이
+# 섞이지 않도록 멤버에서 제외한다. CI 는 `--manifest-path crates/wz-gui/Cargo.toml`
+# 로 별도 빌드한다.
+exclude = ["crates/wz-gui"]
 
 [workspace.package]
 version = "0.1.0"
