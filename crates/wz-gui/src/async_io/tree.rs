@@ -4,7 +4,7 @@
 // 워커 스레드가 결과를 채널로 보내고, UI 스레드는 `poll_load_result` 로
 // 매 프레임 폴링한다.
 
-use std::sync::mpsc;
+use crossbeam_channel;
 
 
 use crate::state::{AppState, LoadMsg, TreeRow};
@@ -43,8 +43,8 @@ pub fn poll_load_result(state: &mut AppState, ctx: &egui::Context) {
             state.loading = false;
             state.load_rx = None;
         }
-        Err(mpsc::TryRecvError::Empty) => {}
-        Err(mpsc::TryRecvError::Disconnected) => {
+        Err(crossbeam_channel::TryRecvError::Empty) => {}
+        Err(crossbeam_channel::TryRecvError::Disconnected) => {
             state.loading = false;
             state.load_rx = None;
         }
@@ -62,8 +62,8 @@ pub fn poll_map_images(state: &mut AppState, ctx: &egui::Context) {
             state.viewport_dirty = true;
             ctx.request_repaint();
         }
-        Err(mpsc::TryRecvError::Empty) => {}
-        Err(mpsc::TryRecvError::Disconnected) => {
+        Err(crossbeam_channel::TryRecvError::Empty) => {}
+        Err(crossbeam_channel::TryRecvError::Disconnected) => {
             state.map_images_rx = None;
         }
     }

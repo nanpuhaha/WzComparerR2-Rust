@@ -26,6 +26,7 @@ glam = "0.29"
 rfd = "0.15"
 wgpu = "30"
 bytemuck = "1"
+crossbeam-channel = "0.5"
 
 [lints.rust]
 unsafe_code = "deny"

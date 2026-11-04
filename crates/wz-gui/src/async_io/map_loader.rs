@@ -46,7 +46,7 @@ pub fn load_map_by_path(state: &mut AppState) {
     if let Some(root) = data_root.clone() {
         let tiles_clone = map.tiles.clone();
         let objs_clone = map.objects.clone();
-        let (tx, rx) = std::sync::mpsc::channel();
+        let (tx, rx) = crossbeam_channel::unbounded();
         state.map_images_rx = Some(rx);
         std::thread::spawn(move || {
             let mut tiles = Vec::new();

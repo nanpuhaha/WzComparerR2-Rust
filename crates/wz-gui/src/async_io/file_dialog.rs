@@ -4,7 +4,7 @@
 // 워커 스레드가 결과를 채널로 보내고, UI 스레드는 `poll_load_result` 로
 // 매 프레임 폴링한다.
 
-use std::sync::{Arc, mpsc};
+use std::sync::Arc;
 use std::thread;
 
 use rfd::FileDialog;
@@ -41,7 +41,7 @@ pub fn open_file_dialog(state: &mut AppState) {
     state.avatar_image = None;
 
     let shared = state.shared_archive.clone();
-    let (tx, rx) = mpsc::channel();
+    let (tx, rx) = crossbeam_channel::unbounded();
     state.load_rx = Some(rx);
 
     thread::spawn(move || {
@@ -78,7 +78,7 @@ pub fn open_file_dialog_with_path(state: &mut AppState, path: std::path::PathBuf
     state.avatar_image = None;
 
     let shared = state.shared_archive.clone();
-    let (tx, rx) = std::sync::mpsc::channel();
+    let (tx, rx) = crossbeam_channel::unbounded();
     state.load_rx = Some(rx);
 
     std::thread::spawn(move || {

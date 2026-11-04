@@ -5,7 +5,8 @@
 // (async_io.rs 의 워커 스레드가 결과를 채널로 보낸다).
 
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{Arc, Mutex};
+use crossbeam_channel;
 
 use egui::TextureHandle;
 use wz_core::WzArchive;
@@ -61,7 +62,7 @@ pub struct AppState {
     pub map_tile_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub map_obj_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub map_status: String,
-    pub map_images_rx: Option<mpsc::Receiver<MapImages>>,
+    pub map_images_rx: Option<crossbeam_channel::Receiver<MapImages>>,
     pub avatar_image: Option<(u32, u32, Vec<u8>)>,
     pub avatar_status: String,
     pub avatar_rendered: Option<(u32, u32, Vec<u8>)>,
@@ -82,7 +83,7 @@ pub struct AppState {
     pub viewport_dragging: bool,
     pub viewport_last_pos: Option<egui::Pos2>,
     pub loading: bool,
-    pub load_rx: Option<mpsc::Receiver<LoadMsg>>,
+    pub load_rx: Option<crossbeam_channel::Receiver<LoadMsg>>,
     pub status: String,
     pub search: String,
 }
