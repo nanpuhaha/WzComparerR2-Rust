@@ -1,5 +1,15 @@
 target/
 **/*.rs.bk
-Cargo.lock
 .DS_Store
 **/.DS_Store
+
+# 로컬 게임 데이터(절대 경로 심볼릭 링크)와 진단 로그는 커밋하지 않는다.
+Data
+*.log
+
+# 로컬 환경 설정
+.env
+.env.*
+
+# wz-gui 는 워크스페이스 멤버이므로 루트 Cargo.lock 을 사용한다.
+crates/wz-gui/Cargo.lock

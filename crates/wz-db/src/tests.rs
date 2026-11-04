@@ -407,11 +407,14 @@ fn string_linker_real_wz() {
     use crate::Arena;
     use wz_core::WzArchive;
 
-    let path = "<WZ_DATA_ROOT>/String/String_000.wz";
-    if !std::path::Path::new(path).exists() {
+    let path = std::env::var_os("WZ_DATA_ROOT")
+        .map(std::path::PathBuf::from)
+        .map(|root| root.join("String").join("String_000.wz"));
+    let Some(path) = path else { return };
+    if !path.exists() {
         return;
     }
-    let arch = WzArchive::open(std::path::Path::new(path)).unwrap();
+    let arch = WzArchive::open(&path).unwrap();
     let (arena, root) = Arena::from_archive(&arch);
     let mut linker = StringLinker::new();
     assert!(linker.load_string_wz(&arena, root));
@@ -433,11 +436,14 @@ fn string_linker_skill_info_real_wz() {
     use crate::Arena;
     use wz_core::WzArchive;
 
-    let path = "<WZ_DATA_ROOT>/String/String_000.wz";
-    if !std::path::Path::new(path).exists() {
+    let path = std::env::var_os("WZ_DATA_ROOT")
+        .map(std::path::PathBuf::from)
+        .map(|root| root.join("String").join("String_000.wz"));
+    let Some(path) = path else { return };
+    if !path.exists() {
         return;
     }
-    let arch = WzArchive::open(std::path::Path::new(path)).unwrap();
+    let arch = WzArchive::open(&path).unwrap();
     let (arena, root) = Arena::from_archive(&arch);
     let mut linker = StringLinker::new();
     assert!(linker.load_string_wz(&arena, root));

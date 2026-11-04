@@ -11,8 +11,13 @@ use crate::state::AppState;
 // ── 파일 열기 ─────────────────────────────────────────────────────────
 
 pub fn load_avatar_from_loader(state: &mut AppState) {
-    let char_wz = "<WZ_DATA_ROOT>/Character/Character.wz";
-    match wz_avatar::load_from_character_wz_with_skin(std::path::Path::new(char_wz), state.avatar_body_skin) {
+    let Some(data_root) = crate::async_io::canvas::find_data_root(None) else {
+        state.avatar_status =
+            "WZ_DATA_ROOT 를 설정하세요 (MapleStory Data 디렉터리)".into();
+        return;
+    };
+    let char_wz = data_root.join("Character").join("Character.wz");
+    match wz_avatar::load_from_character_wz_with_skin(&char_wz, state.avatar_body_skin) {
         Some(av) => {
             state.avatar_status = format!("로드: {} 파트", av.parts.len());
             state.avatar_loaded_parts = av.parts.iter().map(|p| (p.slot.clone(), p.width, p.height, p.rgba.clone())).collect();

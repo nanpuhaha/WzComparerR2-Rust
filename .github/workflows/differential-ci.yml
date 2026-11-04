@@ -57,6 +57,10 @@ concurrency:
   group: differential-ci-${{ github.ref }}
   cancel-in-progress: false
 
+# 기본 GITHUB_TOKEN 권한을 읽기 전용으로 제한한다 (최소 권한 원칙).
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1

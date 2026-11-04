@@ -29,8 +29,8 @@ edition = "2021"
 # 그대로 잡아내므로, 이 하한 교정과 린트 정리는 한 묶음이다.
 rust-version = "1.90"
 license = "MIT"
-repository = "https://github.com/seotbeo/WzComparerR2-seotbeo"
-authors = ["WzComparerR2 contributors"]
+repository = "https://github.com/nanpuhaha/WzComparerR2-Rust"
+authors = ["Seo, Jang-won <nanpuhaha@gmail.com>", "WzComparerR2 contributors"]
 
 [workspace.dependencies]
 wz-error = { path = "crates/wz-error", version = "0.1.0" }

@@ -6,7 +6,6 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
-use crossbeam_channel;
 
 use egui::TextureHandle;
 use wz_core::WzArchive;

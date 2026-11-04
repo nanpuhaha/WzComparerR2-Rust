@@ -13,8 +13,22 @@ use wz_core::image::ImageValue;
 
 // ── 파일 열기 ─────────────────────────────────────────────────────────
 
+/// `WZ_DATA_ROOT` 환경 변수가 가리키는 MapleStory `Data` 디렉터리.
+///
+/// 게임 데이터는 사용자마다 설치 경로가 다르므로 소스에 절대 경로를 넣지 않는다.
+/// 설정하지 않았거나 경로가 없으면 `None`.
+pub fn data_root_from_env() -> Option<std::path::PathBuf> {
+    std::env::var_os("WZ_DATA_ROOT")
+        .map(std::path::PathBuf::from)
+        .filter(|p| p.exists())
+}
+
 pub fn find_data_root(archive_path: Option<&std::path::Path>) -> Option<std::path::PathBuf> {
-    // archive_path 에서 "Data" 디렉터리를 찾는다.
+    // 1) 명시적 환경 변수
+    if let Some(root) = data_root_from_env() {
+        return Some(root);
+    }
+    // 2) archive_path 에서 "Data" 디렉터리를 찾는다.
     if let Some(p) = archive_path {
         let mut cur = p.to_path_buf();
         while let Some(parent) = cur.parent() {
@@ -23,14 +37,6 @@ pub fn find_data_root(archive_path: Option<&std::path::Path>) -> Option<std::pat
             }
             cur = parent.to_path_buf();
         }
-    }
-    // 폴백: 일반적인 설치 경로
-    let candidates = [
-        "<WZ_DATA_ROOT>",
-    ];
-    for c in candidates {
-        let p = std::path::PathBuf::from(c);
-        if p.join("Map").exists() { return Some(p); }
     }
     None
 }
@@ -94,8 +100,15 @@ pub fn load_canvas_image(
 
 pub fn load_avatar_body(state: &mut AppState) {
     // Character/_Canvas/_Canvas_000.wz 에서 첫 번째 이미지를 로드한다.
-    let canvas_path = "<WZ_DATA_ROOT>/Character/_Canvas/_Canvas_000.wz";
-    let cp = std::path::PathBuf::from(canvas_path);
+    let Some(data_root) = find_data_root(None) else {
+        state.avatar_status =
+            "WZ_DATA_ROOT 를 설정하세요 (MapleStory Data 디렉터리)".into();
+        return;
+    };
+    let cp = data_root
+        .join("Character")
+        .join("_Canvas")
+        .join("_Canvas_000.wz");
     let Ok(arch) = WzArchive::open(&cp) else {
         state.avatar_status = "Character _Canvas 열기 실패".into();
         return;

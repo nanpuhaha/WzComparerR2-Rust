@@ -618,13 +618,24 @@ pub fn load_avatar_with_equipment(
 mod tests {
     use super::*;
 
+    /// 실제 게임 데이터가 있는 환경에서만 도는 테스트용 루트.
+    ///
+    /// `WZ_DATA_ROOT`(예: `.../Nexon/Maple/Data`)를 설정한 경우에만 테스트가
+    /// 실제 파일을 읽고, 없으면 조용히 skip 한다. 소스에 사용자 경로를 넣지 않는다.
+    fn wz_data_root() -> Option<std::path::PathBuf> {
+        std::env::var_os("WZ_DATA_ROOT")
+            .map(std::path::PathBuf::from)
+            .filter(|p| p.exists())
+    }
+
     #[test]
     fn loader_returns_parts_on_real_character_wz() {
-        let char_wz = "<WZ_DATA_ROOT>/Character/Character.wz";
-        if !std::path::Path::new(char_wz).exists() {
+        let Some(root) = wz_data_root() else { return };
+        let char_wz = root.join("Character").join("Character.wz");
+        if !char_wz.exists() {
             return;
         }
-        let av = load_from_character_wz(std::path::Path::new(char_wz))
+        let av = load_from_character_wz(&char_wz)
             .expect("loader should return Some on real Character.wz");
         assert!(!av.parts.is_empty(), "at least one part loaded");
         for p in &av.parts {
@@ -657,8 +668,7 @@ mod tests {
 
     #[test]
     fn load_avatar_with_equipment_custom_ids() {
-        let data_root = std::path::Path::new("<WZ_DATA_ROOT>");
-        if !data_root.exists() { return; }
+        let Some(data_root) = wz_data_root() else { return };
         // Load with specific equipment IDs
         let equipment = vec![
             ("Cap".to_string(), 1000002),
@@ -668,7 +678,7 @@ mod tests {
             ("Glove".to_string(), 1080000),
             ("Cape".to_string(), 1102000),
         ];
-        let av = load_avatar_with_equipment(data_root, 2000, &equipment);
+        let av = load_avatar_with_equipment(&data_root, 2000, &equipment);
         if let Some(av) = av {
             // Should have body + head + 6 equipment = at least 8 parts
             assert!(av.parts.len() >= 8, "expected >= 8 parts, got {}", av.parts.len());
@@ -680,13 +690,12 @@ mod tests {
 
     #[test]
     fn load_avatar_with_equipment_works() {
-        let data_root = std::path::Path::new("<WZ_DATA_ROOT>");
-        if !data_root.exists() { return; }
+        let Some(data_root) = wz_data_root() else { return };
         let equipment = vec![
             ("Cap".to_string(), 1000000),
             ("Coat".to_string(), 1040000),
         ];
-        let av = load_avatar_with_equipment(data_root, 2000, &equipment);
+        let av = load_avatar_with_equipment(&data_root, 2000, &equipment);
         if let Some(av) = av {
             assert!(!av.parts.is_empty(), "at least one part loaded");
             // body + head + cap + coat
@@ -698,8 +707,7 @@ mod tests {
 
     #[test]
     fn load_equipment_item_works() {
-        let data_root = std::path::Path::new("<WZ_DATA_ROOT>");
-        if !data_root.exists() { return; }
+        let Some(data_root) = wz_data_root() else { return };
         // Cap item 1000000
         let cap_path = data_root.join("Cap").join("_Canvas").join("_Canvas_000.wz");
         if cap_path.exists() {
@@ -723,11 +731,12 @@ mod tests {
 
     #[test]
     fn loader_loads_expected_parts() {
-        let char_wz = "<WZ_DATA_ROOT>/Character/Character.wz";
-        if !std::path::Path::new(char_wz).exists() {
+        let Some(root) = wz_data_root() else { return };
+        let char_wz = root.join("Character").join("Character.wz");
+        if !char_wz.exists() {
             return;
         }
-        let av = load_from_character_wz(std::path::Path::new(char_wz))
+        let av = load_from_character_wz(&char_wz)
             .expect("loader should return Some on real Character.wz");
         // 최소 8 파트 (body, arm, head, ear variants, cap)
         assert!(av.parts.len() >= 14, "expected >= 14 parts, got {}", av.parts.len());
