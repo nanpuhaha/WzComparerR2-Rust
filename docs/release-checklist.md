@@ -26,12 +26,12 @@
 
 ## 공개 직전 수동 확인
 
-- [ ] 열린 Dependabot PR 검토/머지 또는 닫기 (특히 actions v7/v8 메이저 범프)
-- [ ] `README` 의 기능 설명이 현재 코드와 일치하는지 최종 확인
-- [ ] `docs/known-bugs.md`/`docs/oracle-spec.md` 의 핀 커밋이 실제 C# 커밋과 일치하는지 확인
-- [ ] `WzComparerR2-Rust-archive` 를 삭제할지 결정 (이슈 32개/PR #30 보존용)
-- [ ] GitHub 저장소 visibility 를 `public` 으로 전환
-- [ ] (선택) `v0.1.0` 태그/릴리스 노트 생성
+- [x] 열린 Dependabot PR 검토: `crc32fast`/`memmap2` 패치 PR #3 머지, 메이저 범프 8개는 v0.1.0 이후로 닫음
+- [x] `README` 의 기능 설명이 현재 코드와 일치하는지 최종 확인
+- [x] `docs/known-bugs.md`/`docs/oracle-spec.md` 의 핀 커밋(`bb98c25…`)이 실제 C# 커밋과 일치하는지 확인
+- [x] `WzComparerR2-Rust-archive` 는 private 로 보관 유지 (이슈 32개/PR #30 보존)
+- [x] GitHub 저장소 visibility 를 `public` 으로 전환
+- [x] `v0.1.0` 태그/릴리스 노트 생성 (`d9c4984`)
 
 ## 공개 후
 
