@@ -2313,16 +2313,16 @@ pub fn load_body_action_frames(
     body_skin: i32,
     action: &str,
     max_frames: usize,
-) -> Vec<Vec<AvatarPart>> {
+) -> (Vec<Vec<AvatarPart>>, Vec<u32>) {
     let canvas_path = data_root
         .join("Character")
         .join("_Canvas")
         .join("_Canvas_000.wz");
     let Ok(archive) = WzArchive::open(&canvas_path) else {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     };
     let Ok(tree) = archive.read_tree() else {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     };
     let image_name = format!("{:08}.img", body_skin);
     let Some(entry) = tree
@@ -2331,19 +2331,19 @@ pub fn load_body_action_frames(
         .iter()
         .find(|e| e.node_type == 4 && e.name.as_deref() == Some(image_name.as_str()))
     else {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     };
     let Some(offset) = entry.offset else {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     };
     let Ok(node) = archive.parse_image_at(offset) else {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     };
     let action_node = child_node(&node, action)
         .or_else(|| child_node(&node, "stand1"))
         .or_else(|| child_node(&node, "stand"));
     let Some(action_node) = action_node else {
-        return Vec::new();
+        return (Vec::new(), Vec::new());
     };
     let frames: Vec<&ImageNode> =
         if matches!(action_node.value, Some(wz_core::image::ImageValue::Png(_))) {
@@ -2352,6 +2352,7 @@ pub fn load_body_action_frames(
             action_node.object_children().iter().collect()
         };
     let mut out = Vec::new();
+    let mut delays = Vec::new();
     for frame in frames.into_iter().take(max_frames) {
         let Ok(assembly) = crate::collect_frame_assembly(frame, &archive, Some(&archive)) else {
             continue;
@@ -2371,8 +2372,106 @@ pub fn load_body_action_frames(
             })
             .collect();
         out.push(parts);
+        delays.push(node_int(frame, "delay").unwrap_or(120).max(20) as u32);
     }
-    out
+    (out, delays)
+}
+
+/// 장비 한 슬롯의 action 프레임을 로드한다 (GUI 액션 재생용).
+pub fn load_item_action_frames(
+    data_root: &std::path::Path,
+    slot: &str,
+    item_id: i32,
+    action: &str,
+    max_frames: usize,
+) -> Vec<Vec<AvatarPart>> {
+    let Some(dir) = slot_dir_name(slot) else {
+        return Vec::new();
+    };
+    let base = data_root.join("Character").join(dir).join("_Canvas");
+    let image = format!("{:08}.img", item_id);
+    let part_slot = if matches!(dir, "Accessory" | "Ring") || slot == "Saddle" {
+        slot.to_ascii_lowercase()
+    } else {
+        dir.to_ascii_lowercase()
+    };
+    for entry in std::fs::read_dir(base).ok().into_iter().flatten().flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.node_type == 4 && e.name.as_deref() == Some(image.as_str()))
+        else {
+            continue;
+        };
+        let Some(offset) = entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let custom_origin = parse_custom_origin(&node);
+        let action_node = child_node(&node, action)
+            .or_else(|| child_node(&node, "default"))
+            .or_else(|| child_node(&node, "stand1"));
+        let Some(action_node) = action_node else {
+            return Vec::new();
+        };
+        let action_children: &[ImageNode] = match &action_node.value {
+            Some(wz_core::image::ImageValue::Property(property)) => &property.children,
+            _ => &action_node.children,
+        };
+        let frames: Vec<&ImageNode> = if action_children
+            .iter()
+            .any(|c| matches!(c.value, Some(wz_core::image::ImageValue::Png(_))))
+        {
+            vec![action_node]
+        } else {
+            action_children.iter().collect()
+        };
+        let mut out = Vec::new();
+        for frame in frames.into_iter().take(max_frames.max(1)) {
+            let Ok(assembly) = crate::collect_frame_assembly(frame, &archive, Some(&archive))
+            else {
+                continue;
+            };
+            let parts: Vec<AvatarPart> = assembly
+                .layers
+                .iter()
+                .enumerate()
+                .map(|(i, layer)| {
+                    let name = if i == 0 {
+                        part_slot.clone()
+                    } else {
+                        format!("{part_slot}_{}", layer.name)
+                    };
+                    AvatarPart {
+                        slot: name,
+                        width: layer.canvas.w,
+                        height: layer.canvas.h,
+                        rgba: layer.canvas.rgba.clone(),
+                        position: layer.pos,
+                        origin: layer.origin,
+                        z_index: layer.z_int.unwrap_or(0),
+                        custom_origin_map: custom_origin.clone(),
+                    }
+                })
+                .collect();
+            out.push(parts);
+        }
+        return out;
+    }
+    Vec::new()
 }
 
 /// `Character/<slot>/_Canvas` 에서 장비 이미지를 찾아 로드한다.
@@ -2609,12 +2708,21 @@ fn load_item_eff_frames(
         let Some(layer_node) = child_node(chair, layer) else {
             continue;
         };
-        // ItemEff: layer -> frame group -> Canvas(_outlink).
-        let Some(frame_group) = layer_node.object_children().first() else {
-            continue;
+        // ItemEff: layer -> Canvas (ring) 또는 layer -> frame group -> Canvas (chair).
+        let children = layer_node.object_children();
+        let canvas_nodes: Vec<&ImageNode> = if children
+            .iter()
+            .any(|c| matches!(c.value, Some(wz_core::image::ImageValue::Png(_))))
+        {
+            children.iter().collect()
+        } else {
+            let Some(frame_group) = children.first() else {
+                continue;
+            };
+            frame_group.object_children().iter().collect()
         };
         let mut frames = Vec::new();
-        for canvas_node in frame_group.object_children() {
+        for canvas_node in canvas_nodes {
             let Some(png) = canvas_node.first_canvas() else {
                 continue;
             };
@@ -3607,6 +3715,118 @@ pub struct MixOptions {
     /// 호출자가 선택한 body action/프레임 (정적 포즈).
     pub body_action: Option<String>,
     pub body_frame: Option<usize>,
+    /// Android 장비 item ID. 지정 시 `Etc/Android`의 basic/costume으로 아바타를 조립한다.
+    pub android_item: Option<i32>,
+}
+
+fn android_id_for_item(data_root: &std::path::Path, item_id: i32) -> Option<i32> {
+    let base = data_root.join("Character").join("Android");
+    let image = format!("{item_id:08}.img");
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image.as_str()))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let Some(info) = child_node(&node, "info") else {
+            continue;
+        };
+        if let Some(id) = node_int(info, "android") {
+            return Some(id);
+        }
+    }
+    None
+}
+
+fn load_android_avatar(
+    data_root: &std::path::Path,
+    android_id: i32,
+    mix: &MixOptions,
+) -> Option<LoadedAvatar> {
+    let base = data_root.join("Etc").join("Android");
+    let image = format!("{android_id:04}.img");
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image.as_str()))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let basic = child_node(&node, "basic");
+        let costume = child_node(&node, "costume");
+        let mut equipment = Vec::new();
+        if let Some(basic) = basic {
+            for (key, slot) in [
+                ("accessory", None),
+                ("longcoat", Some("Longcoat")),
+                ("shoes", Some("Shoes")),
+            ] {
+                if let Some(id) = node_int(basic, key).filter(|id| *id != 0) {
+                    let slot = slot
+                        .map(|s| s.to_string())
+                        .or_else(|| item_id_to_slot(id).map(|s| s.to_string()));
+                    if let Some(slot) = slot {
+                        equipment.push((slot, id));
+                    }
+                }
+            }
+        }
+        let mut body_skin = 2000;
+        if let Some(costume) = costume {
+            if let Some(face) = node_int(costume, "face/0").filter(|id| *id != 0) {
+                equipment.push(("Face".to_string(), face));
+            }
+            if let Some(hair) = node_int(costume, "hair/0").filter(|id| *id != 0) {
+                equipment.push(("Hair".to_string(), hair));
+            }
+            if let Some(skin) = node_int(costume, "skin/0").filter(|id| *id != 0) {
+                body_skin = skin;
+            }
+        }
+        let inner = MixOptions {
+            android_item: None,
+            ..mix.clone()
+        };
+        return load_avatar_with_equipment_and_mix(data_root, body_skin, &equipment, &inner);
+    }
+    None
 }
 
 pub fn load_avatar_with_equipment(
@@ -3623,6 +3843,11 @@ pub fn load_avatar_with_equipment_and_mix(
     equipment: &[(String, i32)],
     mix: &MixOptions,
 ) -> Option<LoadedAvatar> {
+    if let Some(item_id) = mix.android_item {
+        if let Some(android_id) = android_id_for_item(data_root, item_id) {
+            return load_android_avatar(data_root, android_id, mix);
+        }
+    }
     // Body 로드 (0000{skin}00.img)
     let body_dir = data_root.join("Character");
     let canvas_dir = body_dir.join("_Canvas");
@@ -3986,6 +4211,38 @@ pub fn load_avatar_with_equipment_and_mix(
                 apply_custom_origin_map(&mut item_root, &item_parts, &mix.custom_origins);
                 merge_bone_tree(&mut root, item_root);
                 parts.extend(item_parts);
+
+                // Ring item effects live in Effect/ItemEff.img/<ringId>/0|1.
+                if slot.starts_with("Ring") && item_id / 10000 == 111 {
+                    for layer in ["0", "1"] {
+                        let Some((w, h, rgba, origin, z)) =
+                            load_item_eff_frames(data_root, *item_id, layer)
+                                .into_iter()
+                                .next()
+                        else {
+                            continue;
+                        };
+                        let part_slot = format!("{}_{}", slot.to_ascii_lowercase(), layer);
+                        let local = crate::Point::new(-origin.x, -origin.y);
+                        let mut skin = SkinLayer::new(&part_slot);
+                        skin.z = "effect".into();
+                        skin.z_index = z;
+                        skin.origin = crate::Point::ZERO;
+                        skin.width = w;
+                        skin.height = h;
+                        root.append_bone(skin, &part_slot, local);
+                        parts.push(AvatarPart {
+                            slot: part_slot,
+                            width: w,
+                            height: h,
+                            rgba,
+                            position: local,
+                            origin,
+                            z_index: z,
+                            custom_origin_map: Default::default(),
+                        });
+                    }
+                }
             }
         }
     }
@@ -5017,6 +5274,45 @@ mod chair_custom_type_tests {
     }
 
     #[test]
+    fn ring_effect_loads_from_item_eff() {
+        let Some(root) = data_root() else { return };
+        let equipment = vec![("Ring1".to_string(), 1112001)];
+        let Some(av) = load_avatar_with_equipment(&root, 2000, &equipment) else {
+            return;
+        };
+        let part = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "ring1_0" || p.slot == "ring1_1")
+            .expect("ring effect part");
+        assert!(part.width > 1 && part.height > 1);
+        assert!(part.rgba.chunks(4).any(|p| p[3] != 0));
+    }
+
+    #[test]
+    fn android_item_assembles_avatar_from_etc_android() {
+        let Some(root) = data_root() else { return };
+        let Some(av) = load_avatar_with_equipment_and_mix(
+            &root,
+            2000,
+            &[],
+            &MixOptions {
+                android_item: Some(1662000),
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        for slot in ["body", "hair", "face", "earrings", "longcoat", "shoes"] {
+            assert!(
+                av.parts.iter().any(|p| p.slot == slot),
+                "slot {slot} missing: {:?}",
+                av.parts.iter().map(|p| p.slot.clone()).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
     fn face_accessory_fixed_emotion_changes_face() {
         let Some(root) = data_root() else { return };
         let base_equipment = vec![("Face".to_string(), 20000)];
@@ -5043,11 +5339,21 @@ mod chair_custom_type_tests {
     #[test]
     fn body_action_frames_preload_and_differ() {
         let Some(root) = data_root() else { return };
-        let frames = load_body_action_frames(&root, 2000, "walk1", 16);
+        let (frames, delays) = load_body_action_frames(&root, 2000, "walk1", 16);
         assert!(frames.len() > 1);
+        assert_eq!(frames.len(), delays.len());
+        assert!(delays.iter().all(|d| *d >= 20));
         let first_body = frames[0].iter().find(|p| p.slot == "body").unwrap();
         let second_body = frames[1].iter().find(|p| p.slot == "body").unwrap();
         assert_ne!(first_body.rgba, second_body.rgba);
+    }
+
+    #[test]
+    fn item_action_frames_load_for_equipment() {
+        let Some(root) = data_root() else { return };
+        let frames = load_item_action_frames(&root, "Cap", 1000000, "walk1", 16);
+        assert!(!frames.is_empty());
+        assert!(frames.iter().any(|f| f.iter().any(|p| p.slot == "cap")));
     }
 
     #[test]

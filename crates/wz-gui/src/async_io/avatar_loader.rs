@@ -48,17 +48,59 @@ fn part_data(p: &wz_avatar::AvatarPart) -> AvatarPartData {
     }
 }
 
+fn parse_equipment(input: &str) -> Vec<(String, i32)> {
+    let mut equipment = Vec::new();
+    for part in input.split(',') {
+        let Some((slot, id)) = part.trim().split_once(':') else {
+            continue;
+        };
+        if let Ok(id) = id.trim().parse::<i32>() {
+            equipment.push((slot.trim().to_string(), id));
+        }
+    }
+    equipment
+}
+
 fn load_action_frames(state: &mut AppState, data_root: &std::path::Path) {
-    let frames = wz_avatar::load_body_action_frames(
+    let (body_frames, delays) = wz_avatar::load_body_action_frames(
         data_root,
         state.avatar_body_skin,
         &state.body_action,
         16,
     );
-    state.action_frames = frames
-        .iter()
-        .map(|frame| frame.iter().map(part_data).collect())
-        .collect();
+    let equipment = parse_equipment(&state.avatar_equipment_input);
+    let mut item_frames = Vec::new();
+    for (slot, item_id) in equipment {
+        if matches!(slot.as_str(), "Chair" | "Taming" | "Effect") {
+            continue;
+        }
+        let frames = wz_avatar::load_item_action_frames(
+            data_root,
+            &slot,
+            item_id,
+            &state.body_action,
+            body_frames.len().max(1),
+        );
+        if !frames.is_empty() {
+            item_frames.push(frames);
+        }
+    }
+    let count = body_frames
+        .len()
+        .max(item_frames.iter().map(|f| f.len()).max().unwrap_or(0));
+    let mut combined = Vec::with_capacity(count);
+    for i in 0..count {
+        let mut frame = Vec::new();
+        if !body_frames.is_empty() {
+            frame.extend(body_frames[i % body_frames.len()].iter().cloned());
+        }
+        for frames in &item_frames {
+            frame.extend(frames[i % frames.len()].iter().cloned());
+        }
+        combined.push(frame.into_iter().map(|p| part_data(&p)).collect());
+    }
+    state.action_frames = combined;
+    state.action_delays = delays;
     state.body_frame_slots = state
         .action_frames
         .iter()
@@ -90,7 +132,13 @@ pub fn tick_action(state: &mut AppState, now: f64) -> bool {
     if !state.action_auto_play || state.action_frames.len() < 2 {
         return false;
     }
-    let delay = 0.12;
+    let delay = state
+        .action_delays
+        .get(state.action_frame % state.action_delays.len().max(1))
+        .copied()
+        .unwrap_or(120)
+        .max(20) as f64
+        / 1000.0;
     if state.action_last_time <= 0.0 {
         state.action_last_time = now;
         return false;
@@ -192,6 +240,7 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
             custom_origins: parse_custom_origins(&state.custom_origin_input),
             body_action: Some(state.body_action.clone()),
             body_frame: Some(state.body_frame),
+            android_item: state.android_item.trim().parse::<i32>().ok(),
             chair: wz_avatar::ChairUserData {
                 level: Some(state.chair_level),
                 score: Some(state.chair_score),

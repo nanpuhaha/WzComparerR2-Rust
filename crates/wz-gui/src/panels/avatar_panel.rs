@@ -65,7 +65,11 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             state.action_last_time = 0.0;
         }
     }
-    ui.label("Body action/frame은 장비 로드 시 적용됩니다");
+    ui.horizontal(|ui| {
+        ui.label("Android item:");
+        ui.text_edit_singleline(&mut state.android_item);
+    });
+    ui.label("Android item ID 지정 시 Etc/Android basic/costume으로 조립합니다");
     ui.label("29개 슬롯 (드롭다운 선택)");
     egui::ScrollArea::vertical()
         .max_height(240.0)
