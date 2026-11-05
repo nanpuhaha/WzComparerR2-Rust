@@ -2894,14 +2894,15 @@ fn transform_bone_op(bone: &mut Bone, op: TransformOp) {
 }
 
 fn is_avatar_body_slot(slot: &str) -> bool {
-    !(slot == "chair"
+    !(slot.starts_with("chair")
         || slot == "effect"
         || slot == "android_effect"
         || slot == "score_effect"
         || slot.starts_with("tamingmob")
         || slot.starts_with("rolling_part")
         || slot.starts_with("showcase")
-        || slot.starts_with("identity_digit")
+        || slot.starts_with("identity")
+        || slot.starts_with("dummy")
         || slot.starts_with("pet")
         || slot.starts_with("pop_")
         || slot.starts_with("vote_")
@@ -2915,6 +2916,27 @@ fn apply_body_flip(parts: &mut [AvatarPart]) {
         .filter(|part| is_avatar_body_slot(&part.slot))
     {
         transform_part_op(part, TransformOp::FlipX);
+    }
+}
+
+fn bone_is_body_subtree(bone: &Bone) -> bool {
+    let has_content = !bone.skins.is_empty() || !bone.children.is_empty();
+    has_content
+        && bone
+            .skins
+            .iter()
+            .all(|skin| is_avatar_body_slot(&skin.name))
+        && bone.children.iter().all(bone_is_body_subtree)
+}
+
+/// taming `info/flip` — body/equipment bone subtree만 반전한다.
+fn flip_body_bones(bone: &mut Bone) {
+    if bone_is_body_subtree(bone) {
+        transform_bone_op(bone, TransformOp::FlipX);
+        return;
+    }
+    for child in &mut bone.children {
+        flip_body_bones(child);
     }
 }
 
@@ -3893,6 +3915,7 @@ pub fn load_avatar_with_equipment_and_mix(
         .is_some_and(|t| t.flip)
     {
         apply_body_flip(&mut parts);
+        flip_body_bones(&mut root);
     }
 
     // WZ 체어 변환(플립/회전) — C# 원본에는 없는 데이터 기반 확장.
@@ -5328,6 +5351,30 @@ mod avatar_transform_tests {
         assert_eq!(parts[0].origin, crate::Point::new(1, 0));
         assert_eq!(parts[0].rgba[0..4], [10, 0, 0, 255]);
         assert_eq!(parts[0].rgba[4..8], [20, 0, 0, 255]);
+    }
+
+    #[test]
+    fn body_flip_bones_only_flips_body_subtree() {
+        let mut root = Bone::new("@root");
+        let mut body_skin = SkinLayer::new("body");
+        body_skin.width = 2;
+        body_skin.height = 1;
+        body_skin.origin = crate::Point::new(0, 0);
+        root.append_bone(body_skin, "body", crate::Point::new(5, 0));
+        let mut chair_skin = SkinLayer::new("chair");
+        chair_skin.width = 2;
+        chair_skin.height = 1;
+        chair_skin.origin = crate::Point::new(0, 0);
+        root.append_bone(chair_skin, "chair", crate::Point::new(7, 0));
+
+        flip_body_bones(&mut root);
+
+        let body = &root.children[0];
+        assert_eq!(body.position, crate::Point::new(-5, 0));
+        assert_eq!(body.skins[0].origin, crate::Point::new(2, 0));
+        let chair = &root.children[1];
+        assert_eq!(chair.position, crate::Point::new(7, 0));
+        assert_eq!(chair.skins[0].origin, crate::Point::new(0, 0));
     }
 
     #[test]

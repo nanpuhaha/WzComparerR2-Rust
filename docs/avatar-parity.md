@@ -138,7 +138,8 @@ remaining CharaSim gaps.
   over `stand1`/`stand`. Group taming members also use `sit`.
 - `info/sitEmotion` selects the head/face emotion action (C# `EmotionTable`);
   taming `characterEmotion` overrides it.
-- taming `info/flip` mirrors body/equipment parts; taming `characterAction`/
+- taming `info/flip` mirrors body/equipment parts **and** the body/equipment bone
+  subtree (chair/taming/effect/pet bones are excluded). taming `characterAction`/
   `characterEmotion` override the body pose/emotion for the `sit`/`stand0` key.
 - chair `effect2` and `Effect/ItemEff.img/<chairId>/0|1` all frames are loaded
   (metadata `_outlink` → `Effect/_Canvas`) and played through the chair frame
