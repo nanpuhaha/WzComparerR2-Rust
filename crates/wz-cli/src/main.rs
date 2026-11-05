@@ -380,6 +380,18 @@ enum Command {
         limit: usize,
     },
 
+    /// Skill 설명 요약(`SummaryParser.GetSkillSummary`) 출력
+    SkillSummary {
+        /// String_000.wz 경로
+        string: PathBuf,
+        /// 최대 행
+        #[arg(long, default_value_t = 1000)]
+        limit: usize,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// DB2 아이콘/이미지 뷰어 (Canvas RGBA SHA-256)
     Db2Icons {
         /// WZ 파일
@@ -698,6 +710,11 @@ fn main() {
             json,
             limit,
         } => cmd_db2_characters(&wz, &string, json, limit),
+        Command::SkillSummary {
+            string,
+            limit,
+            json,
+        } => cmd_skill_summary(&string, limit, json),
         Command::Db2Icons {
             wz,
             image,

@@ -220,6 +220,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                             if let Some(desc) = &sr.desc {
                                 if !desc.is_empty() {
                                     ui.label(format!("설명: {}", desc));
+                                    ui.label(format!(
+                                        "요약: {}",
+                                        wz_db::parse_skill_summary(desc, 1)
+                                    ));
                                 }
                             }
                         }

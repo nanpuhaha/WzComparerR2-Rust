@@ -864,6 +864,53 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    sealed class NoSkillResolver : WzComparerR2.CharaSim.ISkillPropertyResolver
+    {
+        public bool TryResolve(string propertyName, int? skillId, int? skillLevel,
+            out WzComparerR2.CharaSim.ResolvedSkillProperty value)
+        {
+            value = default;
+            return false;
+        }
+    }
+    static void SkillSummary(string stringWzPath, int limit)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        if (!linker.Load(str.wz_files[0], null, null))
+        {
+            Console.WriteLine("{\"error\":\"string linker load failed\"}");
+            return;
+        }
+        var resolver = new NoSkillResolver();
+        var rows = new List<object>();
+        foreach (var kv in linker.StringSkill2.OrderBy(k => k.Key, StringComparer.Ordinal))
+        {
+            var sr = kv.Value as StringResultSkill;
+            if (sr == null) continue;
+            if (!string.IsNullOrEmpty(sr.Desc))
+            {
+                rows.Add(new {
+                    id = kv.Key,
+                    kind = "desc",
+                    summary = WzComparerR2.CharaSim.SummaryParser.GetSkillSummary(
+                        sr.Desc, 1, resolver, WzComparerR2.CharaSim.SummaryParams.Default),
+                });
+            }
+            for (int i = 0; i < sr.SkillH.Count; i++)
+            {
+                if (string.IsNullOrEmpty(sr.SkillH[i])) continue;
+                rows.Add(new {
+                    id = kv.Key,
+                    kind = "h" + i.ToString(),
+                    summary = WzComparerR2.CharaSim.SummaryParser.GetSkillSummary(
+                        sr.SkillH[i], 1, resolver, WzComparerR2.CharaSim.SummaryParams.Default),
+                });
+            }
+            if (rows.Count >= limit) break;
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -883,6 +930,14 @@ class Program
         else if (args[0] == "morphs") MorphGrid(args[1], args[2], args[3]);
         else if (args[0] == "tamingmobs") TamingMobGrid(args[1], args[2]);
         else if (args[0] == "characters") CharacterGrid(args[1], args[2]);
+        else if (args[0] == "skillsummary") SkillSummary(args[1], int.Parse(args[2]));
+        else if (args[0] == "summaryprobe")
+        {
+            var r = new NoSkillResolver();
+            foreach (var text in new[] { "#[400011003]x%", "#c강조#됩니다", "#t2초", "#cooltime초" })
+                Console.WriteLine(text + " => " + WzComparerR2.CharaSim.SummaryParser.GetSkillSummary(
+                    text, 1, r, WzComparerR2.CharaSim.SummaryParams.Default));
+        }
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

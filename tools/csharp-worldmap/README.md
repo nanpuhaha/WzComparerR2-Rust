@@ -46,6 +46,8 @@ Commands:
   (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/tamingMob`).
 - `characters <character.wz> <String_000.wz>` — emits DB2 Character equipment
   rows (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
+- `skillsummary <String_000.wz> <limit>` — runs the original
+  `SummaryParser.GetSkillSummary` on every skill `desc` and `h/h1..hn`.
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -173,3 +175,11 @@ dotnet run ... -- characters ../../Data/Character/Cap/Cap_000.wz ../../Data/Stri
 → 3166 rows
 ```
 Rust `wz db2-characters ... --json` matches all 3166 rows exactly.
+
+Verified Skill summary output:
+```
+dotnet run ... -- skillsummary ../../Data/String/String_000.wz 100000
+→ 20629 rows (all skill desc + h entries)
+```
+Rust `wz skill-summary ... --limit 100000 --json` matches all 20629 rows exactly.
+The fixture test keeps the first 2000 rows (`skill_summary_2000.expected.json`).

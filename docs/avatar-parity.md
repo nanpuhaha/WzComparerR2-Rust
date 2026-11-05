@@ -565,3 +565,18 @@ merge semantics (recursive directory merge, conflict errors).
 - The generic `wz db2-characters` path also covers the Cap tab. `Cap_000.wz`
   → C# `characters` 3166 == Rust 3166 rows, exact match
   (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
+
+## Skill tooltip summary (SummaryParser)
+
+- `wz-db::skill_summary` ports the resolver-failure path of
+  `SummaryParser.GetSkillSummary`: `#c`/`#$g`/`#$x`/`#k`/`#fc`,
+  `#[skillId]prop` skill references, unresolved `#prop#` removal, `\n`/`\r`/
+  `\c`/`\\` escapes, tab removal and trailing `\r`/`\n` trimming.
+- This client has no skill `common`/`level` stat nodes, so property resolution
+  always fails, matching the C# harness `NoSkillResolver`.
+- `wz skill-summary <String_000.wz> [--limit] [--json]` prints every skill
+  `desc` and `h/h1..hn` summary; the GUI inspector shows the summary next to
+  the skill description.
+- Executed C# reference: `tools/csharp-worldmap skillsummary ...` on
+  `String/Skill.img` → 20629 rows, exact match with Rust. A 2000-row fixture
+  backs the test.

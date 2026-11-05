@@ -42,6 +42,7 @@ pub mod node;
 pub mod particle;
 pub mod query;
 pub mod resolve;
+pub mod skill_summary;
 
 #[cfg(test)]
 mod tests;
@@ -77,3 +78,4 @@ pub use query::{
     QueryRule, QueryRuleKind, QueryValueType, StringComparisonMode, ValueRule, DEFAULT_MAX_RESULTS,
 };
 pub use resolve::{find_path, handle_uol, resolve_uol, resolve_uol_lossy, ResolveError};
+pub use skill_summary::parse_skill_summary;

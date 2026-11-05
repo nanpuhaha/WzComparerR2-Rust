@@ -983,3 +983,109 @@ mod cap_tests {
         assert_eq!(rows.len(), 3166);
     }
 }
+
+pub fn cmd_skill_summary(
+    string_wz: &Path,
+    limit: usize,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let mut rows: Vec<serde_json::Value> = Vec::new();
+    for (id, sr) in &linker.string_skill_str {
+        if let Some(desc) = sr.desc.as_deref().filter(|d| !d.is_empty()) {
+            rows.push(serde_json::json!({
+                "id": id,
+                "kind": "desc",
+                "summary": wz_db::parse_skill_summary(desc, 1),
+            }));
+        }
+        for (i, h) in sr.skill_h.iter().enumerate() {
+            if h.is_empty() {
+                continue;
+            }
+            rows.push(serde_json::json!({
+                "id": id,
+                "kind": format!("h{i}"),
+                "summary": wz_db::parse_skill_summary(h, 1),
+            }));
+        }
+        if rows.len() >= limit {
+            break;
+        }
+    }
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in rows {
+            println!(
+                "{}\t{}\t{}",
+                row["id"].as_str().unwrap_or(""),
+                row["kind"].as_str().unwrap_or(""),
+                row["summary"].as_str().unwrap_or("")
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod skill_summary_tests {
+    use super::*;
+    use wz_db::{Arena, StringLinker};
+
+    #[test]
+    fn skill_summary_matches_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let string_wz = root.join("String/String_000.wz");
+        if !string_wz.exists() {
+            return;
+        }
+        let archive = WzArchive::open(&string_wz).unwrap();
+        let (arena, root_id) = Arena::from_archive(&archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, root_id));
+
+        let mut rows: Vec<serde_json::Value> = Vec::new();
+        for (id, sr) in &linker.string_skill_str {
+            if let Some(desc) = sr.desc.as_deref().filter(|d| !d.is_empty()) {
+                rows.push(serde_json::json!({
+                    "id": id,
+                    "kind": "desc",
+                    "summary": wz_db::parse_skill_summary(desc, 1),
+                }));
+            }
+            for (i, h) in sr.skill_h.iter().enumerate() {
+                if h.is_empty() {
+                    continue;
+                }
+                rows.push(serde_json::json!({
+                    "id": id,
+                    "kind": format!("h{i}"),
+                    "summary": wz_db::parse_skill_summary(h, 1),
+                }));
+            }
+            if rows.len() >= 2000 {
+                break;
+            }
+        }
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/skill_summary_2000.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(serde_json::Value::Array(rows), expected);
+    }
+}
