@@ -669,3 +669,10 @@ merge semantics (recursive directory merge, conflict errors).
 
 - The generic `wz db2-characters` path also covers the Dragon tab.
   `Dragon_000.wz` → C# `characters` 16 == Rust 16 rows, exact match.
+
+### DB2 Character/Ring
+
+- The generic `wz db2-characters` path also covers the Ring tab.
+  `Ring_000.wz` → C# `characters` 1127 == Rust 1127 rows, exact match.
+- Afterimage images are named like `swordOL`, so the original Character loop
+  skips them; both C# and Rust return 0 rows.

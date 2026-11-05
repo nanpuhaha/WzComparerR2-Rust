@@ -285,3 +285,12 @@ dotnet run ... -- characters ../../Data/Character/Dragon/Dragon_000.wz ../../Dat
 → 16 rows
 ```
 Rust `wz db2-characters ... --json` matches all 16 rows exactly.
+
+Verified DB2 Character grid output (Ring):
+```
+dotnet run ... -- characters ../../Data/Character/Ring/Ring_000.wz ../../Data/String/String_000.wz
+→ 1127 rows
+```
+Rust `wz db2-characters ... --json` matches all 1127 rows exactly.
+Afterimage returns 0 rows in both because its image names do not start with `0`
+(not a Character grid target).
