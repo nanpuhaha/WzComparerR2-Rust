@@ -48,6 +48,62 @@ fn part_data(p: &wz_avatar::AvatarPart) -> AvatarPartData {
     }
 }
 
+fn load_action_frames(state: &mut AppState, data_root: &std::path::Path) {
+    let frames = wz_avatar::load_body_action_frames(
+        data_root,
+        state.avatar_body_skin,
+        &state.body_action,
+        16,
+    );
+    state.action_frames = frames
+        .iter()
+        .map(|frame| frame.iter().map(part_data).collect())
+        .collect();
+    state.body_frame_slots = state
+        .action_frames
+        .iter()
+        .flat_map(|frame| frame.iter().map(|p| p.slot.clone()))
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    state.action_frame = 0;
+    state.action_last_time = 0.0;
+    apply_action_frame(state);
+}
+
+/// 현재 action frame 의 body 파트를 교체한다.
+pub fn apply_action_frame(state: &mut AppState) {
+    if state.action_frames.is_empty() {
+        return;
+    }
+    let idx = state.action_frame % state.action_frames.len();
+    state
+        .avatar_loaded_parts
+        .retain(|part| !state.body_frame_slots.contains(&part.slot));
+    state
+        .avatar_loaded_parts
+        .extend(state.action_frames[idx].iter().cloned());
+}
+
+/// body action 자동 재생 틱.
+pub fn tick_action(state: &mut AppState, now: f64) -> bool {
+    if !state.action_auto_play || state.action_frames.len() < 2 {
+        return false;
+    }
+    let delay = 0.12;
+    if state.action_last_time <= 0.0 {
+        state.action_last_time = now;
+        return false;
+    }
+    if now - state.action_last_time < delay {
+        return false;
+    }
+    state.action_last_time = now;
+    state.action_frame = (state.action_frame + 1) % state.action_frames.len();
+    apply_action_frame(state);
+    true
+}
+
 // ── 파일 열기 ─────────────────────────────────────────────────────────
 
 pub fn load_avatar_from_loader(state: &mut AppState) {
@@ -68,6 +124,7 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             state.effect_origins.clear();
             state.effect_origin = (0, 0);
             state.effect_last_time = 0.0;
+            load_action_frames(state, &data_root);
             state.chair_frames.clear();
             state.chair_delays.clear();
             state.chair_frame = 0;
@@ -224,6 +281,7 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
                 })
                 .collect();
             apply_pet_frames(state);
+            load_action_frames(state, &data_root);
             render_loaded_avatar(state);
         }
         None => {
@@ -823,6 +881,59 @@ mod tests {
             frames: (0..frames).map(|_| vec![pet_part(color)]).collect(),
             delay_ms,
         }
+    }
+
+    fn body_part(color: u8) -> AvatarPartData {
+        AvatarPartData {
+            slot: "body".into(),
+            width: 1,
+            height: 1,
+            rgba: vec![color, color, color, 255],
+            position: (0, 0),
+            z_index: 0,
+        }
+    }
+
+    #[test]
+    fn apply_action_frame_replaces_body_only() {
+        let head = AvatarPartData {
+            slot: "head".into(),
+            width: 1,
+            height: 1,
+            rgba: vec![9, 9, 9, 255],
+            position: (0, 0),
+            z_index: 0,
+        };
+        let mut state = AppState {
+            avatar_loaded_parts: vec![body_part(1), head],
+            action_frames: vec![vec![body_part(1)], vec![body_part(2)]],
+            body_frame_slots: vec!["body".into()],
+            action_frame: 1,
+            ..Default::default()
+        };
+        apply_action_frame(&mut state);
+        assert_eq!(state.avatar_loaded_parts.len(), 2);
+        assert!(state.avatar_loaded_parts.iter().any(|p| p.slot == "head"));
+        let body = state
+            .avatar_loaded_parts
+            .iter()
+            .find(|p| p.slot == "body")
+            .expect("body");
+        assert_eq!(body.rgba, vec![2, 2, 2, 255]);
+    }
+
+    #[test]
+    fn tick_action_advances_frame() {
+        let mut state = AppState {
+            action_frames: vec![vec![body_part(1)], vec![body_part(2)]],
+            body_frame_slots: vec!["body".into()],
+            action_auto_play: true,
+            action_last_time: 0.0,
+            ..Default::default()
+        };
+        assert!(!tick_action(&mut state, 0.1));
+        assert!(tick_action(&mut state, 0.25));
+        assert_eq!(state.action_frame, 1);
     }
 
     #[test]

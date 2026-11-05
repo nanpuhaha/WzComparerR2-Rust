@@ -13,6 +13,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     if async_io::tick_pets(state, now) {
         async_io::render_loaded_avatar(state);
     }
+    if async_io::tick_action(state, now) {
+        async_io::render_loaded_avatar(state);
+    }
     if state.effect_auto_play && !state.effect_frames.is_empty() {
         repaint = true;
     }
@@ -20,6 +23,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         repaint = true;
     }
     if state.pet_auto_play && !state.pet_animations.is_empty() {
+        repaint = true;
+    }
+    if state.action_auto_play && state.action_frames.len() > 1 {
         repaint = true;
     }
     if repaint {
@@ -41,6 +47,24 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label("Frame:");
         ui.add(egui::DragValue::new(&mut state.body_frame).range(0..=20));
     });
+    if !state.action_frames.is_empty() {
+        let max_frame = state.action_frames.len() - 1;
+        if state.action_frame > max_frame {
+            state.action_frame = max_frame;
+        }
+        if ui
+            .add(egui::Slider::new(&mut state.action_frame, 0..=max_frame).text("Action frame"))
+            .changed()
+        {
+            state.action_last_time = 0.0;
+            async_io::apply_action_frame(state);
+            async_io::render_loaded_avatar(state);
+        }
+        let auto = ui.checkbox(&mut state.action_auto_play, "Body action 자동 재생");
+        if auto.changed() {
+            state.action_last_time = 0.0;
+        }
+    }
     ui.label("Body action/frame은 장비 로드 시 적용됩니다");
     ui.label("29개 슬롯 (드롭다운 선택)");
     egui::ScrollArea::vertical()

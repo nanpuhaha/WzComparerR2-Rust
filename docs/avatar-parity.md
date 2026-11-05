@@ -143,9 +143,10 @@ remaining CharaSim gaps.
   from `Character/TamingMob`; `CashWeapon` maps to `Weapon`. Icon-only images are
   skipped. Ring items and Android items are icon-only in this client and are not
   avatar sprites.
-- Body action: `MixOptions.body_action`/`body_frame` select a static body pose
-  (`walk1`, `jump`, `alert`, `prone`, `ladder`, `rope`, ...); GUI exposes a combo
-  and frame index. Full frame-by-frame action playback is still pending.
+- Body action: `MixOptions.body_action`/`body_frame` select a body pose
+  (`walk1`, `jump`, `alert`, `prone`, `ladder`, `rope`, ...). GUI preloads all body
+  frames for the selected action and exposes `Action frame` + `Body action 자동
+  재생` (120ms). Equipment/head remain static during body playback.
 - `info/sitEmotion` selects the head/face emotion action (C# `EmotionTable`);
   taming `characterEmotion` overrides it.
 - taming `info/flip` mirrors body/equipment parts **and** the body/equipment bone

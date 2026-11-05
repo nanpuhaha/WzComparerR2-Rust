@@ -20,9 +20,10 @@ pub use frame_layers::{
     resolve_outlink, split_outlink, FrameAssembly, FrameLayer, ResolvedCanvas,
 };
 pub use loader::{
-    load_avatar_with_equipment, load_avatar_with_equipment_and_mix, load_equipment_item,
-    load_from_character_wz, load_from_character_wz_with_skin, AvatarPart, ChairInfo, ChairUserData,
-    CustomChairInfo, CustomChairType, EffectFrames, LoadedAvatar, MixOptions,
+    load_avatar_with_equipment, load_avatar_with_equipment_and_mix, load_body_action_frames,
+    load_equipment_item, load_from_character_wz, load_from_character_wz_with_skin, AvatarPart,
+    ChairInfo, ChairUserData, CustomChairInfo, CustomChairType, EffectFrames, LoadedAvatar,
+    MixOptions,
 };
 pub use mix::mix_rgba8;
 pub use prism::{apply_prism_rgba8, PrismData};

@@ -2307,6 +2307,74 @@ fn load_face_accessory_emotion(
     None
 }
 
+/// body action 의 프레임들을 미리 로드한다 (GUI 자동 재생용).
+pub fn load_body_action_frames(
+    data_root: &std::path::Path,
+    body_skin: i32,
+    action: &str,
+    max_frames: usize,
+) -> Vec<Vec<AvatarPart>> {
+    let canvas_path = data_root
+        .join("Character")
+        .join("_Canvas")
+        .join("_Canvas_000.wz");
+    let Ok(archive) = WzArchive::open(&canvas_path) else {
+        return Vec::new();
+    };
+    let Ok(tree) = archive.read_tree() else {
+        return Vec::new();
+    };
+    let image_name = format!("{:08}.img", body_skin);
+    let Some(entry) = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.node_type == 4 && e.name.as_deref() == Some(image_name.as_str()))
+    else {
+        return Vec::new();
+    };
+    let Some(offset) = entry.offset else {
+        return Vec::new();
+    };
+    let Ok(node) = archive.parse_image_at(offset) else {
+        return Vec::new();
+    };
+    let action_node = child_node(&node, action)
+        .or_else(|| child_node(&node, "stand1"))
+        .or_else(|| child_node(&node, "stand"));
+    let Some(action_node) = action_node else {
+        return Vec::new();
+    };
+    let frames: Vec<&ImageNode> =
+        if matches!(action_node.value, Some(wz_core::image::ImageValue::Png(_))) {
+            vec![action_node]
+        } else {
+            action_node.object_children().iter().collect()
+        };
+    let mut out = Vec::new();
+    for frame in frames.into_iter().take(max_frames) {
+        let Ok(assembly) = crate::collect_frame_assembly(frame, &archive, Some(&archive)) else {
+            continue;
+        };
+        let parts = assembly
+            .layers
+            .iter()
+            .map(|layer| AvatarPart {
+                slot: layer.name.clone(),
+                width: layer.canvas.w,
+                height: layer.canvas.h,
+                rgba: layer.canvas.rgba.clone(),
+                position: layer.pos,
+                origin: layer.origin,
+                z_index: layer.z_int.unwrap_or(0),
+                custom_origin_map: Default::default(),
+            })
+            .collect();
+        out.push(parts);
+    }
+    out
+}
+
 /// `Character/<slot>/_Canvas` 에서 장비 이미지를 찾아 로드한다.
 fn load_character_item_by_id(
     data_root: &std::path::Path,
@@ -4970,6 +5038,16 @@ mod chair_custom_type_tests {
         let fixed_face = fixed.parts.iter().find(|p| p.slot == "face").unwrap();
         assert_ne!(base_face.rgba, fixed_face.rgba);
         assert!(fixed.parts.iter().any(|p| p.slot == "faceaccessory"));
+    }
+
+    #[test]
+    fn body_action_frames_preload_and_differ() {
+        let Some(root) = data_root() else { return };
+        let frames = load_body_action_frames(&root, 2000, "walk1", 16);
+        assert!(frames.len() > 1);
+        let first_body = frames[0].iter().find(|p| p.slot == "body").unwrap();
+        let second_body = frames[1].iter().find(|p| p.slot == "body").unwrap();
+        assert_ne!(first_body.rgba, second_body.rgba);
     }
 
     #[test]
