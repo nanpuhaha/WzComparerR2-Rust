@@ -348,3 +348,19 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   texture dimensions > 1, and front tint animation.
 - A synthetic `WorldMap` fixture test covers QuestLimit open/close maps,
   quest/state/default, Fog quest/qState and MapList mapNo.
+
+## Water shader pipelines
+
+- `wz-render` now creates real `waterBack` (group1 = 176 B uniform) and
+  `waterFront` (uniform + 3 textures + 3 samplers) pipelines with
+  `fs_water_back` / `fs_water_front`.
+- `WaterBackParams` / `WaterFrontParams` write the exact WGSL byte layouts
+  (176 / 352 B) including vp/vp_inv/resolution_time and water constants.
+- `RenderContext::render_water_to_rgba` renders a world-space water quad to an
+  offscreen RGBA target using the shader and reads it back; the GUI composites
+  the result over the viewport.
+- Real map `993258900` waterBack (back/14) and waterFront (back/15) textures are
+  uploaded and rendered through the shader. Tests assert non-transparent pixel
+  output for both synthetic and real textures.
+- Weather: the client/MapData has no `weather` node or weather assets; original
+  MapRender only has the three custom shaders (light/waterBack/waterFront).

@@ -1818,6 +1818,37 @@ mod tests {
         assert!(!front_layer.frames.is_empty());
         assert!(front_layer.frames[0].textures[0].0 > 1);
         assert_ne!(front_layer.tint(0.0), front_layer.tint(700.0));
+
+        // 실제 waterFront 텍스처로 WGSL 파이프라인 픽셀 출력 검증.
+        if let Ok(mut rc) = wz_render::RenderContext::new_headless() {
+            let frame = &front_layer.frames[0];
+            let mut keys = Vec::new();
+            for (i, (w, h, rgba)) in frame.textures.iter().enumerate() {
+                let key = wz_render::GpuKey(900 + i as u32);
+                rc.create_texture(key, *w, *h, rgba).unwrap();
+                keys.push(key);
+            }
+            let camera = wz_render::Camera2D::new(64.0, 64.0);
+            let uniforms = camera.build_uniforms(0.0, 0.0);
+            let params = wz_render::WaterFrontParams {
+                vp: uniforms.vp,
+                vp_inv: uniforms.vp_inv,
+                resolution_time: [64.0, 64.0, 0.5, 0.02],
+                ..Default::default()
+            };
+            let pixels = rc
+                .render_water_to_rgba(
+                    64,
+                    64,
+                    wz_render::shader::MaplePixelShader::WaterFront,
+                    &params.to_bytes(),
+                    &keys,
+                    [0.0, 0.0, 64.0, 64.0],
+                    &uniforms,
+                )
+                .expect("waterFront render");
+            assert!(pixels.chunks(4).any(|p| p[3] != 0));
+        }
     }
 
     #[test]

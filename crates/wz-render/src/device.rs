@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use crate::batch::{BlendMode, SpriteBatch, SpriteVertex};
 use crate::camera::SpriteUniformsGpu;
-use crate::shader::{assemble, WgslModule};
+use crate::shader::{assemble, MaplePixelShader, WgslModule};
 use crate::GpuKey;
 
 /// WGPU GPU 컨텍스트 래퍼.
@@ -20,6 +20,10 @@ pub struct RenderContext {
     pipeline_alpha: wgpu::RenderPipeline,
     pipeline_additive: wgpu::RenderPipeline,
     pipeline_opaque: wgpu::RenderPipeline,
+    water_back_pipeline: wgpu::RenderPipeline,
+    water_front_pipeline: wgpu::RenderPipeline,
+    water_back_layout: wgpu::BindGroupLayout,
+    water_front_layout: wgpu::BindGroupLayout,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     uniform_buffer: wgpu::Buffer,
@@ -199,6 +203,133 @@ impl RenderContext {
         let pipeline_additive = create_pipeline("sprite_pipeline_additive", Some(additive_blend));
         let pipeline_opaque = create_pipeline("sprite_pipeline_opaque", None);
 
+        // waterBack: group1 = uniform only (176 B)
+        let water_back_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("water_back_layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+        // waterFront: uniform + 3 textures + 3 samplers
+        let water_front_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("water_front_layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 5,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 6,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+            });
+        let create_water_pipeline = |label: &str, layout: &wgpu::BindGroupLayout, entry: &str| {
+            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some(label),
+                bind_group_layouts: &[Some(&uniform_bind_group_layout), Some(layout)],
+                immediate_size: 0,
+            });
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some(label),
+                layout: Some(&pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &vs_module,
+                    entry_point: Some("vs_main"),
+                    buffers: &[Some(SpriteVertex::LAYOUT)],
+                    compilation_options: Default::default(),
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &fs_module,
+                    entry_point: Some(entry),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                    compilation_options: Default::default(),
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: None,
+                    unclipped_depth: false,
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                multiview_mask: None,
+                cache: None,
+            })
+        };
+        let water_back_pipeline =
+            create_water_pipeline("water_back_pipeline", &water_back_layout, "fs_water_back");
+        let water_front_pipeline = create_water_pipeline(
+            "water_front_pipeline",
+            &water_front_layout,
+            "fs_water_front",
+        );
+
         // 7. 기본 동적 정점/인덱스 버퍼 (초기 64KB)
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("sprite_vertex_buffer"),
@@ -231,6 +362,10 @@ impl RenderContext {
             pipeline_alpha,
             pipeline_additive,
             pipeline_opaque,
+            water_back_pipeline,
+            water_front_pipeline,
+            water_back_layout,
+            water_front_layout,
             vertex_buffer,
             index_buffer,
             uniform_buffer,
@@ -354,6 +489,199 @@ impl RenderContext {
                 render_pass.draw_indexed(cmd.index_start..end, 0, 0..1);
             }
         }
+    }
+
+    /// waterBack/waterFront 셰이더로 월드 사각형 하나를 렌더해 RGBA 로 읽는다.
+    #[allow(clippy::too_many_arguments)]
+    pub fn render_water_to_rgba(
+        &mut self,
+        width: u32,
+        height: u32,
+        kind: MaplePixelShader,
+        uniform_bytes: &[u8],
+        texture_keys: &[GpuKey],
+        world_rect: [f32; 4],
+        camera: &SpriteUniformsGpu,
+    ) -> Result<Vec<u8>, String> {
+        let mut batch = SpriteBatch::new();
+        batch.push_quad(
+            GpuKey(0),
+            world_rect,
+            0.0,
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 1.0],
+        );
+        batch.finish();
+        self.update_buffers(camera, &batch);
+
+        let uniform_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("water_uniform_buffer"),
+            size: uniform_bytes.len() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        self.queue.write_buffer(&uniform_buffer, 0, uniform_bytes);
+
+        let target_texture = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("water_target"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        let target_view = target_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let (pipeline, layout, entries) = match kind {
+            MaplePixelShader::WaterBack => (
+                &self.water_back_pipeline,
+                &self.water_back_layout,
+                vec![wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: uniform_buffer.as_entire_binding(),
+                }],
+            ),
+            MaplePixelShader::WaterFront => {
+                let mut views = Vec::new();
+                for key in texture_keys {
+                    if let Some((_, view, _)) = self.textures.get(key) {
+                        views.push(view);
+                    }
+                }
+                let Some(first) = views.first() else {
+                    return Err("waterFront texture missing".into());
+                };
+                let pick =
+                    |i: usize| -> &wgpu::TextureView { views.get(i).copied().unwrap_or(first) };
+                (
+                    &self.water_front_pipeline,
+                    &self.water_front_layout,
+                    vec![
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: uniform_buffer.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(pick(0)),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: wgpu::BindingResource::TextureView(pick(1)),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: wgpu::BindingResource::TextureView(pick(2)),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 4,
+                            resource: wgpu::BindingResource::Sampler(&self.sampler),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 5,
+                            resource: wgpu::BindingResource::Sampler(&self.sampler),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 6,
+                            resource: wgpu::BindingResource::Sampler(&self.sampler),
+                        },
+                    ],
+                )
+            }
+            _ => return Err("not a water shader".into()),
+        };
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("water_bind_group"),
+            layout,
+            entries: &entries,
+        });
+
+        let bytes_per_row = (width * 4 + 255) & !255;
+        let buffer_size = (bytes_per_row * height) as u64;
+        let staging_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("water_staging"),
+            size: buffer_size,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("water_encoder"),
+            });
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("water_pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &target_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+            pass.set_pipeline(pipeline);
+            pass.set_bind_group(1, &bind_group, &[]);
+            pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+            pass.draw_indexed(0..6, 0, 0..1);
+        }
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture: &target_texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &staging_buffer,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(bytes_per_row),
+                    rows_per_image: Some(height),
+                },
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+        self.queue.submit(Some(encoder.finish()));
+        let slice = staging_buffer.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |res| {
+            let _ = tx.send(res);
+        });
+        self.device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|e| format!("{e:?}"))?;
+        rx.recv()
+            .map_err(|e| format!("Map buffer recv error: {e:?}"))?
+            .map_err(|e| format!("Map buffer error: {e:?}"))?;
+        let mapped = slice.get_mapped_range().map_err(|e| format!("{e:?}"))?;
+        let mut pixels = Vec::with_capacity((width * height * 4) as usize);
+        for row in 0..height {
+            let start = (row * bytes_per_row) as usize;
+            pixels.extend_from_slice(&mapped[start..start + (width * 4) as usize]);
+        }
+        drop(mapped);
+        staging_buffer.unmap();
+        Ok(pixels)
     }
 
     /// 유니폼 및 정점/인덱스 버퍼 업데이트.
@@ -581,5 +909,53 @@ mod tests {
                 eprintln!("GPU Headless 초기화 스킵 (어댑터 없음): {e}");
             }
         }
+    }
+    #[test]
+    fn water_shaders_produce_pixels() {
+        let Ok(mut ctx) = RenderContext::new_headless() else {
+            return;
+        };
+        let pixels = vec![200u8; 4 * 4 * 4];
+        ctx.create_texture(GpuKey(77), 4, 4, &pixels).unwrap();
+        let camera = crate::camera::Camera2D::new(4.0, 4.0);
+        let uniforms = camera.build_uniforms(0.0, 0.0);
+        let rect = [0.0, 0.0, 4.0, 4.0];
+
+        let back = crate::water::WaterBackParams {
+            min_y: 0.0,
+            max_y: 4.0,
+            ..Default::default()
+        };
+        let back_px = ctx
+            .render_water_to_rgba(
+                4,
+                4,
+                MaplePixelShader::WaterBack,
+                &back.to_bytes(),
+                &[],
+                rect,
+                &uniforms,
+            )
+            .expect("waterBack");
+        assert!(back_px.chunks(4).any(|p| p[3] != 0), "waterBack alpha");
+
+        let front = crate::water::WaterFrontParams {
+            vp: uniforms.vp,
+            vp_inv: uniforms.vp_inv,
+            resolution_time: [4.0, 4.0, 0.0, 0.016],
+            ..Default::default()
+        };
+        let front_px = ctx
+            .render_water_to_rgba(
+                4,
+                4,
+                MaplePixelShader::WaterFront,
+                &front.to_bytes(),
+                &[GpuKey(77), GpuKey(77), GpuKey(77)],
+                rect,
+                &uniforms,
+            )
+            .expect("waterFront");
+        assert!(front_px.chunks(4).any(|p| p[3] != 0), "waterFront alpha");
     }
 }

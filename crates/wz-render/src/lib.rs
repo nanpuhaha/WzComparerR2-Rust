@@ -33,6 +33,7 @@ pub mod camera;
 pub mod device;
 pub mod light;
 pub mod shader;
+pub mod water;
 
 pub use atlas::{AtlasPage, AtlasShelfPacker};
 pub use batch::{BlendMode, DrawCommand, SpriteBatch, SpriteVertex};
@@ -42,6 +43,7 @@ pub use light::{LightMap, LightSource, SpotLight};
 pub use shader::{
     all_pipelines, pipeline_table, MaplePixelShader, SpritePipelineDesc, SpriteVertexShader,
 };
+pub use water::{WaterBackParams, WaterFrontParams};
 
 /// GPU 리소스 불투명 키.
 ///

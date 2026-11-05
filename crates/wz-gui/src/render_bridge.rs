@@ -266,6 +266,93 @@ fn draw_background_layers(batch: &mut SpriteBatch, state: &AppState, front: bool
     }
 }
 
+#[allow(clippy::chunks_exact_to_as_chunks)]
+fn blend_water(dst: &mut [u8], src: &[u8]) {
+    for (d, s) in dst.chunks_exact_mut(4).zip(src.chunks_exact(4)) {
+        let a = s[3] as u32;
+        if a == 0 {
+            continue;
+        }
+        let inv = 255 - a;
+        for c in 0..3 {
+            d[c] = ((s[c] as u32 * a + d[c] as u32 * inv) / 255) as u8;
+        }
+        d[3] = 255;
+    }
+}
+
+fn apply_water_shaders(
+    rc: &mut wz_render::RenderContext,
+    rgba: &mut [u8],
+    width: u32,
+    height: u32,
+    state: &AppState,
+    uniforms: &wz_render::SpriteUniformsGpu,
+) {
+    let center = [state.camera.center.x, state.camera.center.y];
+    for (i, water) in state.map_waters.iter().enumerate() {
+        let Some(frame) = water.frame_at(state.map_water_time) else {
+            continue;
+        };
+        let Some((w, h, _)) = frame.textures.first() else {
+            continue;
+        };
+        let frame_index = if water.frames.len() > 1 {
+            water
+                .frames
+                .iter()
+                .position(|f| std::ptr::eq(f, frame))
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        let pos =
+            crate::background::background_position(&water.background, center, state.map_water_time);
+        let keys: Vec<wz_render::GpuKey> = (0..frame.textures.len())
+            .map(|t| water_key(i, frame_index, t))
+            .collect();
+        let time = state.map_water_time as f32 / 1000.0;
+        let (kind, bytes) = match water.kind {
+            crate::water::WaterKind::Back => {
+                let params = wz_render::WaterBackParams {
+                    min_y: pos[1],
+                    max_y: pos[1] + *h as f32,
+                    ..Default::default()
+                };
+                (
+                    wz_render::shader::MaplePixelShader::WaterBack,
+                    params.to_bytes(),
+                )
+            }
+            crate::water::WaterKind::Front => {
+                let mut params = wz_render::WaterFrontParams {
+                    vp: uniforms.vp,
+                    vp_inv: uniforms.vp_inv,
+                    resolution_time: [width as f32, height as f32, time, 0.02],
+                    ..Default::default()
+                };
+                params.min_y = pos[1];
+                params.max_y = pos[1] + *h as f32;
+                (
+                    wz_render::shader::MaplePixelShader::WaterFront,
+                    params.to_bytes(),
+                )
+            }
+        };
+        if let Ok(water_pixels) = rc.render_water_to_rgba(
+            width,
+            height,
+            kind,
+            &bytes,
+            &keys,
+            [pos[0], pos[1], *w as f32, *h as f32],
+            uniforms,
+        ) {
+            blend_water(rgba, &water_pixels);
+        }
+    }
+}
+
 pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
     let animated_background = state
         .map_background_images
@@ -753,7 +840,8 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         batch.finish();
 
         let uniforms = state.camera.build_uniforms(0.0, 0.0);
-        if let Ok(rgba) = rc.render_to_rgba(w, h, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
+        if let Ok(mut rgba) = rc.render_to_rgba(w, h, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
+            apply_water_shaders(&mut rc, &mut rgba, w, h, state, &uniforms);
             let ci = egui::ColorImage::from_rgba_unmultiplied([w as usize, h as usize], &rgba);
             state.viewport_texture = Some(ui.ctx().load_texture(
                 "viewport",
