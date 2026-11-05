@@ -2253,3 +2253,135 @@ mod achievement_tests {
         );
     }
 }
+
+pub fn cmd_world_archive(
+    string_wz: &Path,
+    etc_wz: &Path,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (string_arena, string_root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&string_arena, string_root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let etc_archive = WzArchive::open(etc_wz)?;
+    let (etc_arena, etc_root) = Arena::from_archive(&etc_archive);
+    linker.load_etc_wz(&etc_arena, etc_root);
+
+    let mut rows = Vec::new();
+    for (id, sr) in &linker.string_world_archive_mob {
+        let monster_book = linker
+            .string_monster_book
+            .get(id)
+            .and_then(|sr| sr.desc.clone());
+        rows.push(serde_json::json!({
+            "kind": "mob",
+            "id": id,
+            "desc": sr.desc,
+            "monster_book": monster_book,
+            "lines": wz_db::world_archive_mob_lines(sr.desc.as_deref(), monster_book.as_deref()),
+        }));
+    }
+    for (id, sr) in &linker.string_world_archive_npc {
+        rows.push(serde_json::json!({
+            "kind": "npc",
+            "id": id,
+            "desc": sr.desc,
+            "lines": wz_db::world_archive_npc_lines(sr.desc.as_deref(), false),
+        }));
+    }
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!("{} {}", row["kind"].as_str().unwrap_or(""), row["id"]);
+            for line in row["lines"].as_array().into_iter().flatten() {
+                println!("  {}", line.as_str().unwrap_or(""));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod world_archive_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn world_archive_matches_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let string_wz = root.join("String/String_000.wz");
+        let etc_wz = root.join("Etc/Etc_002.wz");
+        if !string_wz.exists() || !etc_wz.exists() {
+            return;
+        }
+        use wz_db::{Arena, StringLinker};
+        let string_archive = wz_core::WzArchive::open(&string_wz).unwrap();
+        let (string_arena, string_root) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&string_arena, string_root));
+        let etc_archive = wz_core::WzArchive::open(&etc_wz).unwrap();
+        let (etc_arena, etc_root) = Arena::from_archive(&etc_archive);
+        linker.load_etc_wz(&etc_arena, etc_root);
+
+        let rec = char::from(0x1e);
+        let mut rows: Vec<String> = Vec::new();
+        let mut count = 0u64;
+        for (id, sr) in &linker.string_world_archive_mob {
+            let book = linker
+                .string_monster_book
+                .get(id)
+                .and_then(|s| s.desc.clone());
+            let lines = wz_db::world_archive_mob_lines(sr.desc.as_deref(), book.as_deref());
+            rows.push(
+                [
+                    "mob".to_string(),
+                    id.to_string(),
+                    sr.desc.clone().unwrap_or_default(),
+                    book.unwrap_or_default(),
+                    lines.join("|"),
+                ]
+                .join(&rec.to_string()),
+            );
+            count += 1;
+        }
+        for (id, sr) in &linker.string_world_archive_npc {
+            let lines = wz_db::world_archive_npc_lines(sr.desc.as_deref(), false);
+            rows.push(
+                [
+                    "npc".to_string(),
+                    id.to_string(),
+                    sr.desc.clone().unwrap_or_default(),
+                    String::new(),
+                    lines.join("|"),
+                ]
+                .join(&rec.to_string()),
+            );
+            count += 1;
+        }
+        let canon = rows.join(&rec.to_string());
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/world_archive.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(count, expected["rows"].as_u64().unwrap());
+        assert_eq!(
+            sha256_hex(canon.as_bytes()),
+            expected["sha256"].as_str().unwrap()
+        );
+    }
+}

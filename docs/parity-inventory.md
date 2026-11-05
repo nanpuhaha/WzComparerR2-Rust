@@ -400,3 +400,17 @@ C# `Achievement.CreateFromNode` + 렌더러 리터럴과 비교:
 fixture: `crates/wz-cli/tests/fixtures/achievements.expected.json` (행 수 +
 SHA-256), 테스트: `achievements_match_csharp`.
 `wz achievements <wz> [--json]`로 출력한다.
+
+## WorldArchiveTooltip (`WorldArchiveTooltipRender`)
+
+`wz-db::world_archive`가 렌더러의 텍스트 라인 구성을 옮겼다.
+
+- `SplitLine` 구분자 6종(`\r\n`, `\\r\\n`, `\\r`, `\\n`, `\r`, `\n`)
+- 몹: 월드 아카이브 설명 → `[몬스터북]` → 도감 설명
+- NPC: 월드 아카이브 설명, 대사만 있으면 `(정보 없음)`
+
+C# `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook`을 사용한
+하네스와 비교: `String_000.wz` + `Etc_002.wz` **1,845개** 항목 완전 일치.
+fixture: `crates/wz-cli/tests/fixtures/world_archive.expected.json`,
+테스트: `world_archive_matches_csharp`, CLI: `wz world-archive`.
+NPC 대사(`NpcQuote`) 섹션은 대화/버블 노드 탐색이 필요해 제외한다.

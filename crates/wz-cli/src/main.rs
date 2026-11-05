@@ -417,6 +417,17 @@ enum Command {
         json: bool,
     },
 
+    /// WorldArchive/몬스터북 툴팁 텍스트
+    WorldArchive {
+        /// String_000.wz 경로
+        string: PathBuf,
+        /// Etc_002.wz (worldArchive.img 포함) 경로
+        etc: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// 업적 데이터/툴팁 텍스트
     Achievements {
         /// Etc/Achievement/AchievementData WZ 파일
@@ -798,6 +809,9 @@ fn main() {
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
+        Command::WorldArchive { string, etc, json } => {
+            commands::cmd_world_archive(&string, &etc, json)
+        }
         Command::ParityScan { data_root } => commands::parity::cmd_parity_scan(&data_root),
         Command::Db2ItemTab {
             data_root,

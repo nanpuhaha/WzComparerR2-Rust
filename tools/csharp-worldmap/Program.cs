@@ -1377,6 +1377,49 @@ class Program
         var n = st.WzNode.Nodes.FirstOrDefault(x => x.Text == id + ".img");
         return n?.Value is Wz_Image img && img.TryExtract() ? img.Node.FindNodeByPath("info") : null;
     }
+    static string[] SplitWorldArchive(string orgText)
+    {
+        return orgText.Split(new string[] { "\r\n", "\\r\\n", "\\r", "\\n", "\r", "\n" }, StringSplitOptions.None);
+    }
+    static void WorldArchive(string stringWzPath, string etcWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var etc = new Wz_Structure(); etc.Load(etcWzPath);
+        var linker = new StringLinker();
+        if (!linker.Load(str.wz_files[0], null, etc.wz_files[0]))
+        {
+            Console.WriteLine("{\"error\":\"linker load failed\"}");
+            return;
+        }
+        var rows = new List<object>();
+        foreach (var kv in linker.StringWorldArchiveMob.OrderBy(k => k.Key))
+        {
+            var desc = kv.Value.Desc;
+            linker.StringMonsterBook.TryGetValue(kv.Key, out var book);
+            var lines = new List<string>();
+            if (!string.IsNullOrEmpty(desc)) lines.AddRange(SplitWorldArchive(desc));
+            if (!string.IsNullOrEmpty(book?.Desc))
+            {
+                lines.Add("[몬스터북]");
+                lines.AddRange(SplitWorldArchive(book.Desc));
+            }
+            rows.Add(new {
+                kind = "mob",
+                id = kv.Key,
+                desc,
+                monster_book = book?.Desc,
+                lines,
+            });
+        }
+        foreach (var kv in linker.StringWorldArchiveNpc.OrderBy(k => k.Key))
+        {
+            var desc = kv.Value.Desc;
+            var lines = new List<string>();
+            if (!string.IsNullOrEmpty(desc)) lines.AddRange(SplitWorldArchive(desc));
+            rows.Add(new { kind = "npc", id = kv.Key, desc, lines });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1407,6 +1450,7 @@ class Program
         else if (args[0] == "corespec") CoreSpecs();
         else if (args[0] == "fifthjobnames") FifthJobNames();
         else if (args[0] == "achievements") AchievementTooltip(args[1]);
+        else if (args[0] == "worldarchive") WorldArchive(args[1], args[2]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

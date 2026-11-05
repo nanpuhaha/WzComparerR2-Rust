@@ -353,3 +353,9 @@ Verified AchievementTooltip (`achievements <AchievementData_000.wz>`):
 ```
 All name/desc/score/difficulty/uiForm/block/category/prior/missions/rewards
 and rendered text lines match Rust `wz achievements` exactly.
+
+Verified WorldArchive tooltip text (`worldarchive <String_000.wz> <Etc_002.wz>`):
+```
+1845 mob/npc entries (world archive desc + monster book sections)
+```
+All lines match Rust `wz world-archive` exactly.

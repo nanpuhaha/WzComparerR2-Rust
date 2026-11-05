@@ -46,6 +46,7 @@ pub mod particle;
 pub mod query;
 pub mod resolve;
 pub mod skill_summary;
+pub mod world_archive;
 
 #[cfg(test)]
 mod tests;
@@ -93,3 +94,7 @@ pub use query::{
 };
 pub use resolve::{find_path, handle_uol, resolve_uol, resolve_uol_lossy, ResolveError};
 pub use skill_summary::parse_skill_summary;
+pub use world_archive::{
+    mob_lines as world_archive_mob_lines, npc_lines as world_archive_npc_lines,
+    split_lines as world_archive_split_lines,
+};
