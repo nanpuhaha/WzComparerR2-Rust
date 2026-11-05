@@ -1,8 +1,9 @@
 # Avatar anchor / prism / zmap parity
 
-Status: resolved 2026-11-05; body/head/equipment/weapon frame assembly and GUI prism
-controls implemented. This note records the C# sources, the Rust implementation, and
-the remaining CharaSim gaps.
+Status: resolved 2026-11-05; body/head/equipment/weapon frame assembly, GUI prism
+controls, hair/face mix color, custom-origin parsing, taming, and a first-frame effect
+path implemented. This note records the C# sources, the Rust implementation, and the
+remaining CharaSim gaps.
 
 ## C# sources (pinned `bb98c25…`)
 
@@ -40,8 +41,19 @@ the remaining CharaSim gaps.
   applied; the original loaded RGBA is preserved.
 - `zmap` order is read from `Base/Base_000.wz::zmap.img` and falls back to
   `STANDARD_ZMAP`.
-- Still out of scope: C# `CharaSim` mix color / custom origin maps, and the full
-  effect/taming/chair layer set.
+- Mix color: `mix_rgba8` ports C# `AvatarCanvas.MixBitmaps` (4-bit channel
+  quantization). `MixOptions` applies Hair/Face variants through `MixNodes`; the GUI
+  exposes hair/face color and opacity.
+- Custom origin: `AvatarPart.custom_origin_map` is parsed from `info/customOrigin`
+  (WZ child name → custom origin ID). Applying a selected origin map is caller-driven,
+  matching C# `AvatarCanvas.CustomOrigin`.
+- Taming: the `Taming` slot loads `Character/TamingMob` through `load_item_frame`.
+- Effect: the `Effect` slot loads `Effect/Effect_*.wz` → `ItemEff.img/<id>/effect/
+  default/0` and resolves `_outlink` through `Effect/_Canvas`. Only the first frame is
+  composed; animation is post-v0.1.
+- Still out of scope: chair layers (the client has no `Character/Chair`; chairs need
+  `Item/Install` plus chair-specific frame logic), effect animation, and the custom
+  origin selection UI.
 
 ## Verification
 

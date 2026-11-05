@@ -17,19 +17,21 @@ use wz_core::image::Node as ImageNode;
 use wz_core::WzArchive;
 use wz_image::decode_png_ref_to_rgba;
 
-use crate::{AvatarScene, Bone, ZMap};
+use crate::{AvatarScene, Bone, SkinLayer, ZMap};
 
 use crate::zmap::{part_z_tag, STANDARD_ZMAP};
 
 /// MapleStory 표준 z-map 순서 (Base\zmap.img 에서 로드).
 /// 낮은 인덱스가 먼저 그려진다 (painter's algorithm).
 /// 로드된 아바타 파트.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct AvatarPart {
     pub slot: String,
     pub width: u32,
     pub height: u32,
     pub rgba: Vec<u8>,
+    /// `info/customOrigin` — WZ child name → custom origin ID.
+    pub custom_origin_map: std::collections::BTreeMap<String, String>,
 }
 
 impl AvatarPart {
@@ -129,9 +131,52 @@ fn load_frame_parts(
             width: layer.canvas.w,
             height: layer.canvas.h,
             rgba: layer.canvas.rgba.clone(),
+            custom_origin_map: Default::default(),
         })
         .collect();
     Some((assembly.root_bone, parts))
+}
+
+/// Hair/Face 아이템의 믹스 컬러 변형을 로드해 `parts` 에 블렌드한다.
+///
+/// C# `AvatarPart.LoadMixNodes` / `AvatarCanvas.MixBitmaps` 대응.
+fn apply_mix_to_item(
+    archive: &WzArchive,
+    item_id: i32,
+    dir: &str,
+    parts: &mut [AvatarPart],
+    mix_color: i32,
+    opacity: i32,
+) {
+    if parts.is_empty() || opacity <= 0 || !(0..=8).contains(&mix_color) {
+        return;
+    }
+    let (base_color, variant_id) = match dir {
+        "Hair" => {
+            let base = item_id % 10;
+            (base, item_id / 10 * 10 + mix_color)
+        }
+        "Face" => {
+            let base = item_id / 100 % 10;
+            (
+                base,
+                item_id / 1000 * 1000 + item_id % 100 + mix_color * 100,
+            )
+        }
+        _ => return,
+    };
+    if base_color == mix_color {
+        return;
+    }
+    let image_name = format!("{:08}.img", variant_id);
+    let Some((_, mix_parts)) =
+        load_item_frame(archive, Some(&image_name), &["default", "stand1"], dir)
+    else {
+        return;
+    };
+    for (base, mix) in parts.iter_mut().zip(mix_parts.iter()) {
+        crate::mix_rgba8(&mut base.rgba, &mix.rgba, opacity);
+    }
 }
 
 /// 두 bone 트리를 합친다. 같은 이름의 bone 은 스킨을 합치고, 없으면 자식으로 붙인다.
@@ -144,6 +189,153 @@ fn merge_bone_tree(dst: &mut Bone, src: Bone) {
             dst.children.push(child);
         }
     }
+}
+
+/// 이름으로 직접 자식을 찾는다.
+fn child_node<'a>(node: &'a ImageNode, name: &str) -> Option<&'a ImageNode> {
+    node.object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == name)
+}
+
+/// `Effect/_Canvas` 에서 특정 이미지를 가진 아카이브를 찾는다.
+fn find_effect_canvas_archive(data_root: &std::path::Path, image_name: &str) -> Option<WzArchive> {
+    let dir = data_root.join("Effect").join("_Canvas");
+    for entry in std::fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        if tree
+            .root
+            .entries
+            .iter()
+            .any(|e| e.name.as_deref() == Some(image_name))
+        {
+            return Some(archive);
+        }
+    }
+    None
+}
+
+/// `Effect/Effect_*.wz` 의 `ItemEff.img/<id>/effect/default/0` 을 정적 1프레임으로 로드한다.
+///
+/// C# 은 effect 를 애니메이션하지만, v0.1 이후 PoC 는 첫 프레임만 합성한다.
+fn load_effect_item(data_root: &std::path::Path, item_id: i32) -> Option<(Bone, Vec<AvatarPart>)> {
+    use wz_core::image::ImageValue;
+
+    let effect_dir = data_root.join("Effect");
+    let mut parsed = None;
+    for entry in std::fs::read_dir(effect_dir).ok()?.flatten() {
+        let path = entry.path();
+        let name = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        if !name.starts_with("Effect") || path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("ItemEff.img"))
+        else {
+            continue;
+        };
+        if let Ok(node) = archive.parse_image_at(entry.offset?) {
+            parsed = Some(node);
+            break;
+        }
+    }
+    let item_eff = parsed?;
+    let item = child_node(&item_eff, &item_id.to_string())?;
+    let effect = child_node(item, "effect")?;
+    let default = child_node(effect, "default")?;
+    let frame = child_node(default, "0").or_else(|| default.children.first())?;
+    let png = frame.first_canvas()?;
+
+    let canvas_archive = find_effect_canvas_archive(data_root, "ItemEff.img");
+    let canvas_archive = canvas_archive?;
+    let outlink = png.sub_property.as_ref().and_then(|sub| {
+        sub.children.iter().find_map(|c| match &c.value {
+            Some(ImageValue::Str(v)) if c.name.as_ref() == "_outlink" => Some(v.to_string()),
+            _ => None,
+        })
+    })?;
+    let resolved = crate::resolve_outlink(&canvas_archive, &outlink).ok()?;
+
+    let mut origin = crate::Point::ZERO;
+    let mut z_index = 0;
+    if let Some(sub) = &png.sub_property {
+        for ch in &sub.children {
+            match (ch.name.as_ref(), &ch.value) {
+                ("origin", Some(ImageValue::Vector(v))) => {
+                    origin = crate::Point::new(v.x, v.y);
+                }
+                ("z", Some(ImageValue::Int(v))) => z_index = *v,
+                _ => {}
+            }
+        }
+    }
+    if let Some(z_node) = child_node(effect, "z") {
+        if let Some(ImageValue::Int(v)) = &z_node.value {
+            z_index = *v;
+        }
+    }
+
+    let mut skin = SkinLayer::new("effect");
+    skin.z = "effect".into();
+    skin.z_index = z_index;
+    skin.origin = origin;
+    skin.width = resolved.w;
+    skin.height = resolved.h;
+
+    let mut root = Bone::new("@effect");
+    root.append_bone(skin, "effect", crate::Point::ZERO);
+    let part = AvatarPart {
+        slot: "effect".into(),
+        width: resolved.w,
+        height: resolved.h,
+        rgba: resolved.rgba,
+        ..Default::default()
+    };
+    Some((root, vec![part]))
+}
+
+/// `info/customOrigin` 의 자식들에서 `WZ child name → custom origin ID` 맵을 만든다.
+fn parse_custom_origin(node: &ImageNode) -> std::collections::BTreeMap<String, String> {
+    use wz_core::image::ImageValue;
+
+    let mut out = std::collections::BTreeMap::new();
+    let Some(info) = node.children.iter().find(|c| c.name.as_ref() == "info") else {
+        return out;
+    };
+    let Some(custom) = info
+        .children
+        .iter()
+        .find(|c| c.name.as_ref() == "customOrigin")
+    else {
+        return out;
+    };
+    for child in &custom.children {
+        if let Some(ImageValue::Str(value)) = &child.value {
+            out.insert(value.to_string(), child.name.to_string());
+        }
+    }
+    out
 }
 
 /// `_Canvas` 아이템 이미지 하나를 `collect_frame_assembly` 로 조립한다.
@@ -169,6 +361,7 @@ fn load_item_frame(
         None => tree.root.entries.iter().find(|e| e.node_type == 4),
     }?;
     let node = archive.parse_image_at(entry.offset?).ok()?;
+    let custom_origin = parse_custom_origin(&node);
     let action = action_names
         .iter()
         .find_map(|name| node.children.iter().find(|c| c.name.as_ref() == *name))
@@ -205,6 +398,7 @@ fn load_item_frame(
                 width: layer.canvas.w,
                 height: layer.canvas.h,
                 rgba: layer.canvas.rgba.clone(),
+                custom_origin_map: custom_origin.clone(),
             }
         })
         .collect();
@@ -337,6 +531,10 @@ pub fn slot_dir_name(slot: &str) -> Option<&'static str> {
         "Weapon" => Some("Weapon"),
         "Shield" | "SubWeapon" => Some("Shield"),
         "FaceAccessory" => Some("Accessory"),
+        "Hair" => Some("Hair"),
+        "Face" => Some("Face"),
+        "Taming" => Some("TamingMob"),
+        "Effect" => Some("Effect"),
         _ => None,
     }
 }
@@ -389,10 +587,28 @@ pub fn load_equipment_item(
 /// 장비 아이템 ID 목록으로 아바타를 로드한다.
 /// data_root: MapleStory Data 디렉터리 경로
 /// equipment: (slot_name, item_id) 쌍의 목록
+/// Hair/Face 믹스 컬러 설정. `(mix_color, opacity)` 이며 opacity 는 0..=100.
+///
+/// WZ/UI 가 공급한다 (C# `AvatarPart.MixColor`/`MixOpacity`).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct MixOptions {
+    pub hair: Option<(i32, i32)>,
+    pub face: Option<(i32, i32)>,
+}
+
 pub fn load_avatar_with_equipment(
     data_root: &std::path::Path,
     body_skin: i32,
     equipment: &[(String, i32)],
+) -> Option<LoadedAvatar> {
+    load_avatar_with_equipment_and_mix(data_root, body_skin, equipment, &MixOptions::default())
+}
+
+pub fn load_avatar_with_equipment_and_mix(
+    data_root: &std::path::Path,
+    body_skin: i32,
+    equipment: &[(String, i32)],
+    mix: &MixOptions,
 ) -> Option<LoadedAvatar> {
     // Body 로드 (0000{skin}00.img)
     let body_dir = data_root.join("Character");
@@ -422,10 +638,32 @@ pub fn load_avatar_with_equipment(
     let char_root = data_root.join("Character");
     for (slot, item_id) in equipment {
         if let Some(dir) = slot_dir_name(slot) {
+            if dir == "Effect" {
+                if let Some((item_root, item_parts)) = load_effect_item(data_root, *item_id) {
+                    merge_bone_tree(&mut root, item_root);
+                    parts.extend(item_parts);
+                }
+                continue;
+            }
+            let path = char_root.join(dir).join("_Canvas").join("_Canvas_000.wz");
+            if !path.exists() {
+                continue;
+            }
+            let Ok(archive) = WzArchive::open(&path) else {
+                continue;
+            };
             let image_name = format!("{:08}.img", item_id);
-            if let Some((item_root, item_parts)) =
-                load_item_canvas(&char_root, dir, &image_name, &["default", "stand1"])
+            if let Some((item_root, mut item_parts)) =
+                load_item_frame(&archive, Some(&image_name), &["default", "stand1"], dir)
             {
+                let mix_setting = match dir {
+                    "Hair" => mix.hair,
+                    "Face" => mix.face,
+                    _ => None,
+                };
+                if let Some((color, opacity)) = mix_setting {
+                    apply_mix_to_item(&archive, *item_id, dir, &mut item_parts, color, opacity);
+                }
                 merge_bone_tree(&mut root, item_root);
                 parts.extend(item_parts);
             }
@@ -558,6 +796,42 @@ mod tests {
     }
 
     #[test]
+    fn hair_mix_color_changes_hair_pixels() {
+        let Some(data_root) = wz_data_root() else {
+            return;
+        };
+        let equipment = vec![("Hair".to_string(), 30000)];
+        let base = load_avatar_with_equipment_and_mix(
+            &data_root,
+            2000,
+            &equipment,
+            &MixOptions::default(),
+        );
+        let mixed = load_avatar_with_equipment_and_mix(
+            &data_root,
+            2000,
+            &equipment,
+            &MixOptions {
+                hair: Some((1, 100)),
+                face: None,
+            },
+        );
+        let (Some(base), Some(mixed)) = (base, mixed) else {
+            return;
+        };
+        let Some(base_hair) = base.parts.iter().find(|p| p.slot == "hair") else {
+            return;
+        };
+        let Some(mixed_hair) = mixed.parts.iter().find(|p| p.slot == "hair") else {
+            return;
+        };
+        assert_ne!(
+            base_hair.rgba, mixed_hair.rgba,
+            "mix color should change hair pixels"
+        );
+    }
+
+    #[test]
     fn load_equipment_item_works() {
         let Some(data_root) = wz_data_root() else {
             return;
@@ -637,9 +911,92 @@ mod prism_tests {
             width: 1,
             height: 1,
             rgba: vec![255, 0, 0, 255],
+            ..Default::default()
         };
         let prism = crate::PrismData::new(0, 120, 100, 100);
         part.apply_prism(&prism);
         assert_ne!(part.rgba, vec![255, 0, 0, 255]);
+    }
+}
+
+#[cfg(test)]
+mod custom_origin_tests {
+    use super::*;
+    use std::sync::Arc;
+    use wz_core::image::ImageValue;
+
+    #[test]
+    fn parses_custom_origin_id_map() {
+        let mut root = ImageNode {
+            name: Arc::from("01000000.img"),
+            value: None,
+            children: Vec::new(),
+        };
+        let mut info = ImageNode {
+            name: Arc::from("info"),
+            value: None,
+            children: Vec::new(),
+        };
+        let custom = ImageNode {
+            name: Arc::from("customOrigin"),
+            value: None,
+            children: vec![
+                ImageNode {
+                    name: Arc::from("cap"),
+                    value: Some(ImageValue::Str(Arc::from("capType"))),
+                    children: Vec::new(),
+                },
+                ImageNode {
+                    name: Arc::from("ear"),
+                    value: Some(ImageValue::Str(Arc::from("earType"))),
+                    children: Vec::new(),
+                },
+            ],
+        };
+        info.children.push(custom);
+        root.children.push(info);
+
+        let map = parse_custom_origin(&root);
+        assert_eq!(map.get("capType").map(String::as_str), Some("cap"));
+        assert_eq!(map.get("earType").map(String::as_str), Some("ear"));
+    }
+}
+
+#[cfg(test)]
+mod special_slot_tests {
+    use super::*;
+
+    fn data_root() -> Option<std::path::PathBuf> {
+        std::env::var_os("WZ_DATA_ROOT")
+            .map(std::path::PathBuf::from)
+            .filter(|p| p.exists())
+    }
+
+    #[test]
+    fn taming_slot_loads() {
+        let Some(data_root) = data_root() else {
+            return;
+        };
+        let equipment = vec![("Taming".to_string(), 1902000)];
+        if let Some(av) = load_avatar_with_equipment(&data_root, 2000, &equipment) {
+            assert!(
+                av.parts.iter().any(|p| p.slot == "tamingmob"),
+                "taming part missing"
+            );
+        }
+    }
+
+    #[test]
+    fn effect_slot_loads_first_frame() {
+        let Some(data_root) = data_root() else {
+            return;
+        };
+        let equipment = vec![("Effect".to_string(), 1000070)];
+        if let Some(av) = load_avatar_with_equipment(&data_root, 2000, &equipment) {
+            assert!(
+                av.parts.iter().any(|p| p.slot == "effect"),
+                "effect part missing"
+            );
+        }
     }
 }

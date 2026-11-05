@@ -9,6 +9,7 @@ pub mod compose;
 pub mod frame;
 pub mod frame_layers;
 pub mod loader;
+pub mod mix;
 pub mod prism;
 pub mod scene;
 pub mod zmap;
@@ -19,9 +20,10 @@ pub use frame_layers::{
     resolve_outlink, split_outlink, FrameAssembly, FrameLayer, ResolvedCanvas,
 };
 pub use loader::{
-    load_avatar_with_equipment, load_equipment_item, load_from_character_wz,
-    load_from_character_wz_with_skin, AvatarPart, LoadedAvatar,
+    load_avatar_with_equipment, load_avatar_with_equipment_and_mix, load_equipment_item,
+    load_from_character_wz, load_from_character_wz_with_skin, AvatarPart, LoadedAvatar, MixOptions,
 };
+pub use mix::mix_rgba8;
 pub use prism::{apply_prism_rgba8, PrismData};
 pub use scene::{AvatarBatch, AvatarScene, AvatarVertex};
 

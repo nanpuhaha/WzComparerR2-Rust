@@ -107,6 +107,49 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     if prism_changed && !state.avatar_loaded_parts.is_empty() {
         async_io::render_loaded_avatar(state);
     }
+
+    ui.separator();
+    ui.label("Hair/Face 믹스 컬러");
+    let mut mix_changed = ui
+        .checkbox(&mut state.hair_mix_enabled, "Hair 믹스")
+        .changed();
+    ui.add_enabled_ui(state.hair_mix_enabled, |ui| {
+        egui::ComboBox::from_id_salt("hair_mix_color")
+            .selected_text(MIX_COLORS[state.hair_mix_color.clamp(0, 8) as usize])
+            .show_ui(ui, |ui| {
+                for (i, name) in MIX_COLORS.iter().enumerate() {
+                    mix_changed |= ui
+                        .selectable_value(&mut state.hair_mix_color, i as i32, *name)
+                        .changed();
+                }
+            });
+        mix_changed |= ui
+            .add(egui::Slider::new(&mut state.hair_mix_opacity, 0..=100).text("Hair Opacity"))
+            .changed();
+    });
+    mix_changed |= ui
+        .checkbox(&mut state.face_mix_enabled, "Face 믹스")
+        .changed();
+    ui.add_enabled_ui(state.face_mix_enabled, |ui| {
+        egui::ComboBox::from_id_salt("face_mix_color")
+            .selected_text(MIX_COLORS[state.face_mix_color.clamp(0, 8) as usize])
+            .show_ui(ui, |ui| {
+                for (i, name) in MIX_COLORS.iter().enumerate() {
+                    mix_changed |= ui
+                        .selectable_value(&mut state.face_mix_color, i as i32, *name)
+                        .changed();
+                }
+            });
+        mix_changed |= ui
+            .add(egui::Slider::new(&mut state.face_mix_opacity, 0..=100).text("Face Opacity"))
+            .changed();
+    });
+    if ui.button("믹스 적용 (장비 다시 로드)").clicked() {
+        async_io::load_avatar_with_equipment_input(state);
+    }
+    if mix_changed {
+        ui.label(egui::RichText::new("Hair/Face 믹스는 장비 로드 시 적용됩니다").weak());
+    }
     if !state.avatar_loaded_parts.is_empty() {
         ui.separator();
         ui.label(format!(
@@ -148,6 +191,8 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label(format!("Rendered: {}x{}", w, h));
     }
 }
+
+pub const MIX_COLORS: [&str; 9] = ["0", "1", "2", "3", "4", "5", "6", "7", "8"];
 
 pub const PRISM_COLORS: [&str; 7] = [
     "전체 색상",

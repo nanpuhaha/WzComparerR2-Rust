@@ -69,7 +69,19 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
         state.avatar_status = "유효한 장비 ID가 없습니다".into();
         return;
     }
-    match wz_avatar::load_avatar_with_equipment(&data_root, 2000, &equipment) {
+    match wz_avatar::load_avatar_with_equipment_and_mix(
+        &data_root,
+        2000,
+        &equipment,
+        &wz_avatar::MixOptions {
+            hair: state
+                .hair_mix_enabled
+                .then_some((state.hair_mix_color, state.hair_mix_opacity)),
+            face: state
+                .face_mix_enabled
+                .then_some((state.face_mix_color, state.face_mix_opacity)),
+        },
+    ) {
         Some(av) => {
             state.avatar_status = format!("장비 로드: {} 파트", av.parts.len());
             state.avatar_loaded_parts = av
