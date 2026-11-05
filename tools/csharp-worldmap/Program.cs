@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using WzComparerR2.WzLib;
 using WzComparerR2.Common;
 using WzComparerR2.CharaSim;
+using System.Globalization;
 
 class Program
 {
@@ -1314,6 +1315,68 @@ class Program
             }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void AchievementTooltip(string wzPath)
+    {
+        var st = new Wz_Structure(); st.Load(wzPath);
+        var achievements = new List<WzComparerR2.CharaSim.Achievement>();
+        var names = new Dictionary<int, string>();
+        foreach (Wz_Node n in st.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            if (!img.TryExtract()) continue;
+            var ac = WzComparerR2.CharaSim.Achievement.CreateFromNode(img.Node, null);
+            if (ac == null) continue;
+            achievements.Add(ac);
+            names[ac.ID] = img.Node.FindNodeByPath(@"info\name")?.Value?.ToString() ?? "";
+        }
+        var rows = new List<object>();
+        foreach (var ac in achievements.OrderBy(a => a.ID))
+        {
+            var info = PluginBaseFind(st, ac.ID);
+            var name = names.TryGetValue(ac.ID, out var nm) ? nm : "";
+            var desc = info?.FindNodeByPath(@"desc")?.Value?.ToString() ?? "";
+            var lines = new List<string> { name };
+            if (!string.IsNullOrEmpty(ac.Start) && !string.IsNullOrEmpty(ac.End)
+                && DateTime.TryParseExact(ac.Start, "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var start)
+                && DateTime.TryParseExact(ac.End, "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var end))
+            {
+                var fmt = "yyyy년 MM월 dd일 HH시 mm분";
+                lines.Add($"{start.ToString(fmt)} ~ {end.ToString(fmt)}");
+            }
+            if (!string.IsNullOrEmpty(desc)) lines.Add(desc);
+            if (ac.ShowMissions) lines.AddRange(ac.Missions);
+            var category = string.Join(" / ", new[] { ac.MainCategory, ac.SubCategory }.Where(t => !string.IsNullOrEmpty(t)));
+            if (!string.IsNullOrEmpty(category)) lines.Add($"카테고리: {category}");
+            if (ac.PriorIDs.Count > 0)
+            {
+                var list = string.Join(", ", ac.PriorIDs.Select(id =>
+                    $"{(names.TryGetValue(id, out var pn) ? pn : "null")}({id:D5})"));
+                lines.Add($"선행 업적: {list}");
+            }
+            if (ac.Hide) lines.Add("업적창에 표시되지 않음");
+            rows.Add(new {
+                id = ac.ID,
+                name,
+                desc,
+                score = ac.Score,
+                difficulty = ac.Difficulty,
+                ui_form = ac.UiForm,
+                block = ac.Block,
+                main_category = ac.MainCategory,
+                sub_category = ac.SubCategory,
+                prior_ids = ac.PriorIDs,
+                missions = ac.Missions,
+                rewards = ac.Rewards.Select(r => new { id = r.ID, desc = r.Desc }),
+                lines,
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    static Wz_Node PluginBaseFind(Wz_Structure st, int id)
+    {
+        var n = st.WzNode.Nodes.FirstOrDefault(x => x.Text == id + ".img");
+        return n?.Value is Wz_Image img && img.TryExtract() ? img.Node.FindNodeByPath("info") : null;
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1343,6 +1406,7 @@ class Program
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));
         else if (args[0] == "corespec") CoreSpecs();
         else if (args[0] == "fifthjobnames") FifthJobNames();
+        else if (args[0] == "achievements") AchievementTooltip(args[1]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

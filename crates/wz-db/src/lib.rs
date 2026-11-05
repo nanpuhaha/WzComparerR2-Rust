@@ -20,6 +20,7 @@
 //! - **해석기 2벌** — 재귀형과 반복형이 서로 다른 규칙으로 경로를 푼다.
 //!   한 벌로 통합한다.
 
+pub mod achievement;
 pub mod arena;
 pub mod calc;
 pub mod chara_prop;
@@ -49,6 +50,7 @@ pub mod skill_summary;
 #[cfg(test)]
 mod tests;
 
+pub use achievement::{Achievement, AchievementReward};
 pub use arena::Arena;
 pub use calc::{evaluate_expression, CalcError};
 pub use chara_prop::CharaProp;

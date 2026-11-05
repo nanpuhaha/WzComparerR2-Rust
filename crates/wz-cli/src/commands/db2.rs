@@ -2096,3 +2096,160 @@ mod item_tab_tooltip_tests {
         }
     }
 }
+
+pub fn cmd_achievements(
+    wz_path: &Path,
+    json: bool,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let mut rows = Vec::new();
+    let mut names = std::collections::HashMap::new();
+    for entry in &tree.root.entries {
+        if entry.node_type != 4 {
+            continue;
+        }
+        let Some(offset) = entry.offset else {
+            continue;
+        };
+        let Ok(mut node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        if let Some(name) = entry.name.as_deref() {
+            node.name = std::sync::Arc::from(name);
+        }
+        if let Some(ac) = wz_db::Achievement::from_node(&node) {
+            names.insert(ac.id, ac.name.clone());
+            rows.push(ac);
+        }
+    }
+    rows.sort_by_key(|a| a.id);
+    rows.truncate(limit);
+    let rows: Vec<_> = rows
+        .into_iter()
+        .map(|ac| {
+            let lines = ac.tooltip_lines(&names);
+            serde_json::json!({
+                "id": ac.id,
+                "name": ac.name,
+                "desc": ac.desc,
+                "score": ac.score,
+                "difficulty": ac.difficulty,
+                "ui_form": ac.ui_form,
+                "block": ac.block,
+                "main_category": ac.main_category,
+                "sub_category": ac.sub_category,
+                "prior_ids": ac.prior_ids,
+                "missions": ac.missions,
+                "rewards": ac.rewards,
+                "lines": lines,
+            })
+        })
+        .collect();
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!("{}", row["id"]);
+            for line in row["lines"].as_array().into_iter().flatten() {
+                println!("  {}", line.as_str().unwrap_or(""));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod achievement_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    fn rec() -> char {
+        char::from(0x1e)
+    }
+
+    #[test]
+    fn achievements_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let path = root.join("Etc/Achievement/AchievementData/AchievementData_000.wz");
+        if !path.exists() {
+            return;
+        }
+        let archive = wz_core::WzArchive::open(&path).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let mut rows = Vec::new();
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else {
+                continue;
+            };
+            let Ok(mut node) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            if let Some(name) = entry.name.as_deref() {
+                node.name = std::sync::Arc::from(name);
+            }
+            if let Some(ac) = wz_db::Achievement::from_node(&node) {
+                rows.push(ac);
+            }
+        }
+        rows.sort_by_key(|a| a.id);
+        let names: std::collections::HashMap<i32, String> =
+            rows.iter().map(|a| (a.id, a.name.clone())).collect();
+        let rec = rec();
+        let canon = rows
+            .iter()
+            .map(|a| {
+                let lines = a.tooltip_lines(&names);
+                [
+                    a.id.to_string(),
+                    a.name.clone(),
+                    a.desc.clone(),
+                    a.score.to_string(),
+                    a.difficulty.clone().unwrap_or_default(),
+                    a.ui_form.clone().unwrap_or_default(),
+                    a.block.clone().unwrap_or_default(),
+                    a.main_category.clone(),
+                    a.sub_category.clone().unwrap_or_default(),
+                    a.prior_ids
+                        .iter()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<_>>()
+                        .join(","),
+                    a.missions.join("|"),
+                    a.rewards
+                        .iter()
+                        .map(|r| format!("{}:{}", r.id, r.desc))
+                        .collect::<Vec<_>>()
+                        .join("|"),
+                    lines.join("|"),
+                ]
+                .join(&rec.to_string())
+            })
+            .collect::<Vec<_>>()
+            .join(&rec.to_string());
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/achievements.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(rows.len() as u64, expected["rows"].as_u64().unwrap());
+        assert_eq!(
+            sha256_hex(canon.as_bytes()),
+            expected["sha256"].as_str().unwrap()
+        );
+    }
+}

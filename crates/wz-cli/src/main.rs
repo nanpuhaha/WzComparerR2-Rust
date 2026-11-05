@@ -417,6 +417,18 @@ enum Command {
         json: bool,
     },
 
+    /// 업적 데이터/툴팁 텍스트
+    Achievements {
+        /// Etc/Achievement/AchievementData WZ 파일
+        wz: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+        /// 최대 행
+        #[arg(long, default_value_t = 5000)]
+        limit: usize,
+    },
+
     /// 데이터 부재 항목 전수 스캔 (Skill common/level, WorldMap Fog, Familiar, BIN)
     ParityScan {
         /// Data 루트
@@ -785,6 +797,7 @@ fn main() {
             json,
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
+        Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
         Command::ParityScan { data_root } => commands::parity::cmd_parity_scan(&data_root),
         Command::Db2ItemTab {
             data_root,

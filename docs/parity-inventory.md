@@ -383,3 +383,20 @@ fixture: `crates/wz-avatar/tests/job_names.json`,
 `crates/wz-avatar/tests/fifth_job_names.json`,
 `crates/wz-db/tests/core_specs.json`.
 C# 하네스: `jobnames 60000`, `fifthjobnames`, `corespec`.
+
+## AchievementTooltip (`AchievementTooltipRenderer`)
+
+`wz-db::achievement`가 `Achievement.CreateFromNode`와 렌더러의 텍스트 라인
+순서를 옮겼다.
+
+- 이름/설명, score, difficulty(`difficulty` 노드가 있을 때만, 기본 `normal`),
+  uiForm(`uiType`이 있을 때만, 기본 `basic`), block(기본 `none`)
+- 기간: `yyyyMMddHHmmss` → `yyyy년 MM월 dd일 HH시 mm분` 두 개를 ` ~ `로 연결
+- 미션(`uiForm`이 `mission`/`all`일 때), `카테고리: 대/소분류`,
+  `선행 업적: 이름(00037)`, `업적창에 표시되지 않음`
+
+C# `Achievement.CreateFromNode` + 렌더러 리터럴과 비교:
+`AchievementData_000.wz` **1,579개** 전부 일치 (13개 필드 + lines).
+fixture: `crates/wz-cli/tests/fixtures/achievements.expected.json` (행 수 +
+SHA-256), 테스트: `achievements_match_csharp`.
+`wz achievements <wz> [--json]`로 출력한다.

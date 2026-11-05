@@ -346,3 +346,10 @@ corespec            -> 408 (kind, value, desc) combos
 ```
 All match Rust (`wz-avatar::get_job_name`, `wz_avatar::get_fifth_job_name`,
 `wz_db::item_core_spec_string`) exactly.
+
+Verified AchievementTooltip (`achievements <AchievementData_000.wz>`):
+```
+1579 achievement rows
+```
+All name/desc/score/difficulty/uiForm/block/category/prior/missions/rewards
+and rendered text lines match Rust `wz achievements` exactly.
