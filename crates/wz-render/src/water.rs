@@ -49,19 +49,34 @@ impl WaterBackParams {
     }
 }
 
-/// `WaterFrontUniforms` 파라미터 (필요한 값만 노출).
+/// `WaterFrontUniforms` 파라미터.
 #[derive(Debug, Clone)]
 pub struct WaterFrontParams {
     pub vp: [f32; 16],
     pub vp_inv: [f32; 16],
     pub resolution_time: [f32; 4],
-    pub diffuse: [f32; 3],
-    pub min_y: f32,
-    pub max_y: f32,
+    pub value: [f32; 2],
+    pub cgrad: [f32; 2],
+    pub octave: [f32; 2],
     pub strength: f32,
     pub edge: f32,
+    pub godray_min_y: f32,
+    pub godray_max_y: f32,
+    pub godray_move: f32,
+    pub godray_bright: f32,
+    pub godray_color: [f32; 3],
+    pub godray_uv_rot: f32,
+    pub godray_uv_scale: [f32; 2],
     pub aberration: f32,
     pub dist_strength: f32,
+    pub diffuse: [f32; 3],
+    pub screen_min_y: f32,
+    pub screen_max_y: f32,
+    pub screen_color: [f32; 3],
+    pub min_y: f32,
+    pub max_y: f32,
+    pub distance_factor1: f32,
+    pub distance_factor2: f32,
 }
 
 impl Default for WaterFrontParams {
@@ -70,13 +85,28 @@ impl Default for WaterFrontParams {
             vp: glam::Mat4::IDENTITY.to_cols_array(),
             vp_inv: glam::Mat4::IDENTITY.to_cols_array(),
             resolution_time: [800.0, 600.0, 0.0, 0.0],
-            diffuse: [0.30, 0.62, 0.90],
-            min_y: -2000.0,
-            max_y: 2000.0,
+            value: [0.0, 0.04],
+            cgrad: [1.0, 1.0],
+            octave: [1.0, 1.0],
             strength: 1.0,
             edge: 0.1,
+            godray_min_y: -2000.0,
+            godray_max_y: 4000.0,
+            godray_move: 0.0,
+            godray_bright: 0.5,
+            godray_color: [1.0, 1.0, 1.0],
+            godray_uv_rot: 0.0,
+            godray_uv_scale: [1.0, 1.0],
             aberration: 0.005,
             dist_strength: 0.001,
+            diffuse: [0.30, 0.62, 0.90],
+            screen_min_y: -2000.0,
+            screen_max_y: 4000.0,
+            screen_color: [0.2, 0.4, 0.6],
+            min_y: -2000.0,
+            max_y: 2000.0,
+            distance_factor1: 1.0,
+            distance_factor2: 1.0,
         }
     }
 }
@@ -96,45 +126,43 @@ impl WaterFrontParams {
         for (i, v) in self.resolution_time.iter().enumerate() {
             put(128 + i * 4, *v);
         }
-        // cb1 starts at 144.
-        put(144, 0.0); // value.x
-        put(148, 0.0); // value.y
-        put(152, 1.0); // cgrad.x
-        put(156, 1.0); // cgrad.y
-        put(160, 1.0); // octave.x
-        put(164, 1.0); // octave.y
+        put(144, self.value[0]);
+        put(148, self.value[1]);
+        put(152, self.cgrad[0]);
+        put(156, self.cgrad[1]);
+        put(160, self.octave[0]);
+        put(164, self.octave[1]);
         put(168, self.strength);
         put(172, self.edge);
-        put(176, -2000.0); // godray_min_y
-        put(180, 4000.0); // godray_max_y
-        put(184, 0.0); // godray_move
-        put(188, 0.5); // godray_bright
-        put(192, 1.0); // godray_color.r
-        put(196, 1.0); // godray_color.g
-        put(200, 1.0); // godray_color.b
-        put(204, 0.0); // godray_uv_rot
-        put(208, 1.0); // godray_uv_scale.x
-        put(212, 1.0); // godray_uv_scale.y
+        put(176, self.godray_min_y);
+        put(180, self.godray_max_y);
+        put(184, self.godray_move);
+        put(188, self.godray_bright);
+        put(192, self.godray_color[0]);
+        put(196, self.godray_color[1]);
+        put(200, self.godray_color[2]);
+        put(204, self.godray_uv_rot);
+        put(208, self.godray_uv_scale[0]);
+        put(212, self.godray_uv_scale[1]);
         put(216, self.aberration);
         put(220, self.dist_strength);
         put(224, self.diffuse[0]);
         put(228, self.diffuse[1]);
         put(232, self.diffuse[2]);
-        put(236, -2000.0); // screen_min_y
-        put(240, 4000.0); // screen_max_y
-        put(244, 0.2); // screen_color.r
-        put(248, 0.4); // screen_color.g
-        put(252, 0.6); // screen_color.b
-                       // cb2 starts at 256.
-        put(256, 0.0); // player_pos.x
+        put(236, self.screen_min_y);
+        put(240, self.screen_max_y);
+        put(244, self.screen_color[0]);
+        put(248, self.screen_color[1]);
+        put(252, self.screen_color[2]);
+        put(256, 0.0);
         put(260, 0.0);
-        put(264, 1.0); // distance_factor1
+        put(264, self.distance_factor1);
         put(268, 0.0);
         put(272, self.min_y);
         put(276, self.max_y);
-        put(280, 0.0); // dist_center_pos.x
+        put(280, 0.0);
         put(284, 0.0);
-        put(288, 1.0); // distance_factor2
+        put(288, self.distance_factor2);
         put(292, 0.0);
         out
     }

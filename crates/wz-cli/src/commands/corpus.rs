@@ -3,7 +3,7 @@ pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
     println!("지원: PKG1/PKG2/MS 컨테이너, AES/SNOW2/ChaCha20");
     println!("      이미지 트리/Canvas/UOL, WZ/DXBC/BC7 디코딩");
     println!("      StringLinker(5 roots), 아바타/맵 데이터, C# 오라클 차분 하네스");
-    println!("미구현: 날씨 이펙트(원본 데이터 없음)");
+    println!("미구현: 없음 (weather는 원본/클라이언트 데이터 없음)");
     Ok(())
 }
 pub fn cmd_fmt(n: usize) -> Result<(), Box<dyn std::error::Error>> {

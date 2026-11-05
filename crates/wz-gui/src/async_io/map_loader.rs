@@ -1234,6 +1234,81 @@ fn water_shader_kind(node: &wz_core::image::Node) -> Option<crate::water::WaterK
     }
 }
 
+fn node_float_value(node: &wz_core::image::Node, key: &str) -> Option<f32> {
+    node.object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == key)
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Float(v)) => Some(*v),
+            Some(wz_core::image::ImageValue::Double(v)) => Some(*v as f32),
+            Some(wz_core::image::ImageValue::Int(v)) => Some(*v as f32),
+            _ => None,
+        })
+}
+
+fn node_vec2_value(node: &wz_core::image::Node, key: &str) -> Option<[f32; 2]> {
+    node.object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == key)
+        .and_then(|c| {
+            let x = node_float_value(c, "x")?;
+            let y = node_float_value(c, "y")?;
+            Some([x, y])
+        })
+}
+
+fn node_vec3_value(node: &wz_core::image::Node, key: &str) -> Option<[f32; 3]> {
+    node.object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == key)
+        .and_then(|c| {
+            let x = node_float_value(c, "x")?;
+            let y = node_float_value(c, "y")?;
+            let z = node_float_value(c, "z")?;
+            Some([x, y, z])
+        })
+}
+
+fn parse_water_back_params(root: &wz_core::image::Node) -> Option<wz_render::WaterBackParams> {
+    let constant = helper_path(root, &["shader", "waterBack", "constant"])?;
+    let mut params = wz_render::WaterBackParams::default();
+    params.min_y = node_float_value(constant, "min_y").unwrap_or(params.min_y);
+    params.max_y = node_float_value(constant, "max_y").unwrap_or(params.max_y);
+    for i in 0..10 {
+        if let Some(color) = node_vec3_value(constant, &format!("color{i}")) {
+            params.bands[i][0] = color[0];
+            params.bands[i][1] = color[1];
+            params.bands[i][2] = color[2];
+            params.bands[i][3] = node_float_value(constant, &format!("level{i}")).unwrap_or(0.0);
+        }
+    }
+    Some(params)
+}
+
+fn parse_water_front_params(root: &wz_core::image::Node) -> Option<wz_render::WaterFrontParams> {
+    let constant = helper_path(root, &["shader", "waterFront", "constant"])?;
+    let mut p = wz_render::WaterFrontParams::default();
+    p.value = node_vec2_value(constant, "value").unwrap_or(p.value);
+    p.cgrad = node_vec2_value(constant, "cgrad").unwrap_or(p.cgrad);
+    p.octave = node_vec2_value(constant, "octave").unwrap_or(p.octave);
+    p.strength = node_float_value(constant, "strength").unwrap_or(p.strength);
+    p.edge = node_float_value(constant, "edge").unwrap_or(p.edge);
+    p.godray_min_y = node_float_value(constant, "godray_min_y").unwrap_or(p.godray_min_y);
+    p.godray_max_y = node_float_value(constant, "godray_max_y").unwrap_or(p.godray_max_y);
+    p.godray_move = node_float_value(constant, "godray_move").unwrap_or(p.godray_move);
+    p.godray_bright = node_float_value(constant, "godray_bright").unwrap_or(p.godray_bright);
+    p.godray_color = node_vec3_value(constant, "godray_color").unwrap_or(p.godray_color);
+    p.godray_uv_rot = node_float_value(constant, "godray_uv_rot").unwrap_or(p.godray_uv_rot);
+    p.godray_uv_scale = node_vec2_value(constant, "godray_uv_scale").unwrap_or(p.godray_uv_scale);
+    p.aberration = node_float_value(constant, "aberration").unwrap_or(p.aberration);
+    p.dist_strength = node_float_value(constant, "dist_strength").unwrap_or(p.dist_strength);
+    p.diffuse = node_vec3_value(constant, "diffuse").unwrap_or(p.diffuse);
+    p.screen_min_y = node_float_value(constant, "screen_min_y").unwrap_or(p.screen_min_y);
+    p.screen_max_y = node_float_value(constant, "screen_max_y").unwrap_or(p.screen_max_y);
+    p.screen_color = node_vec3_value(constant, "screen_color").unwrap_or(p.screen_color);
+    Some(p)
+}
+
 fn load_water_layer(
     root: &std::path::Path,
     background: &wz_db::BackItem,
@@ -1276,6 +1351,8 @@ fn load_water_layer(
             let Some(kind) = water_shader_kind(target) else {
                 continue;
             };
+            let back_params = parse_water_back_params(&node);
+            let front_params = parse_water_front_params(&node);
             let source = archive.source().clone();
             let mut frames = Vec::new();
             let mut delays = Vec::new();
@@ -1354,6 +1431,8 @@ fn load_water_layer(
                 kind,
                 frames,
                 delays,
+                back_params,
+                front_params,
             });
         }
     }
@@ -1706,6 +1785,58 @@ mod tests {
     }
 
     #[test]
+    fn real_worldmap_has_no_quest_or_fog_nodes() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let dir = root.join("Map").join("WorldMap");
+        if !dir.exists() {
+            return;
+        }
+        let mut images = 0;
+        let mut quest_nodes = 0;
+        let mut fog_nodes = 0;
+        for entry in std::fs::read_dir(dir).unwrap().flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+                continue;
+            }
+            let Ok(archive) = wz_core::WzArchive::open(&path) else {
+                continue;
+            };
+            let Ok(tree) = archive.read_tree() else {
+                continue;
+            };
+            for image in &tree.root.entries {
+                if image.node_type != 4 {
+                    continue;
+                }
+                let Some(offset) = image.offset else {
+                    continue;
+                };
+                let Ok(node) = archive.parse_image_at(offset) else {
+                    continue;
+                };
+                images += 1;
+                let mut stack = vec![&node];
+                while let Some(current) = stack.pop() {
+                    for child in current.object_children() {
+                        match child.name.as_ref() {
+                            "QuestLimit" => quest_nodes += 1,
+                            "Fog" => fog_nodes += 1,
+                            _ => {}
+                        }
+                        stack.push(child);
+                    }
+                }
+            }
+        }
+        assert!(images >= 80, "worldmap images: {images}");
+        assert_eq!(quest_nodes, 0, "client unexpectedly has QuestLimit");
+        assert_eq!(fog_nodes, 0, "client unexpectedly has Fog");
+    }
+
+    #[test]
     fn parses_synthetic_worldmap_quest_and_fog() {
         let mut root = wz_core::image::Node::new("Synthetic.img");
         let mut info = wz_core::image::Node::new("info");
@@ -1865,11 +1996,26 @@ mod tests {
 
         let back_layer = load_water_layer(&root, back).expect("waterBack layer");
         assert_eq!(back_layer.kind, crate::water::WaterKind::Back);
+        let bp = back_layer
+            .back_params
+            .as_ref()
+            .expect("waterBack constants");
+        assert_eq!((bp.min_y, bp.max_y), (4500.0, 19500.0));
+        assert_eq!(bp.bands[0][0..3], [1.0, 1.0, 1.0]);
+        assert_eq!(bp.bands[9][3], 1.0001);
         assert!(!back_layer.frames.is_empty());
         assert!(back_layer.frames[0].textures[0].0 > 1);
 
         let front_layer = load_water_layer(&root, front).expect("waterFront layer");
         assert_eq!(front_layer.kind, crate::water::WaterKind::Front);
+        let fp = front_layer
+            .front_params
+            .as_ref()
+            .expect("waterFront constants");
+        assert!((fp.aberration - 0.005).abs() < 1e-6);
+        assert_eq!(fp.godray_max_y, 5248.0);
+        assert_eq!(fp.godray_min_y, 4754.0);
+        assert_eq!(fp.diffuse, [1.0, 1.0, 1.0]);
         assert!(!front_layer.frames.is_empty());
         assert!(front_layer.frames[0].textures[0].0 > 1);
         assert_ne!(front_layer.tint(0.0), front_layer.tint(700.0));

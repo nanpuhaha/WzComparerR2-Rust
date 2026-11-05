@@ -387,3 +387,14 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   chase movement and vertical fly.
 - waterFront now binds the current scene RGBA as `bg_tex` (plus the two WZ
   textures) for the shader's background capture.
+
+## Water constants & WorldMap absence evidence
+
+- Water shader constants are parsed from
+  `2024BlueholeExploration.img/shader/waterBack/constant` and
+  `.../waterFront/constant` (min/max 4500/19500, color0..9/level0..9,
+  aberration 0.005, godray 4754..5248, diffuse 1,1,1). No defaults are used
+  when the real constants exist.
+- `real_worldmap_has_no_quest_or_fog_nodes` scans every image in
+  `Map/WorldMap` (85+) and asserts `QuestLimit = 0`, `Fog = 0`; the parser/UI
+  remains covered by the synthetic fixture test.

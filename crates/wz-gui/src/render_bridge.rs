@@ -316,11 +316,7 @@ fn apply_water_shaders(
         let time = state.map_water_time as f32 / 1000.0;
         let (kind, bytes) = match water.kind {
             crate::water::WaterKind::Back => {
-                let params = wz_render::WaterBackParams {
-                    min_y: pos[1],
-                    max_y: pos[1] + *h as f32,
-                    ..Default::default()
-                };
+                let params = water.back_params.clone().unwrap_or_default();
                 (
                     wz_render::shader::MaplePixelShader::WaterBack,
                     params.to_bytes(),
@@ -333,14 +329,10 @@ fn apply_water_shaders(
                 let first = keys.first().copied().unwrap_or(scene_key);
                 let second = keys.get(1).copied().unwrap_or(first);
                 keys = vec![first, second, scene_key];
-                let mut params = wz_render::WaterFrontParams {
-                    vp: uniforms.vp,
-                    vp_inv: uniforms.vp_inv,
-                    resolution_time: [width as f32, height as f32, time, 0.02],
-                    ..Default::default()
-                };
-                params.min_y = pos[1];
-                params.max_y = pos[1] + *h as f32;
+                let mut params = water.front_params.clone().unwrap_or_default();
+                params.vp = uniforms.vp;
+                params.vp_inv = uniforms.vp_inv;
+                params.resolution_time = [width as f32, height as f32, time, 0.02];
                 (
                     wz_render::shader::MaplePixelShader::WaterFront,
                     params.to_bytes(),

@@ -25,6 +25,10 @@ pub struct WaterLayer {
     pub kind: WaterKind,
     pub frames: Vec<WaterFrame>,
     pub delays: Vec<u32>,
+    /// WZ `shader/waterBack/constant`에서 파싱한 값.
+    pub back_params: Option<wz_render::WaterBackParams>,
+    /// WZ `shader/waterFront/constant`에서 파싱한 값.
+    pub front_params: Option<wz_render::WaterFrontParams>,
 }
 
 impl WaterLayer {

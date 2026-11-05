@@ -41,7 +41,7 @@
 | `ToolTip` 맵 오브젝트 | `map.rs` + `String/ToolTipHelp.img` | ✅ | 실제 000050000 |
 | MiniMap canvas/icons/names | `map.rs` + GUI panel | ✅ | 2313x1592, 아이콘 4종, String 이름 |
 | `WorldMap` BaseImg/MapList | `wz-gui/src/worldmap.rs` | ✅ | 실제 WorldMap000 7 spots |
-| WorldMap `QuestLimit`/`Fog` | `worldmap.rs` + GUI | 🟡 | 합성 픽스처만 (클라이언트 노드 없음) |
+| WorldMap `QuestLimit`/`Fog` | `worldmap.rs` + GUI | 🟡 | 합성 픽스처 + `real_worldmap_has_no_quest_or_fog_nodes` (85+ 이미지 0개) |
 
 ## 4. MapRender 렌더링
 
@@ -52,6 +52,7 @@
 | `waterBack`/`waterFront` 파이프라인 | `wz-render/src/device.rs`, `water.rs` | ✅ | 실제 993258900 텍스처 + 픽셀 리드백 |
 | waterBack→scene→waterFront 합성 | `wz-gui/src/compose.rs` | ✅ | `back_is_behind_scene...`, 993258900 픽셀 회귀 |
 | waterFront bg_tex 장면 캡처 | `render_bridge.rs` | ✅ | 현재 scene RGBA를 bg_tex로 바인딩 |
+| water 셰이더 상수 | `parse_water_back_params`/`front` | ✅ | min/max 4500/19500, aberration 0.005, godray 4754/5248 |
 | Camera pan/zoom/키보드 관성 | `wz-render/src/camera.rs`, `camera_input.rs` | ✅ | camera_input 2 tests |
 | Minimap UI | `panels/inspector.rs` | ✅ | GUI tests |
 | WorldMap UI | `panels/inspector.rs` | ✅ | 실 WorldMap000 |
@@ -71,9 +72,11 @@
 
 - ✅ Life 공격/추적/비행: attack/chase/fly 상태, 실 mob `9833307`
   (fly/attack1) 로드와 합성 상태 테스트.
-- 🟡 WorldMap QuestLimit/Fog: 파서+UI+합성 테스트만. 이 클라이언트
-  `WorldMap_000.wz` 85개 이미지에 해당 노드가 없음.
-- 🟡 Weather: 원본 MapRender/클라이언트 데이터에 weather 노드·자산이 없음.
+- 🟡 WorldMap QuestLimit/Fog: 파서+UI+합성 픽스처 테스트 완료. 실제
+  `WorldMap_000.wz` 85개 이미지 전수 스캔에서 QuestLimit/Fog 0개임을
+  `real_worldmap_has_no_quest_or_fog_nodes` 로 고정.
+- ✅/N/A Weather: 원본 MapRender 코드에 weather 로더/셰이더가 없고,
+  클라이언트 맵/WZ에도 weather 노드·자산이 없음 (문서화된 미지원 데이터).
 - 🟡 정확한 water 셰이더 색수차/디스토션은 GPU 셰이더로 실행되지만,
   텍스처 바인딩은 실제 3장을 사용하고 배경 캡처는 단순화되어 있음.
 
