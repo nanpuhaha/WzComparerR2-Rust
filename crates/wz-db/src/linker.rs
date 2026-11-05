@@ -12,7 +12,8 @@
 //! | `reactorNode`| `Reactor.wz` 루트| 각 `.img` 의 `info` |
 //!
 //! 그래서 이 모듈도 진입점을 루트별로 나눈다 — [`StringLinker::load_string_wz`],
-//! [`StringLinker::load_item_wz`], [`StringLinker::load_etc_wz`].
+//! [`StringLinker::load_item_wz`], [`StringLinker::load_etc_wz`],
+//! [`StringLinker::load_quest_wz`], [`StringLinker::load_reactor_wz`].
 //!
 //! # `string_root` 가 무엇인지 (혼동하기 쉬운 지점)
 //!
@@ -43,6 +44,8 @@ pub struct StringResult {
     pub street_name: Option<String>,
     pub map_name: Option<String>,
     pub pdesc: Option<String>,
+    /// `Quest_DemandBase` — `Quest.wz` 의 `demand/base`.
+    pub quest_demand_base: Option<String>,
     /// `SkillH` — `h` 또는 `h1..hn`.
     pub skill_h: Vec<String>,
     /// `SkillpH` — `ph`.
@@ -71,6 +74,23 @@ impl LoadMode {
     }
 }
 
+/// 하나의 WZ 루트와 그 노드를 가리키는 borrowed view.
+#[derive(Clone, Copy)]
+pub struct StringRoot<'a> {
+    pub arena: &'a Arena,
+    pub node: NodeId,
+}
+
+/// [`StringLinker`] 가 읽는 다섯 루트. `string` 만 필수이고 나머지는 선택이다.
+#[derive(Clone, Copy)]
+pub struct StringRoots<'a> {
+    pub string: StringRoot<'a>,
+    pub item: Option<StringRoot<'a>>,
+    pub etc: Option<StringRoot<'a>>,
+    pub quest: Option<StringRoot<'a>>,
+    pub reactor: Option<StringRoot<'a>>,
+}
+
 /// WZ 문자열 테이블 인덱서 (`StringLinker.cs`).
 #[derive(Debug, Clone, Default)]
 pub struct StringLinker {
@@ -81,6 +101,8 @@ pub struct StringLinker {
     pub string_mob: BTreeMap<i32, StringResult>,
     pub string_monster_book: BTreeMap<i32, StringResult>,
     pub string_npc: BTreeMap<i32, StringResult>,
+    pub string_quest: BTreeMap<i32, StringResult>,
+    pub string_reactor: BTreeMap<i32, StringResult>,
     pub string_skill: BTreeMap<i32, StringResult>,
     pub string_skill_str: BTreeMap<String, StringResult>,
     pub string_set_item: BTreeMap<i32, StringResult>,
@@ -88,6 +110,19 @@ pub struct StringLinker {
     pub string_world_archive_npc: BTreeMap<i32, StringResult>,
     pub string_world_archive_mob_by_path: BTreeMap<String, StringResult>,
     pub string_world_archive_npc_by_path: BTreeMap<String, StringResult>,
+}
+
+/// `worldArchive.img` 엔트리 하나를 처리하는 값 묶음.
+///
+/// 예전에는 `load_world_archive_entry` 가 같은 값 일곱 개를 매번 인자로 받았다.
+struct WorldArchiveEntry<'a> {
+    arena: &'a Arena,
+    kind: WorldArchiveKind,
+    entry: NodeId,
+    node_text: &'a str,
+    sub_text: &'a str,
+    kind_node: NodeId,
+    mode: LoadMode,
 }
 
 impl StringLinker {
@@ -104,6 +139,8 @@ impl StringLinker {
         self.string_mob.clear();
         self.string_monster_book.clear();
         self.string_npc.clear();
+        self.string_quest.clear();
+        self.string_reactor.clear();
         self.string_skill.clear();
         self.string_skill_str.clear();
         self.string_set_item.clear();
@@ -111,6 +148,26 @@ impl StringLinker {
         self.string_world_archive_npc.clear();
         self.string_world_archive_mob_by_path.clear();
         self.string_world_archive_npc_by_path.clear();
+    }
+
+    /// 다섯 루트를 한 번에 로드한다. `string` 만 필수이고, 나머지는 주어진
+    /// 것만 병합한다. 호출자는 루트→로더 매핑을 몰라도 된다.
+    pub fn load_roots(&mut self, roots: &StringRoots<'_>) -> bool {
+        self.clear();
+        self.load_string_wz(roots.string.arena, roots.string.node);
+        if let Some(r) = roots.item {
+            self.load_item_wz(r.arena, r.node);
+        }
+        if let Some(r) = roots.etc {
+            self.load_etc_wz(r.arena, r.node);
+        }
+        if let Some(r) = roots.quest {
+            self.load_quest_wz(r.arena, r.node);
+        }
+        if let Some(r) = roots.reactor {
+            self.load_reactor_wz(r.arena, r.node);
+        }
+        self.has_values()
     }
 
     /// `StringLinker.HasValues` (`StringLinker.cs:736-743`).
@@ -125,6 +182,8 @@ impl StringLinker {
             || !self.string_npc.is_empty()
             || !self.string_skill.is_empty()
             || !self.string_set_item.is_empty()
+            || !self.string_quest.is_empty()
+            || !self.string_reactor.is_empty()
     }
 
     /// `String.wz` 루트를 처음부터 읽는다 (`StringLinker.Load`).
@@ -207,6 +266,113 @@ impl StringLinker {
         self.has_values()
     }
 
+    /// `Quest.wz` 루트 — `QuestData` 또는 `QuestInfo.img`
+    /// (`StringLinker.cs:627-673`).
+    pub fn load_quest_wz(&mut self, arena: &Arena, quest_root: NodeId) -> bool {
+        self.load_quest_wz_with(arena, quest_root, LoadMode::Load)
+    }
+
+    /// `Quest.wz` 루트를 병합한다 (`StringLinker.Update` 의 questNode).
+    pub fn update_quest_wz(&mut self, arena: &Arena, quest_root: NodeId) -> bool {
+        self.load_quest_wz_with(arena, quest_root, LoadMode::Update)
+    }
+
+    fn load_quest_wz_with(&mut self, arena: &Arena, quest_root: NodeId, mode: LoadMode) -> bool {
+        let mut data = find_path(arena, quest_root, "QuestData");
+        let mut new_quest_dir = true;
+        if data.is_none() {
+            if let Some(info) = find_path(arena, quest_root, "QuestInfo.img") {
+                data = Some(arena.descend_image(info));
+                new_quest_dir = false;
+            }
+        }
+        let Some(data) = data else {
+            return self.has_values();
+        };
+
+        for &entry in arena.children(data) {
+            let tree = arena.descend_image(entry);
+            let info = if new_quest_dir {
+                find_path(arena, tree, "QuestInfo")
+            } else {
+                Some(tree)
+            };
+            let Some(info) = info else { continue };
+            let Some(tree_name) = arena.name(tree) else {
+                continue;
+            };
+            let Ok(id) = parse_csharp_int(&tree_name.replace(".img", "")) else {
+                continue;
+            };
+            let Some(link_node) = resolve_uol_lossy(arena, info) else {
+                continue;
+            };
+
+            let mut sr = take(&mut self.string_quest, id, mode);
+            set_default_string(arena, &mut sr.name, link_node, "name");
+            if let Some(v) = get_default_string(arena, link_node, "0") {
+                sr.desc = Some(v);
+            }
+            if let Some(v) = get_default_string(arena, link_node, "demand/base") {
+                sr.quest_demand_base = Some(v);
+            }
+            set_full_path(&mut sr, mode, || {
+                let prefix = if new_quest_dir { "QuestData\\" } else { "" };
+                format!("{prefix}{}", node_path(arena, tree))
+            });
+            add_all_values(arena, &mut sr, link_node);
+            self.string_quest.insert(id, sr);
+        }
+        self.has_values()
+    }
+
+    /// `Reactor.wz` 루트 — 각 `.img` 의 `info` (`StringLinker.cs:675-703`).
+    pub fn load_reactor_wz(&mut self, arena: &Arena, reactor_root: NodeId) -> bool {
+        self.load_reactor_wz_with(arena, reactor_root, LoadMode::Load)
+    }
+
+    /// `Reactor.wz` 루트를 병합한다 (`StringLinker.Update` 의 reactorNode).
+    pub fn update_reactor_wz(&mut self, arena: &Arena, reactor_root: NodeId) -> bool {
+        self.load_reactor_wz_with(arena, reactor_root, LoadMode::Update)
+    }
+
+    fn load_reactor_wz_with(
+        &mut self,
+        arena: &Arena,
+        reactor_root: NodeId,
+        mode: LoadMode,
+    ) -> bool {
+        for &entry in arena.children(reactor_root) {
+            let tree = arena.descend_image(entry);
+            let Some(info) = find_path(arena, tree, "info") else {
+                continue;
+            };
+            let Some(tree_name) = arena.name(tree) else {
+                continue;
+            };
+            let Ok(id) = parse_csharp_int(&tree_name.replace(".img", "")) else {
+                continue;
+            };
+            let Some(link_node) = resolve_uol_lossy(arena, info) else {
+                continue;
+            };
+
+            let mut sr = take(&mut self.string_reactor, id, mode);
+            if let Some(v) = get_default_string(arena, link_node, "viewName")
+                .or_else(|| get_default_string(arena, link_node, "name"))
+                .or_else(|| get_default_string(arena, link_node, "info"))
+            {
+                sr.name = v;
+            }
+            set_full_path(&mut sr, mode, || {
+                format!("Reactor\\{}", node_path(arena, tree))
+            });
+            // 원본은 reactor 에 `AddAllValue` 를 호출하지 않는다 (`:700` 주석).
+            self.string_reactor.insert(id, sr);
+        }
+        self.has_values()
+    }
+
     /// 단일 문자열 이미지(`Consume.img`, `Eqp.img`, `Skill.img` 등)를 로드한다.
     pub fn load_image(&mut self, arena: &Arena, image_name: &str, image_root: NodeId) {
         self.load_image_with(arena, image_name, image_root, LoadMode::Load);
@@ -247,7 +413,7 @@ impl StringLinker {
                     }
                     set_full_path(&mut sr, mode, || format!("{image_name}/{text}"));
                     add_all_values(arena, &mut sr, link_node);
-                    put(&mut self.string_item, id, sr);
+                    self.string_item.insert(id, sr);
                 }
             }
             "Etc.img" => {
@@ -270,7 +436,7 @@ impl StringLinker {
                         }
                         set_full_path(&mut sr, mode, || format!("{image_name}/{cat_name}/{text}"));
                         add_all_values(arena, &mut sr, link_node);
-                        put(&mut self.string_item, id, sr);
+                        self.string_item.insert(id, sr);
                     }
                 }
             }
@@ -316,7 +482,7 @@ impl StringLinker {
                     set_default_string(arena, &mut sr.name, link_node, "name");
                     set_full_path(&mut sr, mode, || format!("{image_name}/{text}"));
                     add_all_values(arena, &mut sr, link_node);
-                    put(&mut self.string_mob, id, sr);
+                    self.string_mob.insert(id, sr);
                 }
             }
             "MonsterBook.img" => {
@@ -343,7 +509,7 @@ impl StringLinker {
                     let mut sr = take(&mut self.string_monster_book, id, mode);
                     sr.name = mob.name.clone();
                     sr.desc = Some(desc);
-                    put(&mut self.string_monster_book, id, sr);
+                    self.string_monster_book.insert(id, sr);
                 }
             }
             "Npc.img" => {
@@ -364,7 +530,7 @@ impl StringLinker {
                     }
                     set_full_path(&mut sr, mode, || format!("{image_name}/{text}"));
                     add_all_values(arena, &mut sr, link_node);
-                    put(&mut self.string_npc, id, sr);
+                    self.string_npc.insert(id, sr);
                 }
             }
             "Map.img" => {
@@ -381,27 +547,28 @@ impl StringLinker {
                             continue;
                         };
                         let mut sr = take(&mut self.string_map, id, mode);
-                        let street = get_default_string(arena, link_node, "streetName");
-                        let map = get_default_string(arena, link_node, "mapName");
-                        // `string.Format` 은 null 을 빈 문자열로 찍으므로
-                        // 이름은 **항상** 덮어쓴다 (`StringLinker.cs:269-271`).
-                        sr.name = format!(
-                            "{} : {}",
-                            street.as_deref().unwrap_or_default(),
-                            map.as_deref().unwrap_or_default()
-                        );
-                        if let Some(v) = street {
+                        // `string.Format` 은 null 을 빈 문자열로 찍으므로 이름은
+                        // **항상** 덮어쓴다 (`StringLinker.cs:269-271`). 다만
+                        // update 모드에서 패치가 한쪽 필드만 주는 경우, 먼저
+                        // 기존 값을 유지한 뒤 합성해야 `name` 과
+                        // `street_name`/`map_name` 이 어긋나지 않는다.
+                        if let Some(v) = get_default_string(arena, link_node, "streetName") {
                             sr.street_name = Some(v);
                         }
-                        if let Some(v) = map {
+                        if let Some(v) = get_default_string(arena, link_node, "mapName") {
                             sr.map_name = Some(v);
                         }
+                        sr.name = format!(
+                            "{} : {}",
+                            sr.street_name.as_deref().unwrap_or_default(),
+                            sr.map_name.as_deref().unwrap_or_default()
+                        );
                         if let Some(v) = get_default_string(arena, link_node, "mapDesc") {
                             sr.desc = Some(v);
                         }
                         set_full_path(&mut sr, mode, || format!("{image_name}/{c0}/{text}"));
                         add_all_values(arena, &mut sr, link_node);
-                        put(&mut self.string_map, id, sr);
+                        self.string_map.insert(id, sr);
                     }
                 }
             }
@@ -459,32 +626,10 @@ impl StringLinker {
                     }
 
                     let ph = get_default_string(arena, link_node, "ph");
-                    match (mode, ph) {
-                        (LoadMode::Update, Some(ph)) => {
-                            sr.skill_ph.clear();
-                            sr.skill_ph.push(ph);
-                        }
-                        (LoadMode::Update, None) => {}
-                        (LoadMode::Load, ph) => {
-                            if let Some(ph) = ph {
-                                sr.skill_ph.push(ph);
-                            }
-                        }
-                    }
+                    merge_single(&mut sr.skill_ph, ph, mode);
 
                     let hch = get_default_string(arena, link_node, "hch");
-                    match (mode, hch) {
-                        (LoadMode::Update, Some(hch)) => {
-                            sr.skill_hch.clear();
-                            sr.skill_hch.push(hch);
-                        }
-                        (LoadMode::Update, None) => {}
-                        (LoadMode::Load, hch) => {
-                            if let Some(hch) = hch {
-                                sr.skill_hch.push(hch);
-                            }
-                        }
-                    }
+                    merge_single(&mut sr.skill_hch, hch, mode);
 
                     collect_extra_h(arena, &mut sr, link_node);
                     set_full_path(&mut sr, mode, || format!("{image_name}/{text}"));
@@ -520,7 +665,7 @@ impl StringLinker {
                                 format!("{image_name}/{c0}/{c1}/{text}")
                             });
                             add_all_values(arena, &mut sr, link_node);
-                            put(&mut self.string_eqp, id, sr);
+                            self.string_eqp.insert(id, sr);
                         }
                     }
                 }
@@ -548,7 +693,7 @@ impl StringLinker {
             set_default_string(arena, &mut sr.name, link_node, "setItemName");
             set_full_path(&mut sr, mode, || format!("SetItemInfo.img/{text}"));
             add_all_values(arena, &mut sr, link_node);
-            put(&mut self.string_set_item, id, sr);
+            self.string_set_item.insert(id, sr);
         }
     }
 
@@ -572,7 +717,7 @@ impl StringLinker {
             }
             set_full_path(&mut sr, mode, || format!("0910.img/{text}"));
             add_all_values(arena, &mut sr, link_node);
-            put(&mut self.string_item, id, sr);
+            self.string_item.insert(id, sr);
         }
     }
 
@@ -611,26 +756,31 @@ impl StringLinker {
                         _ => continue,
                     };
                     for &entry in arena.children(sub2) {
-                        self.load_world_archive_entry(
-                            arena, kind, entry, node_text, sub_text, sub2, mode,
-                        );
+                        self.load_world_archive_entry(WorldArchiveEntry {
+                            arena,
+                            kind,
+                            entry,
+                            node_text,
+                            sub_text,
+                            kind_node: sub2,
+                            mode,
+                        });
                     }
                 }
             }
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn load_world_archive_entry(
-        &mut self,
-        arena: &Arena,
-        kind: WorldArchiveKind,
-        entry: NodeId,
-        node_text: &str,
-        sub_text: &str,
-        kind_node: NodeId,
-        mode: LoadMode,
-    ) {
+    fn load_world_archive_entry(&mut self, entry: WorldArchiveEntry<'_>) {
+        let WorldArchiveEntry {
+            arena,
+            kind,
+            entry,
+            node_text,
+            sub_text,
+            kind_node,
+            mode,
+        } = entry;
         let Some(entry_text) = arena.name(entry) else {
             return;
         };
@@ -787,17 +937,18 @@ fn world_archive_ids(arena: &Arena, entry: NodeId) -> Vec<i32> {
         .filter_map(|&c| match arena.value(c) {
             Some(NodeValue::Short(v)) => Some(i32::from(*v)),
             Some(NodeValue::Int(v)) => Some(*v),
-            Some(NodeValue::Long(v)) => Some(*v as i32),
-            Some(NodeValue::Uint(v)) => Some(*v as i32),
+            Some(NodeValue::Long(v)) => i32::try_from(*v).ok(),
+            Some(NodeValue::Uint(v)) => i32::try_from(*v).ok(),
             _ => None,
         })
         .filter(|&v| v != 0)
         .collect()
 }
 
-/// C# `Int32.TryParse` 와 같게 **공백을 허용하지 않는다**.
+/// C# `Int32.TryParse` 의 기본 `NumberStyles.Integer` 처럼 앞뒤 공백과
+/// 선택적 부호를 허용한다. 숫자가 아니면 `Err`.
 fn parse_csharp_int(text: &str) -> Result<i32, ()> {
-    text.parse::<i32>().map_err(|_| ())
+    text.trim().parse::<i32>().map_err(|_| ())
 }
 
 /// `StringLinker.cs:373` — 이름 길이가 7 이상이고 숫자로 읽혀야 한다.
@@ -816,8 +967,20 @@ fn take(map: &mut BTreeMap<i32, StringResult>, id: i32, mode: LoadMode) -> Strin
     }
 }
 
-fn put(map: &mut BTreeMap<i32, StringResult>, id: i32, sr: StringResult) {
-    map.insert(id, sr);
+/// 단일 문자열 필드를 `Load`/`Update` 규칙에 맞게 병합한다.
+///
+/// `Update` 는 새 값이 있으면 기존 값을 비우고 교체하고, 없으면 유지한다.
+/// `Load` 는 항상 append 한다. (`StringLinker.cs` 의 `if (!update) … else …`)
+fn merge_single(slot: &mut Vec<String>, value: Option<String>, mode: LoadMode) {
+    match (mode, value) {
+        (LoadMode::Update, Some(v)) => {
+            slot.clear();
+            slot.push(v);
+        }
+        (LoadMode::Update, None) => {}
+        (LoadMode::Load, Some(v)) => slot.push(v),
+        (LoadMode::Load, None) => {}
+    }
 }
 
 /// `if (!update) strResult.FullPath = ...` — update 모드는 경로를 건드리지 않는다.
@@ -834,6 +997,22 @@ where
 ///
 /// 노드가 **있으면** 값을 문자열로 돌려준다. 값이 없거나 스칼라가 아니면
 /// C# 의 `Convert.ToString(null)` (= `""`) 과 같은 빈 문자열이다.
+/// 노드의 루트→자기 경로를 `\` 로 잇는다. C# `Wz_Node.FullPath` 대응.
+fn node_path(arena: &Arena, node: NodeId) -> String {
+    let mut parts = Vec::new();
+    let mut cur = Some(node);
+    while let Some(id) = cur {
+        if let Some(name) = arena.name(id) {
+            if !name.is_empty() {
+                parts.push(name.to_string());
+            }
+        }
+        cur = arena.parent(id);
+    }
+    parts.reverse();
+    parts.join("\\")
+}
+
 fn get_default_string(arena: &Arena, node: NodeId, search_path: &str) -> Option<String> {
     let target = find_path(arena, node, search_path)?;
     Some(node_value_to_string(arena.value(target)).unwrap_or_default())
@@ -879,4 +1058,17 @@ pub fn extract_gear_stats(arena: &Arena, gear_root: NodeId) -> Vec<(String, Stri
 
     sort_natural(&mut entries, |(k, _)| k.as_str());
     entries
+}
+
+#[cfg(test)]
+mod unit_tests {
+    use super::*;
+
+    #[test]
+    fn parse_csharp_int_accepts_surrounding_whitespace() {
+        // C# Int32.TryParse 의 기본 NumberStyles.Integer 와 같은 동작.
+        assert_eq!(parse_csharp_int(" 100 "), Ok(100));
+        assert_eq!(parse_csharp_int("-7"), Ok(-7));
+        assert_eq!(parse_csharp_int("1.5"), Err(()));
+    }
 }

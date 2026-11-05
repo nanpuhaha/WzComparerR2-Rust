@@ -5,7 +5,7 @@ pub fn cmd_oracle_mapscene(
 ) -> Result<(), Box<dyn std::error::Error>> {
     use wz_core::text::sort_natural;
     use wz_core::WzArchive;
-    use wz_db::MapData;
+    use wz_db::{LadderRopeKind, LifeKind, MapData};
 
     let archive = WzArchive::open(wz_path)?;
     let tree = archive.read_tree()?;
@@ -131,6 +131,11 @@ pub fn cmd_oracle_mapscene(
             serde_json::json!({
                 "id": l.id,
                 "type": l.life_type,
+                "kind": match l.kind() {
+                    LifeKind::Npc => "npc",
+                    LifeKind::Mob => "mob",
+                    LifeKind::Unknown => "unknown",
+                },
                 "x": l.x,
                 "y": l.y,
                 "cy": l.cy,
@@ -141,6 +146,96 @@ pub fn cmd_oracle_mapscene(
         })
         .collect();
     res.insert("life".into(), serde_json::Value::Array(life_items));
+
+    // ladders / ropes
+    let mut sorted_lr = map_data.ladders_ropes.clone();
+    sorted_lr.sort_by_key(|l| (l.x, l.y1, l.y2, l.id));
+    let lr_items: Vec<serde_json::Value> = sorted_lr
+        .iter()
+        .map(|l| {
+            serde_json::json!({
+                "id": l.id,
+                "x": l.x,
+                "y1": l.y1,
+                "y2": l.y2,
+                "l": l.l,
+                "kind": match l.kind() {
+                    LadderRopeKind::Ladder => "ladder",
+                    LadderRopeKind::Rope => "rope",
+                },
+                "uf": l.uf,
+                "page": l.page,
+            })
+        })
+        .collect();
+    res.insert("ladders_ropes".into(), serde_json::Value::Array(lr_items));
+
+    // backgrounds
+    let mut sorted_bg = map_data.backgrounds.clone();
+    sorted_bg.sort_by_key(|b| b.index);
+    let bg_items: Vec<serde_json::Value> = sorted_bg
+        .iter()
+        .map(|b| {
+            serde_json::json!({
+                "index": b.index,
+                "b_s": b.b_s,
+                "ani": b.ani,
+                "no": b.no,
+                "x": b.x,
+                "y": b.y,
+                "rx": b.rx,
+                "ry": b.ry,
+                "cx": b.cx,
+                "cy": b.cy,
+                "tile_mode": b.tile_mode,
+                "flip": b.flip,
+                "front": b.front,
+                "alpha": b.alpha,
+            })
+        })
+        .collect();
+    res.insert("backgrounds".into(), serde_json::Value::Array(bg_items));
+
+    // objects
+    let mut sorted_obj = map_data.objects.clone();
+    sorted_obj.sort_by_key(|o| (o.layer, o.index));
+    let obj_items: Vec<serde_json::Value> = sorted_obj
+        .iter()
+        .map(|o| {
+            serde_json::json!({
+                "layer": o.layer,
+                "index": o.index,
+                "o_s": o.o_s,
+                "l0": o.l0,
+                "l1": o.l1,
+                "l2": o.l2,
+                "x": o.x,
+                "y": o.y,
+                "z": o.z,
+                "flip": o.flip,
+            })
+        })
+        .collect();
+    res.insert("objects".into(), serde_json::Value::Array(obj_items));
+
+    // tiles
+    let mut sorted_tile = map_data.tiles.clone();
+    sorted_tile.sort_by_key(|t| (t.layer, t.index));
+    let tile_items: Vec<serde_json::Value> = sorted_tile
+        .iter()
+        .map(|t| {
+            serde_json::json!({
+                "layer": t.layer,
+                "index": t.index,
+                "t_s": t.t_s,
+                "u": t.u,
+                "no": t.no,
+                "x": t.x,
+                "y": t.y,
+            })
+        })
+        .collect();
+    res.insert("tiles".into(), serde_json::Value::Array(tile_items));
 
     doc.insert("result".into(), serde_json::Value::Object(res));
 

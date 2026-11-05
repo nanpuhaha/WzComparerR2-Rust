@@ -230,9 +230,17 @@ enum OracleAction {
 
     /// 아이템/장비/스킬 툴팁 문자열(StringLinker) 표준 JSON 덤프
     Tooltip {
-        /// WZ 파일 경로
+        /// String.wz 파일 경로
         #[arg(long)]
         wz: PathBuf,
+
+        /// Item.wz 파일 경로 (Special/0910.img 등)
+        #[arg(long)]
+        item_wz: Option<PathBuf>,
+
+        /// Etc.wz 파일 경로 (SetItemInfo.img / worldArchive.img)
+        #[arg(long)]
+        etc_wz: Option<PathBuf>,
 
         /// 아이템/장비/스킬 ID (예: 2000000)
         #[arg(long)]

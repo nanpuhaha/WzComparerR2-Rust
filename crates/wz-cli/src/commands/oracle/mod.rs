@@ -29,7 +29,12 @@ pub fn cmd_oracle(action: OracleAction) -> Result<(), Box<dyn std::error::Error>
         OracleAction::Tree { wz, filter } => cmd_oracle_tree(&wz, filter.as_deref()),
         OracleAction::Diff { base, r#mod } => cmd_oracle_diff(&base, &r#mod),
         OracleAction::Image { wz, path, format } => cmd_oracle_image(&wz, &path, &format),
-        OracleAction::Tooltip { wz, item } => cmd_oracle_tooltip(&wz, item),
+        OracleAction::Tooltip {
+            wz,
+            item_wz,
+            etc_wz,
+            item,
+        } => cmd_oracle_tooltip(&wz, item, item_wz.as_deref(), etc_wz.as_deref()),
         OracleAction::Stats { wz, gear, prop } => cmd_oracle_stats(&wz, &gear, prop.as_deref()),
         OracleAction::Expr { expr, args } => cmd_oracle_expr(&expr, &args),
         OracleAction::Patch { patch } => cmd_oracle_patch(&patch),

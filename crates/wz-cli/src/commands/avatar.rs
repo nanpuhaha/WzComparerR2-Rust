@@ -42,7 +42,7 @@ pub fn cmd_avatar(
     if demo {
         println!();
         println!("=== 아바타 Z-Map 레이어 조합 & 앵커 정렬 데모 ===");
-        let layers = scene.canvas.generate_layers(&root);
+        let layers = scene.canvas().generate_layers(&root);
         println!("생성된 레이어 수: {}", layers.len());
         for (i, layer) in layers.iter().enumerate() {
             println!(
@@ -70,7 +70,7 @@ pub fn cmd_avatar(
     if should_render {
         println!();
         println!("=== wz-render 아바타 스프라이트 배치 및 오프스크린 렌더 ===");
-        let layers = scene.canvas.generate_layers(&root);
+        let layers = scene.canvas().generate_layers(&root);
 
         let atlas_w = 512u32;
         let atlas_h = 512u32;

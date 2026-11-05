@@ -1,7 +1,9 @@
 //! arena/해석 테스트.
 //!
-//! 함정만 골라 实測한다. 정상 경로는 C# 대조에서 이미 검증되므로 여기서는
-//! **원본이 틀리는 경우** 를 고정한다.
+//! 두 종류를 고정한다:
+//! 1. 원본이 틀리는 경우(함정) — C# 대조에서 정상 경로가 검증되지 않는 부분.
+//! 2. StringLinker 파리티(ticket #25) — 합성 String/Item/Etc 트리로 공개 경계를
+//!    고정한다. 실제 WZ 가 없어도 `.img` 레이아웃/UOL/업데이트 규칙을 검증한다.
 
 use std::sync::Arc;
 
@@ -1452,5 +1454,98 @@ fn string_linker_resolves_parent_relative_uol_across_ids() {
     assert_eq!(
         linker.string_eqp[&1000001].desc.as_deref(),
         Some("머리를 가린다.")
+    );
+}
+
+#[test]
+fn quest_loader_reads_questdata_name_desc_and_demand_base() {
+    let mut a = Arena::with_root("");
+    let data = a.add_node(a.root(), "QuestData", None);
+    let entry = a.add_node(data, "0000000.img", None);
+    a.ingest_image(
+        entry,
+        &with_children(
+            node("0000000.img"),
+            vec![with_children(
+                node("QuestInfo"),
+                vec![
+                    node_val("name", NodeValue::Str(Arc::from("퀘스트"))),
+                    node_val("0", NodeValue::Str(Arc::from("설명"))),
+                    with_children(
+                        node("demand"),
+                        vec![node_val("base", NodeValue::Str(Arc::from("기본")))],
+                    ),
+                ],
+            )],
+        ),
+    );
+
+    let mut linker = crate::linker::StringLinker::new();
+    assert!(linker.load_quest_wz(&a, a.root()));
+    let sr = linker.string_quest.get(&0).expect("quest 0");
+    assert_eq!(sr.name, "퀘스트");
+    assert_eq!(sr.desc.as_deref(), Some("설명"));
+    assert_eq!(sr.quest_demand_base.as_deref(), Some("기본"));
+    assert!(sr.full_path.contains("QuestData"), "{}", sr.full_path);
+}
+
+#[test]
+fn reactor_loader_prefers_view_name() {
+    let mut a = Arena::with_root("");
+    let entry = a.add_node(a.root(), "0000000.img", None);
+    a.ingest_image(
+        entry,
+        &with_children(
+            node("0000000.img"),
+            vec![with_children(
+                node("info"),
+                vec![node_val("viewName", NodeValue::Str(Arc::from("리액터")))],
+            )],
+        ),
+    );
+
+    let mut linker = crate::linker::StringLinker::new();
+    assert!(linker.load_reactor_wz(&a, a.root()));
+    let sr = linker.string_reactor.get(&0).expect("reactor 0");
+    assert_eq!(sr.name, "리액터");
+    assert!(sr.full_path.contains("Reactor"), "{}", sr.full_path);
+}
+
+#[test]
+fn load_roots_loads_optional_quest_root_in_one_call() {
+    let mut a = Arena::with_root("");
+    let string = a.add_node(a.root(), "String", None);
+    let quest = a.add_node(a.root(), "Quest", None);
+    let data = a.add_node(quest, "QuestData", None);
+    let entry = a.add_node(data, "0000000.img", None);
+    a.ingest_image(
+        entry,
+        &with_children(
+            node("0000000.img"),
+            vec![with_children(
+                node("QuestInfo"),
+                vec![node_val("name", NodeValue::Str(Arc::from("퀘스트")))],
+            )],
+        ),
+    );
+
+    let roots = crate::linker::StringRoots {
+        string: crate::linker::StringRoot {
+            arena: &a,
+            node: string,
+        },
+        item: None,
+        etc: None,
+        quest: Some(crate::linker::StringRoot {
+            arena: &a,
+            node: quest,
+        }),
+        reactor: None,
+    };
+    let mut linker = crate::linker::StringLinker::new();
+    assert!(linker.load_roots(&roots));
+    assert_eq!(
+        linker.string_quest.get(&0).map(|s| s.name.as_str()),
+        Some("퀘스트")
     );
 }

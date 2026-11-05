@@ -280,10 +280,12 @@ fn read_sides(dir: &Path) -> Result<(SideResult, SideResult), String> {
         })?;
         let stderr =
             std::fs::read_to_string(dir.join(format!("{stem}.stderr"))).unwrap_or_default();
-        let code = std::fs::read_to_string(dir.join(format!("{stem}.code")))
-            .ok()
-            .and_then(|raw| raw.trim().parse::<i32>().ok())
-            .unwrap_or(0);
+        let code_path = dir.join(format!("{stem}.code"));
+        let code = std::fs::read_to_string(&code_path)
+            .map_err(|e| format!("{} 읽기 실패: {e}", code_path.display()))?
+            .trim()
+            .parse::<i32>()
+            .map_err(|e| format!("{} exit code 파싱 실패: {e}", code_path.display()))?;
         Ok(SideResult {
             code,
             stdout,
@@ -839,6 +841,16 @@ mod tests {
         write(&dir.join("csharp.json"), "{}");
         let err = read_sides(&dir).unwrap_err();
         assert!(err.contains("rust.json"), "{err}");
+    }
+
+    #[test]
+    fn replay_reports_a_missing_exit_code_instead_of_defaulting_to_zero() {
+        let dir = scratch("replay-missing-code");
+        write(&dir.join("rust.json"), "{}");
+        write(&dir.join("csharp.json"), "{}");
+        write(&dir.join("csharp.code"), "0");
+        let err = read_sides(&dir).unwrap_err();
+        assert!(err.contains("rust.code"), "{err}");
     }
 
     #[test]
