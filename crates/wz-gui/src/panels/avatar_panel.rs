@@ -203,6 +203,11 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     });
     ui.label("showcaseChair: 쉼표로 구분한 장비 ID (최대 4개)");
     ui.horizontal(|ui| {
+        ui.label("Pet items:");
+        ui.text_edit_singleline(&mut state.chair_pet_input);
+    });
+    ui.label("petChair: 쉼표로 구분한 펫 ID (최대 3개)");
+    ui.horizontal(|ui| {
         ui.label("Name:");
         ui.text_edit_singleline(&mut state.chair_name);
         ui.label("Job:");

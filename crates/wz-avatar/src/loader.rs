@@ -245,6 +245,7 @@ pub struct ChairUserData {
     pub pop: Option<i64>,
     pub time_minutes: Option<i64>,
     pub showcase_items: Vec<i32>,
+    pub pet_items: Vec<i32>,
 }
 
 /// `hashTagChairInfo/action/N` — 동작별 강제 포즈.
@@ -1896,6 +1897,56 @@ fn build_rolling_frame(
     Some((root, parts))
 }
 
+/// `Item/Pet/_Canvas` 에서 펫 이미지를 찾아 첫 프레임을 로드한다.
+fn load_pet_item(
+    data_root: &std::path::Path,
+    item_id: i32,
+    action_names: &[&str],
+) -> Option<(Bone, Vec<AvatarPart>)> {
+    let base = data_root.join("Item").join("Pet").join("_Canvas");
+    let image = format!("{item_id}.img");
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        if tree
+            .root
+            .entries
+            .iter()
+            .any(|e| e.name.as_deref() == Some(image.as_str()))
+        {
+            return load_item_frame(&archive, Some(&image), action_names, "pet");
+        }
+    }
+    None
+}
+
+/// 펫 파트를 슬롯 위치에 놓고, 필요하면 스프라이트 경계 안에서 좌우 반전한다.
+fn place_pet_parts(parts: &mut [AvatarPart], pos: crate::Point, flip: bool) {
+    let min_x = parts.iter().map(|p| p.position.x).min().unwrap_or(0);
+    let max_x = parts
+        .iter()
+        .map(|p| p.position.x + p.width as i32)
+        .max()
+        .unwrap_or(0);
+    for part in parts.iter_mut() {
+        if flip {
+            part.rgba = flip_rgba_horizontal(&part.rgba, part.width, part.height);
+            part.position.x = min_x + (max_x - (part.position.x + part.width as i32));
+            part.origin.x = part.width as i32 - part.origin.x;
+        }
+        part.position = crate::Point::new(part.position.x + pos.x, part.position.y + pos.y);
+        part.z_index = 1;
+    }
+}
+
 /// `Character/<slot>/_Canvas` 에서 장비 이미지를 찾아 로드한다.
 fn load_character_item_by_id(
     data_root: &std::path::Path,
@@ -3044,6 +3095,30 @@ pub fn load_avatar_with_equipment_and_mix(
                                 parts.extend(item_parts);
                             }
                         }
+                        if let Some(pet) = &custom.pet {
+                            for (i, item_id) in
+                                mix.chair.pet_items.iter().take(pet.slots.len()).enumerate()
+                            {
+                                if *item_id == 0 {
+                                    continue;
+                                }
+                                let Some((mut pet_root, mut pet_parts)) = load_pet_item(
+                                    data_root,
+                                    *item_id,
+                                    &["stand0", "stand1", "move", "rest0"],
+                                ) else {
+                                    continue;
+                                };
+                                let slot = pet.slots[i].pos;
+                                place_pet_parts(&mut pet_parts, slot, pet.slots[i].reverse_flip);
+                                pet_root.position = slot;
+                                for part in &mut pet_parts {
+                                    part.slot = format!("pet{i}_{}", part.slot);
+                                }
+                                merge_bone_tree(&mut root, pet_root);
+                                parts.extend(pet_parts);
+                            }
+                        }
                         if let Some(font) = game_font(data_root) {
                             if let Some(identity) = &custom.identity {
                                 for (slot, text, pos) in [
@@ -3976,6 +4051,36 @@ mod chair_custom_type_tests {
                 ..Default::default()
             },
         )
+    }
+
+    #[test]
+    fn pet_chair_renders_supplied_pets() {
+        let Some(av) = load_chair_with(
+            3018179,
+            ChairUserData {
+                pet_items: vec![5000000, 5000001, 5000002],
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let pet = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.pet.as_ref())
+            .expect("pet info");
+        assert_eq!(pet.slots.len(), 3);
+        assert!(pet.slots[0].reverse_flip);
+        for i in 0..3 {
+            let part = av
+                .parts
+                .iter()
+                .find(|p| p.slot.starts_with(&format!("pet{i}_")))
+                .unwrap_or_else(|| panic!("pet{i} missing"));
+            assert!(part.width > 1 && part.height > 1);
+            assert!(part.rgba.chunks(4).any(|p| p[3] != 0));
+        }
     }
 
     #[test]

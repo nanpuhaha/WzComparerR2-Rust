@@ -3,7 +3,7 @@ pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
     println!("지원: PKG1/PKG2/MS 컨테이너, AES/SNOW2/ChaCha20");
     println!("      이미지 트리/Canvas/UOL, WZ/DXBC/BC7 디코딩");
     println!("      StringLinker(5 roots), 아바타/맵 데이터, C# 오라클 차분 하네스");
-    println!("미구현: petChair 실제 펫 렌더와 C# 잔여 (이름/직업/길드 텍스트 구현)");
+    println!("미구현: petChair 애니메이션/랜덤 행동, C# sitEmotion/taming flip/effect (펫/텍스트 렌더 구현)");
     Ok(())
 }
 pub fn cmd_fmt(n: usize) -> Result<(), Box<dyn std::error::Error>> {
