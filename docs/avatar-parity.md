@@ -48,16 +48,21 @@ remaining CharaSim gaps.
   (WZ child name → custom origin ID). Applying a selected origin map is caller-driven,
   matching C# `AvatarCanvas.CustomOrigin`.
 - Taming: the `Taming` slot loads `Character/TamingMob` through `load_item_frame`.
-- Effect: the `Effect` slot loads `Effect/Effect_*.wz` → `ItemEff.img/<id>/effect/
-  default/<frame>` and resolves `_outlink` through `Effect/_Canvas`. `MixOptions.effect_frame`
-  selects the static frame; the GUI exposes a frame slider. Automatic playback and
-  per-frame timing are post-v0.1.
+- Effect: the `Effect` slot loads all frames of `ItemEff.img/<id>/effect/default/<n>`,
+  resolves `_outlink` through `Effect/_Canvas`, and stores `effect_frames` +
+  `effect_delays` on `LoadedAvatar`. The GUI can step frames manually or auto-play
+  using `tick_effect` with the WZ `delay` values.
 - Chair: the `Chair` slot loads `Item/Install/_Canvas` → `<category>.img/<8-digit id>`
-  and composes the `effect/0` (or `0`/`default`) canvas as a static chair layer.
-- Custom origin UI: the GUI accepts `name:x,y;name2:x,y` and applies the override to
-  `SkinLayer.name` through `apply_custom_origins`.
-- Still out of scope: effect auto-play/timing, chair group/taming scale and
-  `bodyRelMove` offsets, and the exact C# `CustomOriginMap` child-name semantics.
+  and composes the `effect/0` (or `0`/`default`) canvas. `ChairInfo` captures
+  `info/scale`, `customChair`, group chair taming IDs/`bodyRelMove`. `apply_avatar_scale`
+  resizes avatar parts/bones for `ScaleAvatarChair`/`info/scale`, and `bodyRelMove`
+  offsets the chair root.
+- Custom origin: the two-step C# semantics are implemented:
+  `CustomOriginMap` (originValue → childName) + `CustomOrigin` (childName → Point)
+  → `apply_custom_origin_map`. The GUI accepts `childName:x,y;...`.
+- Still out of scope: rendering multi-user group-chair taming members, custom chair
+  types beyond `ScaleAvatarChair`, and per-frame effect origin differences (the bone
+  origin is taken from the selected frame).
 
 ## Verification
 

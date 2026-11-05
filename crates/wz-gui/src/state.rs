@@ -88,6 +88,11 @@ pub struct AppState {
     pub effect_frame: usize,
     /// `name:x,y;...` 형식의 커스텀 오리진 오버라이드.
     pub custom_origin_input: String,
+    /// Effect 전체 프레임과 delay (자동 재생).
+    pub effect_frames: Vec<(u32, u32, Vec<u8>)>,
+    pub effect_delays: Vec<u32>,
+    pub effect_auto_play: bool,
+    pub effect_last_time: f64,
     pub camera: Camera2D,
     pub viewport_texture: Option<TextureHandle>,
     pub viewport_dirty: bool,
@@ -150,6 +155,10 @@ impl Default for AppState {
             face_mix_opacity: 100,
             effect_frame: 0,
             custom_origin_input: String::new(),
+            effect_frames: Vec::new(),
+            effect_delays: Vec::new(),
+            effect_auto_play: false,
+            effect_last_time: 0.0,
             camera: Camera2D::new(512.0, 512.0),
             viewport_texture: None,
             viewport_dirty: true,

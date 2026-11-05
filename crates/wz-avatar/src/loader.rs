@@ -24,7 +24,7 @@ use crate::zmap::{part_z_tag, STANDARD_ZMAP};
 /// MapleStory 표준 z-map 순서 (Base\zmap.img 에서 로드).
 /// 낮은 인덱스가 먼저 그려진다 (painter's algorithm).
 /// 로드된 아바타 파트.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct AvatarPart {
     pub slot: String,
     pub width: u32,
@@ -53,6 +53,23 @@ pub struct LoadedAvatar {
     pub root_bone: Bone,
     pub zmap: Arc<ZMap>,
     pub scene: AvatarScene,
+    /// Effect 슬롯의 전체 프레임 (자동 재생용). `parts` 에는 선택 프레임만 들어간다.
+    pub effect_frames: Vec<AvatarPart>,
+    pub effect_delays: Vec<u32>,
+    /// 체어 메타데이터 (`info/scale`, group taming, bodyRelMove).
+    pub chair_info: Option<ChairInfo>,
+}
+
+/// C# `ChairPart` 의 메타데이터 중 정적 로더가 해석하는 부분.
+#[derive(Debug, Clone, Default)]
+pub struct ChairInfo {
+    pub scale: i32,
+    pub custom_chair_type: Option<String>,
+    pub custom_scale: Option<i32>,
+    pub group_count: usize,
+    pub group_taming_ids: Vec<i32>,
+    pub group_body_rel_move: Vec<crate::Point>,
+    pub body_rel_move: Option<crate::Point>,
 }
 
 /// `Base/zmap.img` 에서 z-order 를 읽는다. 없으면 `None` (호출부가 표준 순서로 폴백).
@@ -198,6 +215,37 @@ fn child_node<'a>(node: &'a ImageNode, name: &str) -> Option<&'a ImageNode> {
         .find(|c| c.name.as_ref() == name)
 }
 
+/// `/` 로 구분된 경로를 따라간다.
+fn find_path_node<'a>(node: &'a ImageNode, path: &str) -> Option<&'a ImageNode> {
+    let mut cur = node;
+    for seg in path.split('/').filter(|s| !s.is_empty()) {
+        cur = child_node(cur, seg)?;
+    }
+    Some(cur)
+}
+
+fn node_int(node: &ImageNode, path: &str) -> Option<i32> {
+    match find_path_node(node, path).and_then(|n| n.value.as_ref()) {
+        Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
+        Some(wz_core::image::ImageValue::Short(v)) => Some(i32::from(*v)),
+        _ => None,
+    }
+}
+
+fn node_str(node: &ImageNode, path: &str) -> Option<String> {
+    match find_path_node(node, path).and_then(|n| n.value.as_ref()) {
+        Some(wz_core::image::ImageValue::Str(v)) => Some(v.to_string()),
+        _ => None,
+    }
+}
+
+fn node_vec(node: &ImageNode, path: &str) -> Option<crate::Point> {
+    match find_path_node(node, path).and_then(|n| n.value.as_ref()) {
+        Some(wz_core::image::ImageValue::Vector(v)) => Some(crate::Point::new(v.x, v.y)),
+        _ => None,
+    }
+}
+
 /// `Effect/_Canvas` 에서 특정 이미지를 가진 아카이브를 찾는다.
 fn find_effect_canvas_archive(data_root: &std::path::Path, image_name: &str) -> Option<WzArchive> {
     let dir = data_root.join("Effect").join("_Canvas");
@@ -248,7 +296,10 @@ fn png_origin_z(png: &wz_core::image::PngRef) -> (crate::Point, i32) {
 ///
 /// 체어 카테고리 이미지는 `03010.img` 처럼 5자리이고, 그 자식이 아이템 ID 다.
 /// `effect/0`, `0`, `default` 순으로 캔버스를 찾는다.
-fn load_chair_item(data_root: &std::path::Path, item_id: i32) -> Option<(Bone, Vec<AvatarPart>)> {
+fn load_chair_item(
+    data_root: &std::path::Path,
+    item_id: i32,
+) -> Option<(Bone, Vec<AvatarPart>, ChairInfo)> {
     let canvas_dir = data_root.join("Item").join("Install").join("_Canvas");
     let category = format!("{:05}.img", item_id / 1000);
     for entry in std::fs::read_dir(canvas_dir).ok()?.flatten() {
@@ -285,6 +336,42 @@ fn load_chair_item(data_root: &std::path::Path, item_id: i32) -> Option<(Bone, V
         let (w, h, rgba) = wz_image::decode_png_ref_to_rgba(&png, archive.source()).ok()?;
         let (origin, z_index) = png_origin_z(&png);
 
+        let info = child_node(item, "info");
+        let scale = info.and_then(|i| node_int(i, "scale")).unwrap_or(100);
+        let custom = info.and_then(|i| child_node(i, "customChair"));
+        let custom_chair_type = custom.and_then(|c| node_str(c, "type"));
+        let custom_scale = custom.and_then(|c| node_int(c, "scaleAvatar/scale"));
+        let mut group_count = 0;
+        let mut group_taming_ids = Vec::new();
+        let mut group_body_rel_move = Vec::new();
+        if let Some(info) = info {
+            for group in info.object_children() {
+                if !group.name.to_ascii_lowercase().contains("group") {
+                    continue;
+                }
+                for entry in group.object_children() {
+                    let lower = entry.name.to_ascii_lowercase();
+                    if !(lower.contains("sit") || lower.contains("mainuser")) {
+                        continue;
+                    }
+                    group_count = entry.object_children().len();
+                    for member in entry.object_children() {
+                        let id = node_int(member, "tamingMobM")
+                            .or_else(|| node_int(member, "tamingMobF"))
+                            .or_else(|| node_int(member, "tamingMob"))
+                            .unwrap_or(0);
+                        group_taming_ids.push(id);
+                        group_body_rel_move
+                            .push(node_vec(member, "bodyRelMove").unwrap_or(crate::Point::ZERO));
+                    }
+                }
+            }
+        }
+        let body_rel_move = child_node(item, "0")
+            .and_then(|n| node_vec(n, "bodyRelMove"))
+            .or_else(|| child_node(item, "1").and_then(|n| node_vec(n, "bodyRelMove")))
+            .or_else(|| group_body_rel_move.first().copied());
+
         let mut skin = SkinLayer::new("chair");
         skin.z = "chair".into();
         skin.z_index = z_index;
@@ -293,6 +380,7 @@ fn load_chair_item(data_root: &std::path::Path, item_id: i32) -> Option<(Bone, V
         skin.height = h;
 
         let mut root = Bone::new("@chair");
+        root.position = body_rel_move.unwrap_or(crate::Point::ZERO);
         root.append_bone(skin, "chair", crate::Point::ZERO);
         let part = AvatarPart {
             slot: "chair".into(),
@@ -301,9 +389,92 @@ fn load_chair_item(data_root: &std::path::Path, item_id: i32) -> Option<(Bone, V
             rgba,
             ..Default::default()
         };
-        return Some((root, vec![part]));
+        let chair_info = ChairInfo {
+            scale,
+            custom_chair_type,
+            custom_scale,
+            group_count,
+            group_taming_ids,
+            group_body_rel_move,
+            body_rel_move,
+        };
+        return Some((root, vec![part], chair_info));
     }
     None
+}
+
+/// RGBA8 버퍼를 최근접 이웃으로 `factor` 배 확대/축소한다.
+fn resize_rgba_nearest(src: &[u8], w: u32, h: u32, factor: f32) -> (u32, u32, Vec<u8>) {
+    let nw = ((w as f32 * factor).round() as u32).max(1);
+    let nh = ((h as f32 * factor).round() as u32).max(1);
+    if nw == w && nh == h {
+        return (w, h, src.to_vec());
+    }
+    let mut out = vec![0u8; (nw * nh * 4) as usize];
+    for y in 0..nh {
+        let sy = ((y as f32 / factor) as u32).min(h.saturating_sub(1));
+        for x in 0..nw {
+            let sx = ((x as f32 / factor) as u32).min(w.saturating_sub(1));
+            let src_off = ((sy * w + sx) * 4) as usize;
+            let dst_off = ((y * nw + x) * 4) as usize;
+            out[dst_off..dst_off + 4].copy_from_slice(&src[src_off..src_off + 4]);
+        }
+    }
+    (nw, nh, out)
+}
+
+fn is_scaled_slot(slot: &str) -> bool {
+    !matches!(slot, "chair" | "effect" | "tamingmob" | "taming")
+}
+
+fn scale_bone_tree(bone: &mut Bone, factor: f32, scaled: &std::collections::HashSet<String>) {
+    let has_scaled = bone.skins.iter().any(|s| scaled.contains(&s.name));
+    if has_scaled {
+        bone.position = crate::Point::new(
+            (bone.position.x as f32 * factor).round() as i32,
+            (bone.position.y as f32 * factor).round() as i32,
+        );
+        for skin in &mut bone.skins {
+            if scaled.contains(&skin.name) {
+                skin.origin = crate::Point::new(
+                    (skin.origin.x as f32 * factor).round() as i32,
+                    (skin.origin.y as f32 * factor).round() as i32,
+                );
+                skin.offset = crate::Point::new(
+                    (skin.offset.x as f32 * factor).round() as i32,
+                    (skin.offset.y as f32 * factor).round() as i32,
+                );
+                skin.width = (skin.width as f32 * factor).round().max(1.0) as u32;
+                skin.height = (skin.height as f32 * factor).round().max(1.0) as u32;
+            }
+        }
+    }
+    for child in &mut bone.children {
+        scale_bone_tree(child, factor, scaled);
+    }
+}
+
+/// 체어의 `scale`/`scaleAvatar.scale` 을 아바타 파트와 bone 에 적용한다.
+fn apply_avatar_scale(root: &mut Bone, parts: &mut [AvatarPart], scale: i32) {
+    if scale <= 0 || scale == 100 {
+        return;
+    }
+    let factor = scale as f32 / 100.0;
+    let scaled: std::collections::HashSet<String> = parts
+        .iter()
+        .filter(|p| is_scaled_slot(&p.slot))
+        .map(|p| p.slot.clone())
+        .collect();
+    for part in parts.iter_mut() {
+        if !scaled.contains(&part.slot) {
+            continue;
+        }
+        let (w, h, rgba) = resize_rgba_nearest(&part.rgba, part.width, part.height, factor);
+        part.width = w;
+        part.height = h;
+        part.rgba = rgba;
+    }
+    scale_bone_tree(root, factor, &scaled);
 }
 
 /// `name:x,y` 로 지정한 커스텀 오리진을 bone 의 skin 에 적용한다.
@@ -321,6 +492,29 @@ fn apply_custom_origins(bone: &mut Bone, map: &std::collections::BTreeMap<String
     }
 }
 
+/// C# `CustomOriginMap`(originValue → childName) + `CustomOrigin`(childName → Point)
+/// 두 단계를 거쳐 skin origin 을 덮어쓴다.
+fn apply_custom_origin_map(
+    root: &mut Bone,
+    parts: &[AvatarPart],
+    selected: &std::collections::BTreeMap<String, crate::Point>,
+) {
+    if selected.is_empty() {
+        return;
+    }
+    for part in parts {
+        let mut effective = std::collections::BTreeMap::new();
+        for (origin_value, child_name) in &part.custom_origin_map {
+            if let Some(point) = selected.get(child_name) {
+                effective.insert(origin_value.clone(), *point);
+            }
+        }
+        if !effective.is_empty() {
+            apply_custom_origins(root, &effective);
+        }
+    }
+}
+
 /// `Effect/Effect_*.wz` 의 `ItemEff.img/<id>/effect/default/0` 을 정적 1프레임으로 로드한다.
 ///
 /// C# 은 effect 를 애니메이션하지만, v0.1 이후 PoC 는 첫 프레임만 합성한다.
@@ -328,7 +522,7 @@ fn load_effect_item(
     data_root: &std::path::Path,
     item_id: i32,
     frame_index: usize,
-) -> Option<(Bone, Vec<AvatarPart>)> {
+) -> Option<(Bone, Vec<AvatarPart>, Vec<u32>)> {
     use wz_core::image::ImageValue;
 
     let effect_dir = data_root.join("Effect");
@@ -371,55 +565,69 @@ fn load_effect_item(
         .iter()
         .filter(|c| c.name.parse::<usize>().is_ok())
         .collect();
-    let frame = frames.get(frame_index % frames.len().max(1))?;
-    let png = frame.first_canvas()?;
-
-    let canvas_archive = find_effect_canvas_archive(data_root, "ItemEff.img");
-    let canvas_archive = canvas_archive?;
-    let outlink = png.sub_property.as_ref().and_then(|sub| {
-        sub.children.iter().find_map(|c| match &c.value {
-            Some(ImageValue::Str(v)) if c.name.as_ref() == "_outlink" => Some(v.to_string()),
+    if frames.is_empty() {
+        return None;
+    }
+    let canvas_archive = find_effect_canvas_archive(data_root, "ItemEff.img")?;
+    let effect_z = child_node(effect, "z")
+        .and_then(|n| match &n.value {
+            Some(ImageValue::Int(v)) => Some(*v),
             _ => None,
         })
-    })?;
-    let resolved = crate::resolve_outlink(&canvas_archive, &outlink).ok()?;
+        .unwrap_or(0);
 
-    let mut origin = crate::Point::ZERO;
-    let mut z_index = 0;
-    if let Some(sub) = &png.sub_property {
-        for ch in &sub.children {
-            match (ch.name.as_ref(), &ch.value) {
-                ("origin", Some(ImageValue::Vector(v))) => {
-                    origin = crate::Point::new(v.x, v.y);
-                }
-                ("z", Some(ImageValue::Int(v))) => z_index = *v,
-                _ => {}
-            }
+    let selected_index = frame_index % frames.len();
+    let mut parts = Vec::new();
+    let mut delays = Vec::new();
+    let mut selected_meta = None;
+
+    for (i, frame) in frames.iter().enumerate() {
+        let png = frame.first_canvas()?;
+        let outlink = png.sub_property.as_ref().and_then(|sub| {
+            sub.children.iter().find_map(|c| match &c.value {
+                Some(ImageValue::Str(v)) if c.name.as_ref() == "_outlink" => Some(v.to_string()),
+                _ => None,
+            })
+        })?;
+        let resolved = crate::resolve_outlink(&canvas_archive, &outlink).ok()?;
+        let (origin, frame_z) = png_origin_z(&png);
+        let z_index = if frame_z != 0 { frame_z } else { effect_z };
+        let delay = png
+            .sub_property
+            .as_ref()
+            .and_then(|sub| {
+                sub.children
+                    .iter()
+                    .find_map(|c| match (&c.name.as_ref(), &c.value) {
+                        (&"delay", Some(ImageValue::Int(v))) => Some((*v).max(0) as u32),
+                        _ => None,
+                    })
+            })
+            .unwrap_or(0);
+        delays.push(delay);
+        if i == selected_index {
+            selected_meta = Some((resolved.w, resolved.h, origin, z_index));
         }
-    }
-    if let Some(z_node) = child_node(effect, "z") {
-        if let Some(ImageValue::Int(v)) = &z_node.value {
-            z_index = *v;
-        }
+        parts.push(AvatarPart {
+            slot: "effect".into(),
+            width: resolved.w,
+            height: resolved.h,
+            rgba: resolved.rgba,
+            ..Default::default()
+        });
     }
 
+    let (w, h, origin, z_index) = selected_meta?;
     let mut skin = SkinLayer::new("effect");
     skin.z = "effect".into();
     skin.z_index = z_index;
     skin.origin = origin;
-    skin.width = resolved.w;
-    skin.height = resolved.h;
+    skin.width = w;
+    skin.height = h;
 
     let mut root = Bone::new("@effect");
     root.append_bone(skin, "effect", crate::Point::ZERO);
-    let part = AvatarPart {
-        slot: "effect".into(),
-        width: resolved.w,
-        height: resolved.h,
-        rgba: resolved.rgba,
-        ..Default::default()
-    };
-    Some((root, vec![part]))
+    Some((root, parts, delays))
 }
 
 /// `info/customOrigin` 의 자식들에서 `WZ child name → custom origin ID` 맵을 만든다.
@@ -622,6 +830,9 @@ pub fn load_from_character_wz_with_skin(
         root_bone: root,
         zmap,
         scene,
+        effect_frames: Vec::new(),
+        effect_delays: Vec::new(),
+        chair_info: None,
     })
 }
 
@@ -748,19 +959,28 @@ pub fn load_avatar_with_equipment_and_mix(
 
     // Equipment 로드
     let char_root = data_root.join("Character");
+    let mut effect_frames: Vec<AvatarPart> = Vec::new();
+    let mut effect_delays: Vec<u32> = Vec::new();
+    let mut chair_info: Option<ChairInfo> = None;
     for (slot, item_id) in equipment {
         if let Some(dir) = slot_dir_name(slot) {
             if dir == "Effect" {
-                if let Some((item_root, item_parts)) =
+                if let Some((item_root, item_parts, delays)) =
                     load_effect_item(data_root, *item_id, mix.effect_frame)
                 {
                     merge_bone_tree(&mut root, item_root);
-                    parts.extend(item_parts);
+                    let selected = mix.effect_frame.min(item_parts.len().saturating_sub(1));
+                    if let Some(part) = item_parts.get(selected).cloned() {
+                        parts.push(part);
+                    }
+                    effect_frames = item_parts;
+                    effect_delays = delays;
                 }
                 continue;
             }
             if dir == "Chair" {
-                if let Some((item_root, item_parts)) = load_chair_item(data_root, *item_id) {
+                if let Some((item_root, item_parts, info)) = load_chair_item(data_root, *item_id) {
+                    chair_info = Some(info);
                     merge_bone_tree(&mut root, item_root);
                     parts.extend(item_parts);
                 }
@@ -774,7 +994,7 @@ pub fn load_avatar_with_equipment_and_mix(
                 continue;
             };
             let image_name = format!("{:08}.img", item_id);
-            if let Some((item_root, mut item_parts)) =
+            if let Some((mut item_root, mut item_parts)) =
                 load_item_frame(&archive, Some(&image_name), &["default", "stand1"], dir)
             {
                 let mix_setting = match dir {
@@ -785,13 +1005,17 @@ pub fn load_avatar_with_equipment_and_mix(
                 if let Some((color, opacity)) = mix_setting {
                     apply_mix_to_item(&archive, *item_id, dir, &mut item_parts, color, opacity);
                 }
+                apply_custom_origin_map(&mut item_root, &item_parts, &mix.custom_origins);
                 merge_bone_tree(&mut root, item_root);
                 parts.extend(item_parts);
             }
         }
     }
 
-    apply_custom_origins(&mut root, &mix.custom_origins);
+    if let Some(info) = &chair_info {
+        let scale = info.custom_scale.unwrap_or(info.scale);
+        apply_avatar_scale(&mut root, &mut parts, scale);
+    }
 
     if parts.is_empty() {
         return None;
@@ -814,6 +1038,9 @@ pub fn load_avatar_with_equipment_and_mix(
         root_bone: root,
         zmap,
         scene,
+        effect_frames,
+        effect_delays,
+        chair_info,
     })
 }
 
@@ -1186,5 +1413,75 @@ mod special_slot_tests {
             return;
         };
         assert_ne!(a.rgba, b.rgba, "effect frame 0 and 1 should differ");
+        assert!(base.effect_frames.len() >= 2, "effect frames missing");
+        assert_eq!(base.effect_frames.len(), base.effect_delays.len());
+        assert!(
+            base.effect_delays.iter().any(|d| *d > 0),
+            "effect delays missing"
+        );
+    }
+}
+
+#[cfg(test)]
+mod custom_origin_map_tests {
+    use super::*;
+
+    #[test]
+    fn custom_origin_map_uses_child_name_then_selected_point() {
+        let mut root = Bone::new("@root");
+        root.append_bone(SkinLayer::new("default"), "navel", crate::Point::ZERO);
+
+        let mut part = AvatarPart::default();
+        // C# `CustomOriginMap`: originValue ("default") → childName ("cap").
+        part.custom_origin_map
+            .insert("default".to_string(), "cap".to_string());
+
+        let mut selected = std::collections::BTreeMap::new();
+        selected.insert("cap".to_string(), crate::Point::new(7, 9));
+        apply_custom_origin_map(&mut root, &[part], &selected);
+
+        let found = root
+            .children
+            .iter()
+            .flat_map(|b| b.skins.iter())
+            .find(|s| s.name == "default")
+            .expect("skin");
+        assert_eq!(found.origin, crate::Point::new(7, 9));
+    }
+}
+
+#[cfg(test)]
+mod scale_tests {
+    use super::*;
+
+    #[test]
+    fn avatar_scale_resizes_matching_parts_and_bones() {
+        let mut root = Bone::new("@root");
+        let mut skin = SkinLayer::new("body");
+        skin.origin = crate::Point::new(2, 4);
+        skin.width = 2;
+        skin.height = 2;
+        root.append_bone(skin, "navel", crate::Point::ZERO);
+
+        let mut parts = vec![AvatarPart {
+            slot: "body".into(),
+            width: 2,
+            height: 2,
+            rgba: vec![255; 16],
+            ..Default::default()
+        }];
+        apply_avatar_scale(&mut root, &mut parts, 150);
+
+        assert_eq!(parts[0].width, 3);
+        assert_eq!(parts[0].height, 3);
+        assert_eq!(parts[0].rgba.len(), 36);
+        let skin = root
+            .children
+            .iter()
+            .flat_map(|b| b.skins.iter())
+            .find(|s| s.name == "body")
+            .expect("body skin");
+        assert_eq!(skin.width, 3);
+        assert_eq!(skin.origin, crate::Point::new(3, 6));
     }
 }

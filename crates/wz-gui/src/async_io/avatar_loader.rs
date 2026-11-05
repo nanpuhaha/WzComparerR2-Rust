@@ -25,6 +25,9 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
             }
+            state.effect_frames.clear();
+            state.effect_delays.clear();
+            state.effect_last_time = 0.0;
             render_loaded_avatar(state);
         }
         None => {
@@ -94,6 +97,13 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
             }
+            state.effect_frames = av
+                .effect_frames
+                .iter()
+                .map(|p| (p.width, p.height, p.rgba.clone()))
+                .collect();
+            state.effect_delays = av.effect_delays.clone();
+            state.effect_last_time = 0.0;
             render_loaded_avatar(state);
         }
         None => {
@@ -206,4 +216,43 @@ fn parse_custom_origins(input: &str) -> std::collections::BTreeMap<String, wz_av
         }
     }
     out
+}
+
+/// Effect 자동 재생 틱. 다음 프레임으로 넘어갔으면 `true`.
+pub fn tick_effect(state: &mut AppState, now: f64) -> bool {
+    if !state.effect_auto_play || state.effect_frames.is_empty() {
+        return false;
+    }
+    let frame = state.effect_frame % state.effect_frames.len();
+    let delay = state
+        .effect_delays
+        .get(frame)
+        .copied()
+        .unwrap_or(200)
+        .max(20) as f64
+        / 1000.0;
+    if state.effect_last_time <= 0.0 {
+        state.effect_last_time = now;
+        return false;
+    }
+    if now - state.effect_last_time < delay {
+        return false;
+    }
+    state.effect_last_time = now;
+    state.effect_frame = (frame + 1) % state.effect_frames.len();
+    let (w, h, rgba) = state.effect_frames[state.effect_frame].clone();
+    if let Some(part) = state
+        .avatar_loaded_parts
+        .iter_mut()
+        .find(|p| p.0 == "effect")
+    {
+        part.1 = w;
+        part.2 = h;
+        part.3 = rgba;
+    } else {
+        state
+            .avatar_loaded_parts
+            .push(("effect".into(), w, h, rgba));
+    }
+    true
 }

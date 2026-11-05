@@ -3,7 +3,7 @@ pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
     println!("지원: PKG1/PKG2/MS 컨테이너, AES/SNOW2/ChaCha20");
     println!("      이미지 트리/Canvas/UOL, WZ/DXBC/BC7 디코딩");
     println!("      StringLinker(5 roots), 아바타/맵 데이터, C# 오라클 차분 하네스");
-    println!("미구현: 이펙트 자동 재생/타이밍, 체어 그룹/스케일/바디 오프셋 (post-v0.1)");
+    println!("미구현: 그룹 체어 다인 렌더링, 커스텀 체어 타입 전체 (post-v0.1)");
     Ok(())
 }
 pub fn cmd_fmt(n: usize) -> Result<(), Box<dyn std::error::Error>> {

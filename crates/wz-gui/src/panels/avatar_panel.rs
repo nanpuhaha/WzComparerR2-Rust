@@ -2,6 +2,14 @@ use crate::async_io;
 use crate::state::AppState;
 
 pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
+    let now = ui.input(|i| i.time);
+    if async_io::tick_effect(state, now) {
+        async_io::render_loaded_avatar(state);
+    }
+    if state.effect_auto_play && !state.effect_frames.is_empty() {
+        ui.ctx()
+            .request_repaint_after(std::time::Duration::from_millis(50));
+    }
     ui.label("29개 슬롯 (드롭다운 선택)");
     egui::ScrollArea::vertical()
         .max_height(240.0)
@@ -147,11 +155,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.separator();
     ui.label("Effect / Custom Origin");
     ui.add(egui::Slider::new(&mut state.effect_frame, 0..=30).text("Effect frame"));
+    ui.checkbox(&mut state.effect_auto_play, "Effect 자동 재생");
     ui.horizontal(|ui| {
         ui.label("Custom origin:");
         ui.text_edit_singleline(&mut state.custom_origin_input);
     });
-    ui.label("형식: default:10,20;defaultAc:5,5 (장비 로드 시 적용)");
+    ui.label("형식: cap:10,20;ear:5,5 (childName 기준, 장비 로드 시 적용)");
     if ui
         .button("믹스/특수 레이어 적용 (장비 다시 로드)")
         .clicked()
