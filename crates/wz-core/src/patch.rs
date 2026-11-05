@@ -12,8 +12,9 @@ const TOP_BIT: u32 = 0x80000000;
 /// SFX 패처 안내문 길이의 상한 (1 MiB). 손상된 tail 로 거대한 할당을 막는다.
 const MAX_NOTICE_BYTES: u64 = 1024 * 1024;
 
-/// 패치 파트 목록 압축 해제 결과의 상한 (64 MiB). zlib 폭탄 방지.
-const MAX_PARTS_DECOMPRESSED_BYTES: usize = 64 * 1024 * 1024;
+/// 압축 해제 페이로드 상한 (4 GiB). 실제 대형 패치는 1.5 GiB 수준이며,
+/// 64 MiB 로 제한하면 파트 목록이 통째로 비어 버린다.
+const MAX_PARTS_DECOMPRESSED_BYTES: usize = 4 * 1024 * 1024 * 1024;
 
 /// BZIP2/CRC32 변종 체크섬 계산기 (원본 `CheckSum.cs:37-65, 184-186`).
 pub fn compute_patch_checksum(data: &[u8], initial_crc: u32) -> u32 {
@@ -179,12 +180,10 @@ impl PatchHeader {
         })
     }
 
-    /// ZLIB 인플레이트 스트림을 열어 패치 파일 내부의 파트 목록(`PatchPart`)을 파싱한다.
+    /// ZLIB 압축 영역을 메모리로 인플레이트한다.
     ///
-    /// 원본 `WzPatcher.PrePatch` (`WzPatcher.cs:171-237`) 대응:
-    /// - ZLIB 헤더(0x78 0x9C 등)를 확인/건너뛰고 인플레이트 스트림을 초기화
-    /// - 패치 파트 헤더(`GetFileName` + 타입별 메타데이터)를 순차 추출
-    pub fn parse_parts(&self, src: &Arc<dyn ByteSource>) -> Result<Vec<PatchPart>> {
+    /// 원본 `WzPatcher.OpenDecompress` 와 같은 zlib/raw-deflate 폴백을 쓴다.
+    pub fn decompress_payload(&self, src: &Arc<dyn ByteSource>) -> Result<Vec<u8>> {
         use flate2::read::ZlibDecoder;
         use std::io::Read;
 
@@ -202,17 +201,15 @@ impl PatchHeader {
         if raw.len() < 2 {
             return Ok(Vec::new());
         }
-        let slice = &raw[..];
 
         let limit = MAX_PARTS_DECOMPRESSED_BYTES as u64 + 1;
-        let mut decoder = ZlibDecoder::new(slice).take(limit);
+        let mut decoder = ZlibDecoder::new(&raw[..]).take(limit);
         let mut decompressed = Vec::new();
         if decoder.read_to_end(&mut decompressed).is_err()
             || decompressed.len() > MAX_PARTS_DECOMPRESSED_BYTES
         {
-            // raw deflate fallback
             use flate2::read::DeflateDecoder;
-            let mut def_decoder = DeflateDecoder::new(slice).take(limit);
+            let mut def_decoder = DeflateDecoder::new(&raw[..]).take(limit);
             decompressed.clear();
             let _ = def_decoder.read_to_end(&mut decompressed);
             if decompressed.len() > MAX_PARTS_DECOMPRESSED_BYTES {
@@ -223,129 +220,559 @@ impl PatchHeader {
                 .into());
             }
         }
+        Ok(decompressed)
+    }
 
-        if decompressed.is_empty() {
-            return Ok(Vec::new());
+    /// ZLIB 인플레이트 스트림을 열어 패치 파일 내부의 파트 목록(`PatchPart`)을 파싱한다.
+    ///
+    /// 원본 `WzPatcher.PrePatch` (`WzPatcher.cs:171-237`) 대응:
+    /// - ZLIB 헤더(0x78 0x9C 등)를 확인/건너뛰고 인플레이트 스트림을 초기화
+    /// - 패치 파트 헤더(`GetFileName` + 타입별 메타데이터)를 순차 추출
+    pub fn parse_parts(&self, src: &Arc<dyn ByteSource>) -> Result<Vec<PatchPart>> {
+        let decompressed = self.decompress_payload(src)?;
+        Ok(parse_parts_from_payload(&decompressed).0)
+    }
+
+    /// 압축 해제된 페이로드와 KMST1125 해시 테이블 여부를 함께 읽는다.
+    pub fn read_patch(&self, src: &Arc<dyn ByteSource>) -> Result<PatchPayload> {
+        let decompressed = self.decompress_payload(src)?;
+        let (parts, is_kmst1125, old_hashes) = parse_parts_from_payload_with_hashes(&decompressed);
+        Ok(PatchPayload {
+            bytes: decompressed,
+            parts,
+            is_kmst1125,
+            old_hashes,
+        })
+    }
+}
+
+/// 압축 해제된 `.patch` 페이로드와 레코드.
+#[derive(Debug, Clone, Default)]
+pub struct PatchPayload {
+    pub bytes: Vec<u8>,
+    pub parts: Vec<PatchPart>,
+    pub is_kmst1125: bool,
+    /// KMST1125 선행 해시 테이블 (`파일명 → 체크섬`).
+    pub old_hashes: std::collections::HashMap<String, u32>,
+}
+
+fn read_i32(bytes: &[u8], cursor: &mut usize) -> Option<i32> {
+    if *cursor + 4 > bytes.len() {
+        return None;
+    }
+    let v = i32::from_le_bytes([
+        bytes[*cursor],
+        bytes[*cursor + 1],
+        bytes[*cursor + 2],
+        bytes[*cursor + 3],
+    ]);
+    *cursor += 4;
+    Some(v)
+}
+
+fn read_u32(bytes: &[u8], cursor: &mut usize) -> Option<u32> {
+    read_i32(bytes, cursor).map(|v| v as u32)
+}
+
+fn read_len_string(bytes: &[u8], cursor: &mut usize, max: usize) -> Option<String> {
+    let len = read_i32(bytes, cursor)?;
+    if len < 0 || len as usize > max || *cursor + len as usize > bytes.len() {
+        return None;
+    }
+    let s = String::from_utf8_lossy(&bytes[*cursor..*cursor + len as usize]).to_string();
+    *cursor += len as usize;
+    Some(s)
+}
+
+/// 수정 레코드의 명령 스트림을 건너뛴다 (`CalcNewFileLength`).
+fn skip_modify_commands(bytes: &[u8], mut cursor: usize, is_kmst1125: bool) -> (usize, usize) {
+    let mut output_len = 0usize;
+    while let Some(cmd) = read_i32(bytes, &mut cursor) {
+        if cmd == 0 {
+            break;
         }
-
-        let mut cursor = 0usize;
-        let mut parts = Vec::new();
-
-        // KMST1125 파일 해시 테이블 건너뛰기/확인
-        if cursor + 4 <= decompressed.len() {
-            let count = i32::from_le_bytes([
-                decompressed[cursor],
-                decompressed[cursor + 1],
-                decompressed[cursor + 2],
-                decompressed[cursor + 3],
-            ]);
-            if count > 0 && count < 10000 {
-                // hash list heuristic: try parse
-                let mut temp_cur = cursor + 4;
-                let mut valid_table = true;
-                for _ in 0..count {
-                    if temp_cur + 4 > decompressed.len() {
-                        valid_table = false;
-                        break;
-                    }
-                    let str_len = i32::from_le_bytes([
-                        decompressed[temp_cur],
-                        decompressed[temp_cur + 1],
-                        decompressed[temp_cur + 2],
-                        decompressed[temp_cur + 3],
-                    ]) as usize;
-                    temp_cur += 4;
-                    if str_len > 1024 || temp_cur + str_len + 4 > decompressed.len() {
-                        valid_table = false;
-                        break;
-                    }
-                    temp_cur += str_len + 4;
+        match (cmd as u32) >> 0x1C {
+            0x08 => {
+                let len = (cmd as u32 & 0x0FFF_FFFF) as usize;
+                cursor = cursor.saturating_add(len);
+                output_len += len;
+            }
+            0x0C => {
+                output_len += ((cmd as u32 & 0x0FFF_FF00) >> 8) as usize;
+            }
+            _ => {
+                cursor = cursor.saturating_add(4);
+                if is_kmst1125 {
+                    let _ = read_len_string(bytes, &mut cursor, 4096);
                 }
-                if valid_table {
-                    cursor = temp_cur;
-                }
+                // 길이(`cmd`)는 출력 파일 길이일 뿐 패치 스트림에는 바이트가 없다.
+                output_len += cmd.max(0) as usize;
             }
         }
+        if cursor > bytes.len() {
+            return (bytes.len(), output_len);
+        }
+    }
+    (cursor.min(bytes.len()), output_len)
+}
 
-        while cursor < decompressed.len() {
-            let mut name_bytes = Vec::new();
-            let mut patch_type_byte = None;
-            while cursor < decompressed.len() {
-                let b = decompressed[cursor];
-                cursor += 1;
-                if b <= 2 {
-                    patch_type_byte = Some(b);
+fn parse_parts_from_payload(payload: &[u8]) -> (Vec<PatchPart>, bool) {
+    let (parts, is_kmst, _) = parse_parts_from_payload_with_hashes(payload);
+    (parts, is_kmst)
+}
+
+fn parse_parts_from_payload_with_hashes(
+    decompressed: &[u8],
+) -> (Vec<PatchPart>, bool, std::collections::HashMap<String, u32>) {
+    let mut cursor = 0usize;
+    let mut parts = Vec::new();
+    let mut old_hashes = std::collections::HashMap::new();
+    let mut is_kmst1125 = false;
+
+    // KMST1125 선행 파일 해시 테이블: count(i32) + [len(i32)+name+checksum(u32)]*count
+    if cursor + 4 <= decompressed.len() {
+        let count = i32::from_le_bytes([
+            decompressed[cursor],
+            decompressed[cursor + 1],
+            decompressed[cursor + 2],
+            decompressed[cursor + 3],
+        ]);
+        if count > 0 && count < 100_000 {
+            let mut temp_cur = cursor + 4;
+            let mut table = std::collections::HashMap::new();
+            let mut valid = true;
+            for _ in 0..count {
+                let Some(name) = read_len_string(decompressed, &mut temp_cur, 4096) else {
+                    valid = false;
+                    break;
+                };
+                if temp_cur + 4 > decompressed.len() {
+                    valid = false;
                     break;
                 }
-                name_bytes.push(b);
+                let hash = u32::from_le_bytes([
+                    decompressed[temp_cur],
+                    decompressed[temp_cur + 1],
+                    decompressed[temp_cur + 2],
+                    decompressed[temp_cur + 3],
+                ]);
+                temp_cur += 4;
+                table.insert(name, hash);
             }
-
-            let p_type = match patch_type_byte {
-                Some(0) => PatchPartType::Create,
-                Some(1) => PatchPartType::Modify,
-                Some(2) => PatchPartType::Delete,
-                _ => break,
-            };
-
-            let file_name = String::from_utf8_lossy(&name_bytes).to_string();
-            let mut old_checksum = None;
-            let mut new_checksum = None;
-            let mut new_file_len = 0usize;
-
-            match p_type {
-                PatchPartType::Create => {
-                    if file_name.contains('.') && cursor + 8 <= decompressed.len() {
-                        new_file_len = i32::from_le_bytes([
-                            decompressed[cursor],
-                            decompressed[cursor + 1],
-                            decompressed[cursor + 2],
-                            decompressed[cursor + 3],
-                        ]) as usize;
-                        cursor += 4;
-                        new_checksum = Some(u32::from_le_bytes([
-                            decompressed[cursor],
-                            decompressed[cursor + 1],
-                            decompressed[cursor + 2],
-                            decompressed[cursor + 3],
-                        ]));
-                        cursor += 4;
-                        // skip payload
-                        cursor = cursor.saturating_add(new_file_len).min(decompressed.len());
-                    }
-                }
-                PatchPartType::Modify => {
-                    if cursor + 8 <= decompressed.len() {
-                        old_checksum = Some(u32::from_le_bytes([
-                            decompressed[cursor],
-                            decompressed[cursor + 1],
-                            decompressed[cursor + 2],
-                            decompressed[cursor + 3],
-                        ]));
-                        cursor += 4;
-                        new_checksum = Some(u32::from_le_bytes([
-                            decompressed[cursor],
-                            decompressed[cursor + 1],
-                            decompressed[cursor + 2],
-                            decompressed[cursor + 3],
-                        ]));
-                        cursor += 4;
-                    }
-                }
-                PatchPartType::Delete => {}
+            if valid && !table.is_empty() {
+                old_hashes = table;
+                is_kmst1125 = true;
+                cursor = temp_cur;
             }
+        }
+    }
 
-            parts.push(PatchPart {
-                file_name,
-                part_type: p_type,
-                old_checksum,
-                new_checksum,
-                new_file_len,
-                data_offset: cursor as u64,
-            });
+    while cursor < decompressed.len() {
+        let mut name_bytes = Vec::new();
+        let mut patch_type_byte = None;
+        while cursor < decompressed.len() {
+            let b = decompressed[cursor];
+            cursor += 1;
+            if b <= 2 {
+                patch_type_byte = Some(b);
+                break;
+            }
+            name_bytes.push(b);
         }
 
-        Ok(parts)
+        let p_type = match patch_type_byte {
+            Some(0) => PatchPartType::Create,
+            Some(1) => PatchPartType::Modify,
+            Some(2) => PatchPartType::Delete,
+            _ => break,
+        };
+        let file_name = String::from_utf8_lossy(&name_bytes).to_string();
+        let mut old_checksum = None;
+        let mut new_checksum = None;
+        let mut new_file_len = 0usize;
+        let mut data_offset = cursor;
+
+        match p_type {
+            PatchPartType::Create => {
+                if file_name.contains('.') {
+                    let Some(len) = read_i32(decompressed, &mut cursor) else {
+                        break;
+                    };
+                    let Some(checksum) = read_u32(decompressed, &mut cursor) else {
+                        break;
+                    };
+                    new_file_len = len.max(0) as usize;
+                    new_checksum = Some(checksum);
+                    data_offset = cursor;
+                    cursor = cursor.saturating_add(new_file_len).min(decompressed.len());
+                }
+            }
+            PatchPartType::Modify => {
+                if !is_kmst1125 {
+                    let Some(old) = read_u32(decompressed, &mut cursor) else {
+                        break;
+                    };
+                    old_checksum = Some(old);
+                }
+                let Some(new) = read_u32(decompressed, &mut cursor) else {
+                    break;
+                };
+                new_checksum = Some(new);
+                data_offset = cursor;
+                let (next, len) = skip_modify_commands(decompressed, cursor, is_kmst1125);
+                new_file_len = len;
+                cursor = next;
+            }
+            PatchPartType::Delete => {}
+        }
+
+        parts.push(PatchPart {
+            file_name,
+            part_type: p_type,
+            old_checksum,
+            new_checksum,
+            new_file_len,
+            data_offset: data_offset as u64,
+        });
     }
+
+    (parts, is_kmst1125, old_hashes)
+}
+
+/// 패치 적용 옵션.
+#[derive(Debug, Clone)]
+pub struct PatchApplyOptions {
+    /// 생성/수정 결과와 원본 파일의 체크섬을 검증한다 (기본 true).
+    pub verify_checksums: bool,
+}
+
+impl Default for PatchApplyOptions {
+    fn default() -> Self {
+        Self {
+            verify_checksums: true,
+        }
+    }
+}
+
+/// 패치 적용 결과 요약.
+#[derive(Debug, Clone, Default)]
+pub struct PatchApplyReport {
+    pub created: usize,
+    pub modified: usize,
+    pub deleted: usize,
+    pub skipped: usize,
+    pub errors: Vec<String>,
+}
+
+fn safe_join(root: &std::path::Path, name: &str) -> std::path::PathBuf {
+    let mut path = root.to_path_buf();
+    for component in name.split(['/', '\\']) {
+        if component.is_empty() || component == "." {
+            continue;
+        }
+        if component == ".." || component.contains(':') {
+            return root.join("__invalid_patch_path__");
+        }
+        path.push(component);
+    }
+    path
+}
+
+fn file_checksum(path: &std::path::Path) -> std::io::Result<u32> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut crc = 0u32;
+    let mut buf = vec![0u8; 256 * 1024];
+    loop {
+        let n = file.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        crc = compute_patch_checksum(&buf[..n], crc);
+    }
+    Ok(crc)
+}
+
+fn read_exact_at(file: &mut std::fs::File, offset: u64, len: usize) -> std::io::Result<Vec<u8>> {
+    use std::io::{Read, Seek, SeekFrom};
+    file.seek(SeekFrom::Start(offset))?;
+    let mut buf = vec![0u8; len];
+    file.read_exact(&mut buf)?;
+    Ok(buf)
+}
+
+struct ModifyCursor<'a> {
+    bytes: &'a [u8],
+    pos: usize,
+}
+
+impl<'a> ModifyCursor<'a> {
+    fn read_i32(&mut self) -> Result<i32> {
+        let value = read_i32(self.bytes, &mut self.pos).ok_or(WzFormatError::Malformed {
+            what: "patch modify command truncated",
+            offset: self.pos as u64,
+        })?;
+        Ok(value)
+    }
+    fn take(&mut self, len: usize) -> Result<&'a [u8]> {
+        if self.pos + len > self.bytes.len() {
+            return Err(WzFormatError::Malformed {
+                what: "patch modify payload truncated",
+                offset: self.pos as u64,
+            }
+            .into());
+        }
+        let slice = &self.bytes[self.pos..self.pos + len];
+        self.pos += len;
+        Ok(slice)
+    }
+    fn read_string(&mut self) -> Result<String> {
+        let len = self.read_i32()?;
+        if len < 0 || len as usize > 4096 {
+            return Err(WzFormatError::Malformed {
+                what: "patch dependency name invalid",
+                offset: self.pos as u64,
+            }
+            .into());
+        }
+        let bytes = self.take(len as usize)?;
+        Ok(String::from_utf8_lossy(bytes).to_string())
+    }
+}
+
+/// `.patch` 페이로드를 원본 디렉터리에 적용해 출력 디렉터리에 쓴다.
+///
+/// 원본 `WzPatcher.CreateNewFile` / `RebuildFile` 의 생성·수정·삭제 흐름을
+/// 그대로 옮긴 것이다. 수정 레코드의 세 가지 명령(패치 복사, 바이트 채움,
+/// 원본 구간 복사)과 KMST1125 의존 파일명까지 처리한다.
+pub fn apply_patch(
+    payload: &PatchPayload,
+    old_root: &std::path::Path,
+    out_root: &std::path::Path,
+    options: &PatchApplyOptions,
+) -> Result<PatchApplyReport> {
+    use std::io::Write;
+
+    let mut report = PatchApplyReport::default();
+    std::fs::create_dir_all(out_root).map_err(|_| WzFormatError::Malformed {
+        what: "cannot create patch output directory",
+        offset: 0,
+    })?;
+
+    for part in &payload.parts {
+        if part.file_name.is_empty() {
+            report.skipped += 1;
+            continue;
+        }
+        let target = safe_join(out_root, &part.file_name);
+        match part.part_type {
+            PatchPartType::Create => {
+                if part.new_file_len == 0 && !part.file_name.contains('.') {
+                    if let Err(e) = std::fs::create_dir_all(&target) {
+                        report.errors.push(format!("{}: {e}", part.file_name));
+                    } else {
+                        report.created += 1;
+                    }
+                    continue;
+                }
+                let start = part.data_offset as usize;
+                let end = start.saturating_add(part.new_file_len);
+                if end > payload.bytes.len() {
+                    report
+                        .errors
+                        .push(format!("{}: 생성 데이터 범위 초과", part.file_name));
+                    continue;
+                }
+                let data = &payload.bytes[start..end];
+                if options.verify_checksums {
+                    if let Some(expected) = part.new_checksum {
+                        let actual = compute_patch_checksum(data, 0);
+                        if actual != expected {
+                            report.errors.push(format!(
+                                "{}: 생성 체크섬 불일치 (0x{expected:08X} != 0x{actual:08X})",
+                                part.file_name
+                            ));
+                            continue;
+                        }
+                    }
+                }
+                if let Some(parent) = target.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                match std::fs::write(&target, data) {
+                    Ok(()) => report.created += 1,
+                    Err(e) => report.errors.push(format!("{}: {e}", part.file_name)),
+                }
+            }
+            PatchPartType::Delete => {
+                let result = if target.is_dir() {
+                    std::fs::remove_dir_all(&target)
+                } else {
+                    std::fs::remove_file(&target)
+                };
+                match result {
+                    Ok(()) => report.deleted += 1,
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => report.skipped += 1,
+                    Err(e) => report.errors.push(format!("{}: {e}", part.file_name)),
+                }
+            }
+            PatchPartType::Modify => {
+                let old_path = safe_join(old_root, &part.file_name);
+                if !old_path.exists() {
+                    report
+                        .errors
+                        .push(format!("{}: 원본 파일 없음", part.file_name));
+                    continue;
+                }
+                if options.verify_checksums {
+                    if let Some(expected) = part.old_checksum {
+                        match file_checksum(&old_path) {
+                            Ok(actual) if actual != expected => {
+                                report.errors.push(format!(
+                                    "{}: 원본 체크섬 불일치 (0x{expected:08X} != 0x{actual:08X})",
+                                    part.file_name
+                                ));
+                                continue;
+                            }
+                            Ok(_) => {}
+                            Err(e) => {
+                                report.errors.push(format!("{}: {e}", part.file_name));
+                                continue;
+                            }
+                        }
+                    }
+                }
+                let start = part.data_offset as usize;
+                if start > payload.bytes.len() {
+                    report
+                        .errors
+                        .push(format!("{}: 명령 오프셋 범위 초과", part.file_name));
+                    continue;
+                }
+                let mut cursor = ModifyCursor {
+                    bytes: &payload.bytes[start..],
+                    pos: 0,
+                };
+                let mut old_file = match std::fs::File::open(&old_path) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        report.errors.push(format!("{}: {e}", part.file_name));
+                        continue;
+                    }
+                };
+                if let Some(parent) = target.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let mut out = match std::fs::File::create(&target) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        report.errors.push(format!("{}: {e}", part.file_name));
+                        continue;
+                    }
+                };
+                let mut crc = 0u32;
+                let mut failed = None;
+                loop {
+                    let cmd = match cursor.read_i32() {
+                        Ok(cmd) => cmd,
+                        Err(e) => {
+                            failed = Some(format!("{}: {e}", part.file_name));
+                            break;
+                        }
+                    };
+                    if cmd == 0 {
+                        break;
+                    }
+                    let kind = (cmd as u32) >> 0x1C;
+                    let result: Result<()> = (|| {
+                        match kind {
+                            0x08 => {
+                                let len = (cmd as u32 & 0x0FFF_FFFF) as usize;
+                                let block = cursor.take(len)?;
+                                out.write_all(block).map_err(|_| WzFormatError::Malformed {
+                                    what: "patch write failed",
+                                    offset: 0,
+                                })?;
+                                crc = compute_patch_checksum(block, crc);
+                            }
+                            0x0C => {
+                                let len = ((cmd as u32 & 0x0FFF_FF00) >> 8) as usize;
+                                let fill = (cmd as u32 & 0xFF) as u8;
+                                let buf = vec![fill; len];
+                                out.write_all(&buf).map_err(|_| WzFormatError::Malformed {
+                                    what: "patch fill write failed",
+                                    offset: 0,
+                                })?;
+                                crc = compute_patch_checksum(&buf, crc);
+                            }
+                            _ => {
+                                let len = cmd.max(0) as usize;
+                                let start_pos =
+                                    cursor.read_i32().map_err(|_| WzFormatError::Malformed {
+                                        what: "patch old-copy offset invalid",
+                                        offset: 0,
+                                    })?;
+                                let from_name = if payload.is_kmst1125 {
+                                    cursor.read_string()?
+                                } else {
+                                    part.file_name.clone()
+                                };
+                                let from_path = safe_join(old_root, &from_name);
+                                if from_path != old_path {
+                                    old_file = std::fs::File::open(&from_path).map_err(|_| {
+                                        WzFormatError::Malformed {
+                                            what: "patch dependency file missing",
+                                            offset: 0,
+                                        }
+                                    })?;
+                                }
+                                let block =
+                                    read_exact_at(&mut old_file, start_pos.max(0) as u64, len)
+                                        .map_err(|_| WzFormatError::Malformed {
+                                            what: "patch old-copy read failed",
+                                            offset: 0,
+                                        })?;
+                                out.write_all(&block)
+                                    .map_err(|_| WzFormatError::Malformed {
+                                        what: "patch old-copy write failed",
+                                        offset: 0,
+                                    })?;
+                                crc = compute_patch_checksum(&block, crc);
+                            }
+                        }
+                        Ok(())
+                    })();
+                    if let Err(e) = result {
+                        failed = Some(format!("{}: {e}", part.file_name));
+                        break;
+                    }
+                }
+                if let Some(err) = failed {
+                    let _ = std::fs::remove_file(&target);
+                    report.errors.push(err);
+                    continue;
+                }
+                out.flush().map_err(|_| WzFormatError::Malformed {
+                    what: "patch flush failed",
+                    offset: 0,
+                })?;
+                if options.verify_checksums {
+                    if let Some(expected) = part.new_checksum {
+                        if crc != expected {
+                            report.errors.push(format!(
+                                "{}: 수정 체크섬 불일치 (0x{expected:08X} != 0x{crc:08X})",
+                                part.file_name
+                            ));
+                            let _ = std::fs::remove_file(&target);
+                            continue;
+                        }
+                    }
+                }
+                report.modified += 1;
+            }
+        }
+    }
+    Ok(report)
 }
 
 #[cfg(test)]
@@ -376,6 +803,119 @@ mod tests {
         assert_eq!(header.computed_checksum, computed_crc);
         assert!(header.is_valid);
         assert_eq!(header.compressed_len, payload.len() as u64);
+    }
+
+    fn temp_dir(tag: &str) -> std::path::PathBuf {
+        std::env::temp_dir().join(format!("wz-patch-test-{}-{tag}", std::process::id()))
+    }
+
+    #[test]
+    fn apply_create_and_modify_records() {
+        let root = temp_dir("apply");
+        let old_root = root.join("old");
+        let out_root = root.join("out");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&old_root).unwrap();
+        std::fs::write(old_root.join("old.bin"), b"ABCXYZ").unwrap();
+
+        let created = b"hello world";
+        let mut bytes = created.to_vec();
+        let create_checksum = compute_patch_checksum(created, 0);
+        let modify_offset = bytes.len();
+        let fill_cmd = (0x0Cu32 << 28) | (2u32 << 8) | u32::from(b'X');
+        bytes.extend_from_slice(&fill_cmd.to_le_bytes());
+        let copy_patch_cmd = (0x08u32 << 28) | 5u32;
+        bytes.extend_from_slice(&copy_patch_cmd.to_le_bytes());
+        bytes.extend_from_slice(b"PATCH");
+        bytes.extend_from_slice(&4i32.to_le_bytes());
+        bytes.extend_from_slice(&2i32.to_le_bytes());
+        bytes.extend_from_slice(&0i32.to_le_bytes());
+        let expected = b"XXPATCHCXYZ";
+        let modify_checksum = compute_patch_checksum(expected, 0);
+
+        let payload = PatchPayload {
+            bytes,
+            is_kmst1125: false,
+            old_hashes: Default::default(),
+            parts: vec![
+                PatchPart {
+                    file_name: "new.bin".into(),
+                    part_type: PatchPartType::Create,
+                    old_checksum: None,
+                    new_checksum: Some(create_checksum),
+                    new_file_len: created.len(),
+                    data_offset: 0,
+                },
+                PatchPart {
+                    file_name: "old.bin".into(),
+                    part_type: PatchPartType::Modify,
+                    old_checksum: None,
+                    new_checksum: Some(modify_checksum),
+                    new_file_len: 0,
+                    data_offset: modify_offset as u64,
+                },
+            ],
+        };
+        let report = apply_patch(
+            &payload,
+            &old_root,
+            &out_root,
+            &PatchApplyOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(report.created, 1);
+        assert_eq!(report.modified, 1);
+        assert!(report.errors.is_empty(), "{:?}", report.errors);
+        assert_eq!(std::fs::read(out_root.join("new.bin")).unwrap(), created);
+        assert_eq!(std::fs::read(out_root.join("old.bin")).unwrap(), expected);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn real_patch_created_files_verify() {
+        let Some(path) = std::env::var_os("WZ_PATCH_PATH").map(std::path::PathBuf::from) else {
+            return;
+        };
+        if !path.exists() {
+            return;
+        }
+        let src: Arc<dyn ByteSource> =
+            Arc::new(wz_pool::FileSource::open(&path).expect("open real patch"));
+        let header = PatchHeader::parse(&src).expect("header");
+        assert!(header.is_valid);
+        let payload = header.read_patch(&src).expect("read patch");
+        assert!(payload.is_kmst1125);
+        let created: Vec<_> = payload
+            .parts
+            .iter()
+            .filter(|p| p.part_type == PatchPartType::Create && p.new_file_len > 0)
+            .collect();
+        assert_eq!(created.len(), 43);
+        let total_modified: usize = payload
+            .parts
+            .iter()
+            .filter(|p| p.part_type == PatchPartType::Modify)
+            .map(|p| p.new_file_len)
+            .sum();
+        assert_eq!(total_modified, 42_701_118_706);
+        let ng = payload
+            .parts
+            .iter()
+            .find(|p| p.file_name == "NGClient64.aes")
+            .expect("NGClient64.aes");
+        assert_eq!(ng.new_file_len, 12_825_088);
+        for part in created {
+            let start = part.data_offset as usize;
+            let data = &payload.bytes[start..start + part.new_file_len];
+            if let Some(expected) = part.new_checksum {
+                assert_eq!(
+                    compute_patch_checksum(data, 0),
+                    expected,
+                    "{}",
+                    part.file_name
+                );
+            }
+        }
     }
 
     #[test]

@@ -182,6 +182,24 @@ enum Command {
         json: bool,
     },
 
+    /// MapleStory `.patch` 레코드 확인/적용
+    Patch {
+        /// .patch 파일 경로
+        patch: PathBuf,
+
+        /// 적용할 원본 클라이언트 디렉터리
+        #[arg(long)]
+        old: Option<PathBuf>,
+
+        /// 패치 결과를 쓸 디렉터리
+        #[arg(long)]
+        out: Option<PathBuf>,
+
+        /// 적용하지 않고 레코드만 요약
+        #[arg(long)]
+        info: bool,
+    },
+
     /// C# Oracle 호환 검증용 표준 JSON 출력 하네스
     Oracle {
         #[command(subcommand)]
@@ -397,6 +415,12 @@ fn main() {
             props,
             json,
         } => cmd_query(&wz, &name, &props, json),
+        Command::Patch {
+            patch,
+            old,
+            out,
+            info,
+        } => cmd_patch(&patch, old.as_deref(), out.as_deref(), info),
         Command::Oracle { action } => cmd_oracle(action),
     };
 

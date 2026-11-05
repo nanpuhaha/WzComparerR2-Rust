@@ -181,3 +181,15 @@ remaining CharaSim gaps.
 
 `WZ_DATA_ROOT=<Data> cargo test -p wz-avatar` passes all 18 real-data tests, including
 body/head loading, equipment loading, zmap, and the prism unit test.
+
+## Patch
+
+- `wz-core::patch` now parses the full decompressed payload, the KMST1125
+  leading file-hash table, create/modify/delete records and each modify
+  command stream (`CalcNewFileLength`).
+- `wz patch <file> [--info] [--old DIR --out DIR]` can inspect records or apply
+  them. Create/modify output checksums and old-file checksums are verified.
+- Verified with the real `00419to00420.patch`: 44 create (43 files + 1 dir),
+  415 modify, 1 delete, 1024+ hash entries; all 43 created files match the
+  reference extraction SHA-256 and every modify output length sums to
+  42,701,118,706 bytes.
