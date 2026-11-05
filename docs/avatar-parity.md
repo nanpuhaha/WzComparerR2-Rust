@@ -82,6 +82,12 @@ remaining CharaSim gaps.
     through metadata `_outlink` into `_Canvas`, with `partZ` z-order and `posLv/lv1`
     avatar offset. All frames and delays are loaded; the GUI exposes a frame slider
     and `Rolling house 자동 재생` (WZ delay driven).
+  - `androidChair` → `androidChairInfo/customEffect/0..15` outlink frames,
+    `pos`/`reverseFlip`/`z`, `forcedHideBody`/`forcedAction`; played through the
+    same chair frame slider/auto-play (fixed 100ms because WZ has no delay).
+  - `petChair` → `petChairInfo` slots (`pos`, `reverseFlip`, `wonderGrade`,
+    `tGapMin/Max`) are parsed and the taming/base is loaded. Actual pet sprites
+    require the player's equipped-pet data, which is not part of the chair WZ.
   - `AvatarPart` now carries final `position`, `origin`, and `z_index`; the GUI
     centers/scales the assembled avatar and draws parts at those coordinates.
 - Custom origin: the two-step C# semantics are implemented:

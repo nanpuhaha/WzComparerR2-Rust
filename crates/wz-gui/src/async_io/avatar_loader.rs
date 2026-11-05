@@ -311,7 +311,7 @@ pub fn apply_chair_frame(state: &mut AppState) {
     let idx = state.chair_frame % state.chair_frames.len();
     state
         .avatar_loaded_parts
-        .retain(|p| !p.slot.starts_with("rolling_part"));
+        .retain(|p| !p.slot.starts_with("rolling_part") && p.slot != "android_effect");
     state
         .avatar_loaded_parts
         .extend(state.chair_frames[idx].iter().cloned());
@@ -471,6 +471,38 @@ mod tests {
     }
 
     #[test]
+    fn render_android_chair_smoke() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let Some(av) =
+            wz_avatar::load_avatar_with_equipment(&root, 2000, &[("Chair".to_string(), 3018020)])
+        else {
+            return;
+        };
+        assert!(av.chair_frames.len() > 1, "android chair frames missing");
+        let mut state = AppState {
+            avatar_loaded_parts: av.parts.iter().map(part_data).collect(),
+            chair_frames: av
+                .chair_frames
+                .iter()
+                .map(|frame| frame.iter().map(part_data).collect())
+                .collect(),
+            chair_delays: av.chair_delays.clone(),
+            ..Default::default()
+        };
+        render_loaded_avatar(&mut state);
+        if state.avatar_status.contains("RC 실패") {
+            return;
+        }
+        assert!(
+            state.avatar_rendered.is_some(),
+            "render failed: {}",
+            state.avatar_status
+        );
+    }
+
+    #[test]
     fn apply_chair_frame_replaces_rolling_parts() {
         let body = AvatarPartData {
             slot: "body".into(),
@@ -488,14 +520,22 @@ mod tests {
             position: (0, 0),
             z_index: 0,
         };
+        let android = |n: u8| AvatarPartData {
+            slot: "android_effect".into(),
+            width: 1,
+            height: 1,
+            rgba: vec![n, n, n, 255],
+            position: (0, 0),
+            z_index: 0,
+        };
         let mut state = AppState {
-            avatar_loaded_parts: vec![body.clone(), rolling(1)],
-            chair_frames: vec![vec![rolling(1)], vec![rolling(2)]],
+            avatar_loaded_parts: vec![body.clone(), rolling(1), android(1)],
+            chair_frames: vec![vec![rolling(1), android(1)], vec![rolling(2), android(2)]],
             chair_frame: 1,
             ..Default::default()
         };
         apply_chair_frame(&mut state);
-        assert_eq!(state.avatar_loaded_parts.len(), 2);
+        assert_eq!(state.avatar_loaded_parts.len(), 3);
         assert!(state.avatar_loaded_parts.iter().any(|p| p.slot == "body"));
         let part = state
             .avatar_loaded_parts
@@ -503,6 +543,12 @@ mod tests {
             .find(|p| p.slot == "rolling_part0")
             .expect("rolling part");
         assert_eq!(part.rgba, vec![2, 2, 2, 255]);
+        let android_part = state
+            .avatar_loaded_parts
+            .iter()
+            .find(|p| p.slot == "android_effect")
+            .expect("android part");
+        assert_eq!(android_part.rgba, vec![2, 2, 2, 255]);
     }
 
     #[test]

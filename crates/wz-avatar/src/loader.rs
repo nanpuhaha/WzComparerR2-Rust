@@ -150,6 +150,33 @@ pub struct RollingHouseInfo {
     pub quest_id: i32,
 }
 
+/// `androidChairInfo` — 안드로이드/홀로그램 효과.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AndroidChairInfo {
+    pub effect_frames: usize,
+    pub z: i32,
+    pub forced_action: Option<String>,
+    pub hide_body: bool,
+    pub pos: crate::Point,
+    pub reverse_flip: bool,
+}
+
+/// `petChairInfo` 의 펫 슬롯 하나.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PetChairSlot {
+    pub pos: crate::Point,
+    pub reverse_flip: bool,
+    pub wonder_grade: i32,
+    pub t_gap_min: i32,
+    pub t_gap_max: i32,
+}
+
+/// `petChairInfo` — 펫 3마리 슬롯.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PetChairInfo {
+    pub slots: Vec<PetChairSlot>,
+}
+
 /// `customChair` 의 알려진 필드 + 미래/미구현 필드 보존.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CustomChairInfo {
@@ -160,6 +187,8 @@ pub struct CustomChairInfo {
     pub rotate: Option<RotatedChairInfo>,
     pub dummy: Option<DummyChairInfo>,
     pub rolling_house: Option<RollingHouseInfo>,
+    pub android: Option<AndroidChairInfo>,
+    pub pet: Option<PetChairInfo>,
     /// 중첩 Property 를 `a/b/c` 경로의 문자열로 평탄화해 보존한다.
     pub extra: std::collections::BTreeMap<String, String>,
 }
@@ -251,6 +280,42 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         }
     });
 
+    let android = child_node(node, "androidChairInfo").map(|n| {
+        let effect_frames = child_node(n, "customEffect")
+            .map(|ce| {
+                ce.object_children()
+                    .iter()
+                    .filter(|c| matches!(c.value, Some(wz_core::image::ImageValue::Png(_))))
+                    .count()
+            })
+            .unwrap_or(0);
+        AndroidChairInfo {
+            effect_frames,
+            z: node_int(n, "z").unwrap_or(0),
+            forced_action: node_str(n, "forcedAction").filter(|v| !v.is_empty()),
+            hide_body: node_int(n, "forcedHideBody").unwrap_or(0) != 0,
+            pos: node_vec(n, "pos").unwrap_or(crate::Point::ZERO),
+            reverse_flip: node_int(n, "reverseFlip").unwrap_or(0) != 0,
+        }
+    });
+
+    let pet = child_node(node, "petChairInfo").map(|n| {
+        let mut slots = Vec::new();
+        for child in n.object_children() {
+            if child.name.parse::<usize>().is_err() {
+                continue;
+            }
+            slots.push(PetChairSlot {
+                pos: node_vec(child, "pos").unwrap_or(crate::Point::ZERO),
+                reverse_flip: node_int(child, "reverseFlip").unwrap_or(0) != 0,
+                wonder_grade: node_int(child, "wonderGrade").unwrap_or(0),
+                t_gap_min: node_int(child, "randAct/tGapMin").unwrap_or(0),
+                t_gap_max: node_int(child, "randAct/tGapMax").unwrap_or(0),
+            });
+        }
+        PetChairInfo { slots }
+    });
+
     let rolling_house = child_node(node, "rollingHouseChairInfo").map(|n| {
         let parts_count = node_int(n, "partsCount").unwrap_or(0).max(0) as usize;
         let part_z = (0..parts_count)
@@ -289,6 +354,8 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         rotate,
         dummy,
         rolling_house,
+        android,
+        pet,
         extra,
     }
 }
@@ -376,6 +443,17 @@ impl ChairInfo {
                 name: action.clone(),
                 frame,
             };
+        }
+        if let Some(android) = self.custom_chair.as_ref().and_then(|c| c.android.as_ref()) {
+            if android.hide_body {
+                return ChairBodyAction::Hide;
+            }
+            if let Some(action) = &android.forced_action {
+                return ChairBodyAction::Action {
+                    name: action.clone(),
+                    frame,
+                };
+            }
         }
         if self.remove_body {
             return ChairBodyAction::Hide;
@@ -911,6 +989,66 @@ pub fn load_chair_info(data_root: &std::path::Path, item_id: i32) -> Option<Chai
     Some(chair)
 }
 
+/// `androidChairInfo/customEffect` 프레임을 로드한다.
+///
+/// 메타데이터 캔버스는 1x1 + `_outlink` 이고, 실제 픽셀은 `_Canvas` 아카이브에
+/// 있다. 각 프레임은 단일 파트(`android_effect`)로 취급한다.
+fn load_android_chair_item(
+    data_root: &std::path::Path,
+    item_id: i32,
+    info: &ChairInfo,
+) -> Option<(Bone, Vec<AvatarPart>, ChairFrames)> {
+    let (_, meta_item) = find_install_item(data_root, "", item_id)?;
+    let (canvas_archive, _) = find_install_item(data_root, "_Canvas", item_id)?;
+    let android = info.custom_chair.as_ref()?.android.as_ref()?;
+    let effect = find_path_node(&meta_item, "info/customChair/androidChairInfo/customEffect")?;
+
+    let mut frames = Vec::new();
+    let mut delays = Vec::new();
+    let mut first_bone = None;
+    for i in 0..android.effect_frames {
+        let Some(node) = child_node(effect, &i.to_string()) else {
+            continue;
+        };
+        let Some(outlink) = node_str(node, "_outlink") else {
+            continue;
+        };
+        let Ok(resolved) = crate::frame_layers::resolve_outlink(&canvas_archive, &outlink) else {
+            continue;
+        };
+        let mut rgba = resolved.rgba;
+        if android.reverse_flip {
+            rgba = flip_rgba_horizontal(&rgba, resolved.w, resolved.h);
+        }
+        if first_bone.is_none() {
+            let mut root = Bone::new("@android");
+            let mut skin = SkinLayer::new("android_effect");
+            skin.z = "android".into();
+            skin.z_index = android.z;
+            skin.origin = crate::Point::ZERO;
+            skin.width = resolved.w;
+            skin.height = resolved.h;
+            root.position = android.pos;
+            root.append_bone(skin, "android_effect", crate::Point::ZERO);
+            first_bone = Some(root);
+        }
+        frames.push(vec![AvatarPart {
+            slot: "android_effect".into(),
+            width: resolved.w,
+            height: resolved.h,
+            rgba,
+            position: android.pos,
+            origin: crate::Point::ZERO,
+            z_index: android.z,
+            custom_origin_map: Default::default(),
+        }]);
+        // WZ 에 delay 가 없어서 100ms 고정.
+        delays.push(100);
+    }
+    let first = frames.first()?.clone();
+    Some((first_bone?, first, ChairFrames { frames, delays }))
+}
+
 /// 한 rolling-house 프레임의 8개 파츠를 조립한다.
 fn build_rolling_frame(
     frame_node: &ImageNode,
@@ -1041,6 +1179,15 @@ fn load_chair_item(
     item_id: i32,
     info: &ChairInfo,
 ) -> Option<(Bone, Vec<AvatarPart>, Option<ChairFrames>)> {
+    if info
+        .custom_chair
+        .as_ref()
+        .and_then(|c| c.android.as_ref())
+        .is_some()
+    {
+        return load_android_chair_item(data_root, item_id, info)
+            .map(|(bone, parts, frames)| (bone, parts, Some(frames)));
+    }
     if info
         .custom_chair
         .as_ref()
@@ -2852,6 +2999,54 @@ mod chair_custom_type_tests {
         // flipXYChair 는 removeBody/sitAction 이 없으므로 C# 은 sit 을 쓴다.
         assert!(has_slot(&av, "body"));
         assert!(has_slot(&av, "chair"));
+    }
+
+    #[test]
+    fn android_chair_loads_custom_effect_frames() {
+        let Some(av) = load_chair(3018020) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let android = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.android.as_ref())
+            .expect("android info");
+        assert_eq!(android.effect_frames, 16);
+        assert!(android.hide_body);
+        assert_eq!(android.forced_action.as_deref(), Some("sit"));
+        assert_eq!(android.pos, crate::Point::new(-121, 6));
+        assert!(android.reverse_flip);
+        assert_eq!(av.chair_frames.len(), 16);
+        assert_eq!(av.chair_delays, vec![100; 16]);
+        assert!(!has_slot(&av, "body"));
+        let part = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "android_effect")
+            .expect("android_effect part");
+        assert!(part.width > 1 && part.height > 1);
+    }
+
+    #[test]
+    fn pet_chair_parses_slots_and_loads_taming() {
+        let Some(av) = load_chair(3018179) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let pet = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.pet.as_ref())
+            .expect("pet info");
+        assert_eq!(pet.slots.len(), 3);
+        assert_eq!(pet.slots[0].pos, crate::Point::new(-108, 0));
+        assert!(pet.slots[0].reverse_flip);
+        assert_eq!(pet.slots[0].wonder_grade, 6);
+        assert_eq!(pet.slots[1].pos, crate::Point::new(-6, 50));
+        assert_eq!(pet.slots[2].pos, crate::Point::new(18, -149));
+        assert_eq!(info.taming_mob, Some(1983457));
+        assert!(av.parts.iter().any(|p| p.slot.starts_with("tamingmob")));
     }
 
     #[test]
