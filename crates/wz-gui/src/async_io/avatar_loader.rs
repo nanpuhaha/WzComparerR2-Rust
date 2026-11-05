@@ -381,6 +381,46 @@ mod tests {
     }
 
     #[test]
+    fn render_rolling_house_chair_smoke() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let Some(av) =
+            wz_avatar::load_avatar_with_equipment(&root, 2000, &[("Chair".to_string(), 3018010)])
+        else {
+            return;
+        };
+        assert!(
+            av.parts.iter().any(|p| p.slot.starts_with("rolling_part")),
+            "rolling house parts missing"
+        );
+        let mut state = AppState {
+            avatar_loaded_parts: av
+                .parts
+                .iter()
+                .map(|p| AvatarPartData {
+                    slot: p.slot.clone(),
+                    width: p.width,
+                    height: p.height,
+                    rgba: p.rgba.clone(),
+                    position: (p.position.x, p.position.y),
+                    z_index: p.z_index,
+                })
+                .collect(),
+            ..Default::default()
+        };
+        render_loaded_avatar(&mut state);
+        if state.avatar_status.contains("RC 실패") {
+            return;
+        }
+        assert!(
+            state.avatar_rendered.is_some(),
+            "render failed: {}",
+            state.avatar_status
+        );
+    }
+
+    #[test]
     fn apply_effect_frame_updates_origin_and_part() {
         let mut state = AppState {
             effect_frames: vec![(2, 2, vec![1; 16]), (3, 3, vec![2; 36])],

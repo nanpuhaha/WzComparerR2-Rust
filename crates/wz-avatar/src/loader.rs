@@ -134,6 +134,19 @@ pub struct DummyChairInfo {
     pub chat_balloon_move: crate::Point,
 }
 
+/// `rollingHouseChairInfo` — 20프레임 다층 회전 하우스.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RollingHouseInfo {
+    pub parts_count: usize,
+    pub part_z: Vec<i32>,
+    pub pos_lv: Vec<crate::Point>,
+    pub frame_count: usize,
+    pub delays: Vec<u32>,
+    pub min_level: i32,
+    pub max_level: i32,
+    pub quest_id: i32,
+}
+
 /// `customChair` 의 알려진 필드 + 미래/미구현 필드 보존.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CustomChairInfo {
@@ -143,6 +156,7 @@ pub struct CustomChairInfo {
     pub flip: Option<FlipXYChairInfo>,
     pub rotate: Option<RotatedChairInfo>,
     pub dummy: Option<DummyChairInfo>,
+    pub rolling_house: Option<RollingHouseInfo>,
     /// 중첩 Property 를 `a/b/c` 경로의 문자열로 평탄화해 보존한다.
     pub extra: std::collections::BTreeMap<String, String>,
 }
@@ -234,6 +248,33 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         }
     });
 
+    let rolling_house = child_node(node, "rollingHouseChairInfo").map(|n| {
+        let parts_count = node_int(n, "partsCount").unwrap_or(0).max(0) as usize;
+        let part_z = (0..parts_count)
+            .filter_map(|i| node_int(n, &format!("partZ/{i}")))
+            .collect();
+        let pos_lv = (1..=10)
+            .filter_map(|i| node_vec(n, &format!("posLv/lv{i}")))
+            .collect();
+        let frame_count = child_node(n, "part")
+            .map(|p| p.object_children().len())
+            .unwrap_or(0);
+        let delays = (0..frame_count)
+            .filter_map(|i| node_int(n, &format!("part/{i}/delay")))
+            .map(|v| v.max(0) as u32)
+            .collect();
+        RollingHouseInfo {
+            parts_count,
+            part_z,
+            pos_lv,
+            frame_count,
+            delays,
+            min_level: node_int(n, "minLevel").unwrap_or(0),
+            max_level: node_int(n, "maxLevel").unwrap_or(0),
+            quest_id: node_int(n, "partsQuestID").unwrap_or(0),
+        }
+    });
+
     let mut extra = std::collections::BTreeMap::new();
     flatten_extra(node, "", &mut extra);
 
@@ -244,6 +285,7 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         flip,
         rotate,
         dummy,
+        rolling_house,
         extra,
     }
 }
@@ -408,6 +450,19 @@ pub struct EffectFrames {
     pub delays: Vec<u32>,
     pub origins: Vec<crate::Point>,
     pub z_indices: Vec<i32>,
+}
+
+fn set_named_skin_z(bone: &mut Bone, name: &str, z_index: i32) -> bool {
+    if let Some(skin) = bone.skins.iter_mut().find(|s| s.name == name) {
+        skin.z_index = z_index;
+        return true;
+    }
+    for child in &mut bone.children {
+        if set_named_skin_z(child, name, z_index) {
+            return true;
+        }
+    }
+    false
 }
 
 fn set_bone_z(bone: &mut Bone, z_index: i32) {
@@ -846,6 +901,93 @@ pub fn load_chair_info(data_root: &std::path::Path, item_id: i32) -> Option<Chai
     Some(chair)
 }
 
+/// `rollingHouseChairInfo` 의 다층 파츠를 첫 프레임으로 로드한다.
+///
+/// 메타데이터 캔버스는 1x1 + `_outlink` 이고, 실제 픽셀은 `_Canvas` 아카이브에
+/// 있다. `collect_frame_assembly` 가 outlink 를 해석하도록 두 아카이브를 함께 넘긴다.
+fn load_rolling_house_item(
+    data_root: &std::path::Path,
+    item_id: i32,
+    info: &ChairInfo,
+) -> Option<(Bone, Vec<AvatarPart>)> {
+    let (meta_archive, meta_item) = find_install_item(data_root, "", item_id)?;
+    let (canvas_archive, canvas_item) = find_install_item(data_root, "_Canvas", item_id)?;
+    let rolling = info.custom_chair.as_ref()?.rolling_house.as_ref()?;
+    let rh_node = find_path_node(&meta_item, "info/customChair/rollingHouseChairInfo")?;
+    let frame_node = find_path_node(rh_node, "part/0")?;
+    let canvas_root = find_path_node(
+        &canvas_item,
+        "info/customChair/rollingHouseChairInfo/part/0",
+    );
+
+    let mut children = Vec::new();
+    for i in 0..rolling.parts_count {
+        let Some(part) = child_node(frame_node, &format!("part{i}")) else {
+            continue;
+        };
+        // `_Canvas` 에 실제로 존재하는 첫 프레임 인덱스를 고른다.
+        // 일부 파츠는 `0` 이 없고 `1` 부터 시작한다.
+        let frame_key = canvas_root
+            .and_then(|root| child_node(root, &format!("part{i}")))
+            .and_then(|p| p.object_children().first())
+            .map(|c| c.name.to_string())
+            .or_else(|| part.object_children().first().map(|c| c.name.to_string()));
+        let Some(frame_key) = frame_key else {
+            continue;
+        };
+        let Some(canvas) = child_node(part, &frame_key) else {
+            continue;
+        };
+        let mut canvas = canvas.clone();
+        canvas.name = format!("part{i}").into();
+        children.push(canvas);
+    }
+    if children.is_empty() {
+        return None;
+    }
+    let synthetic = ImageNode {
+        name: "rollingHouseFrame".into(),
+        value: None,
+        children,
+    };
+    let assembly =
+        crate::collect_frame_assembly(&synthetic, &meta_archive, Some(&canvas_archive)).ok()?;
+
+    let offset = rolling
+        .pos_lv
+        .first()
+        .copied()
+        .unwrap_or(crate::Point::ZERO);
+    let mut root = assembly.root_bone;
+    root.position = crate::Point::new(-offset.x, -offset.y);
+
+    let mut parts = Vec::new();
+    for layer in &assembly.layers {
+        let idx = layer
+            .name
+            .strip_prefix("part")
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(0);
+        let z = rolling
+            .part_z
+            .get(idx)
+            .copied()
+            .unwrap_or_else(|| layer.z_int.unwrap_or(0));
+        set_named_skin_z(&mut root, &layer.name, z);
+        parts.push(AvatarPart {
+            slot: format!("rolling_part{idx}"),
+            width: layer.canvas.w,
+            height: layer.canvas.h,
+            rgba: layer.canvas.rgba.clone(),
+            position: crate::Point::new(layer.pos.x - offset.x, layer.pos.y - offset.y),
+            origin: layer.origin,
+            z_index: z,
+            custom_origin_map: Default::default(),
+        });
+    }
+    Some((root, parts))
+}
+
 /// `Item/Install/_Canvas` 의 체어 이미지를 정적 1프레임으로 로드한다.
 ///
 /// 체어 카테고리 이미지는 `03010.img` 처럼 5자리이고, 그 자식이 아이템 ID 다.
@@ -855,6 +997,14 @@ fn load_chair_item(
     item_id: i32,
     info: &ChairInfo,
 ) -> Option<(Bone, Vec<AvatarPart>)> {
+    if info
+        .custom_chair
+        .as_ref()
+        .and_then(|c| c.rolling_house.as_ref())
+        .is_some()
+    {
+        return load_rolling_house_item(data_root, item_id, info);
+    }
     let (archive, item) = find_install_item(data_root, "_Canvas", item_id)?;
 
     let png = child_node(&item, "effect")
@@ -2647,6 +2797,34 @@ mod chair_custom_type_tests {
         // flipXYChair 는 removeBody/sitAction 이 없으므로 C# 은 sit 을 쓴다.
         assert!(has_slot(&av, "body"));
         assert!(has_slot(&av, "chair"));
+    }
+
+    #[test]
+    fn rolling_house_chair_loads_multilayer_parts() {
+        let Some(av) = load_chair(3018010) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let rolling = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.rolling_house.as_ref())
+            .expect("rolling house info");
+        assert_eq!(rolling.parts_count, 8);
+        assert_eq!(rolling.part_z.len(), 8);
+        assert_eq!(rolling.pos_lv.len(), 10);
+        assert!(rolling.frame_count >= 1);
+        assert_eq!(info.custom_chair.as_ref().unwrap().self_taming_mob, None);
+
+        for i in 0..8 {
+            let part = av
+                .parts
+                .iter()
+                .find(|p| p.slot == format!("rolling_part{i}"))
+                .unwrap_or_else(|| panic!("rolling_part{i} missing"));
+            assert!(part.width > 1 && part.height > 1, "part{i} is empty");
+        }
+        assert!(!has_slot(&av, "chair"), "base 1x1 chair should be replaced");
     }
 
     #[test]

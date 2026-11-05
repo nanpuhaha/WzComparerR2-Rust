@@ -4,7 +4,7 @@ pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
     println!("      이미지 트리/Canvas/UOL, WZ/DXBC/BC7 디코딩");
     println!("      StringLinker(5 roots), 아바타/맵 데이터, C# 오라클 차분 하네스");
     println!(
-        "미구현: eventPoint/rollingHouse 등 게임플레이 customChair 타입 (플립/회전/더미는 구현)"
+        "미구현: eventPoint/pet/android 등 게임플레이 customChair (rolling house 1프레임 구현)"
     );
     Ok(())
 }

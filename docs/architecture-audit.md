@@ -246,7 +246,7 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
 
 ### 남은 후보
 
-- **WZ-only customChair 타입 동작** — C# `CustomChairType` 은 `Unsupported`/`ScaleAvatarChair` 두 개뿐이다. Rust 로더는 C# 공통 규칙(`sitAction`, `removeBody`, `fixFrameIdx`, `tamingMob`, `info/scale`)을 포팅했고, C#에 없는 `flipXYChair`/`rotatedSleepingBagChair`/`dummyAvatarChair`는 WZ 스키마 기반 확장으로 플립/회전/더미 taming을 적용한다. 남은 것은 `eventPointChair`/`rollingHouseChair` 같은 게임플레이/UI 타입.
+- **WZ-only customChair 타입 동작** — C# `CustomChairType` 은 `Unsupported`/`ScaleAvatarChair` 두 개뿐이다. Rust 로더는 C# 공통 규칙(`sitAction`, `removeBody`, `fixFrameIdx`, `tamingMob`, `info/scale`)을 포팅했고, C#에 없는 `flipXYChair`/`rotatedSleepingBagChair`/`dummyAvatarChair`는 WZ 스키마 기반 확장으로 플립/회전/더미 taming을 적용한다. `rollingHouseChair`는 `_outlink` 로 8개 파츠를 해석해 첫 프레임을 렌더한다. 남은 것은 `eventPointChair`/`petChair`/`androidChair`/`hashTagChair` 같은 게임플레이/UI 타입과 rolling house 애니메이션.
 - **오라클 하네스 CI** — 공개 C# 트리에 `WzComparerR2.Oracle` 프로젝트가 없어 수동 workflow 입력이 필요.
 
 ### 산출물
