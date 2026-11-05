@@ -6,6 +6,17 @@
 
 use crate::state::{AppState, AvatarPartData};
 
+fn part_data(p: &wz_avatar::AvatarPart) -> AvatarPartData {
+    AvatarPartData {
+        slot: p.slot.clone(),
+        width: p.width,
+        height: p.height,
+        rgba: p.rgba.clone(),
+        position: (p.position.x, p.position.y),
+        z_index: p.z_index,
+    }
+}
+
 // ── 파일 열기 ─────────────────────────────────────────────────────────
 
 pub fn load_avatar_from_loader(state: &mut AppState) {
@@ -17,18 +28,7 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
     match wz_avatar::load_from_character_wz_with_skin(&char_wz, state.avatar_body_skin) {
         Some(av) => {
             state.avatar_status = format!("로드: {} 파트", av.parts.len());
-            state.avatar_loaded_parts = av
-                .parts
-                .iter()
-                .map(|p| AvatarPartData {
-                    slot: p.slot.clone(),
-                    width: p.width,
-                    height: p.height,
-                    rgba: p.rgba.clone(),
-                    position: (p.position.x, p.position.y),
-                    z_index: p.z_index,
-                })
-                .collect();
+            state.avatar_loaded_parts = av.parts.iter().map(part_data).collect();
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
             }
@@ -37,6 +37,10 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             state.effect_origins.clear();
             state.effect_origin = (0, 0);
             state.effect_last_time = 0.0;
+            state.chair_frames.clear();
+            state.chair_delays.clear();
+            state.chair_frame = 0;
+            state.chair_last_time = 0.0;
             render_loaded_avatar(state);
         }
         None => {
@@ -98,18 +102,7 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
     ) {
         Some(av) => {
             state.avatar_status = format!("장비 로드: {} 파트", av.parts.len());
-            state.avatar_loaded_parts = av
-                .parts
-                .iter()
-                .map(|p| AvatarPartData {
-                    slot: p.slot.clone(),
-                    width: p.width,
-                    height: p.height,
-                    rgba: p.rgba.clone(),
-                    position: (p.position.x, p.position.y),
-                    z_index: p.z_index,
-                })
-                .collect();
+            state.avatar_loaded_parts = av.parts.iter().map(part_data).collect();
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
             }
@@ -126,6 +119,14 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
                 .copied()
                 .unwrap_or((0, 0));
             state.effect_last_time = 0.0;
+            state.chair_frames = av
+                .chair_frames
+                .iter()
+                .map(|frame| frame.iter().map(part_data).collect())
+                .collect();
+            state.chair_delays = av.chair_delays.clone();
+            state.chair_frame = 0;
+            state.chair_last_time = 0.0;
             render_loaded_avatar(state);
         }
         None => {
@@ -276,6 +277,46 @@ fn parse_custom_origins(input: &str) -> std::collections::BTreeMap<String, wz_av
     out
 }
 
+/// 체어 애니메이션 틱. 다음 프레임으로 넘어갔으면 `true`.
+pub fn tick_chair(state: &mut AppState, now: f64) -> bool {
+    if !state.chair_auto_play || state.chair_frames.is_empty() {
+        return false;
+    }
+    let frame = state.chair_frame % state.chair_frames.len();
+    let delay = state
+        .chair_delays
+        .get(frame)
+        .copied()
+        .unwrap_or(120)
+        .max(20) as f64
+        / 1000.0;
+    if state.chair_last_time <= 0.0 {
+        state.chair_last_time = now;
+        return false;
+    }
+    if now - state.chair_last_time < delay {
+        return false;
+    }
+    state.chair_last_time = now;
+    state.chair_frame = (frame + 1) % state.chair_frames.len();
+    apply_chair_frame(state);
+    true
+}
+
+/// 현재 `chair_frame` 의 rolling house 파츠를 아바타 파트 목록에 반영한다.
+pub fn apply_chair_frame(state: &mut AppState) {
+    if state.chair_frames.is_empty() {
+        return;
+    }
+    let idx = state.chair_frame % state.chair_frames.len();
+    state
+        .avatar_loaded_parts
+        .retain(|p| !p.slot.starts_with("rolling_part"));
+    state
+        .avatar_loaded_parts
+        .extend(state.chair_frames[idx].iter().cloned());
+}
+
 /// Effect 자동 재생 틱. 다음 프레임으로 넘어갔으면 `true`.
 pub fn tick_effect(state: &mut AppState, now: f64) -> bool {
     if !state.effect_auto_play || state.effect_frames.is_empty() {
@@ -395,20 +436,19 @@ mod tests {
             "rolling house parts missing"
         );
         let mut state = AppState {
-            avatar_loaded_parts: av
-                .parts
+            avatar_loaded_parts: av.parts.iter().map(part_data).collect(),
+            chair_frames: av
+                .chair_frames
                 .iter()
-                .map(|p| AvatarPartData {
-                    slot: p.slot.clone(),
-                    width: p.width,
-                    height: p.height,
-                    rgba: p.rgba.clone(),
-                    position: (p.position.x, p.position.y),
-                    z_index: p.z_index,
-                })
+                .map(|frame| frame.iter().map(part_data).collect())
                 .collect(),
+            chair_delays: av.chair_delays.clone(),
             ..Default::default()
         };
+        assert!(
+            state.chair_frames.len() > 1,
+            "expected multiple rolling house frames"
+        );
         render_loaded_avatar(&mut state);
         if state.avatar_status.contains("RC 실패") {
             return;
@@ -418,6 +458,66 @@ mod tests {
             "render failed: {}",
             state.avatar_status
         );
+
+        // 두 번째 프레임으로 교체해도 렌더가 유지되어야 한다.
+        state.chair_frame = 1;
+        apply_chair_frame(&mut state);
+        render_loaded_avatar(&mut state);
+        assert!(
+            state.avatar_rendered.is_some(),
+            "frame render failed: {}",
+            state.avatar_status
+        );
+    }
+
+    #[test]
+    fn apply_chair_frame_replaces_rolling_parts() {
+        let body = AvatarPartData {
+            slot: "body".into(),
+            width: 1,
+            height: 1,
+            rgba: vec![1, 2, 3, 4],
+            position: (0, 0),
+            z_index: 0,
+        };
+        let rolling = |n: u8| AvatarPartData {
+            slot: "rolling_part0".into(),
+            width: 1,
+            height: 1,
+            rgba: vec![n, n, n, 255],
+            position: (0, 0),
+            z_index: 0,
+        };
+        let mut state = AppState {
+            avatar_loaded_parts: vec![body.clone(), rolling(1)],
+            chair_frames: vec![vec![rolling(1)], vec![rolling(2)]],
+            chair_frame: 1,
+            ..Default::default()
+        };
+        apply_chair_frame(&mut state);
+        assert_eq!(state.avatar_loaded_parts.len(), 2);
+        assert!(state.avatar_loaded_parts.iter().any(|p| p.slot == "body"));
+        let part = state
+            .avatar_loaded_parts
+            .iter()
+            .find(|p| p.slot == "rolling_part0")
+            .expect("rolling part");
+        assert_eq!(part.rgba, vec![2, 2, 2, 255]);
+    }
+
+    #[test]
+    fn tick_chair_advances_after_delay() {
+        let mut state = AppState {
+            chair_frames: vec![vec![], vec![]],
+            chair_delays: vec![100, 100],
+            chair_auto_play: true,
+            chair_last_time: 10.0,
+            ..Default::default()
+        };
+        assert!(!tick_chair(&mut state, 10.05));
+        assert_eq!(state.chair_frame, 0);
+        assert!(tick_chair(&mut state, 10.2));
+        assert_eq!(state.chair_frame, 1);
     }
 
     #[test]

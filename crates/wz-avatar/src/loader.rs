@@ -69,6 +69,9 @@ pub struct LoadedAvatar {
     pub chair_info: Option<ChairInfo>,
     /// WZ 데이터 기반 체어 변환 (플립/회전/오프셋).
     pub transform: AvatarTransform,
+    /// 체어 애니메이션 프레임 (rollingHouseChair 등). 비어 있으면 정적.
+    pub chair_frames: Vec<Vec<AvatarPart>>,
+    pub chair_delays: Vec<u32>,
 }
 
 /// C# `CustomChairType` — 현재 C# 원본은 `ScaleAvatarChair` 만 구현한다.
@@ -337,6 +340,13 @@ impl AvatarTransform {
     pub fn is_identity(&self) -> bool {
         !self.flip_x && !self.flip_y && self.rotate % 360 == 0 && self.offset == crate::Point::ZERO
     }
+}
+
+/// 체어 애니메이션 프레임 묶음.
+#[derive(Debug, Clone, Default)]
+pub struct ChairFrames {
+    pub frames: Vec<Vec<AvatarPart>>,
+    pub delays: Vec<u32>,
 }
 
 /// 체어가 본체에 강제하는 동작.
@@ -901,25 +911,15 @@ pub fn load_chair_info(data_root: &std::path::Path, item_id: i32) -> Option<Chai
     Some(chair)
 }
 
-/// `rollingHouseChairInfo` 의 다층 파츠를 첫 프레임으로 로드한다.
-///
-/// 메타데이터 캔버스는 1x1 + `_outlink` 이고, 실제 픽셀은 `_Canvas` 아카이브에
-/// 있다. `collect_frame_assembly` 가 outlink 를 해석하도록 두 아카이브를 함께 넘긴다.
-fn load_rolling_house_item(
-    data_root: &std::path::Path,
-    item_id: i32,
-    info: &ChairInfo,
+/// 한 rolling-house 프레임의 8개 파츠를 조립한다.
+fn build_rolling_frame(
+    frame_node: &ImageNode,
+    canvas_frame: Option<&ImageNode>,
+    rolling: &RollingHouseInfo,
+    meta_archive: &WzArchive,
+    canvas_archive: &WzArchive,
+    offset: crate::Point,
 ) -> Option<(Bone, Vec<AvatarPart>)> {
-    let (meta_archive, meta_item) = find_install_item(data_root, "", item_id)?;
-    let (canvas_archive, canvas_item) = find_install_item(data_root, "_Canvas", item_id)?;
-    let rolling = info.custom_chair.as_ref()?.rolling_house.as_ref()?;
-    let rh_node = find_path_node(&meta_item, "info/customChair/rollingHouseChairInfo")?;
-    let frame_node = find_path_node(rh_node, "part/0")?;
-    let canvas_root = find_path_node(
-        &canvas_item,
-        "info/customChair/rollingHouseChairInfo/part/0",
-    );
-
     let mut children = Vec::new();
     for i in 0..rolling.parts_count {
         let Some(part) = child_node(frame_node, &format!("part{i}")) else {
@@ -927,7 +927,7 @@ fn load_rolling_house_item(
         };
         // `_Canvas` 에 실제로 존재하는 첫 프레임 인덱스를 고른다.
         // 일부 파츠는 `0` 이 없고 `1` 부터 시작한다.
-        let frame_key = canvas_root
+        let frame_key = canvas_frame
             .and_then(|root| child_node(root, &format!("part{i}")))
             .and_then(|p| p.object_children().first())
             .map(|c| c.name.to_string())
@@ -951,13 +951,8 @@ fn load_rolling_house_item(
         children,
     };
     let assembly =
-        crate::collect_frame_assembly(&synthetic, &meta_archive, Some(&canvas_archive)).ok()?;
+        crate::collect_frame_assembly(&synthetic, meta_archive, Some(canvas_archive)).ok()?;
 
-    let offset = rolling
-        .pos_lv
-        .first()
-        .copied()
-        .unwrap_or(crate::Point::ZERO);
     let mut root = assembly.root_bone;
     root.position = crate::Point::new(-offset.x, -offset.y);
 
@@ -988,6 +983,55 @@ fn load_rolling_house_item(
     Some((root, parts))
 }
 
+/// `rollingHouseChairInfo` 의 모든 애니메이션 프레임을 로드한다.
+///
+/// 메타데이터 캔버스는 1x1 + `_outlink` 이고, 실제 픽셀은 `_Canvas` 아카이브에
+/// 있다. `collect_frame_assembly` 가 outlink 를 해석하도록 두 아카이브를 함께 넘긴다.
+fn load_rolling_house_item(
+    data_root: &std::path::Path,
+    item_id: i32,
+    info: &ChairInfo,
+) -> Option<(Bone, Vec<AvatarPart>, ChairFrames)> {
+    let (meta_archive, meta_item) = find_install_item(data_root, "", item_id)?;
+    let (canvas_archive, canvas_item) = find_install_item(data_root, "_Canvas", item_id)?;
+    let rolling = info.custom_chair.as_ref()?.rolling_house.as_ref()?;
+    let rh_node = find_path_node(&meta_item, "info/customChair/rollingHouseChairInfo")?;
+    let frame_root = find_path_node(rh_node, "part")?;
+    let canvas_root = find_path_node(&canvas_item, "info/customChair/rollingHouseChairInfo/part");
+    let offset = rolling
+        .pos_lv
+        .first()
+        .copied()
+        .unwrap_or(crate::Point::ZERO);
+
+    let mut frames = Vec::new();
+    let mut delays = Vec::new();
+    let mut first_bone = None;
+    for f in 0..rolling.frame_count {
+        let Some(frame_node) = child_node(frame_root, &f.to_string()) else {
+            continue;
+        };
+        let canvas_frame = canvas_root.and_then(|root| child_node(root, &f.to_string()));
+        let Some((bone, parts)) = build_rolling_frame(
+            frame_node,
+            canvas_frame,
+            rolling,
+            &meta_archive,
+            &canvas_archive,
+            offset,
+        ) else {
+            continue;
+        };
+        if first_bone.is_none() {
+            first_bone = Some(bone);
+        }
+        frames.push(parts);
+        delays.push(node_int(frame_node, "delay").unwrap_or(120).max(20) as u32);
+    }
+    let first = frames.first()?.clone();
+    Some((first_bone?, first, ChairFrames { frames, delays }))
+}
+
 /// `Item/Install/_Canvas` 의 체어 이미지를 정적 1프레임으로 로드한다.
 ///
 /// 체어 카테고리 이미지는 `03010.img` 처럼 5자리이고, 그 자식이 아이템 ID 다.
@@ -996,14 +1040,15 @@ fn load_chair_item(
     data_root: &std::path::Path,
     item_id: i32,
     info: &ChairInfo,
-) -> Option<(Bone, Vec<AvatarPart>)> {
+) -> Option<(Bone, Vec<AvatarPart>, Option<ChairFrames>)> {
     if info
         .custom_chair
         .as_ref()
         .and_then(|c| c.rolling_house.as_ref())
         .is_some()
     {
-        return load_rolling_house_item(data_root, item_id, info);
+        return load_rolling_house_item(data_root, item_id, info)
+            .map(|(bone, parts, frames)| (bone, parts, Some(frames)));
     }
     let (archive, item) = find_install_item(data_root, "_Canvas", item_id)?;
 
@@ -1039,7 +1084,7 @@ fn load_chair_item(
         z_index,
         ..Default::default()
     };
-    Some((root, vec![part]))
+    Some((root, vec![part], None))
 }
 
 /// RGBA8 버퍼를 최근접 이웃으로 `factor` 배 확대/축소한다.
@@ -1753,6 +1798,8 @@ pub fn load_from_character_wz_with_skin(
         effect_z_indices: Vec::new(),
         chair_info: None,
         transform: AvatarTransform::default(),
+        chair_frames: Vec::new(),
+        chair_delays: Vec::new(),
     })
 }
 
@@ -1897,6 +1944,8 @@ pub fn load_avatar_with_equipment_and_mix(
     let mut effect_origins: Vec<crate::Point> = Vec::new();
     let mut effect_z_indices: Vec<i32> = Vec::new();
     let mut chair_info = chair_info;
+    let mut chair_frames: Vec<Vec<AvatarPart>> = Vec::new();
+    let mut chair_delays: Vec<u32> = Vec::new();
     for (slot, item_id) in equipment {
         if let Some(dir) = slot_dir_name(slot) {
             if dir == "Effect" {
@@ -1927,9 +1976,13 @@ pub fn load_avatar_with_equipment_and_mix(
                 // C# 은 `info/tamingMob` 이 있어도 ChairPart 와 TamingPart 를
                 // **둘 다** 추가한다 (removeChairPart 는 이전 체어만 지운다).
                 if let Some(info) = &chair_info {
-                    if let Some((item_root, item_parts)) =
+                    if let Some((item_root, item_parts, frames)) =
                         load_chair_item(data_root, *item_id, info)
                     {
+                        if let Some(frames) = frames {
+                            chair_frames = frames.frames;
+                            chair_delays = frames.delays;
+                        }
                         merge_bone_tree(&mut root, item_root);
                         parts.extend(item_parts);
                     }
@@ -2098,6 +2151,8 @@ pub fn load_avatar_with_equipment_and_mix(
         effect_z_indices,
         chair_info,
         transform,
+        chair_frames,
+        chair_delays,
     })
 }
 
@@ -2815,6 +2870,9 @@ mod chair_custom_type_tests {
         assert_eq!(rolling.pos_lv.len(), 10);
         assert!(rolling.frame_count >= 1);
         assert_eq!(info.custom_chair.as_ref().unwrap().self_taming_mob, None);
+        assert_eq!(av.chair_frames.len(), rolling.frame_count);
+        assert_eq!(av.chair_delays.len(), rolling.frame_count);
+        assert!(av.chair_frames.iter().all(|f| !f.is_empty()));
 
         for i in 0..8 {
             let part = av

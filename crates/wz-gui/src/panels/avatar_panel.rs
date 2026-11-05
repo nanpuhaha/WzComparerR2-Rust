@@ -3,10 +3,20 @@ use crate::state::AppState;
 
 pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     let now = ui.input(|i| i.time);
+    let mut repaint = false;
     if async_io::tick_effect(state, now) {
         async_io::render_loaded_avatar(state);
     }
+    if async_io::tick_chair(state, now) {
+        async_io::render_loaded_avatar(state);
+    }
     if state.effect_auto_play && !state.effect_frames.is_empty() {
+        repaint = true;
+    }
+    if state.chair_auto_play && !state.chair_frames.is_empty() {
+        repaint = true;
+    }
+    if repaint {
         ui.ctx()
             .request_repaint_after(std::time::Duration::from_millis(50));
     }
@@ -169,6 +179,24 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         }
     }
     ui.checkbox(&mut state.effect_auto_play, "Effect 자동 재생");
+    if !state.chair_frames.is_empty() {
+        let max_frame = state.chair_frames.len() - 1;
+        if state.chair_frame > max_frame {
+            state.chair_frame = max_frame;
+        }
+        if ui
+            .add(egui::Slider::new(&mut state.chair_frame, 0..=max_frame).text("Chair frame"))
+            .changed()
+        {
+            state.chair_last_time = 0.0;
+            async_io::apply_chair_frame(state);
+            async_io::render_loaded_avatar(state);
+        }
+        let auto = ui.checkbox(&mut state.chair_auto_play, "Rolling house 자동 재생");
+        if auto.changed() {
+            state.chair_last_time = 0.0;
+        }
+    }
     ui.horizontal(|ui| {
         ui.label("Custom origin:");
         ui.text_edit_singleline(&mut state.custom_origin_input);

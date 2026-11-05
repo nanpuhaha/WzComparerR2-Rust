@@ -78,9 +78,10 @@ remaining CharaSim gaps.
   - `rotatedSleepingBagChair` → 90° rotation, `avatarPos` offset, weapon hide.
   - `dummyAvatarChair` → `customChair/avatar/*` taming mobs at their `pos`/`z`
     (with `left` mirroring), plus the `self` taming.
-  - `rollingHouseChair` → the first `part/0` frame's `part0..part7` layers, resolved
+  - `rollingHouseChair` → every `part/N` frame's `part0..part7` layers, resolved
     through metadata `_outlink` into `_Canvas`, with `partZ` z-order and `posLv/lv1`
-    avatar offset. Animation frames/delays are parsed but only frame 0 is rendered.
+    avatar offset. All frames and delays are loaded; the GUI exposes a frame slider
+    and `Rolling house 자동 재생` (WZ delay driven).
   - `AvatarPart` now carries final `position`, `origin`, and `z_index`; the GUI
     centers/scales the assembled avatar and draws parts at those coordinates.
 - Custom origin: the two-step C# semantics are implemented:
