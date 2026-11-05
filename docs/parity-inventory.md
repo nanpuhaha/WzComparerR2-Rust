@@ -113,7 +113,7 @@ WorldMap 실제 클라이언트 데이터는 QuestLimit/Fog 노드가 없어, �
 |---|---|---|
 | `worldmap_quest_fog.json` fixture | expected JSON과 MATCH | 동일 expected JSON 테스트 통과 |
 | `Data/Map/WorldMap/WorldMap_000.wz` | `{"images":85,"quest":0,"fog":0}` | `real_worldmap_has_no_quest_or_fog_nodes` 통과 (QuestLimit/Fog 0) |
-| `Map0_000.wz / 000010000.img` | 4721 nodes | oracle `node_count=4722` (가상/UOL wrapper 1개 차이) |
+| `Map0_000.wz / 000010000.img` | 4721 nodes | oracle `node_count=4722` = 4721 + outer Directory wrapper; per-node path diff 일치 |
 
 실행 명령:
 
@@ -140,3 +140,14 @@ dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- mapnodes ../../Da
 | `MapRender/Effects/ShaderMaterials.cs`, `EffectResources.cs` | `wz-render/src/water.rs`, `device.rs`, `compose.rs` |
 | `Patcher/WzPatcher.cs`, `Builder/CheckSum.cs` | `wz-core/src/patch.rs` |
 | `WzLib/Wz_Sound.cs`, `Wz_Image.TryDecryptWaveFormatEx` | `wz-core/src/sound.rs` |
+
+## 전체 C# 파일 커버리지
+
+프로젝트/디렉터리별 파일 수·LOC·상태·미구현 목록은
+[`docs/csharp-coverage.md`](csharp-coverage.md)에 있다.
+
+이번 추가:
+- `wz-diff::virtual_node` — `WzVirtualNode.Combine` 병합 규칙 구현.
+- C# WzLib 실행 하네스로 WorldMap fixture/실데이터/맵 노드 수 비교.
+- `000010000.img` 4721 vs 4722 차이는 Rust oracle의 outer Directory wrapper
+  1개이며, per-node path multiset는 wrapper 제거 후 완전히 일치.

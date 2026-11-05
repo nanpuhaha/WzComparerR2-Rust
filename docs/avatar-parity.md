@@ -418,3 +418,11 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   `real_worldmap_has_no_quest_or_fog_nodes`.
 - `Map0_000.wz/000010000.img` → C# 4721 nodes vs Rust 4722 (one virtual/UOL
   wrapper difference).
+
+## Full C# coverage audit
+
+`docs/csharp-coverage.md` enumerates every original project/directory with file
+counts, LOC and status. Remaining large unmapped areas are the WinForms main UI,
+CharaSimControl, DB2, Common Controls/OpenAPI, LuaConsole, Network and
+PluginBase. `wz-diff::virtual_node` implements the original `WzVirtualNode`
+merge semantics (recursive directory merge, conflict errors).

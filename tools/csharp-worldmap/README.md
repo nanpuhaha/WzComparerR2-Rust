@@ -19,5 +19,7 @@ Commands:
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
 - `Data/Map/WorldMap/WorldMap_000.wz` → `{"images":85,"quest":0,"fog":0}`.
-- `Data/Map/Map/Map0/Map0_000.wz 000010000.img` → 4721 nodes
-  (Rust oracle reports 4722; one virtual/UOL wrapper node difference).
+- `Data/Map/Map/Map0/Map0_000.wz 000010000.img` → C# 4721 nodes.
+  Rust oracle reports 4722 because it counts the outer Directory wrapper.
+  Per-node path diff after stripping the oracle wrapper matches exactly
+  (4721 = 4721; no missing/extra WZ nodes).

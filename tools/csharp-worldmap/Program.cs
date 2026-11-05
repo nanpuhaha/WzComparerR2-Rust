@@ -162,10 +162,29 @@ class Program
         img.TryExtract();
         Console.WriteLine(JsonSerializer.Serialize(new { image = imageName, nodes = CountNodes(img.Node) }));
     }
+    static void DumpPaths(Wz_Node n, string prefix, List<string> paths)
+    {
+        paths.Add(prefix);
+        foreach (Wz_Node c in n.Nodes)
+            DumpPaths(c, prefix + "/" + c.Text, paths);
+    }
+    static void NodePaths(string path, string imageName)
+    {
+        var st = new Wz_Structure();
+        st.Load(path);
+        var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == imageName);
+        var img = imgNode?.Value as Wz_Image;
+        if (img == null) { Console.WriteLine("{\"error\":\"image not found\"}"); return; }
+        img.TryExtract();
+        var paths = new List<string>();
+        DumpPaths(img.Node, "", paths);
+        Console.WriteLine(JsonSerializer.Serialize(paths));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
         else if (args[0] == "mapnodes") MapNodes(args[1], args[2]);
+        else if (args[0] == "nodepaths") NodePaths(args[1], args[2]);
         else Real(args[1]);
     }
 }

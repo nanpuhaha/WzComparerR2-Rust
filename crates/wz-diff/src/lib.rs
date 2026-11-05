@@ -1,3 +1,6 @@
+pub mod virtual_node;
+pub use virtual_node::{merge as merge_virtual, VirtualNode};
+
 use serde::{Deserialize, Serialize};
 use wz_core::image::Node as WzCoreNode;
 use wz_db::{Arena, NodeId};
