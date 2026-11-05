@@ -62,7 +62,7 @@ scripts/differential.sh --csharp-repo /path/to/WzComparerR2 expr --expr "1/3 + 2
 ### 재핀 절차
 
 C# 를 새 커밋으로 옮길 때는 핀 표 네 곳만 고치면 된다 — 절차는
-`docs/oracle-spec.md` 의 `## C# 참조 핀` 절에 있다.
+`docs/oracle-spec.md` 의 `## C# 오라클 구현 지침` 절에 있다.
 재핀 후에는 **비교 불가 op 목록도 다시 확인**해야 한다. C# 가 `diff` 나
 `mapscene` 을 구현하면 `tools/oracle-diff/src/lib.rs` 의 `expectation()` 표에서
 `Uncomparable` 을 `Gate` 로 바꿔야 한다. 안 바꾸면 표가 exit 3 을 내므로
@@ -291,7 +291,7 @@ workflow_dispatch
 
 **저장소 URL 을 워크플로우에 하드코딩하지 않는 이유**: 핀은 문서에 있고
 (`docs/oracle-spec.md`), CI 는 그 핀을 **입력으로** 받아야 재현 가능한 대조가 된다.
-비공개 저장소라면 `CSHARP_REPO_TOKEN` 시크릿을 쓰고, 없으면 `github.token` 으로
+오라클 저장소가 비공개라면 `CSHARP_REPO_TOKEN` 시크릿을 쓰고, 없으면 `github.token` 으로
 폴백한다.
 
 ### op 별 입력 (합성 코퍼스 고정)

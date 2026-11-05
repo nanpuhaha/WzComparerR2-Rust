@@ -245,6 +245,10 @@ a   = eff + (da*(255-eff) + 127)/255
 
 ## C# 오라클 구현 지침
 
+원본 C# 저장소는 공개되어 있다: <https://github.com/seotbeo/WzComparerR2>
+(`seotbeo_main`). 다만 `WzComparerR2.Oracle` 하네스 프로젝트는 이 공개 트리에
+포함되어 있지 않으므로, 차분 CI 에는 하네스를 포함한 저장소/ref 를 입력으로 준다.
+
 `WzComparerR2.Oracle` 는 **기존 소스 프로젝트에 참조만** 추가한다. 로직 복제는 없다.
 `Program.cs` 는 `Program.Main` 이나 `WzComparerR2.Oracle.csproj` 는 디버그/테스트
 프로필에서만 빌드되도록 해서 **배포물에 절대 포함되지 않게** 한다.
