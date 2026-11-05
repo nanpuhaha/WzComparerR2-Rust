@@ -659,3 +659,8 @@ merge semantics (recursive directory merge, conflict errors).
 
 - The Face tab uses `default/face` for its icon source. `Face_000.wz` →
   C# `characters` 7424 == Rust 7424 rows, exact match.
+
+### DB2 Character/Mechanic
+
+- The generic `wz db2-characters` path also covers the Mechanic tab.
+  `Mechanic_000.wz` → C# `characters` 23 == Rust 23 rows, exact match.
