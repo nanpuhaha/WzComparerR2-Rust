@@ -246,9 +246,9 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
 
 ### 남은 후보
 
-- **그룹 체어 다인 렌더링** — `ChairInfo`에 taming ID/`bodyRelMove`를 파싱하지만, 여러 taming mob을 실제로 배치하는 렌더링은 후속.
-- **커스텀 체어 타입 전체** — `ScaleAvatarChair`/`info/scale`은 적용. 그 외 `customChair` 타입은 후속.
-- **이펙트 프레임별 origin** — 프레임 선택/자동 재생/delay는 동작. 프레임마다 다른 origin의 bone 반영은 후속.
+- **그룹 체어 실데이터 검증** — 그룹 taming 로딩/`bodyRelMove` 병합 코드는 구현. 현재 클라이언트 `Item/Install` 코퍼스에 `info/group*` 샘플이 없어 실데이터 검증은 후속.
+- **미래의 customChair 타입** — `ScaleAvatarChair`/`info/scale` 처리. 알 수 없는 타입은 `info/scale`로 폴백.
+- **GUI 파트 렌더러의 프레임별 origin** — `LoadedAvatar::apply_effect_frame`으로 scene API는 지원. GUI 는 RGBA 파트만 그리므로 origin을 쓰지 않는다.
 - **오라클 하네스 CI** — 공개 C# 트리에 `WzComparerR2.Oracle` 프로젝트가 없어 수동 workflow 입력이 필요.
 
 ### 산출물

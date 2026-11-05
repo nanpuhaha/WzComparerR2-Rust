@@ -56,6 +56,9 @@ pub struct LoadedAvatar {
     /// Effect 슬롯의 전체 프레임 (자동 재생용). `parts` 에는 선택 프레임만 들어간다.
     pub effect_frames: Vec<AvatarPart>,
     pub effect_delays: Vec<u32>,
+    /// 프레임별 origin/z (scene 렌더러용).
+    pub effect_origins: Vec<crate::Point>,
+    pub effect_z_indices: Vec<i32>,
     /// 체어 메타데이터 (`info/scale`, group taming, bodyRelMove).
     pub chair_info: Option<ChairInfo>,
 }
@@ -70,6 +73,65 @@ pub struct ChairInfo {
     pub group_taming_ids: Vec<i32>,
     pub group_body_rel_move: Vec<crate::Point>,
     pub body_rel_move: Option<crate::Point>,
+}
+
+/// Effect 한 항목의 전체 프레임/딜레이/origin/z.
+#[derive(Debug, Clone)]
+pub struct EffectFrames {
+    pub root_bone: Bone,
+    pub parts: Vec<AvatarPart>,
+    pub delays: Vec<u32>,
+    pub origins: Vec<crate::Point>,
+    pub z_indices: Vec<i32>,
+}
+
+impl ChairInfo {
+    /// `ScaleAvatarChair` 이면 `scaleAvatar.scale`, 아니면 `info.scale`.
+    pub fn effective_scale(&self) -> i32 {
+        if self
+            .custom_chair_type
+            .as_deref()
+            .is_some_and(|t| t.eq_ignore_ascii_case("ScaleAvatarChair"))
+        {
+            self.custom_scale.unwrap_or(100)
+        } else {
+            self.scale
+        }
+    }
+}
+
+fn set_effect_skin(bone: &mut Bone, origin: crate::Point, z_index: i32) -> bool {
+    if let Some(skin) = bone.skins.iter_mut().find(|s| s.name == "effect") {
+        skin.origin = origin;
+        skin.z_index = z_index;
+        return true;
+    }
+    for child in &mut bone.children {
+        if set_effect_skin(child, origin, z_index) {
+            return true;
+        }
+    }
+    false
+}
+
+impl LoadedAvatar {
+    /// effect 프레임의 origin/z 를 bone 에 반영한다 (scene 렌더러용).
+    ///
+    /// GUI 의 파트 기반 렌더러는 RGBA 만 쓰므로 origin 이 필요 없지만,
+    /// `AvatarScene` 을 쓰는 렌더러는 이 메서드로 프레임별 origin 을 맞춘다.
+    pub fn apply_effect_frame(&mut self, index: usize) {
+        if self.effect_frames.is_empty() {
+            return;
+        }
+        let i = index % self.effect_frames.len();
+        let origin = self
+            .effect_origins
+            .get(i)
+            .copied()
+            .unwrap_or(crate::Point::ZERO);
+        let z_index = self.effect_z_indices.get(i).copied().unwrap_or(0);
+        set_effect_skin(&mut self.root_bone, origin, z_index);
+    }
 }
 
 /// `Base/zmap.img` 에서 z-order 를 읽는다. 없으면 `None` (호출부가 표준 순서로 폴백).
@@ -424,7 +486,7 @@ fn resize_rgba_nearest(src: &[u8], w: u32, h: u32, factor: f32) -> (u32, u32, Ve
 }
 
 fn is_scaled_slot(slot: &str) -> bool {
-    !matches!(slot, "chair" | "effect" | "tamingmob" | "taming")
+    !matches!(slot, "chair" | "effect" | "taming") && !slot.starts_with("tamingmob")
 }
 
 fn scale_bone_tree(bone: &mut Bone, factor: f32, scaled: &std::collections::HashSet<String>) {
@@ -522,7 +584,7 @@ fn load_effect_item(
     data_root: &std::path::Path,
     item_id: i32,
     frame_index: usize,
-) -> Option<(Bone, Vec<AvatarPart>, Vec<u32>)> {
+) -> Option<EffectFrames> {
     use wz_core::image::ImageValue;
 
     let effect_dir = data_root.join("Effect");
@@ -579,6 +641,8 @@ fn load_effect_item(
     let selected_index = frame_index % frames.len();
     let mut parts = Vec::new();
     let mut delays = Vec::new();
+    let mut origins = Vec::new();
+    let mut z_indices = Vec::new();
     let mut selected_meta = None;
 
     for (i, frame) in frames.iter().enumerate() {
@@ -605,6 +669,8 @@ fn load_effect_item(
             })
             .unwrap_or(0);
         delays.push(delay);
+        origins.push(origin);
+        z_indices.push(z_index);
         if i == selected_index {
             selected_meta = Some((resolved.w, resolved.h, origin, z_index));
         }
@@ -627,7 +693,13 @@ fn load_effect_item(
 
     let mut root = Bone::new("@effect");
     root.append_bone(skin, "effect", crate::Point::ZERO);
-    Some((root, parts, delays))
+    Some(EffectFrames {
+        root_bone: root,
+        parts,
+        delays,
+        origins,
+        z_indices,
+    })
 }
 
 /// `info/customOrigin` 의 자식들에서 `WZ child name → custom origin ID` 맵을 만든다.
@@ -718,6 +790,22 @@ fn load_item_frame(
         })
         .collect();
     Some((assembly.root_bone, parts))
+}
+
+/// `Character/TamingMob/_Canvas` 에서 taming mob 한 마리를 로드한다.
+fn load_taming_item(data_root: &std::path::Path, item_id: i32) -> Option<(Bone, Vec<AvatarPart>)> {
+    let path = data_root
+        .join("Character")
+        .join("TamingMob")
+        .join("_Canvas")
+        .join("_Canvas_000.wz");
+    let archive = WzArchive::open(&path).ok()?;
+    load_item_frame(
+        &archive,
+        Some(&format!("{:08}.img", item_id)),
+        &["stand1", "default"],
+        "TamingMob",
+    )
 }
 
 /// `Character/<dir>/_Canvas/_Canvas_000.wz` 를 열어 아이템 이미지를 조립한다.
@@ -832,6 +920,8 @@ pub fn load_from_character_wz_with_skin(
         scene,
         effect_frames: Vec::new(),
         effect_delays: Vec::new(),
+        effect_origins: Vec::new(),
+        effect_z_indices: Vec::new(),
         chair_info: None,
     })
 }
@@ -961,20 +1051,29 @@ pub fn load_avatar_with_equipment_and_mix(
     let char_root = data_root.join("Character");
     let mut effect_frames: Vec<AvatarPart> = Vec::new();
     let mut effect_delays: Vec<u32> = Vec::new();
+    let mut effect_origins: Vec<crate::Point> = Vec::new();
+    let mut effect_z_indices: Vec<i32> = Vec::new();
     let mut chair_info: Option<ChairInfo> = None;
     for (slot, item_id) in equipment {
         if let Some(dir) = slot_dir_name(slot) {
             if dir == "Effect" {
-                if let Some((item_root, item_parts, delays)) =
-                    load_effect_item(data_root, *item_id, mix.effect_frame)
-                {
-                    merge_bone_tree(&mut root, item_root);
-                    let selected = mix.effect_frame.min(item_parts.len().saturating_sub(1));
-                    if let Some(part) = item_parts.get(selected).cloned() {
+                if let Some(effect) = load_effect_item(data_root, *item_id, mix.effect_frame) {
+                    let EffectFrames {
+                        root_bone,
+                        parts: frame_parts,
+                        delays,
+                        origins,
+                        z_indices,
+                    } = effect;
+                    merge_bone_tree(&mut root, root_bone);
+                    let selected = mix.effect_frame.min(frame_parts.len().saturating_sub(1));
+                    if let Some(part) = frame_parts.get(selected).cloned() {
                         parts.push(part);
                     }
-                    effect_frames = item_parts;
+                    effect_frames = frame_parts;
                     effect_delays = delays;
+                    effect_origins = origins;
+                    effect_z_indices = z_indices;
                 }
                 continue;
             }
@@ -1013,8 +1112,26 @@ pub fn load_avatar_with_equipment_and_mix(
     }
 
     if let Some(info) = &chair_info {
-        let scale = info.custom_scale.unwrap_or(info.scale);
-        apply_avatar_scale(&mut root, &mut parts, scale);
+        for (i, id) in info.group_taming_ids.iter().enumerate() {
+            if *id == 0 {
+                continue;
+            }
+            if let Some((mut taming_root, mut taming_parts)) = load_taming_item(data_root, *id) {
+                taming_root.position = info
+                    .group_body_rel_move
+                    .get(i)
+                    .copied()
+                    .unwrap_or(crate::Point::ZERO);
+                if i > 0 {
+                    for part in &mut taming_parts {
+                        part.slot = format!("{}_{}", part.slot, i);
+                    }
+                }
+                merge_bone_tree(&mut root, taming_root);
+                parts.extend(taming_parts);
+            }
+        }
+        apply_avatar_scale(&mut root, &mut parts, info.effective_scale());
     }
 
     if parts.is_empty() {
@@ -1040,6 +1157,8 @@ pub fn load_avatar_with_equipment_and_mix(
         scene,
         effect_frames,
         effect_delays,
+        effect_origins,
+        effect_z_indices,
         chair_info,
     })
 }
@@ -1483,5 +1602,25 @@ mod scale_tests {
             .expect("body skin");
         assert_eq!(skin.width, 3);
         assert_eq!(skin.origin, crate::Point::new(3, 6));
+    }
+}
+
+#[cfg(test)]
+mod effect_origin_tests {
+    use super::*;
+
+    #[test]
+    fn set_effect_skin_updates_origin_and_z() {
+        let mut root = Bone::new("@root");
+        root.append_bone(SkinLayer::new("effect"), "effect", crate::Point::ZERO);
+        assert!(set_effect_skin(&mut root, crate::Point::new(3, 4), 2));
+        let skin = root
+            .children
+            .iter()
+            .flat_map(|b| b.skins.iter())
+            .find(|s| s.name == "effect")
+            .expect("effect skin");
+        assert_eq!(skin.origin, crate::Point::new(3, 4));
+        assert_eq!(skin.z_index, 2);
     }
 }

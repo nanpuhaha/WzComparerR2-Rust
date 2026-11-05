@@ -48,21 +48,21 @@ remaining CharaSim gaps.
   (WZ child name → custom origin ID). Applying a selected origin map is caller-driven,
   matching C# `AvatarCanvas.CustomOrigin`.
 - Taming: the `Taming` slot loads `Character/TamingMob` through `load_item_frame`.
-- Effect: the `Effect` slot loads all frames of `ItemEff.img/<id>/effect/default/<n>`,
-  resolves `_outlink` through `Effect/_Canvas`, and stores `effect_frames` +
-  `effect_delays` on `LoadedAvatar`. The GUI can step frames manually or auto-play
-  using `tick_effect` with the WZ `delay` values.
-- Chair: the `Chair` slot loads `Item/Install/_Canvas` → `<category>.img/<8-digit id>`
-  and composes the `effect/0` (or `0`/`default`) canvas. `ChairInfo` captures
-  `info/scale`, `customChair`, group chair taming IDs/`bodyRelMove`. `apply_avatar_scale`
-  resizes avatar parts/bones for `ScaleAvatarChair`/`info/scale`, and `bodyRelMove`
-  offsets the chair root.
+- Effect: the `Effect` slot loads all frames, delays, **origins and z indices** of
+  `ItemEff.img/<id>/effect/default/<n>`. `LoadedAvatar::apply_effect_frame(index)`
+  updates the effect bone skin for scene renderers; the GUI can step frames manually
+  or auto-play with `tick_effect` using the WZ delays.
+- Chair: `ChairInfo` captures `info/scale`, `customChair`, group taming IDs/`bodyRelMove`.
+  Group taming members are loaded from `Character/TamingMob` and merged with their
+  `bodyRelMove` offsets. `ChairInfo::effective_scale()` handles `ScaleAvatarChair`
+  and falls back to `info/scale` for other/unknown custom types.
 - Custom origin: the two-step C# semantics are implemented:
   `CustomOriginMap` (originValue → childName) + `CustomOrigin` (childName → Point)
   → `apply_custom_origin_map`. The GUI accepts `childName:x,y;...`.
-- Still out of scope: rendering multi-user group-chair taming members, custom chair
-  types beyond `ScaleAvatarChair`, and per-frame effect origin differences (the bone
-  origin is taken from the selected frame).
+- Still out of scope: a real group-chair sample in this client (the code path is
+  implemented but the current `Item/Install` corpus has no `info/group*` sample),
+  unknown future `customChair` types, and the GUI part renderer using per-frame
+  effect origins (the scene API supports them).
 
 ## Verification
 
