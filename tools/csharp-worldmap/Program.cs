@@ -609,6 +609,32 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void ReactorGrid(string reactorWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(reactorWzPath);
+        var rows = new List<object>();
+        foreach (Wz_Node n in st.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            var id = n.Text.Replace(".img", "");
+            if (id.Length == 0 || !id.All(char.IsDigit)) continue;
+            img.TryExtract();
+            var info = img.Node.Nodes["info"];
+            var linkNode = info?.Nodes["link"];
+            int? link = linkNode?.Value == null ? (int?)null : Convert.ToInt32(linkNode.Value);
+            rows.Add(new {
+                id,
+                has_icon = img.Node.FindNodeByPath(@"0\0") != null,
+                has_info = info != null,
+                has_link = linkNode != null,
+                link,
+            });
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -622,6 +648,7 @@ class Program
         else if (args[0] == "mobs") MobGrid(args[1], args[2]);
         else if (args[0] == "skills") SkillGrid(args[1], args[2]);
         else if (args[0] == "npcs") NpcGrid(args[1], args[2]);
+        else if (args[0] == "reactors") ReactorGrid(args[1]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

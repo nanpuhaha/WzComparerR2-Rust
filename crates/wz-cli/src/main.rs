@@ -293,6 +293,18 @@ enum Command {
         limit: usize,
     },
 
+    /// DB2 Reactor 그리드 (id/icon/info/link)
+    Db2Reactors {
+        /// Reactor WZ 파일
+        wz: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+        /// 최대 행
+        #[arg(long, default_value_t = 2000)]
+        limit: usize,
+    },
+
     /// DB2 아이콘/이미지 뷰어 (Canvas RGBA SHA-256)
     Db2Icons {
         /// WZ 파일
@@ -584,6 +596,7 @@ fn main() {
             json,
             limit,
         } => cmd_db2_npcs(&wz, &string, json, limit),
+        Command::Db2Reactors { wz, json, limit } => cmd_db2_reactors(&wz, json, limit),
         Command::Db2Icons {
             wz,
             image,

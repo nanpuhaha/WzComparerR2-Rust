@@ -28,6 +28,7 @@ pub mod db2_items;
 pub mod db2_maps;
 pub mod db2_mobs;
 pub mod db2_npcs;
+pub mod db2_reactors;
 pub mod db2_skills;
 pub mod gear_stats;
 pub mod linker;
@@ -48,6 +49,7 @@ pub use db2_items::{item_grid_rows as db2_item_grid_rows, Db2ItemRow};
 pub use db2_maps::{map_grid_rows as db2_map_grid_rows, Db2MapRow};
 pub use db2_mobs::{mob_grid_rows as db2_mob_grid_rows, Db2MobRow};
 pub use db2_npcs::{npc_grid_rows as db2_npc_grid_rows, Db2NpcRow};
+pub use db2_reactors::{reactor_grid_rows as db2_reactor_grid_rows, Db2ReactorRow};
 pub use db2_skills::{skill_grid_rows as db2_skill_grid_rows, Db2SkillRow};
 pub use gear_stats::extract_gear_props;
 pub use linker::{

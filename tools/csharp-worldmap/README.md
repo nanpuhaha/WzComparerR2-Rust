@@ -34,6 +34,8 @@ Commands:
   `StringLinker.StringSkill/StringSkill2`.
 - `npcs <npc.wz> <String_000.wz>` — emits DB2 NPC rows
   (`id/name/stand/default/link`) using `StringLinker.StringNpc`.
+- `reactors <reactor.wz>` — emits DB2 Reactor rows
+  (`id/has_icon/has_info/has_link/link`).
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -112,3 +114,10 @@ dotnet run ... -- npcs ../../Data/Npc/_Canvas/_Canvas_000.wz ../../Data/String/S
 → 943 rows
 ```
 Rust `wz db2-npcs ... --json` matches all 943 rows exactly.
+
+Verified DB2 Reactor grid output:
+```
+dotnet run ... -- reactors ../../Data/Reactor/_Canvas/_Canvas_000.wz
+→ 441 rows
+```
+Rust `wz db2-reactors ... --json` matches all 441 rows exactly.

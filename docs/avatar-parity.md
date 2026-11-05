@@ -486,3 +486,14 @@ merge semantics (recursive directory merge, conflict errors).
 - Executed C# reference: `tools/csharp-worldmap npcs ...` uses the original
   `StringLinker.StringNpc`. `_Canvas_000.wz` → C# 943 == Rust 943 rows, exact
   match.
+
+## DB2 Reactor grid
+
+- `wz-db::db2_reactors` mirrors `DB2Form.LoadReactor`: each numeric
+  `Reactor/<id>.img` becomes `id/has_icon/has_info/has_link/link`, where the
+  icon source is the original `0/0` canvas and the link comes from
+  `info/link` (string-encoded IDs accepted).
+- `wz db2-reactors <reactor.wz>` prints the grid; the GUI Catalog has a DB2
+  Reactor grid table.
+- Executed C# reference: `tools/csharp-worldmap reactors ...` uses the original
+  WzLib. `_Canvas_000.wz` → C# 441 == Rust 441 rows, exact match.

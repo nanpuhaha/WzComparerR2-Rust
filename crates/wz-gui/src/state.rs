@@ -207,6 +207,7 @@ pub struct AppState {
     pub db2_mob_rows: Vec<wz_db::Db2MobRow>,
     pub db2_skill_rows: Vec<wz_db::Db2SkillRow>,
     pub db2_npc_rows: Vec<wz_db::Db2NpcRow>,
+    pub db2_reactor_rows: Vec<wz_db::Db2ReactorRow>,
     /// 프리즘 (C# `PrismData`) — 호출자/UI 공급. WZ에는 저장되지 않는다.
     pub prism_enabled: bool,
     pub prism_color_type: i32,
@@ -383,6 +384,7 @@ impl Default for AppState {
             db2_mob_rows: Vec::new(),
             db2_skill_rows: Vec::new(),
             db2_npc_rows: Vec::new(),
+            db2_reactor_rows: Vec::new(),
             prism_enabled: false,
             prism_color_type: 0,
             prism_hue: 0,

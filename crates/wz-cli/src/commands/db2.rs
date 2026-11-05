@@ -534,3 +534,56 @@ mod npc_tests {
         assert_eq!(rows.len(), 943);
     }
 }
+
+pub fn cmd_db2_reactors(
+    wz_path: &Path,
+    json: bool,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let mut rows = wz_db::db2_reactor_grid_rows(&archive, &tree);
+    rows.truncate(limit);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        println!("{:<8} {:>5} {:>5} link", "id", "icon", "info");
+        for row in rows {
+            println!(
+                "{:<8} {:>5} {:>5} {:?}",
+                row.id, row.has_icon, row.has_info, row.link
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod reactor_tests {
+    use super::*;
+
+    #[test]
+    fn db2_reactors_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let wz = root.join("Reactor/_Canvas/_Canvas_000.wz");
+        if !wz.exists() {
+            return;
+        }
+        let archive = WzArchive::open(&wz).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let rows = wz_db::db2_reactor_grid_rows(&archive, &tree);
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/db2_reactors_canvas000.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(serde_json::to_value(&rows).unwrap(), expected);
+        assert_eq!(rows.len(), 441);
+    }
+}
