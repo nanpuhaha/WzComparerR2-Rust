@@ -634,3 +634,9 @@ merge semantics (recursive directory merge, conflict errors).
 - The generic `wz db2-characters` path also covers the Cape tab.
   `Cape_000.wz` → C# `characters` 1139 == Rust 1139 rows, exact match
   (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
+
+### DB2 Character/PetEquip
+
+- The generic `wz db2-characters` path also covers the PetEquip tab.
+  `PetEquip_000.wz` → C# `characters` 511 == Rust 511 rows, exact match
+  (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
