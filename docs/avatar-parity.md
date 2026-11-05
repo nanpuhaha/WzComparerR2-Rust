@@ -647,3 +647,10 @@ merge semantics (recursive directory merge, conflict errors).
   `Weapon_000.wz` → C# `characters` 5655 == Rust 5655 rows, exact match
   (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
 - The CLI `--limit` default is raised to 10000 so the full Weapon list is shown.
+
+### DB2 Character/Hair
+
+- `wz-db::db2_characters` now takes the category into account for the icon
+  source. Hair uses `default/hairOverHead` (Face uses `default/face`), matching
+  `DB2Form.LoadCharacter`; other categories keep `info/icon`.
+- `Hair_000.wz` → C# `characters` 9004 == Rust 9004 rows, exact match.

@@ -52,7 +52,10 @@ pub use arena::Arena;
 pub use calc::{evaluate_expression, CalcError};
 pub use chara_prop::CharaProp;
 pub use db2::{image_rows as db2_image_rows, Db2Row};
-pub use db2_characters::{character_grid_rows as db2_character_grid_rows, Db2CharacterRow};
+pub use db2_characters::{
+    character_grid_rows as db2_character_grid_rows,
+    character_grid_rows_for as db2_character_grid_rows_for, Db2CharacterRow,
+};
 pub use db2_damage_skins::{damage_skin_rows as db2_damage_skin_rows, Db2DamageSkinRow};
 pub use db2_items::{item_grid_rows as db2_item_grid_rows, Db2ItemRow};
 pub use db2_maps::{map_grid_rows as db2_map_grid_rows, Db2MapRow};

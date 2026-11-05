@@ -255,3 +255,11 @@ dotnet run ... -- characters ../../Data/Character/Weapon/Weapon_000.wz ../../Dat
 → 5655 rows
 ```
 Rust `wz db2-characters ... --json` matches all 5655 rows exactly.
+
+Verified DB2 Character grid output (Hair):
+```
+dotnet run ... -- characters ../../Data/Character/Hair/Hair_000.wz ../../Data/String/String_000.wz
+→ 9004 rows
+```
+Rust `wz db2-characters ... --json` matches all 9004 rows exactly, including
+the `default/hairOverHead` icon path.

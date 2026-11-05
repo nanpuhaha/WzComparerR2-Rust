@@ -66,6 +66,16 @@ pub fn character_grid_rows(
     tree: &DirTree,
     linker: &StringLinker,
 ) -> Vec<Db2CharacterRow> {
+    character_grid_rows_for(archive, tree, linker, None)
+}
+
+/// 카테고리별 아이콘 경로(`Hair`/`Face` 특례)를 반영한 Character 행.
+pub fn character_grid_rows_for(
+    archive: &WzArchive,
+    tree: &DirTree,
+    linker: &StringLinker,
+    category: Option<&str>,
+) -> Vec<Db2CharacterRow> {
     let mut rows = Vec::new();
     for entry in &tree.root.entries {
         if entry.node_type != 4 {
@@ -90,6 +100,12 @@ pub fn character_grid_rows(
             continue;
         };
         let info = child(&node, "info");
+        let default = child(&node, "default");
+        let has_icon = match category {
+            Some("Hair") => default.and_then(|d| child(d, "hairOverHead")).is_some(),
+            Some("Face") => default.and_then(|d| child(d, "face")).is_some(),
+            _ => info.and_then(|info| child(info, "icon")).is_some(),
+        };
         let sr = linker.string_eqp.get(&id_num);
         rows.push(Db2CharacterRow {
             id: id.to_string(),
@@ -98,7 +114,7 @@ pub fn character_grid_rows(
             h1: sr
                 .and_then(|sr| sr.values.get("h1").cloned())
                 .unwrap_or_default(),
-            has_icon: info.and_then(|info| child(info, "icon")).is_some(),
+            has_icon,
             req_level: info.map(|info| int(info, "reqLevel")).unwrap_or(0),
             req_job: info.map(|info| int(info, "reqJob")).unwrap_or(0),
             tuc: info.map(|info| int(info, "tuc")).unwrap_or(0),

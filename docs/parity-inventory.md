@@ -141,6 +141,7 @@ WorldMap 실제 클라이언트 데이터는 QuestLimit/Fog 노드가 없어, �
 | `Character/Cape/Cape_000.wz` DB2 Character/Cape grid | 1139 rows | Rust `wz db2-characters` 1139행 동일 컬럼 완전 일치 |
 | `Character/PetEquip/PetEquip_000.wz` DB2 Character/PetEquip grid | 511 rows | Rust `wz db2-characters` 511행 동일 컬럼 완전 일치 |
 | `Character/Weapon/Weapon_000.wz` DB2 Character/Weapon grid | 5655 rows | Rust `wz db2-characters` 5655행 동일 컬럼 완전 일치 |
+| `Character/Hair/Hair_000.wz` DB2 Character/Hair grid | 9004 rows | Rust `wz db2-characters` 9004행 `default/hairOverHead` 포함 완전 일치 |
 | `String/Skill.img` skill desc + h | 20629 rows | Rust `wz skill-summary` 20629행 SummaryParser 출력 완전 일치 |
 | `Consume_000.wz/0200.img/02000012` ItemTooltip | 1 item | Rust `wz item-tooltip` name/desc/auto_desc/attributes 완전 일치 |
 | `Etc_000.wz` set -1 | `{"name":"결속의 반지","complete":5,"effects":[...]}` | Rust set effects 동일 |
@@ -228,8 +229,8 @@ dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- mapnodes ../../Da
   1703/1703 for `Shoes_000.wz`, 2369/2369 for `Accessory_000.wz`, and
   2493/2493 for `Longcoat_000.wz`, 661/661 for `Glove_000.wz`, 579/579 for
   `Pants_000.wz`, 142/142 for `Shield_000.wz`, 1139/1139 for
-  `Cape_000.wz`, 511/511 for `PetEquip_000.wz`, and 5655/5655 for
-  `Weapon_000.wz`.
+  `Cape_000.wz`, 511/511 for `PetEquip_000.wz`, 5655/5655 for
+  `Weapon_000.wz`, and 9004/9004 for `Hair_000.wz`.
 - GUI `Catalog` panel loads the selected image into a filterable DB2 grid.
 - C# WzLib harness `db2` mode prints the same rows. Real test:
   `Weapon_000.wz/01302000.img` → C# 270 == Rust 270 rows, exact match.

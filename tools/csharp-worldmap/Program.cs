@@ -839,12 +839,19 @@ class Program
             img.TryExtract();
             linker.StringEqp.TryGetValue(idNum, out var sr);
             var info = img.Node.Nodes["info"];
+            var defaultNode = img.Node.Nodes["default"];
+            var category = new DirectoryInfo(Path.GetDirectoryName(characterWzPath)).Name;
+            bool hasIcon = category switch {
+                "Hair" => defaultNode?.Nodes["hairOverHead"] != null,
+                "Face" => defaultNode?.Nodes["face"] != null,
+                _ => info?.Nodes["icon"] != null,
+            };
             rows.Add(new {
                 id,
                 name = sr?.Name ?? "",
                 desc = sr?.Desc ?? "",
                 h1 = sr?["h1"] ?? "",
-                has_icon = info?.Nodes["icon"] != null,
+                has_icon = hasIcon,
                 req_level = ValueInt(info, "reqLevel"),
                 req_job = ValueInt(info, "reqJob"),
                 tuc = ValueInt(info, "tuc"),
