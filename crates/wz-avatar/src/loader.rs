@@ -30,6 +30,12 @@ pub struct AvatarPart {
     pub width: u32,
     pub height: u32,
     pub rgba: Vec<u8>,
+    /// 아바타 기준 좌표의 최종 왼쪽 위 위치 (`FrameLayer::pos`).
+    pub position: crate::Point,
+    /// 원본 캔버스 origin (변환/디버그용).
+    pub origin: crate::Point,
+    /// 최종 z 인덱스 (GUI/씬 정렬용).
+    pub z_index: i32,
     /// `info/customOrigin` — WZ child name → custom origin ID.
     pub custom_origin_map: std::collections::BTreeMap<String, String>,
 }
@@ -61,6 +67,8 @@ pub struct LoadedAvatar {
     pub effect_z_indices: Vec<i32>,
     /// 체어 메타데이터 (`info/scale`, group taming, bodyRelMove).
     pub chair_info: Option<ChairInfo>,
+    /// WZ 데이터 기반 체어 변환 (플립/회전/오프셋).
+    pub transform: AvatarTransform,
 }
 
 /// C# `CustomChairType` — 현재 C# 원본은 `ScaleAvatarChair` 만 구현한다.
@@ -273,6 +281,22 @@ pub struct TamingInfo {
     pub flip: bool,
 }
 
+/// WZ 체어 데이터 기반 변환. C# 아바타 렌더러에는 없는 확장이다.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct AvatarTransform {
+    pub flip_x: bool,
+    pub flip_y: bool,
+    /// 0/90/180/270 (양수 = 시계 방향).
+    pub rotate: i32,
+    pub offset: crate::Point,
+}
+
+impl AvatarTransform {
+    pub fn is_identity(&self) -> bool {
+        !self.flip_x && !self.flip_y && self.rotate % 360 == 0 && self.offset == crate::Point::ZERO
+    }
+}
+
 /// 체어가 본체에 강제하는 동작.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ChairBodyAction {
@@ -323,6 +347,30 @@ impl ChairInfo {
         }
     }
 
+    /// WZ `customChair` 의 플립/회전 정보를 변환으로 만든다.
+    pub fn avatar_transform(&self) -> AvatarTransform {
+        let Some(custom) = &self.custom_chair else {
+            return AvatarTransform::default();
+        };
+        if let Some(flip) = &custom.flip {
+            return AvatarTransform {
+                flip_x: flip.flip_horizontal,
+                flip_y: flip.flip_vertical,
+                rotate: 0,
+                offset: flip.avatar_pos,
+            };
+        }
+        if let Some(rot) = &custom.rotate {
+            return AvatarTransform {
+                flip_x: false,
+                flip_y: false,
+                rotate: rot.rotate,
+                offset: rot.avatar_pos,
+            };
+        }
+        AvatarTransform::default()
+    }
+
     /// C# `CustomChairAvatarScale`: `ScaleAvatarChair` 만 `scaleAvatar.scale` 를 쓰고,
     /// 나머지 타입은 100 이다. `info/scale` 은 체어가 아니라 taming 에만 쓰인다.
     pub fn effective_scale(&self) -> i32 {
@@ -332,6 +380,14 @@ impl ChairInfo {
             }
         }
         100
+    }
+
+    /// `flipXYChair.avatarInvisibleWeapon` / `rotatedSleepingBagChair.avartarInvisibleWeapon`.
+    pub fn hides_weapon(&self) -> bool {
+        self.custom_chair.as_ref().is_some_and(|c| {
+            c.flip.as_ref().is_some_and(|f| f.invisible_weapon)
+                || c.rotate.as_ref().is_some_and(|r| r.hide_weapon)
+        })
     }
 
     /// 아바타 전체에 적용할 배율. taming 이 있으면 taming `info/scale`,
@@ -352,6 +408,15 @@ pub struct EffectFrames {
     pub delays: Vec<u32>,
     pub origins: Vec<crate::Point>,
     pub z_indices: Vec<i32>,
+}
+
+fn set_bone_z(bone: &mut Bone, z_index: i32) {
+    for skin in &mut bone.skins {
+        skin.z_index = z_index;
+    }
+    for child in &mut bone.children {
+        set_bone_z(child, z_index);
+    }
 }
 
 fn set_effect_skin(bone: &mut Bone, origin: crate::Point, z_index: i32) -> bool {
@@ -485,6 +550,9 @@ fn load_frame_parts_at(
             width: layer.canvas.w,
             height: layer.canvas.h,
             rgba: layer.canvas.rgba.clone(),
+            position: layer.pos,
+            origin: layer.origin,
+            z_index: layer.z_int.unwrap_or(0),
             custom_origin_map: Default::default(),
         })
         .collect();
@@ -813,6 +881,12 @@ fn load_chair_item(
         width: w,
         height: h,
         rgba,
+        position: crate::Point::new(
+            info.body_rel_move.unwrap_or(crate::Point::ZERO).x - origin.x,
+            info.body_rel_move.unwrap_or(crate::Point::ZERO).y - origin.y,
+        ),
+        origin,
+        z_index,
         ..Default::default()
     };
     Some((root, vec![part]))
@@ -887,9 +961,236 @@ fn apply_avatar_scale(root: &mut Bone, parts: &mut [AvatarPart], scale: i32) {
         let (w, h, rgba) = resize_rgba_nearest(&part.rgba, part.width, part.height, factor);
         part.width = w;
         part.height = h;
+        part.position = crate::Point::new(
+            (part.position.x as f32 * factor).round() as i32,
+            (part.position.y as f32 * factor).round() as i32,
+        );
+        part.origin = crate::Point::new(
+            (part.origin.x as f32 * factor).round() as i32,
+            (part.origin.y as f32 * factor).round() as i32,
+        );
         part.rgba = rgba;
     }
     scale_bone_tree(root, factor, &scaled);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TransformOp {
+    FlipX,
+    FlipY,
+    Rotate90,
+    Rotate180,
+    Rotate270,
+}
+
+fn transform_ops(transform: AvatarTransform) -> Vec<TransformOp> {
+    let mut ops = Vec::new();
+    if transform.flip_x {
+        ops.push(TransformOp::FlipX);
+    }
+    if transform.flip_y {
+        ops.push(TransformOp::FlipY);
+    }
+    match transform.rotate.rem_euclid(360) {
+        90 => ops.push(TransformOp::Rotate90),
+        180 => ops.push(TransformOp::Rotate180),
+        270 => ops.push(TransformOp::Rotate270),
+        _ => {}
+    }
+    ops
+}
+
+fn flip_rgba_horizontal(src: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let mut out = vec![0u8; src.len()];
+    for y in 0..h {
+        for x in 0..w {
+            let sx = w - 1 - x;
+            let s = ((y * w + sx) * 4) as usize;
+            let d = ((y * w + x) * 4) as usize;
+            out[d..d + 4].copy_from_slice(&src[s..s + 4]);
+        }
+    }
+    out
+}
+
+fn flip_rgba_vertical(src: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let mut out = vec![0u8; src.len()];
+    for y in 0..h {
+        let sy = h - 1 - y;
+        for x in 0..w {
+            let s = ((sy * w + x) * 4) as usize;
+            let d = ((y * w + x) * 4) as usize;
+            out[d..d + 4].copy_from_slice(&src[s..s + 4]);
+        }
+    }
+    out
+}
+
+fn rotate_rgba_180(src: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let mut out = vec![0u8; src.len()];
+    for y in 0..h {
+        let sy = h - 1 - y;
+        for x in 0..w {
+            let sx = w - 1 - x;
+            let s = ((sy * w + sx) * 4) as usize;
+            let d = ((y * w + x) * 4) as usize;
+            out[d..d + 4].copy_from_slice(&src[s..s + 4]);
+        }
+    }
+    out
+}
+
+/// 시계 방향 90도. 결과 크기는 `h x w`.
+fn rotate_rgba_cw(src: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let nw = h;
+    let nh = w;
+    let mut out = vec![0u8; src.len()];
+    for y in 0..nh {
+        for x in 0..nw {
+            // dst(x,y) = src(y, h-1-x)
+            let sx = y;
+            let sy = h - 1 - x;
+            let s = ((sy * w + sx) * 4) as usize;
+            let d = ((y * nw + x) * 4) as usize;
+            out[d..d + 4].copy_from_slice(&src[s..s + 4]);
+        }
+    }
+    out
+}
+
+/// 반시계 방향 90도. 결과 크기는 `h x w`.
+fn rotate_rgba_ccw(src: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let nw = h;
+    let nh = w;
+    let mut out = vec![0u8; src.len()];
+    for y in 0..nh {
+        for x in 0..nw {
+            // dst(x,y) = src(w-1-y, x)
+            let sx = w - 1 - y;
+            let sy = x;
+            let s = ((sy * w + sx) * 4) as usize;
+            let d = ((y * nw + x) * 4) as usize;
+            out[d..d + 4].copy_from_slice(&src[s..s + 4]);
+        }
+    }
+    out
+}
+
+fn transform_part_op(part: &mut AvatarPart, op: TransformOp) {
+    match op {
+        TransformOp::FlipX => {
+            part.rgba = flip_rgba_horizontal(&part.rgba, part.width, part.height);
+            part.position.x = -part.position.x - part.width as i32;
+            part.origin.x = part.width as i32 - part.origin.x;
+        }
+        TransformOp::FlipY => {
+            part.rgba = flip_rgba_vertical(&part.rgba, part.width, part.height);
+            part.position.y = -part.position.y - part.height as i32;
+            part.origin.y = part.height as i32 - part.origin.y;
+        }
+        TransformOp::Rotate90 => {
+            part.rgba = rotate_rgba_cw(&part.rgba, part.width, part.height);
+            let h = part.height as i32;
+            part.position = crate::Point::new(-part.position.y - h, part.position.x);
+            part.origin = crate::Point::new(h - part.origin.y, part.origin.x);
+            std::mem::swap(&mut part.width, &mut part.height);
+        }
+        TransformOp::Rotate180 => {
+            part.rgba = rotate_rgba_180(&part.rgba, part.width, part.height);
+            part.position = crate::Point::new(
+                -part.position.x - part.width as i32,
+                -part.position.y - part.height as i32,
+            );
+            part.origin = crate::Point::new(
+                part.width as i32 - part.origin.x,
+                part.height as i32 - part.origin.y,
+            );
+        }
+        TransformOp::Rotate270 => {
+            part.rgba = rotate_rgba_ccw(&part.rgba, part.width, part.height);
+            let w = part.width as i32;
+            part.position = crate::Point::new(part.position.y, -part.position.x - w);
+            part.origin = crate::Point::new(part.origin.y, w - part.origin.x);
+            std::mem::swap(&mut part.width, &mut part.height);
+        }
+    }
+}
+
+fn transform_bone_op(bone: &mut Bone, op: TransformOp) {
+    match op {
+        TransformOp::FlipX => {
+            bone.position.x = -bone.position.x;
+            for skin in &mut bone.skins {
+                skin.offset.x = -skin.offset.x;
+                skin.origin.x = skin.width as i32 - skin.origin.x;
+            }
+        }
+        TransformOp::FlipY => {
+            bone.position.y = -bone.position.y;
+            for skin in &mut bone.skins {
+                skin.offset.y = -skin.offset.y;
+                skin.origin.y = skin.height as i32 - skin.origin.y;
+            }
+        }
+        TransformOp::Rotate90 => {
+            bone.position = crate::Point::new(-bone.position.y, bone.position.x);
+            for skin in &mut bone.skins {
+                skin.offset = crate::Point::new(-skin.offset.y, skin.offset.x);
+                skin.origin = crate::Point::new(skin.height as i32 - skin.origin.y, skin.origin.x);
+                std::mem::swap(&mut skin.width, &mut skin.height);
+            }
+        }
+        TransformOp::Rotate180 => {
+            bone.position = crate::Point::new(-bone.position.x, -bone.position.y);
+            for skin in &mut bone.skins {
+                skin.offset = crate::Point::new(-skin.offset.x, -skin.offset.y);
+                skin.origin = crate::Point::new(
+                    skin.width as i32 - skin.origin.x,
+                    skin.height as i32 - skin.origin.y,
+                );
+            }
+        }
+        TransformOp::Rotate270 => {
+            bone.position = crate::Point::new(bone.position.y, -bone.position.x);
+            for skin in &mut bone.skins {
+                skin.offset = crate::Point::new(skin.offset.y, -skin.offset.x);
+                skin.origin = crate::Point::new(skin.origin.y, skin.width as i32 - skin.origin.x);
+                std::mem::swap(&mut skin.width, &mut skin.height);
+            }
+        }
+    }
+    for child in &mut bone.children {
+        transform_bone_op(child, op);
+    }
+}
+
+/// WZ 체어 변환을 파트와 bone 트리에 동시에 적용한다.
+pub fn apply_avatar_transform(
+    root: &mut Bone,
+    parts: &mut [AvatarPart],
+    transform: AvatarTransform,
+) {
+    if transform.is_identity() {
+        return;
+    }
+    for op in transform_ops(transform) {
+        for part in parts.iter_mut() {
+            transform_part_op(part, op);
+        }
+        transform_bone_op(root, op);
+    }
+    if transform.offset != crate::Point::ZERO {
+        for part in parts.iter_mut() {
+            part.position = crate::Point::new(
+                part.position.x + transform.offset.x,
+                part.position.y + transform.offset.y,
+            );
+        }
+        root.position = crate::Point::new(
+            root.position.x + transform.offset.x,
+            root.position.y + transform.offset.y,
+        );
+    }
 }
 
 /// `name:x,y` 로 지정한 커스텀 오리진을 bone 의 skin 에 적용한다.
@@ -1032,6 +1333,9 @@ fn load_effect_item(
             width: resolved.w,
             height: resolved.h,
             rgba: resolved.rgba,
+            position: crate::Point::new(-origin.x, -origin.y),
+            origin,
+            z_index,
             ..Default::default()
         });
     }
@@ -1138,6 +1442,9 @@ fn load_item_frame(
                 width: layer.canvas.w,
                 height: layer.canvas.h,
                 rgba: layer.canvas.rgba.clone(),
+                position: layer.pos,
+                origin: layer.origin,
+                z_index: layer.z_int.unwrap_or(0),
                 custom_origin_map: custom_origin.clone(),
             }
         })
@@ -1295,6 +1602,7 @@ pub fn load_from_character_wz_with_skin(
         effect_origins: Vec::new(),
         effect_z_indices: Vec::new(),
         chair_info: None,
+        transform: AvatarTransform::default(),
     })
 }
 
@@ -1478,6 +1786,9 @@ pub fn load_avatar_with_equipment_and_mix(
                 }
                 continue;
             }
+            if dir == "Weapon" && chair_info.as_ref().is_some_and(|c| c.hides_weapon()) {
+                continue;
+            }
             let path = char_root.join(dir).join("_Canvas").join("_Canvas_000.wz");
             if !path.exists() {
                 continue;
@@ -1518,13 +1829,18 @@ pub fn load_avatar_with_equipment_and_mix(
                 }
                 if let Some((mut taming_root, mut taming_parts)) = load_taming_item(data_root, *id)
                 {
-                    taming_root.position = info
+                    let offset = info
                         .group_body_rel_move
                         .get(i)
                         .copied()
                         .unwrap_or(crate::Point::ZERO);
-                    if i > 0 {
-                        for part in &mut taming_parts {
+                    taming_root.position = offset;
+                    for part in &mut taming_parts {
+                        part.position = crate::Point::new(
+                            part.position.x + offset.x,
+                            part.position.y + offset.y,
+                        );
+                        if i > 0 {
                             part.slot = format!("{}_{}", part.slot, i);
                         }
                     }
@@ -1534,8 +1850,15 @@ pub fn load_avatar_with_equipment_and_mix(
             }
         } else if let Some(taming) = &info.taming {
             // 단일 taming 체어 — C# 은 ChairPart 와 TamingPart 를 함께 추가한다.
-            if let Some((mut taming_root, taming_parts)) = load_taming_item(data_root, taming.id) {
-                taming_root.position = info.body_rel_move.unwrap_or(crate::Point::ZERO);
+            if let Some((mut taming_root, mut taming_parts)) =
+                load_taming_item(data_root, taming.id)
+            {
+                let offset = info.body_rel_move.unwrap_or(crate::Point::ZERO);
+                taming_root.position = offset;
+                for part in &mut taming_parts {
+                    part.position =
+                        crate::Point::new(part.position.x + offset.x, part.position.y + offset.y);
+                }
                 merge_bone_tree(&mut root, taming_root);
                 parts.extend(taming_parts);
             }
@@ -1555,7 +1878,48 @@ pub fn load_avatar_with_equipment_and_mix(
             info.effective_scale()
         };
         apply_avatar_scale(&mut root, &mut parts, scale);
+
+        // WZ `dummyAvatarChair`: `customChair/avatar/*` 의 더미 아바타를 추가한다.
+        // C# 은 이 데이터를 렌더링하지 않으므로, 이 경로는 WZ 스키마 기반 확장이다.
+        if let Some(dummy) = info.custom_chair.as_ref().and_then(|c| c.dummy.as_ref()) {
+            for (i, entry) in dummy.avatars.iter().enumerate() {
+                if entry.taming_mob == 0 || Some(entry.taming_mob) == info.taming_mob {
+                    continue;
+                }
+                let Some((mut taming_root, mut taming_parts)) =
+                    load_taming_item(data_root, entry.taming_mob)
+                else {
+                    continue;
+                };
+                if entry.left {
+                    let flip = AvatarTransform {
+                        flip_x: true,
+                        ..Default::default()
+                    };
+                    apply_avatar_transform(&mut taming_root, &mut taming_parts, flip);
+                }
+                taming_root.position = entry.position;
+                set_bone_z(&mut taming_root, entry.z);
+                for part in &mut taming_parts {
+                    part.position = crate::Point::new(
+                        part.position.x + entry.position.x,
+                        part.position.y + entry.position.y,
+                    );
+                    part.z_index = entry.z;
+                    part.slot = format!("dummy{i}_{}", part.slot);
+                }
+                merge_bone_tree(&mut root, taming_root);
+                parts.extend(taming_parts);
+            }
+        }
     }
+
+    // WZ 체어 변환(플립/회전) — C# 원본에는 없는 데이터 기반 확장.
+    let transform = chair_info
+        .as_ref()
+        .map(|c| c.avatar_transform())
+        .unwrap_or_default();
+    apply_avatar_transform(&mut root, &mut parts, transform);
 
     if parts.is_empty() {
         return None;
@@ -1583,6 +1947,7 @@ pub fn load_avatar_with_equipment_and_mix(
         effect_origins,
         effect_z_indices,
         chair_info,
+        transform,
     })
 }
 
@@ -2232,6 +2597,9 @@ mod chair_custom_type_tests {
         assert_eq!(rotate.avatar_pos, crate::Point::new(-26, -23));
         assert!(rotate.hide_weapon);
         assert!(rotate.hide_nick);
+        assert!(info.hides_weapon());
+        assert_eq!(av.transform.rotate, 90);
+        assert_eq!(av.transform.offset, crate::Point::new(-26, -23));
     }
 
     #[test]
@@ -2250,6 +2618,14 @@ mod chair_custom_type_tests {
         assert!(!has_slot(&av, "body"));
         assert!(has_slot(&av, "chair"));
         assert!(av.parts.iter().any(|p| p.slot.starts_with("tamingmob")));
+        for i in 0..4 {
+            assert!(
+                av.parts
+                    .iter()
+                    .any(|p| p.slot.starts_with(&format!("dummy{i}_"))),
+                "dummy {i} parts missing"
+            );
+        }
     }
 
     #[test]
@@ -2264,6 +2640,10 @@ mod chair_custom_type_tests {
         assert_eq!(flip.avatar_pos, crate::Point::new(-17, -111));
         assert_eq!(flip.avatar_z, 0);
         assert!(flip.invisible_weapon);
+        assert!(info.hides_weapon());
+        assert!(av.transform.flip_x);
+        assert!(av.transform.flip_y);
+        assert_eq!(av.transform.offset, crate::Point::new(-17, -111));
         // flipXYChair 는 removeBody/sitAction 이 없으므로 C# 은 sit 을 쓴다.
         assert!(has_slot(&av, "body"));
         assert!(has_slot(&av, "chair"));
@@ -2328,5 +2708,100 @@ mod chair_custom_type_tests {
             ChairBodyAction::Action { name, .. } => assert_eq!(name, expected),
             other => panic!("expected action {expected}, got {other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod avatar_transform_tests {
+    use super::*;
+
+    fn part_2x1() -> AvatarPart {
+        AvatarPart {
+            slot: "test".into(),
+            width: 2,
+            height: 1,
+            rgba: vec![10, 0, 0, 255, 20, 0, 0, 255],
+            position: crate::Point::new(5, 7),
+            origin: crate::Point::new(0, 0),
+            z_index: 0,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn horizontal_flip_mirrors_pixels_and_position() {
+        let mut root = Bone::new("@root");
+        let mut parts = vec![part_2x1()];
+        apply_avatar_transform(
+            &mut root,
+            &mut parts,
+            AvatarTransform {
+                flip_x: true,
+                ..Default::default()
+            },
+        );
+        assert_eq!(parts[0].rgba[0..4], [20, 0, 0, 255]);
+        assert_eq!(parts[0].rgba[4..8], [10, 0, 0, 255]);
+        assert_eq!(parts[0].position, crate::Point::new(-7, 7));
+        assert_eq!(parts[0].origin, crate::Point::new(2, 0));
+    }
+
+    #[test]
+    fn rotate_90_swaps_dimensions_and_position() {
+        let mut root = Bone::new("@root");
+        let mut parts = vec![part_2x1()];
+        apply_avatar_transform(
+            &mut root,
+            &mut parts,
+            AvatarTransform {
+                rotate: 90,
+                ..Default::default()
+            },
+        );
+        assert_eq!((parts[0].width, parts[0].height), (1, 2));
+        assert_eq!(parts[0].position, crate::Point::new(-8, 5));
+        assert_eq!(parts[0].origin, crate::Point::new(1, 0));
+        assert_eq!(parts[0].rgba[0..4], [10, 0, 0, 255]);
+        assert_eq!(parts[0].rgba[4..8], [20, 0, 0, 255]);
+    }
+
+    #[test]
+    fn transform_offset_is_applied_to_parts_and_root() {
+        let mut root = Bone::new("@root");
+        root.position = crate::Point::new(1, 2);
+        let mut parts = vec![part_2x1()];
+        apply_avatar_transform(
+            &mut root,
+            &mut parts,
+            AvatarTransform {
+                offset: crate::Point::new(10, -3),
+                ..Default::default()
+            },
+        );
+        assert_eq!(parts[0].position, crate::Point::new(15, 4));
+        assert_eq!(root.position, crate::Point::new(11, -1));
+    }
+
+    #[test]
+    fn rotate_bone_swaps_skin_dimensions_and_origin() {
+        let mut root = Bone::new("@root");
+        let mut skin = SkinLayer::new("body");
+        skin.width = 2;
+        skin.height = 1;
+        skin.origin = crate::Point::new(0, 0);
+        root.append_bone(skin, "body", crate::Point::new(5, 7));
+        let mut parts = Vec::new();
+        apply_avatar_transform(
+            &mut root,
+            &mut parts,
+            AvatarTransform {
+                rotate: 90,
+                ..Default::default()
+            },
+        );
+        let skin = &root.children[0].skins[0];
+        assert_eq!((skin.width, skin.height), (1, 2));
+        assert_eq!(skin.origin, crate::Point::new(1, 0));
+        assert_eq!(root.children[0].position, crate::Point::new(-7, 5));
     }
 }

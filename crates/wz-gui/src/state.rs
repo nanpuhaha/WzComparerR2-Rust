@@ -41,6 +41,17 @@ pub struct TreeRow {
 
 // ── 앱 상태 ───────────────────────────────────────────────────────────
 
+/// GUI 렌더용 아바타 파트 (로더의 `AvatarPart` + 최종 좌표/z).
+#[derive(Clone, Default)]
+pub struct AvatarPartData {
+    pub slot: String,
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Vec<u8>,
+    pub position: (i32, i32),
+    pub z_index: i32,
+}
+
 pub struct AppState {
     pub archive: Option<Arc<WzArchive>>,
     pub archive_path: Option<std::path::PathBuf>,
@@ -67,7 +78,7 @@ pub struct AppState {
     pub avatar_rendered: Option<(u32, u32, Vec<u8>)>,
     pub avatar_selected_slots: std::collections::HashSet<usize>,
     pub avatar_slot_selection: [usize; 29],
-    pub avatar_loaded_parts: Vec<(String, u32, u32, Vec<u8>)>,
+    pub avatar_loaded_parts: Vec<AvatarPartData>,
     pub avatar_equipment_input: String,
     pub avatar_body_skin: i32,
     /// 프리즘 (C# `PrismData`) — 호출자/UI 공급. WZ에는 저장되지 않는다.

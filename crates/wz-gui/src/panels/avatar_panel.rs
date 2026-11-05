@@ -21,8 +21,8 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                         let mut sel = state.avatar_slot_selection[i];
                         let preview = if sel == usize::MAX {
                             "없음".to_string()
-                        } else if let Some((name, _, _, _)) = state.avatar_loaded_parts.get(sel) {
-                            format!("{} ({})", name, sel)
+                        } else if let Some(part) = state.avatar_loaded_parts.get(sel) {
+                            format!("{} ({})", part.slot, sel)
                         } else {
                             format!("Part {}", sel)
                         };
@@ -33,10 +33,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                                     state.avatar_slot_selection[i] = sel;
                                 }
                                 for j in 0..state.avatar_loaded_parts.len() {
-                                    let label = if let Some((name, _, _, _)) =
-                                        state.avatar_loaded_parts.get(j)
+                                    let label = if let Some(part) = state.avatar_loaded_parts.get(j)
                                     {
-                                        format!("{} ({})", name, j)
+                                        format!("{} ({})", part.slot, j)
                                     } else {
                                         format!("Part {}", j)
                                     };
@@ -192,8 +191,17 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             "로드된 파트 ({}):",
             state.avatar_loaded_parts.len()
         ));
-        for (i, (slot, w, h, _)) in state.avatar_loaded_parts.iter().enumerate() {
-            ui.label(format!("  {}: {} ({}x{})", i, slot, w, h));
+        for (i, part) in state.avatar_loaded_parts.iter().enumerate() {
+            ui.label(format!(
+                "  {}: {} ({}x{}) @ {},{} z={}",
+                i,
+                part.slot,
+                part.width,
+                part.height,
+                part.position.0,
+                part.position.1,
+                part.z_index
+            ));
         }
     }
     if state.avatar_rendered.is_some() || state.avatar_image.is_some() {

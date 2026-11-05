@@ -4,7 +4,7 @@
 // 워커 스레드가 결과를 채널로 보내고, UI 스레드는 `poll_load_result` 로
 // 매 프레임 폴링한다.
 
-use crate::state::AppState;
+use crate::state::{AppState, AvatarPartData};
 
 // ── 파일 열기 ─────────────────────────────────────────────────────────
 
@@ -20,7 +20,14 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             state.avatar_loaded_parts = av
                 .parts
                 .iter()
-                .map(|p| (p.slot.clone(), p.width, p.height, p.rgba.clone()))
+                .map(|p| AvatarPartData {
+                    slot: p.slot.clone(),
+                    width: p.width,
+                    height: p.height,
+                    rgba: p.rgba.clone(),
+                    position: (p.position.x, p.position.y),
+                    z_index: p.z_index,
+                })
                 .collect();
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
@@ -94,7 +101,14 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
             state.avatar_loaded_parts = av
                 .parts
                 .iter()
-                .map(|p| (p.slot.clone(), p.width, p.height, p.rgba.clone()))
+                .map(|p| AvatarPartData {
+                    slot: p.slot.clone(),
+                    width: p.width,
+                    height: p.height,
+                    rgba: p.rgba.clone(),
+                    position: (p.position.x, p.position.y),
+                    z_index: p.z_index,
+                })
                 .collect();
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
@@ -135,19 +149,19 @@ pub fn render_loaded_avatar(state: &mut AppState) {
         convert_pure_black: state.prism_convert_pure_black,
     };
     let apply_prism = state.prism_enabled && prism.is_valid();
-    let parts: Vec<(String, u32, u32, Vec<u8>)> = state
+    let parts: Vec<AvatarPartData> = state
         .avatar_loaded_parts
         .iter()
-        .map(|(slot, w, h, rgba)| {
-            let mut rgba = rgba.clone();
+        .map(|p| {
+            let mut rgba = p.rgba.clone();
             if apply_prism {
                 wz_avatar::apply_prism_rgba8(&mut rgba, &prism, false);
             }
-            (slot.clone(), *w, *h, rgba)
+            AvatarPartData { rgba, ..p.clone() }
         })
         .collect();
-    if let Some((_, w, h, rgba)) = parts.first() {
-        state.avatar_image = Some((*w, *h, rgba.clone()));
+    if let Some(first) = parts.first() {
+        state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
     }
     use wz_render::{
         atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D, device::RenderContext,
@@ -160,22 +174,43 @@ pub fn render_loaded_avatar(state: &mut AppState) {
     };
     let mut slots = Vec::new();
     for &i in &selected {
-        if let Some((slot, w, h, rgba)) = parts.get(i) {
-            if let Some(s) = packer.allocate_and_write(*w, *h, rgba) {
-                // effect 프레임은 origin 픽셀이 아바타 기준점(0,0)에 오도록 배치한다.
-                // 나머지 파트는 기존처럼 좌상단 기준을 유지한다.
-                let pos = if slot == "effect" {
-                    [
-                        -(state.effect_origin.0 as f32),
-                        -(state.effect_origin.1 as f32),
-                    ]
-                } else {
-                    [0.0, 0.0]
-                };
-                slots.push((*w, *h, s, pos));
+        if let Some(p) = parts.get(i) {
+            if let Some(s) = packer.allocate_and_write(p.width, p.height, &p.rgba) {
+                slots.push((p.clone(), s));
             }
         }
     }
+    if slots.is_empty() {
+        state.avatar_status = "선택된 파트가 없습니다".into();
+        return;
+    }
+
+    // 파트의 최종 좌표를 합쳐 아바타를 중앙에 배치하고, 256x256 에 맞게 축소한다.
+    let (rw, rh) = (256u32, 256u32);
+    let effective_pos = |p: &AvatarPartData| -> (i32, i32) {
+        if p.slot == "effect" {
+            (-state.effect_origin.0, -state.effect_origin.1)
+        } else {
+            p.position
+        }
+    };
+    let mut min_x = i32::MAX;
+    let mut min_y = i32::MAX;
+    let mut max_x = i32::MIN;
+    let mut max_y = i32::MIN;
+    for (p, _) in &slots {
+        let (x, y) = effective_pos(p);
+        min_x = min_x.min(x);
+        min_y = min_y.min(y);
+        max_x = max_x.max(x + p.width as i32);
+        max_y = max_y.max(y + p.height as i32);
+    }
+    let bbox_w = (max_x - min_x).max(1) as f32;
+    let bbox_h = (max_y - min_y).max(1) as f32;
+    let scale = (rw as f32 / bbox_w).min(rh as f32 / bbox_h).min(1.0);
+    let off_x = (rw as f32 - bbox_w * scale) * 0.5 - min_x as f32 * scale;
+    let off_y = (rh as f32 - bbox_h * scale) * 0.5 - min_y as f32 * scale;
+
     let mut rc = match RenderContext::new_headless() {
         Ok(r) => r,
         Err(e) => {
@@ -187,18 +222,23 @@ pub fn render_loaded_avatar(state: &mut AppState) {
         let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
     }
     let mut batch = SpriteBatch::new();
-    for (w, h, slot, pos) in &slots {
+    for (p, slot) in &slots {
+        let (x, y) = effective_pos(p);
         batch.push_atlas_quad(
             slot.key,
-            [pos[0], pos[1], *w as f32, *h as f32],
-            0.0,
+            [
+                off_x + x as f32 * scale,
+                off_y + y as f32 * scale,
+                p.width as f32 * scale,
+                p.height as f32 * scale,
+            ],
+            p.z_index as f32,
             &slot.rect,
             (512, 512),
             [1.0, 1.0, 1.0, 1.0],
         );
     }
     batch.finish();
-    let (rw, rh) = (256u32, 256u32);
     let cam = Camera2D::new(rw as f32, rh as f32);
     let uniforms = cam.build_uniforms(0.0, 0.0);
     match rc.render_to_rgba(rw, rh, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
@@ -278,18 +318,25 @@ pub fn apply_effect_frame(state: &mut AppState) {
         .get(state.effect_frame % state.effect_origins.len().max(1))
         .copied()
         .unwrap_or((0, 0));
+    let origin = state.effect_origin;
     if let Some(part) = state
         .avatar_loaded_parts
         .iter_mut()
-        .find(|p| p.0 == "effect")
+        .find(|p| p.slot == "effect")
     {
-        part.1 = w;
-        part.2 = h;
-        part.3 = rgba;
+        part.width = w;
+        part.height = h;
+        part.rgba = rgba;
+        part.position = (-origin.0, -origin.1);
     } else {
-        state
-            .avatar_loaded_parts
-            .push(("effect".into(), w, h, rgba));
+        state.avatar_loaded_parts.push(AvatarPartData {
+            slot: "effect".into(),
+            width: w,
+            height: h,
+            rgba,
+            position: (-origin.0, -origin.1),
+            z_index: 0,
+        });
     }
 }
 
@@ -312,9 +359,10 @@ mod tests {
         let part = state
             .avatar_loaded_parts
             .iter()
-            .find(|p| p.0 == "effect")
+            .find(|p| p.slot == "effect")
             .expect("effect part");
-        assert_eq!((part.1, part.2), (3, 3));
-        assert_eq!(part.3.len(), 36);
+        assert_eq!((part.width, part.height), (3, 3));
+        assert_eq!(part.rgba.len(), 36);
+        assert_eq!(part.position, (7, -8));
     }
 }

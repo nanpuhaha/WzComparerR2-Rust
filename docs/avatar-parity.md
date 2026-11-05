@@ -72,9 +72,14 @@ remaining CharaSim gaps.
   - `info/tamingMob` and `customChair/self/tamingMob` add a `TamingMob` part;
     the chair image stays (C# adds `ChairPart` and `TamingPart` together).
   - `customChair/self` and `customChair/avatar/*` are parsed for future rendering.
-- The visual behavior of `flipXYChair` / `rotatedSleepingBagChair` /
-  `dummyAvatarChair` (flip, rotation, multiple dummy avatars) is **WZ data, not
-  C# source**. It is preserved but not yet applied by the renderer.
+- WZ-only visual behavior (not present in C# source) is implemented as an explicit
+  extension:
+  - `flipXYChair` → horizontal/vertical mirror, `flipCharacterPos` offset, weapon hide.
+  - `rotatedSleepingBagChair` → 90° rotation, `avatarPos` offset, weapon hide.
+  - `dummyAvatarChair` → `customChair/avatar/*` taming mobs at their `pos`/`z`
+    (with `left` mirroring), plus the `self` taming.
+  - `AvatarPart` now carries final `position`, `origin`, and `z_index`; the GUI
+    centers/scales the assembled avatar and draws parts at those coordinates.
 - Custom origin: the two-step C# semantics are implemented:
   `CustomOriginMap` (originValue → childName) + `CustomOrigin` (childName → Point)
   → `apply_custom_origin_map`. The GUI accepts `childName:x,y;...`.
