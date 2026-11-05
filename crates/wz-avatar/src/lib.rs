@@ -15,8 +15,8 @@ pub mod zmap;
 pub use compose::{bounding_box, compose, ComposeError, ComposedFrame, LayerSource};
 pub use frame::FrameTiming;
 pub use frame_layers::{
-    avatar_z_priority, collect_frame_layers, decode_canvas_pixels, resolve_outlink, split_outlink,
-    FrameLayer, ResolvedCanvas,
+    avatar_z_priority, collect_frame_assembly, collect_frame_layers, decode_canvas_pixels,
+    resolve_outlink, split_outlink, FrameAssembly, FrameLayer, ResolvedCanvas,
 };
 pub use loader::{
     load_avatar_with_equipment, load_equipment_item, load_from_character_wz,

@@ -85,11 +85,31 @@ pub fn resolve_outlink(
     decode_canvas_pixels(&png, canvas_archive.source())
 }
 
+/// A frame assembled into both flat layers and a bone tree.
+///
+/// `layers` carry the resolved pixels and absolute positions; `root_bone` is the same
+/// structure the C# `AppendBone` path builds, so loaders no longer re-implement the
+/// `map`/`origin` bone chain.
+pub struct FrameAssembly {
+    pub layers: Vec<FrameLayer>,
+    pub move_vec: Option<crate::Point>,
+    pub root_bone: crate::Bone,
+}
+
 pub fn collect_frame_layers(
     frame_node: &wz_core::image::Node,
     archive: &wz_core::WzArchive,
     canvas_archive: Option<&wz_core::WzArchive>,
 ) -> Result<(Vec<FrameLayer>, Option<crate::Point>), Box<dyn std::error::Error>> {
+    let assembly = collect_frame_assembly(frame_node, archive, canvas_archive)?;
+    Ok((assembly.layers, assembly.move_vec))
+}
+
+pub fn collect_frame_assembly(
+    frame_node: &wz_core::image::Node,
+    archive: &wz_core::WzArchive,
+    canvas_archive: Option<&wz_core::WzArchive>,
+) -> Result<FrameAssembly, Box<dyn std::error::Error>> {
     let src = archive.source();
 
     #[derive(Clone)]
@@ -291,7 +311,40 @@ pub fn collect_frame_layers(
         });
     }
 
-    Ok((layers, move_vec))
+    fn build_bone_tree(nodes: &[BoneNode], layers: &[FrameLayer], idx: usize) -> crate::Bone {
+        let node = &nodes[idx];
+        let mut bone = crate::Bone::new(node.name.clone());
+        bone.position = node.position;
+        for (i, &layer_idx) in node.skins.iter().enumerate() {
+            let layer = &layers[layer_idx];
+            let mut skin = crate::SkinLayer::new(layer.name.clone());
+            skin.offset = node.skin_offsets[i];
+            skin.z = layer.z.clone().unwrap_or_default();
+            skin.z_index = layer.z_int.unwrap_or(-2);
+            skin.origin = node.skin_origins[i];
+            skin.width = layer.canvas.w;
+            skin.height = layer.canvas.h;
+            bone.skins.push(skin);
+        }
+        for (child_idx, child) in nodes.iter().enumerate() {
+            if child.parent == Some(idx) {
+                bone.children
+                    .push(build_bone_tree(nodes, layers, child_idx));
+            }
+        }
+        bone
+    }
+
+    let mut root_bone = build_bone_tree(&nodes, &layers, 0);
+    if let Some(mv) = move_vec {
+        root_bone.position = crate::Point::new(mv.x, mv.y);
+    }
+
+    Ok(FrameAssembly {
+        layers,
+        move_vec,
+        root_bone,
+    })
 }
 
 pub fn avatar_z_priority(zmap_len: usize, zmap: &crate::ZMap, layer: &FrameLayer) -> i32 {

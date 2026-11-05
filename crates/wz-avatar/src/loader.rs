@@ -32,6 +32,19 @@ pub struct AvatarPart {
     pub rgba: Vec<u8>,
 }
 
+impl AvatarPart {
+    /// 호출자가 제공한 프리즘을 이 파트의 RGBA 에 적용한다.
+    ///
+    /// C# 에서도 `PrismData` 는 WZ 가 아니라 UI/호출자가 들고 있다
+    /// (`AvatarPart.PrismData` 는 외부에서 설정된다). 로더는 픽셀만 만들고,
+    /// 색 변환은 이 메서드로 분리한다.
+    pub fn apply_prism(&mut self, data: &crate::PrismData) {
+        if data.is_valid() {
+            crate::apply_prism_rgba8(&mut self.rgba, data, false);
+        }
+    }
+}
+
 /// 로드 결과.
 pub struct LoadedAvatar {
     pub parts: Vec<AvatarPart>,
@@ -155,6 +168,57 @@ fn load_zmap_order(data_root: Option<&std::path::Path>) -> Option<Vec<String>> {
     }
 }
 
+/// 한 이미지의 액션 프레임을 [`crate::collect_frame_assembly`] 로 조립한다.
+///
+/// 기존 `loader.rs` 가 파트마다 반복하던 `origin`/`map`/bone 구성을
+/// `frame_layers::collect_frame_assembly` 한 곳으로 모은다.
+fn load_frame_parts(
+    archive: &WzArchive,
+    image_name: &str,
+    action_names: &[&str],
+) -> Option<(Bone, Vec<AvatarPart>)> {
+    use wz_core::image::ImageValue;
+
+    let tree = archive.read_tree().ok()?;
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.node_type == 4 && e.name.as_deref() == Some(image_name))?;
+    let node = archive.parse_image_at(entry.offset?).ok()?;
+    let action = action_names
+        .iter()
+        .find_map(|name| node.children.iter().find(|c| c.name.as_ref() == *name))
+        .or_else(|| node.children.first())?;
+    let action_children: &[ImageNode] = match &action.value {
+        Some(ImageValue::Property(p)) => &p.children,
+        _ => &action.children,
+    };
+    let frame = if action_children
+        .iter()
+        .any(|c| matches!(c.value, Some(ImageValue::Png(_))))
+    {
+        // `front` 처럼 액션 노드 자체가 프레임이고 자식이 Canvas 인 경우.
+        action
+    } else {
+        // `stand1/0` 처럼 첫 자식이 프레임인 경우.
+        action_children.first().unwrap_or(action)
+    };
+
+    let assembly = crate::collect_frame_assembly(frame, archive, Some(archive)).ok()?;
+    let parts = assembly
+        .layers
+        .iter()
+        .map(|layer| AvatarPart {
+            slot: layer.name.clone(),
+            width: layer.canvas.w,
+            height: layer.canvas.h,
+            rgba: layer.canvas.rgba.clone(),
+        })
+        .collect();
+    Some((assembly.root_bone, parts))
+}
+
 pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAvatar> {
     load_from_character_wz_with_skin(char_wz_path, 2000)
 }
@@ -172,207 +236,19 @@ pub fn load_from_character_wz_with_skin(
         .join("_Canvas")
         .join("_Canvas_000.wz");
     let arch = WzArchive::open(&canvas_path).ok()?;
-    let tree = arch.read_tree().ok()?;
 
-    let body_img_name = format!("{:08}.img", body_skin);
-    let img_entry = tree
-        .root
-        .entries
-        .iter()
-        .find(|e| e.node_type == 4 && e.name.as_deref() == Some(body_img_name.as_str()))
-        .or_else(|| tree.root.entries.iter().find(|e| e.node_type == 4))?;
-    let off = img_entry.offset?;
-    let node = arch.parse_image_at(off).ok()?;
+    let (mut root, mut parts) = load_frame_parts(
+        &arch,
+        &format!("{:08}.img", body_skin),
+        &["stand1", "alert"],
+    )?;
 
-    // 표준 액션 우선 선택 (stand1 > alert > 첫 번째)
-    let action = node
-        .children
-        .iter()
-        .find(|c| c.name.as_ref() == "stand1")
-        .or_else(|| node.children.iter().find(|c| c.name.as_ref() == "alert"))
-        .or_else(|| node.children.first())
-        .or_else(|| {
-            if let Some(wz_core::image::ImageValue::Property(p)) = &node.value {
-                p.children
-                    .iter()
-                    .find(|c| c.name.as_ref() == "stand1")
-                    .or_else(|| p.children.iter().find(|c| c.name.as_ref() == "alert"))
-                    .or_else(|| p.children.first())
-            } else {
-                None
-            }
-        })?;
-    // 첫 프레임
-    let frame = action.children.first().or_else(|| {
-        if let Some(wz_core::image::ImageValue::Property(p)) = &action.value {
-            p.children.first()
-        } else {
-            None
-        }
-    })?;
-
-    // 프레임의 모든 파트 (body, head, hair, arm, etc.) 로드
-    let mut part_nodes: Vec<&ImageNode> = frame.children.iter().collect();
-    if let Some(wz_core::image::ImageValue::Property(p)) = &frame.value {
-        part_nodes.extend(p.children.iter());
-    }
-
-    let mut parts: Vec<AvatarPart> = Vec::new();
-    let mut root = Bone::new("@root");
-
-    for pn in part_nodes {
-        fn find_png(n: &ImageNode) -> Option<wz_core::image::PngRef> {
-            use wz_core::image::ImageValue;
-            if let Some(ImageValue::Png(p)) = &n.value {
-                return Some(p.clone());
-            }
-            for c in &n.children {
-                if let Some(p) = find_png(c) {
-                    return Some(p);
-                }
-            }
-            if let Some(ImageValue::Property(p)) = &n.value {
-                if let Some(res) = find_png(p) {
-                    return Some(res);
-                }
-            }
-            None
-        }
-
-        // z-tag: WZ 노드에 "z" 자식이 있으면 사용, 없으면 이름 기반 추론
-        let z_tag = if let Some(wz_core::image::ImageValue::Property(p)) = &pn.value {
-            // Property 내부에서 z 찾기
-            p.children
-                .iter()
-                .find(|c| c.name.as_ref() == "z")
-                .and_then(|z| match &z.value {
-                    Some(wz_core::image::ImageValue::Str(s)) => Some((**s).to_string()),
-                    Some(wz_core::image::ImageValue::Int(_v)) => None, // int z → z_index
-                    _ => None,
-                })
-                .unwrap_or_else(|| part_z_tag(pn.name.as_ref()))
-        } else {
-            // Png 노드: 형제 노드에서 z 찾기 (부모 프레임에서)
-            part_z_tag(pn.name.as_ref())
-        };
-
-        // z_index: WZ 노드에 "z" 자식이 Int 이면 사용
-        let z_index = if let Some(wz_core::image::ImageValue::Property(p)) = &pn.value {
-            p.children
-                .iter()
-                .find(|c| c.name.as_ref() == "z")
-                .and_then(|z| match &z.value {
-                    Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
-                    _ => None,
-                })
-                .unwrap_or(-2)
-        } else {
-            -2
-        };
-
-        let Some(pr) = find_png(pn) else {
-            continue;
-        };
-        let file_src = wz_pool::FileSource::open(&canvas_path).ok()?;
-        let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
-        let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&pr, &src) else {
-            continue;
-        };
-
-        let slot_name = pn.name.to_string();
-
-        let mut skin = SkinLayer::new(slot_name.clone());
-        skin.z = z_tag;
-        skin.z_index = z_index;
-        skin.width = w;
-        skin.height = h;
-        append_loaded_part(&mut root, &pr, skin);
-
-        parts.push(AvatarPart {
-            slot: slot_name,
-            width: w,
-            height: h,
-            rgba,
-        });
-    }
-
-    // 2. Head 이미지 (00012000.img) 에서 head/face/hair 파트 로드
-    let head_img_name = "00012000.img";
-    if let Some(head_entry) = tree
-        .root
-        .entries
-        .iter()
-        .find(|e| e.node_type == 4 && e.name.as_deref() == Some(head_img_name))
+    if let Some((head_root, head_parts)) =
+        load_frame_parts(&arch, "00012000.img", &["front", "back"])
     {
-        if let Some(off) = head_entry.offset {
-            if let Ok(head_node) = arch.parse_image_at(off) {
-                // front 액션 우선
-                let head_action = head_node
-                    .children
-                    .iter()
-                    .find(|c| c.name.as_ref() == "front")
-                    .or_else(|| {
-                        head_node
-                            .children
-                            .iter()
-                            .find(|c| c.name.as_ref() == "back")
-                    })
-                    .or_else(|| head_node.children.first());
-
-                if let Some(ha) = head_action {
-                    // head action 의 자식이 Canvas 이면 직접 로드
-                    let mut head_parts: Vec<&ImageNode> = ha.children.iter().collect();
-                    if let Some(wz_core::image::ImageValue::Property(p)) = &ha.value {
-                        head_parts.extend(p.children.iter());
-                    }
-
-                    for pn in head_parts {
-                        fn find_png2(n: &ImageNode) -> Option<wz_core::image::PngRef> {
-                            use wz_core::image::ImageValue;
-                            if let Some(ImageValue::Png(p)) = &n.value {
-                                return Some(p.clone());
-                            }
-                            for c in &n.children {
-                                if let Some(p) = find_png2(c) {
-                                    return Some(p);
-                                }
-                            }
-                            if let Some(ImageValue::Property(p)) = &n.value {
-                                if let Some(res) = find_png2(p) {
-                                    return Some(res);
-                                }
-                            }
-                            None
-                        }
-                        let Some(pr) = find_png2(pn) else {
-                            continue;
-                        };
-                        let file_src = wz_pool::FileSource::open(&canvas_path).ok()?;
-                        let src: std::sync::Arc<dyn wz_pool::ByteSource> =
-                            std::sync::Arc::new(file_src);
-                        let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&pr, &src) else {
-                            continue;
-                        };
-
-                        let slot_name = pn.name.to_string();
-                        let z_tag = part_z_tag(&slot_name);
-
-                        let mut skin = SkinLayer::new(slot_name.clone());
-                        skin.z = z_tag;
-                        skin.width = w;
-                        skin.height = h;
-                        append_loaded_part(&mut root, &pr, skin);
-
-                        parts.push(AvatarPart {
-                            slot: slot_name,
-                            width: w,
-                            height: h,
-                            rgba,
-                        });
-                    }
-                }
-            }
-        }
+        root.skins.extend(head_root.skins);
+        root.children.extend(head_root.children);
+        parts.extend(head_parts);
     }
 
     // 3. 장비 아이템 로딩 (PoC: Cap 1000000)
@@ -664,155 +540,19 @@ pub fn load_avatar_with_equipment(
     }
 
     let arch = WzArchive::open(&canvas_path).ok()?;
-    let tree = arch.read_tree().ok()?;
 
-    let mut parts: Vec<AvatarPart> = Vec::new();
-    let mut root = Bone::new("@root");
+    let (mut root, mut parts) = load_frame_parts(
+        &arch,
+        &format!("{:08}.img", body_skin),
+        &["stand1", "alert"],
+    )?;
 
-    // Body: 0000{skin}00.img (skin=2000 → 00002000.img)
-    let body_img_name = format!("{:08}.img", body_skin);
-    if let Some(entry) = tree
-        .root
-        .entries
-        .iter()
-        .find(|e| e.node_type == 4 && e.name.as_deref() == Some(body_img_name.as_str()))
+    if let Some((head_root, head_parts)) =
+        load_frame_parts(&arch, "00012000.img", &["front", "back"])
     {
-        if let Some(off) = entry.offset {
-            if let Ok(node) = arch.parse_image_at(off) {
-                // stand1 액션 우선
-                let action = node
-                    .children
-                    .iter()
-                    .find(|c| c.name.as_ref() == "stand1")
-                    .or_else(|| node.children.iter().find(|c| c.name.as_ref() == "alert"))
-                    .or_else(|| node.children.first());
-                if let Some(act) = action {
-                    let frame = act.children.first();
-                    if let Some(f) = frame {
-                        let mut part_nodes: Vec<&wz_core::image::Node> =
-                            f.children.iter().collect();
-                        if let Some(wz_core::image::ImageValue::Property(p)) = &f.value {
-                            part_nodes.extend(p.children.iter());
-                        }
-                        for pn in part_nodes {
-                            fn find_png(
-                                n: &wz_core::image::Node,
-                            ) -> Option<wz_core::image::PngRef> {
-                                use wz_core::image::ImageValue;
-                                if let Some(ImageValue::Png(p)) = &n.value {
-                                    return Some(p.clone());
-                                }
-                                for c in &n.children {
-                                    if let Some(p) = find_png(c) {
-                                        return Some(p);
-                                    }
-                                }
-                                if let Some(ImageValue::Property(p)) = &n.value {
-                                    if let Some(res) = find_png(p) {
-                                        return Some(res);
-                                    }
-                                }
-                                None
-                            }
-                            let Some(pr) = find_png(pn) else {
-                                continue;
-                            };
-                            let file_src = wz_pool::FileSource::open(&canvas_path).ok()?;
-                            let src: std::sync::Arc<dyn wz_pool::ByteSource> =
-                                std::sync::Arc::new(file_src);
-                            let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&pr, &src) else {
-                                continue;
-                            };
-                            let slot_name = pn.name.to_string();
-                            let z_tag = part_z_tag(&slot_name);
-                            let mut skin = SkinLayer::new(slot_name.clone());
-                            skin.z = z_tag;
-                            skin.width = w;
-                            skin.height = h;
-                            append_loaded_part(&mut root, &pr, skin);
-                            parts.push(AvatarPart {
-                                slot: slot_name,
-                                width: w,
-                                height: h,
-                                rgba,
-                            });
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Head 로드
-    // Head is in the same canvas file (00012000.img)
-    if let Some(head_entry) = tree
-        .root
-        .entries
-        .iter()
-        .find(|e| e.node_type == 4 && e.name.as_deref() == Some("00012000.img"))
-    {
-        if let Some(off) = head_entry.offset {
-            if let Ok(head_node) = arch.parse_image_at(off) {
-                let head_action = head_node
-                    .children
-                    .iter()
-                    .find(|c| c.name.as_ref() == "front")
-                    .or_else(|| {
-                        head_node
-                            .children
-                            .iter()
-                            .find(|c| c.name.as_ref() == "back")
-                    })
-                    .or_else(|| head_node.children.first());
-                if let Some(ha) = head_action {
-                    let mut head_parts: Vec<&wz_core::image::Node> = ha.children.iter().collect();
-                    if let Some(wz_core::image::ImageValue::Property(p)) = &ha.value {
-                        head_parts.extend(p.children.iter());
-                    }
-                    for pn in head_parts {
-                        fn find_png2(n: &wz_core::image::Node) -> Option<wz_core::image::PngRef> {
-                            use wz_core::image::ImageValue;
-                            if let Some(ImageValue::Png(p)) = &n.value {
-                                return Some(p.clone());
-                            }
-                            for c in &n.children {
-                                if let Some(p) = find_png2(c) {
-                                    return Some(p);
-                                }
-                            }
-                            if let Some(ImageValue::Property(p)) = &n.value {
-                                if let Some(res) = find_png2(p) {
-                                    return Some(res);
-                                }
-                            }
-                            None
-                        }
-                        let Some(pr) = find_png2(pn) else {
-                            continue;
-                        };
-                        let file_src = wz_pool::FileSource::open(&canvas_path).ok()?;
-                        let src: std::sync::Arc<dyn wz_pool::ByteSource> =
-                            std::sync::Arc::new(file_src);
-                        let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&pr, &src) else {
-                            continue;
-                        };
-                        let slot_name = pn.name.to_string();
-                        let z_tag = part_z_tag(&slot_name);
-                        let mut skin = SkinLayer::new(slot_name.clone());
-                        skin.z = z_tag;
-                        skin.width = w;
-                        skin.height = h;
-                        append_loaded_part(&mut root, &pr, skin);
-                        parts.push(AvatarPart {
-                            slot: slot_name,
-                            width: w,
-                            height: h,
-                            rgba,
-                        });
-                    }
-                }
-            }
-        }
+        root.skins.extend(head_root.skins);
+        root.children.extend(head_root.children);
+        parts.extend(head_parts);
     }
 
     // Equipment 로드
@@ -1032,5 +772,23 @@ mod tests {
             "layer_count < parts count"
         );
         assert!(batch.vertex_count() > 0, "no vertices generated");
+    }
+}
+
+#[cfg(test)]
+mod prism_tests {
+    use super::*;
+
+    #[test]
+    fn avatar_part_applies_caller_supplied_prism() {
+        let mut part = AvatarPart {
+            slot: "cap".into(),
+            width: 1,
+            height: 1,
+            rgba: vec![255, 0, 0, 255],
+        };
+        let prism = crate::PrismData::new(0, 120, 100, 100);
+        part.apply_prism(&prism);
+        assert_ne!(part.rgba, vec![255, 0, 0, 255]);
     }
 }

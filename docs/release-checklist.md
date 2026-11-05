@@ -35,6 +35,6 @@
 
 ## 공개 후
 
-- [ ] 첫 공개 릴리스에서 `cargo install --path crates/wz-cli` 동작 확인
+- [x] `cargo install --path crates/wz-cli --debug --locked` 스모크 테스트: `wz 0.1.0`, `oracle expr 1+1 → 2`, `tree` 동작 확인
 - [ ] 외부 기여 가이드(이슈/PR 템플릿) 필요 여부 결정
 - [ ] wayfinder 맵을 GitHub 이슈로 옮길지 결정

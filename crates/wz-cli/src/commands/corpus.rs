@@ -1,8 +1,9 @@
 pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
     println!("wz {}", env!("CARGO_PKG_VERSION"));
-    println!("profile phase: 1 (포맷/암호 기반)");
-    println!("지원: AES-ECB keystream, SNOW2, ChaCha20(32-bit counter), PKG2 dir key");
-    println!("미구현: PKG1/PKG2/MS 컨테이너, 이미지 노드 (Phase 1.3~1.11 예정)");
+    println!("지원: PKG1/PKG2/MS 컨테이너, AES/SNOW2/ChaCha20");
+    println!("      이미지 트리/Canvas/UOL, WZ/DXBC/BC7 디코딩");
+    println!("      StringLinker(5 roots), 아바타/맵 데이터, C# 오라클 차분 하네스");
+    println!("미구현: 장비/무기 프레임 조립 및 프리즘 UI 연결 (post-v0.1)");
     Ok(())
 }
 pub fn cmd_fmt(n: usize) -> Result<(), Box<dyn std::error::Error>> {
