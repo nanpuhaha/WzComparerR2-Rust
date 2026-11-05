@@ -184,6 +184,114 @@ fn load_particle_texture(root: &std::path::Path, outlink: &str) -> Option<(u32, 
     None
 }
 
+fn node_scalar_int(node: &wz_core::image::Node, key: &str) -> Option<i32> {
+    let child = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == key)?;
+    match &child.value {
+        Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
+        Some(wz_core::image::ImageValue::Short(v)) => Some(i32::from(*v)),
+        Some(wz_core::image::ImageValue::Long(v)) => Some(*v as i32),
+        _ => None,
+    }
+}
+
+fn decode_node_frame(
+    node: &wz_core::image::Node,
+    archive: &wz_core::WzArchive,
+) -> Option<(u32, u32, Vec<u8>)> {
+    let png = node.first_canvas()?;
+    wz_image::decode_png_ref_to_rgba(&png, archive.source()).ok()
+}
+
+fn collect_frames(
+    node: &wz_core::image::Node,
+    archive: &wz_core::WzArchive,
+    out: &mut Vec<(u32, u32, Vec<u8>)>,
+    delays: &mut Vec<u32>,
+) {
+    if let Some(frame) = decode_node_frame(node, archive) {
+        out.push(frame);
+        delays.push(node_scalar_int(node, "delay").unwrap_or(100).max(20) as u32);
+        return;
+    }
+    for child in node.object_children() {
+        collect_frames(child, archive, out, delays);
+    }
+}
+
+fn load_background_layer(
+    root: &std::path::Path,
+    background: &wz_db::BackItem,
+) -> Option<crate::background::BackgroundLayer> {
+    let base = root.join("Map").join("Back").join("_Canvas");
+    let image_name = format!("{}.img", background.b_s);
+    let no = background.no.trim_matches('/');
+    let mut candidates: Vec<Vec<&str>> = Vec::new();
+    if background.ani == 1 {
+        candidates.push(vec!["ani", no]);
+    }
+    candidates.push(vec!["back", no]);
+    if no.is_empty() {
+        candidates.clear();
+        candidates.push(Vec::new());
+    }
+
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = wz_core::WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        for segments in &candidates {
+            let Some(target) = walk_node(&node, segments) else {
+                continue;
+            };
+            let mut frames = Vec::new();
+            let mut delays = Vec::new();
+            collect_frames(target, &archive, &mut frames, &mut delays);
+            if frames.is_empty() {
+                continue;
+            }
+            return Some(crate::background::BackgroundLayer {
+                x: background.x,
+                y: background.y,
+                rx: background.rx,
+                ry: background.ry,
+                cx: background.cx,
+                cy: background.cy,
+                tile_mode: background.tile_mode,
+                flip: background.flip,
+                alpha: background.alpha.clamp(0, 255) as u8,
+                front: background.front,
+                frames,
+                delays,
+            });
+        }
+    }
+    None
+}
+
 pub fn load_map_by_path(state: &mut AppState) {
     if state.tree.is_none() {
         state.map_status = "WZ 파일을 먼저 열어 주세요".into();
@@ -250,8 +358,8 @@ pub fn load_map_by_path(state: &mut AppState) {
             }
             let mut backgrounds = Vec::new();
             for background in &backgrounds_clone {
-                if let Some((w, h, rgba)) = load_back_image(&root, &background.b_s) {
-                    backgrounds.push((background.x, background.y, w, h, rgba, background.front));
+                if let Some(layer) = load_background_layer(&root, background) {
+                    backgrounds.push(layer);
                 }
             }
             let mut particles = Vec::new();
@@ -286,6 +394,8 @@ pub fn load_map_by_path(state: &mut AppState) {
         });
     }
 
+    state.map_background_time = 0.0;
+    state.map_background_last = 0.0;
     state.map_particle_layers.clear();
     state.map_particle_time = 0.0;
     state.map_particle_last = 0.0;
@@ -351,6 +461,42 @@ pub fn load_map_from_selection(state: &mut AppState) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn loads_background_frames_with_no_and_tile_mode() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let path = root
+            .join("Map")
+            .join("Map")
+            .join("Map0")
+            .join("Map0_000.wz");
+        if !path.exists() {
+            return;
+        }
+        let archive = wz_core::WzArchive::open(&path).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let entry = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("000010000.img"))
+            .expect("000010000.img");
+        let node = archive.parse_image_at(entry.offset.unwrap()).unwrap();
+        let map = wz_db::MapData::parse_from_node(&node);
+
+        let layer = load_background_layer(&root, &map.backgrounds[1]).expect("tile background");
+        assert_eq!(layer.cx, 0);
+        assert_eq!(layer.tile_mode, 4);
+        assert_eq!(layer.rx, -1);
+        assert!(!layer.frames.is_empty());
+        assert!(layer.width() > 0 && layer.height() > 0);
+
+        let tiled = load_background_layer(&root, &map.backgrounds[7]).expect("cx background");
+        assert_eq!(tiled.cx, 1200);
+        assert_eq!(tiled.tile_mode, 1);
+    }
 
     #[test]
     fn loads_particle_desc_and_texture() {

@@ -202,3 +202,15 @@ body/head loading, equipment loading, zmap, and the prism unit test.
 - GUI: map `info/bgm` playback and arbitrary Sound path playback with stop.
 - Verified with `Sound_000.wz/Bgm00.img/DragonDream` (1,261,192-byte MP3,
   44.1k/22.05k stereo) and `AchievementEff.img/GradeUp` (afplay exit 0).
+
+## Map backgrounds (animation / parallax / tiling)
+
+- Background layers now load `Map/Back/<bS>.img/<back|ani>/<no>` instead of the
+  first image canvas, matching `BackItem.LoadFromNode` + `PreloadResource`.
+- All frames and `delay` values are decoded; animation follows the same
+  accumulated-delay selection as the original frame animator.
+- Viewport position uses the original `GetMeshBack` rules: camera ratio
+  `camera * (100+rx)/100`, time scroll for tile modes 4-7, `cx/cy` tiling
+  (with width/height fallback for both-tile), flip UV and `a` alpha.
+- Real `000010000.img` test: 14 backgrounds, tile modes 1/4, `cx=1200/2000`,
+  non-empty `no` values load the correct 900x11 / 900x584 etc. frames.

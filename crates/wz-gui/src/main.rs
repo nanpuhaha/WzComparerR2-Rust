@@ -9,6 +9,7 @@
 
 mod app;
 mod async_io;
+mod background;
 mod panels;
 mod particles;
 mod render_bridge;

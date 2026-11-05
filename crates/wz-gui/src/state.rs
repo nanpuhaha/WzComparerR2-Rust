@@ -19,7 +19,7 @@ pub struct MapImages {
     pub tiles: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub objs: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub reactors: Vec<(i32, i32, u32, u32, Vec<u8>)>,
-    pub backgrounds: Vec<(i32, i32, u32, u32, Vec<u8>, bool)>,
+    pub backgrounds: Vec<crate::background::BackgroundLayer>,
     pub particles: Vec<crate::particles::MapParticleLayer>,
 }
 
@@ -90,7 +90,9 @@ pub struct AppState {
     pub map_path: String,
     pub current_map: Option<MapData>,
     pub map_back_image: Option<(u32, u32, Vec<u8>)>,
-    pub map_background_images: Vec<(i32, i32, u32, u32, Vec<u8>, bool)>,
+    pub map_background_images: Vec<crate::background::BackgroundLayer>,
+    pub map_background_time: f64,
+    pub map_background_last: f64,
     pub data_root: Option<std::path::PathBuf>,
     pub string_linker: Option<wz_db::StringLinker>,
     pub string_linker_status: String,
@@ -220,6 +222,8 @@ impl Default for AppState {
             current_map: None,
             map_back_image: None,
             map_background_images: Vec::new(),
+            map_background_time: 0.0,
+            map_background_last: 0.0,
             data_root: None,
             string_linker: None,
             string_linker_status: "StringLinker 미로드".into(),

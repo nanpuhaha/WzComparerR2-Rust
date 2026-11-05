@@ -15,7 +15,54 @@ fn argb_components(packed: u32) -> [f32; 4] {
     [r, g, b, a]
 }
 
+fn draw_background_layers(batch: &mut SpriteBatch, state: &AppState, front: bool) {
+    let center = [state.camera.center.x, state.camera.center.y];
+    let viewport = [state.viewport_size.0 as f32, state.viewport_size.1 as f32];
+    let time = state.map_background_time;
+    for (i, layer) in state.map_background_images.iter().enumerate() {
+        if layer.front != front || layer.frames.is_empty() {
+            continue;
+        }
+        let frame = layer.frame_at(time);
+        let Some((fw, fh, _)) = layer.frames.get(frame) else {
+            continue;
+        };
+        let position = crate::background::background_position(layer, center, time);
+        let (cx, cy) = crate::background::effective_tile_size(layer);
+        let (l, t, r, b) =
+            crate::background::tile_range(layer, position, center, viewport, state.camera.zoom);
+        let uv = if layer.flip {
+            [1.0, 0.0, 0.0, 1.0]
+        } else {
+            [0.0, 0.0, 1.0, 1.0]
+        };
+        let color = [1.0, 1.0, 1.0, layer.alpha as f32 / 255.0];
+        let key = GpuKey(10_000 + i as u32 * 64 + frame as u32);
+        let z = if front { 1000.0 } else { -1000.0 + i as f32 };
+        for ty in t..b {
+            for tx in l..r {
+                let x = position[0] + tx as f32 * cx as f32;
+                let y = position[1] + ty as f32 * cy as f32;
+                batch.push_quad(key, [x, y, *fw as f32, *fh as f32], z, uv, color);
+            }
+        }
+    }
+}
+
 pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
+    let animated_background = state
+        .map_background_images
+        .iter()
+        .any(|l| l.frames.len() > 1 || matches!(l.tile_mode, 4..=7));
+    if animated_background {
+        let now = ui.input(|i| i.time);
+        if state.map_background_last > 0.0 {
+            state.map_background_time += (now - state.map_background_last).clamp(0.0, 0.1);
+        }
+        state.map_background_last = now;
+        state.viewport_dirty = true;
+        ui.ctx().request_repaint();
+    }
     if !state.map_particle_layers.is_empty() {
         let now = ui.input(|i| i.time);
         if state.map_particle_last > 0.0 {
@@ -80,6 +127,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             if state.map_back_image.is_some()
                 || !state.map_tile_images.is_empty()
                 || !state.map_obj_images.is_empty()
+                || !state.map_background_images.is_empty()
             {
                 state.viewport_cached_has_back = state.map_back_image.is_some();
                 // back (non-front): z = -1000
@@ -87,17 +135,6 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                     state
                         .viewport_cached_layers
                         .push((GpuKey(2), [0.0, 0.0, 0.0, 0.0], -1000.0));
-                }
-                // backgrounds (back z=-1000, front z=1000)
-                for (i, (bx, by, bw, bh, _, front)) in
-                    state.map_background_images.iter().enumerate()
-                {
-                    let z = if *front { 1000.0 } else { -1000.0 + i as f32 };
-                    state.viewport_cached_layers.push((
-                        GpuKey(400 + i as u32),
-                        [*bx as f32, *by as f32, *bw as f32, *bh as f32],
-                        z,
-                    ));
                 }
                 // tiles: z = -500
                 for (i, (tx, ty, tw, th, _)) in state.map_tile_images.iter().enumerate() {
@@ -133,7 +170,10 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         }
 
         let mut batch = SpriteBatch::new();
-        if !state.viewport_cached_layers.is_empty() || state.viewport_cached_has_back {
+        if !state.viewport_cached_layers.is_empty()
+            || state.viewport_cached_has_back
+            || !state.map_background_images.is_empty()
+        {
             // 텍스처 업로드 (새 RenderContext 이므로 매 렌더 필요)
             if let Some((bw, bh, bpx)) = &state.map_back_image {
                 let _ = rc.create_texture(GpuKey(2), *bw, *bh, bpx);
@@ -147,13 +187,17 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             for (i, (_, _, rw, rh, rpx)) in state.map_reactor_images.iter().enumerate() {
                 let _ = rc.create_texture(GpuKey(300 + i as u32), *rw, *rh, rpx);
             }
-            for (i, (_, _, bw, bh, bpx, _)) in state.map_background_images.iter().enumerate() {
-                let _ = rc.create_texture(GpuKey(400 + i as u32), *bw, *bh, bpx);
+            for (i, layer) in state.map_background_images.iter().enumerate() {
+                for (f, (fw, fh, fpx)) in layer.frames.iter().enumerate() {
+                    let _ =
+                        rc.create_texture(GpuKey(10_000 + i as u32 * 64 + f as u32), *fw, *fh, fpx);
+                }
             }
             for (i, layer) in state.map_particle_layers.iter().enumerate() {
                 let (pw, ph, ppx) = &layer.texture;
                 let _ = rc.create_texture(GpuKey(600 + i as u32), *pw, *ph, ppx);
             }
+            draw_background_layers(&mut batch, state, false);
             // 캐시된 레이어를 z 순서로 정렬해 push
             let mut sorted: Vec<&(GpuKey, [f32; 4], f32)> =
                 state.viewport_cached_layers.iter().collect();
@@ -199,6 +243,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                     );
                 }
             }
+            draw_background_layers(&mut batch, state, true);
         }
         // map particles: 원본 ParticleSystem.Draw 와 같은 정적 샘플링.
         if !state.map_particle_layers.is_empty() {
