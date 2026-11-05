@@ -4553,6 +4553,7 @@ dependencies = [
  "egui",
  "glam",
  "rfd",
+ "serde_json",
  "wgpu",
  "wz-avatar",
  "wz-core",

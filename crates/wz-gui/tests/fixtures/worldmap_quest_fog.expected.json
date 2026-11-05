@@ -1,0 +1,12 @@
+{
+  "display_name": "WorldMapFixture",
+  "quests": [
+    {"name": "default", "open_maps": [3, 5], "close_maps": [9], "is_default": true, "quest": 123, "state": 2}
+  ],
+  "fogs": [
+    {"name": "0", "quest": 77, "state": 1}
+  ],
+  "spots": [
+    {"x": 11.0, "y": 22.0, "type": 1, "map_nos": [100000000]}
+  ]
+}

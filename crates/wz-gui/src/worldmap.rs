@@ -31,6 +31,27 @@ pub struct WorldMapFog {
     pub state: i32,
 }
 
+impl WorldMapQuest {
+    /// GUI 선택 항목 라벨 (C# ComboBox 표시와 동일한 필드 구성).
+    pub fn selector_label(&self) -> String {
+        format!(
+            "{} (open {}, close {}, q{}/s{}, default {})",
+            self.name,
+            self.open_maps.len(),
+            self.close_maps.len(),
+            self.quest,
+            self.state,
+            self.is_default
+        )
+    }
+}
+
+impl WorldMapFog {
+    pub fn selector_label(&self) -> String {
+        format!("{} (q{}/s{})", self.name, self.quest, self.state)
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct WorldMapView {
     pub name: String,

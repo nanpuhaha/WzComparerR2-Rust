@@ -1,0 +1,31 @@
+{
+  "name": "WorldMapFixture.img",
+  "children": [
+    {"name": "info", "children": [{"name": "WorldMap", "value": {"Str": "WorldMapFixture"}}]},
+    {"name": "QuestLimit", "children": [
+      {"name": "default", "children": [
+        {"name": "default", "value": {"Int": 1}},
+        {"name": "quest", "value": {"Int": 123}},
+        {"name": "state", "value": {"Int": 2}},
+        {"name": "openMap", "children": [
+          {"name": "0", "value": {"Int": 3}},
+          {"name": "1", "value": {"Int": 5}}
+        ]},
+        {"name": "closeMap", "children": [{"name": "0", "value": {"Int": 9}}]}
+      ]}
+    ]},
+    {"name": "Fog", "children": [
+      {"name": "0", "children": [
+        {"name": "quest", "value": {"Int": 77}},
+        {"name": "qState", "value": {"Int": 1}}
+      ]}
+    ]},
+    {"name": "MapList", "children": [
+      {"name": "0", "children": [
+        {"name": "spot", "value": {"Vector": [11, 22]}},
+        {"name": "type", "value": {"Int": 1}},
+        {"name": "mapNo", "children": [{"name": "0", "value": {"Int": 100000000}}]}
+      ]}
+    ]}
+  ]
+}

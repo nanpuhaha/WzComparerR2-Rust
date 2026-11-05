@@ -1784,6 +1784,79 @@ mod tests {
         );
     }
 
+    fn node_from_fixture(value: &serde_json::Value) -> wz_core::image::Node {
+        let mut node =
+            wz_core::image::Node::new(value.get("name").and_then(|v| v.as_str()).unwrap_or(""));
+        if let Some(value) = value.get("value") {
+            node.value = Some(if let Some(v) = value.get("Str").and_then(|v| v.as_str()) {
+                wz_core::image::ImageValue::Str(v.into())
+            } else if let Some(v) = value.get("Int").and_then(|v| v.as_i64()) {
+                wz_core::image::ImageValue::Int(v as i32)
+            } else if let Some(v) = value.get("Float").and_then(|v| v.as_f64()) {
+                wz_core::image::ImageValue::Float(v as f32)
+            } else if let Some(v) = value.get("Vector").and_then(|v| v.as_array()) {
+                wz_core::image::ImageValue::Vector(wz_core::image::Vec2 {
+                    x: v.first().and_then(|v| v.as_i64()).unwrap_or(0) as i32,
+                    y: v.get(1).and_then(|v| v.as_i64()).unwrap_or(0) as i32,
+                })
+            } else {
+                wz_core::image::ImageValue::Null
+            });
+        }
+        if let Some(children) = value.get("children").and_then(|v| v.as_array()) {
+            for child in children {
+                node.children.push(node_from_fixture(child));
+            }
+        }
+        node
+    }
+
+    #[test]
+    fn worldmap_quest_fog_fixture_matches_uiworldmap_behavior() {
+        let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        let fixture: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(base.join("worldmap_quest_fog.json")).unwrap(),
+        )
+        .unwrap();
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(base.join("worldmap_quest_fog.expected.json")).unwrap(),
+        )
+        .unwrap();
+        let node = node_from_fixture(&fixture);
+        let source: std::sync::Arc<dyn wz_pool::ByteSource> =
+            std::sync::Arc::new(wz_pool::MemorySource::new(vec![0u8; 4]));
+        let view =
+            parse_worldmap_node(std::path::Path::new("."), "WorldMapFixture", &node, &source);
+        let actual = serde_json::json!({
+            "display_name": view.display_name,
+            "quests": view.quests.iter().map(|q| serde_json::json!({
+                "name": q.name,
+                "open_maps": q.open_maps,
+                "close_maps": q.close_maps,
+                "is_default": q.is_default,
+                "quest": q.quest,
+                "state": q.state,
+            })).collect::<Vec<_>>(),
+            "fogs": view.fogs.iter().map(|f| serde_json::json!({
+                "name": f.name,
+                "quest": f.quest,
+                "state": f.state,
+            })).collect::<Vec<_>>(),
+            "spots": view.spots.iter().map(|s| serde_json::json!({
+                "x": s.x,
+                "y": s.y,
+                "type": s.spot_type,
+                "map_nos": s.map_nos,
+            })).collect::<Vec<_>>(),
+        });
+        assert_eq!(actual, expected);
+        assert_eq!(
+            view.quests[0].selector_label(),
+            "default (open 2, close 1, q123/s2, default true)"
+        );
+        assert_eq!(view.fogs[0].selector_label(), "0 (q77/s1)");
+    }
+
     #[test]
     fn real_worldmap_has_no_quest_or_fog_nodes() {
         let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {

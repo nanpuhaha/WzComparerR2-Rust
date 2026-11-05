@@ -398,3 +398,14 @@ body/head loading, equipment loading, zmap, and the prism unit test.
 - `real_worldmap_has_no_quest_or_fog_nodes` scans every image in
   `Map/WorldMap` (85+) and asserts `QuestLimit = 0`, `Fog = 0`; the parser/UI
   remains covered by the synthetic fixture test.
+
+## C# comparison fixtures
+
+- `crates/wz-db/tests/fixtures/map_scene_000010000.expected.json` is compared
+  field-for-field with Rust `MapData` (`map_scene_matches_csharp_expected_fixture`).
+- `crates/wz-gui/tests/fixtures/worldmap_quest_fog.json` is parsed as a WZ node
+  tree; the resulting Quest/Fog/spot JSON and GUI selector labels are compared
+  with `worldmap_quest_fog.expected.json`
+  (`worldmap_quest_fog_fixture_matches_uiworldmap_behavior`).
+- The client's 85+ WorldMap images contain no QuestLimit/Fog nodes, fixed by
+  `real_worldmap_has_no_quest_or_fog_nodes`.

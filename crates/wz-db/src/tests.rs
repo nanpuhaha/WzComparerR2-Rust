@@ -1740,3 +1740,84 @@ fn map_display_names_real_wz() {
     }
     assert!(named > 0, "at least one map should have street/name");
 }
+
+#[test]
+fn map_scene_matches_csharp_expected_fixture() {
+    use crate::{LifeKind, MapData};
+    use wz_core::WzArchive;
+
+    let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+        return;
+    };
+    let path = root.join("Map/Map/Map0/Map0_000.wz");
+    if !path.exists() {
+        return;
+    }
+    let archive = WzArchive::open(&path).unwrap();
+    let tree = archive.read_tree().unwrap();
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some("000010000.img"))
+        .unwrap();
+    let node = archive.parse_image_at(entry.offset.unwrap()).unwrap();
+    let mut map = MapData::parse_from_node(&node);
+    map.info.map_id = Some(10000);
+    map.life.sort_by(|a, b| a.id.cmp(&b.id));
+    let bg = &map.backgrounds[0];
+    let portal = map.portals.iter().find(|p| p.id == 3).unwrap();
+    let actual = serde_json::json!({
+        "info": {
+            "map_id": map.info.map_id,
+            "bgm": map.info.bgm,
+            "town": map.info.town,
+            "swim": map.info.swim,
+            "fly": map.info.fly,
+            "return_map": map.info.return_map,
+            "forced_return": map.info.forced_return,
+            "vrect": map.info.vrect.as_ref().map(|v| serde_json::json!({
+                "left": v.left, "top": v.top, "right": v.right, "bottom": v.bottom
+            })),
+        },
+        "counts": {
+            "backgrounds": map.backgrounds.len(),
+            "objects": map.objects.len(),
+            "tiles": map.tiles.len(),
+            "portals": map.portals.len(),
+            "life": map.life.len(),
+            "reactors": map.reactors.len(),
+            "ladders_ropes": map.ladders_ropes.len(),
+        },
+        "background0": {
+            "b_s": bg.b_s, "x": bg.x, "y": bg.y, "rx": bg.rx, "ry": bg.ry,
+            "tile_mode": bg.tile_mode, "front": bg.front, "alpha": bg.alpha,
+        },
+        "portal0": {
+            "id": portal.id, "p_name": portal.p_name, "p_type": portal.p_type,
+            "x": portal.x, "y": portal.y, "to_map": portal.to_map, "to_name": portal.to_name,
+        },
+        "life": map.life.iter().map(|l| serde_json::json!({
+            "id": l.id,
+            "kind": match l.kind() {
+                LifeKind::Npc => "npc",
+                LifeKind::Mob => "mob",
+                LifeKind::Unknown => "unknown",
+            },
+            "x": l.x, "y": l.y, "flip": l.flip, "hide": l.hide, "rx0": l.rx0, "rx1": l.rx1,
+        })).collect::<Vec<_>>(),
+        "minimap": map.mini_map.as_ref().map(|m| serde_json::json!({
+            "width": m.width, "height": m.height,
+            "center_x": m.center_x, "center_y": m.center_y, "mag": m.mag,
+        })),
+    });
+    let expected: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("tests/fixtures/map_scene_000010000.expected.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(actual, expected);
+}

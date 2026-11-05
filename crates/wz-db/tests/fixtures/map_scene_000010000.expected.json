@@ -1,0 +1,34 @@
+{
+  "info": {
+    "map_id": 10000,
+    "bgm": "Bgm58/The Beginnig of The Adventure",
+    "town": false,
+    "swim": false,
+    "fly": false,
+    "return_map": 1000000,
+    "forced_return": 999999999,
+    "vrect": {"left": -1310, "top": -892, "right": 960, "bottom": 915}
+  },
+  "counts": {
+    "backgrounds": 14,
+    "objects": 50,
+    "tiles": 456,
+    "portals": 4,
+    "life": 2,
+    "reactors": 0,
+    "ladders_ropes": 1
+  },
+  "background0": {
+    "b_s": "grassySoil_new", "x": -48, "y": -109, "rx": 0, "ry": 0,
+    "tile_mode": 1, "front": false, "alpha": 255
+  },
+  "portal0": {
+    "id": 3, "p_name": "out00", "p_type": 2, "x": 544, "y": 423,
+    "to_map": 20000, "to_name": "in00"
+  },
+  "life": [
+    {"id": "1541000", "kind": "npc", "x": -590, "y": 230, "flip": true, "hide": false, "rx0": -640, "rx1": -540},
+    {"id": "1541067", "kind": "npc", "x": -799, "y": 644, "flip": false, "hide": true, "rx0": -849, "rx1": -749}
+  ],
+  "minimap": {"width": 2313, "height": 1592, "center_x": 1338, "center_y": 635, "mag": 4}
+}

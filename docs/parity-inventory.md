@@ -41,7 +41,7 @@
 | `ToolTip` 맵 오브젝트 | `map.rs` + `String/ToolTipHelp.img` | ✅ | 실제 000050000 |
 | MiniMap canvas/icons/names | `map.rs` + GUI panel | ✅ | 2313x1592, 아이콘 4종, String 이름 |
 | `WorldMap` BaseImg/MapList | `wz-gui/src/worldmap.rs` | ✅ | 실제 WorldMap000 7 spots |
-| WorldMap `QuestLimit`/`Fog` | `worldmap.rs` + GUI | 🟡 | 합성 픽스처 + `real_worldmap_has_no_quest_or_fog_nodes` (85+ 이미지 0개) |
+| WorldMap `QuestLimit`/`Fog` | `worldmap.rs` + GUI | ✅ | WZ-node JSON fixture + expected UIWorldMap JSON/selector labels + `real_worldmap_has_no_quest_or_fog_nodes` (85+ 이미지 0개) |
 
 ## 4. MapRender 렌더링
 
@@ -72,8 +72,10 @@
 
 - ✅ Life 공격/추적/비행: attack/chase/fly 상태, 실 mob `9833307`
   (fly/attack1) 로드와 합성 상태 테스트.
-- 🟡 WorldMap QuestLimit/Fog: 파서+UI+합성 픽스처 테스트 완료. 실제
-  `WorldMap_000.wz` 85개 이미지 전수 스캔에서 QuestLimit/Fog 0개임을
+- ✅ WorldMap QuestLimit/Fog: `tests/fixtures/worldmap_quest_fog.json`을
+  실제 WZ 노드 구조로 파싱하고 expected JSON(QuestLimit open/close/quest/
+  state/default, Fog quest/qState, MapList mapNo)과 GUI selector 라벨을 비교.
+  실제 `WorldMap_000.wz` 85개 이미지에는 QuestLimit/Fog 0개임을
   `real_worldmap_has_no_quest_or_fog_nodes` 로 고정.
 - ✅/N/A Weather: 원본 MapRender 코드에 weather 로더/셰이더가 없고,
   클라이언트 맵/WZ에도 weather 노드·자산이 없음 (문서화된 미지원 데이터).
@@ -89,3 +91,15 @@ cargo deny check
 WZ_DATA_ROOT="$PWD/Data" cargo test --manifest-path crates/wz-gui/Cargo.toml --no-default-features
 cargo run -q --manifest-path crates/wz-gui/Cargo.toml --no-default-features -- --smoke Data/Map/Map/Map0/Map0_000.wz
 ```
+
+## C# 비교 검증 (추가)
+
+| 검증 | fixture/테스트 | 비교 대상 |
+|---|---|---|
+| MapData 기본/배경/포털/라이프/미니맵 | `crates/wz-db/tests/fixtures/map_scene_000010000.expected.json` + `map_scene_matches_csharp_expected_fixture` | C# `MapData.Load*` 필드/의미 |
+| WorldMap Quest/Fog | `crates/wz-gui/tests/fixtures/worldmap_quest_fog.*.json` + `worldmap_quest_fog_fixture_matches_uiworldmap_behavior` | C# `UIWorldMap.LoadQuestLimit/LoadFog` |
+| Water 상수/픽셀 | `loads_real_water_back_front_layers`, `water_shaders_produce_pixels` | C# `waterBack/waterFront` WZ 상수 + 렌더 출력 |
+| Life 상태 | `attack_state_runs_and_recovers`, `chase_moves_toward_target`, `fly_state_moves_vertically`, `loads_real_ambient_mob_attack_and_fly` | C# `BehaviorController` 상태 |
+
+WorldMap 실제 클라이언트 데이터는 QuestLimit/Fog 노드가 없어, 실제 WZ 파일 대신
+동일 노드 구조의 fixture로 파서/UI 출력을 C# 동작과 비교한다.

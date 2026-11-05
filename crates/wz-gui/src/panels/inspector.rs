@@ -424,17 +424,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             } else {
                 view.quests
                     .get(state.worldmap_quest_selected as usize)
-                    .map(|q| {
-                        format!(
-                            "{} (open {}, close {}, q{}/s{}, default {})",
-                            q.name,
-                            q.open_maps.len(),
-                            q.close_maps.len(),
-                            q.quest,
-                            q.state,
-                            q.is_default
-                        )
-                    })
+                    .map(|q| q.selector_label())
                     .unwrap_or_else(|| "없음".into())
             };
             egui::ComboBox::from_id_salt("worldmap_quest")
@@ -465,7 +455,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             } else {
                 view.fogs
                     .get(state.worldmap_fog_selected as usize)
-                    .map(|f| format!("{} (q{}/s{})", f.name, f.quest, f.state))
+                    .map(|f| f.selector_label())
                     .unwrap_or_else(|| "없음".into())
             };
             egui::ComboBox::from_id_salt("worldmap_fog")
