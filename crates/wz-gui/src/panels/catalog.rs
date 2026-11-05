@@ -717,6 +717,113 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                     });
             });
     }
+    ui.horizontal(|ui| {
+        if ui.button("선택 이미지 DB2 전체 화면 뷰어").clicked() {
+            let Some(sel) = state.selected.clone() else {
+                state.db2_status = "선택된 노드 없음".into();
+                return;
+            };
+            let Some(archive) = state.shared_archive.lock().unwrap().clone() else {
+                state.db2_status = "아카이브 없음".into();
+                return;
+            };
+            let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
+            let image_name = if name.ends_with(".img") {
+                name.to_string()
+            } else {
+                format!("{name}.img")
+            };
+            let Some(tree) = &state.tree else {
+                state.db2_status = "트리 없음".into();
+                return;
+            };
+            let Some(entry) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+            else {
+                state.db2_status = format!("엔트리 없음: {image_name}");
+                return;
+            };
+            let Some(offset) = entry.offset else {
+                state.db2_status = "오프셋 없음".into();
+                return;
+            };
+            let Ok(node) = archive.parse_image_at(offset) else {
+                state.db2_status = "이미지 파싱 실패".into();
+                return;
+            };
+            fn largest(node: &wz_core::image::Node) -> Option<wz_core::image::PngRef> {
+                let mut best = node.first_canvas();
+                fn walk(n: &wz_core::image::Node, best: &mut Option<wz_core::image::PngRef>) {
+                    if let Some(wz_core::image::ImageValue::Png(p)) = &n.value {
+                        let area = p.width.max(0) as i64 * p.height.max(0) as i64;
+                        let prev = best
+                            .as_ref()
+                            .map(|b| b.width.max(0) as i64 * b.height.max(0) as i64)
+                            .unwrap_or(-1);
+                        if area > prev {
+                            *best = Some(p.clone());
+                        }
+                    }
+                    for child in n.object_children() {
+                        walk(child, best);
+                    }
+                }
+                walk(node, &mut best);
+                best
+            }
+            let Some(png) = largest(&node) else {
+                state.db2_status = "Canvas 없음".into();
+                return;
+            };
+            match wz_image::decode_png_ref_to_rgba(&png, archive.source()) {
+                Ok((w, h, rgba)) => {
+                    let image = egui::ColorImage::from_rgba_unmultiplied(
+                        [w as usize, h as usize],
+                        &rgba,
+                    );
+                    state.db2_viewer_texture = Some(ui.ctx().load_texture(
+                        "db2_full_image",
+                        image,
+                        egui::TextureOptions::NEAREST,
+                    ));
+                    state.db2_viewer_label = format!("{image_name} (largest canvas {w}x{h})");
+                    state.db2_viewer_zoom = 1.0;
+                    state.db2_viewer_open = true;
+                    state.db2_status = format!("viewer: {w}x{h}");
+                }
+                Err(e) => state.db2_status = format!("Canvas 디코딩 실패: {e}"),
+            }
+        }
+    });
+    if state.db2_viewer_open {
+        let mut open = state.db2_viewer_open;
+        egui::Window::new("DB2 이미지 뷰어")
+            .open(&mut open)
+            .default_size([900.0, 700.0])
+            .resizable(true)
+            .show(ui.ctx(), |ui| {
+                ui.label(&state.db2_viewer_label);
+                ui.horizontal(|ui| {
+                    ui.label("zoom:");
+                    ui.add(egui::Slider::new(&mut state.db2_viewer_zoom, 0.1..=8.0));
+                    if ui.button("100%").clicked() {
+                        state.db2_viewer_zoom = 1.0;
+                    }
+                });
+                if let Some(texture) = &state.db2_viewer_texture {
+                    let size = texture.size_vec2() * state.db2_viewer_zoom;
+                    egui::ScrollArea::both()
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            ui.add(egui::Image::new(texture).fit_to_exact_size(size));
+                        });
+                }
+            });
+        state.db2_viewer_open = open;
+    }
     let filter = state.db2_filter.clone();
     let rows: Vec<&wz_db::Db2Row> = state
         .db2_rows

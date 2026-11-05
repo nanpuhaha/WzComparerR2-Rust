@@ -1693,3 +1693,57 @@ mod ring_tests {
         assert_eq!(rows.len(), 1127);
     }
 }
+
+#[cfg(test)]
+mod extra_character_tests {
+    use super::*;
+    use wz_db::{Arena, StringLinker};
+
+    #[test]
+    fn db2_extra_characters_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let string_wz = root.join("String/String_000.wz");
+        if !string_wz.exists() {
+            return;
+        }
+        let string_archive = WzArchive::open(&string_wz).unwrap();
+        let (arena, root_id) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, root_id));
+
+        for (category, expected_rows) in [
+            ("Android", 215),
+            ("ArcaneForce", 7),
+            ("AuthenticForce", 8),
+            ("Bits", 79),
+            ("EquipBag", 2),
+        ] {
+            let wz = root
+                .join("Character")
+                .join(category)
+                .join(format!("{category}_000.wz"));
+            if !wz.exists() {
+                continue;
+            }
+            let archive = WzArchive::open(&wz).unwrap();
+            let tree = archive.read_tree().unwrap();
+            let rows = wz_db::db2_character_grid_rows_for(&archive, &tree, &linker, Some(category));
+            let expected: serde_json::Value = serde_json::from_str(
+                &std::fs::read_to_string(
+                    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                        .join("tests/fixtures")
+                        .join(format!(
+                            "db2_characters_{}000.expected.json",
+                            category.to_ascii_lowercase()
+                        )),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            assert_eq!(serde_json::to_value(&rows).unwrap(), expected, "{category}");
+            assert_eq!(rows.len(), expected_rows, "{category}");
+        }
+    }
+}

@@ -676,3 +676,10 @@ merge semantics (recursive directory merge, conflict errors).
   `Ring_000.wz` → C# `characters` 1127 == Rust 1127 rows, exact match.
 - Afterimage images are named like `swordOL`, so the original Character loop
   skips them; both C# and Rust return 0 rows.
+
+### DB2 Character 추가 카테고리
+
+- Android(215), ArcaneForce(7), AuthenticForce(8), Bits(79), EquipBag(2)를
+  C# `characters` 출력과 비교해 모두 완전 일치했다.
+- DB2 전체 화면 이미지 뷰어: Catalog에서 선택 이미지의 최대 Canvas를 디코딩해
+  zoom/scroll 창으로 표시한다.

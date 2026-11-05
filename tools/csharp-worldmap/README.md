@@ -294,3 +294,9 @@ dotnet run ... -- characters ../../Data/Character/Ring/Ring_000.wz ../../Data/St
 Rust `wz db2-characters ... --json` matches all 1127 rows exactly.
 Afterimage returns 0 rows in both because its image names do not start with `0`
 (not a Character grid target).
+
+Additional verified Character categories (same `characters` mode):
+```
+Android 215, ArcaneForce 7, AuthenticForce 8, Bits 79, EquipBag 2
+```
+All match Rust `wz db2-characters` exactly.

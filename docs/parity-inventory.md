@@ -240,3 +240,16 @@ dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- mapnodes ../../Da
 - GUI `Catalog` panel loads the selected image into a filterable DB2 grid.
 - C# WzLib harness `db2` mode prints the same rows. Real test:
   `Weapon_000.wz/01302000.img` → C# 270 == Rust 270 rows, exact match.
+
+## 추가 Character 카테고리 및 이미지 뷰어
+
+| 입력 | 결과 | 검증 |
+|---|---|---|
+| `Character/Android/Android_000.wz` | 215 rows | C# `characters`와 완전 일치 |
+| `Character/ArcaneForce/ArcaneForce_000.wz` | 7 rows | 완전 일치 |
+| `Character/AuthenticForce/AuthenticForce_000.wz` | 8 rows | 완전 일치 |
+| `Character/Bits/Bits_000.wz` | 79 rows | 완전 일치 |
+| `Character/EquipBag/EquipBag_000.wz` | 2 rows | 완전 일치 |
+
+DB2 전체 화면 이미지 뷰어는 GUI Catalog에서 선택 이미지의 가장 큰 Canvas를
+디코딩해 확대/스크롤 창으로 표시한다.

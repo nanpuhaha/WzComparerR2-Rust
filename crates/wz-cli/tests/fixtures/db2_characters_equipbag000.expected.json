@@ -1,0 +1,42 @@
+[
+  {
+    "id": "01840000",
+    "name": "\uC548\uB4DC\uB85C\uC774\uB4DC 80\uCE78 \uAC00\uBC29",
+    "desc": "\uC548\uB4DC\uB85C\uC774\uB4DC\uB97C \uB123\uC744 \uC218 \uC788\uB294 80\uCE78 \uC9DC\uB9AC \uAC00\uBC29\uC774\uB2E4.\\r\\n#c\uC778\uBCA4\uD1A0\uB9AC \uB0B4 \uC548\uB4DC\uB85C\uC774\uB4DC \uAC00\uBC29 \uC911 5\uAC1C\uB9CC \uC0AC\uC6A9 \uAC00\uB2A5\uD558\uB2E4.",
+    "h1": "",
+    "has_icon": true,
+    "req_level": 0,
+    "req_job": 0,
+    "tuc": 0,
+    "islot": "",
+    "vslot": "",
+    "inc_str": 0,
+    "inc_dex": 0,
+    "inc_int": 0,
+    "inc_luk": 0,
+    "inc_pad": 0,
+    "inc_mad": 0,
+    "inc_pdd": 0,
+    "inc_mdd": 0
+  },
+  {
+    "id": "01840001",
+    "name": "\uD6C8\uC7A5 80\uCE78 \uAC00\uBC29",
+    "desc": "\uD6C8\uC7A5\uC744 \uB123\uC744 \uC218 \uC788\uB294 80\uCE78 \uC9DC\uB9AC \uAC00\uBC29\uC774\uB2E4.\\r\\n#c\uC778\uBCA4\uD1A0\uB9AC \uB0B4 \uD6C8\uC7A5 \uAC00\uBC29 \uC911 5\uAC1C\uB9CC \uC0AC\uC6A9 \uAC00\uB2A5\uD558\uB2E4.",
+    "h1": "",
+    "has_icon": true,
+    "req_level": 0,
+    "req_job": 0,
+    "tuc": 0,
+    "islot": "",
+    "vslot": "",
+    "inc_str": 0,
+    "inc_dex": 0,
+    "inc_int": 0,
+    "inc_luk": 0,
+    "inc_pad": 0,
+    "inc_mad": 0,
+    "inc_pdd": 0,
+    "inc_mdd": 0
+  }
+]

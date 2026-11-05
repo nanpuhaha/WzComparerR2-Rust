@@ -84,9 +84,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
    `wz db2-characters`, GUI Catalog). Character는 Coat(682), Cap(3166),
    Shoes(1703), Accessory(2369), Longcoat(2493), Glove(661), Pants(579),
    Shield(142), Cape(1139), PetEquip(511), Weapon(5655), Hair(9004),
-   Face(7424), Mechanic(23), Dragon(16), Ring(1127) 열여섯 카테고리를
-   실데이터 비교했고, 나머지 13개 전용 그리드와 전체 화면 이미지 뷰어 UI는
-   미구현.
+   Face(7424), Mechanic(23), Dragon(16), Ring(1127), Android(215),
+   ArcaneForce(7), AuthenticForce(8), Bits(79), EquipBag(2) 스물한 카테고리를
+   실데이터 비교했고, DB2 전체 화면 이미지 뷰어(GUI)도 구현했다. 나머지 8개
+   전용 그리드는 미구현.
 6. `WzComparerR2.Common/Controls` (2,138 LOC), `OpenAPI` (2,086 LOC) — 미구현.
 7. `LuaConsole` (1,451), `Network` (1,954), `PluginBase` (693) — 미구현.
 
@@ -170,3 +171,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - Common Controls/OpenAPI, LuaConsole, Network, PluginBase.
 - WorldMap 실제 QuestLimit/Fog 데이터는 클라이언트에 없음.
 - weather는 원본 C# 로더/에셋에 없음.
+
+## DB2 전체 화면 이미지 뷰어
+
+- GUI Catalog의 `선택 이미지 DB2 전체 화면 뷰어` 버튼이 선택 이미지에서 가장 큰
+  Canvas를 디코딩해 별도 창에 표시한다. zoom 슬라이더(0.1..=8.0), 100% 버튼,
+  양방향 스크롤을 지원한다.
+- `crates/wz-gui/src/panels/catalog.rs`의 `egui::Window` + `ScrollArea` 구현.
