@@ -44,7 +44,7 @@ pub use linker::{
 pub use map::{
     BackItem, Foothold, FootholdTree, LadderRope, LadderRopeKind, LifeKind, MapData, MapEvent,
     MapInfo, MapLife, MapLight, MapLight2D, MapParticle, MapPortal, MapReactor, MapVirtualRect,
-    ObjItem, TileItem,
+    MiniMapInfo, ObjItem, TileItem,
 };
 pub use node::{NodeId, NodeValue, RawDataRef};
 pub use particle::{parse_particle_desc, ParticleDesc, ParticleTexture};

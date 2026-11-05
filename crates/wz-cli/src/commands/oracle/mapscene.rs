@@ -147,6 +147,20 @@ pub fn cmd_oracle_mapscene(
         .collect();
     res.insert("life".into(), serde_json::Value::Array(life_items));
 
+    // minimap metadata
+    if let Some(mini) = &map_data.mini_map {
+        res.insert(
+            "minimap".into(),
+            serde_json::json!({
+                "width": mini.width,
+                "height": mini.height,
+                "center_x": mini.center_x,
+                "center_y": mini.center_y,
+                "mag": mini.mag,
+            }),
+        );
+    }
+
     // reactors
     let reactor_items: Vec<serde_json::Value> = map_data
         .reactors

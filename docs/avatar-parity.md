@@ -229,3 +229,20 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   `../../1002009/0/Hit` are followed before decoding.
 - Real-data tests: `1002009` hit frames (64x45, 86x56), `100000` stage 0
   (29x35), `Reactor.img/1209001/0` UOL sound decode.
+
+## Map life & minimap
+
+- `MapData.life` now carries the map placement index. `wz-gui::life` loads
+  `Mob/<id>.img` / `Npc/<id>.img` `stand` (fallback `default`/`move`) frames,
+  follows `info/link`, and keeps canvas origin/flip/hide/delay.
+- Canvas `_outlink` values (for example
+  `Npc/_Canvas/1541000.img/stand/0`) are resolved through the corresponding
+  `_Canvas` archive; the 1x1 placeholder canvas is not used.
+- The viewport animates life by accumulated frame delay, draws at
+  `(x-origin, y-origin)` with flip, skips `hide`, and draws NPC/mob names
+  above the head using StringLinker (`info/hideName` honored).
+- `MapData.mini_map` parses `miniMap` width/height/center/mag; the GUI loads
+  the `miniMap/canvas` (including `_outlink`) and displays it with a camera
+  marker.
+- Real tests: NPC `1541000` (48x75 stand) + hidden `1541067`, mob `100100`,
+  `000010000` minimap `2313x1592 center=(1338,635) mag=4`, canvas pixels.

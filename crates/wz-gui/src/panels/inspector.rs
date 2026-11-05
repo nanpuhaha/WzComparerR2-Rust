@@ -252,6 +252,46 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             m.tiles.len()
         ));
         ui.label(format!("ladders/ropes: {}", m.ladders_ropes.len()));
+        if let Some(info) = &m.mini_map {
+            ui.label(format!(
+                "minimap: {}x{} center=({},{}) mag={}",
+                info.width, info.height, info.center_x, info.center_y, info.mag
+            ));
+        }
+    }
+
+    // 미니맵 캔버스 + 현재 카메라 위치 표시
+    if state.map_minimap_texture.is_none() {
+        if let Some((w, h, rgba, _)) = &state.map_minimap {
+            let image = egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
+            state.map_minimap_texture = Some(ui.ctx().load_texture(
+                "map_minimap",
+                image,
+                egui::TextureOptions::NEAREST,
+            ));
+        }
+    }
+    if let (Some(texture), Some((_, _, _, info))) = (&state.map_minimap_texture, &state.map_minimap)
+    {
+        let max_w = 240.0f32;
+        let tw = texture.size_vec2().x.max(1.0);
+        let th = texture.size_vec2().y.max(1.0);
+        let scale = (max_w / tw).min(1.0);
+        let response =
+            ui.add(egui::Image::new(texture).fit_to_exact_size(egui::vec2(tw * scale, th * scale)));
+        if info.width > 0 && info.height > 0 {
+            let rect = response.rect;
+            let cx = (state.camera.center.x + info.center_x as f32) / info.width as f32;
+            let cy = (state.camera.center.y + info.center_y as f32) / info.height as f32;
+            if (0.0..=1.0).contains(&cx) && (0.0..=1.0).contains(&cy) {
+                let pos = egui::pos2(
+                    rect.min.x + cx * rect.width(),
+                    rect.min.y + cy * rect.height(),
+                );
+                ui.painter()
+                    .circle_stroke(pos, 4.0, egui::Stroke::new(1.5, egui::Color32::YELLOW));
+            }
+        }
     }
 
     ui.separator();

@@ -15,6 +15,41 @@ fn argb_components(packed: u32) -> [f32; 4] {
     [r, g, b, a]
 }
 
+fn life_key(view: usize, frame: usize) -> GpuKey {
+    GpuKey(30_000 + view as u32 * 64 + frame as u32)
+}
+
+fn draw_lifes(batch: &mut SpriteBatch, state: &AppState) {
+    for (i, life) in state.map_lifes.iter().enumerate() {
+        if life.hidden {
+            continue;
+        }
+        let Some(frame_index) = life
+            .animation
+            .frames
+            .get(life.animation.frame_at(state.map_life_time))
+            .map(|_| life.animation.frame_at(state.map_life_time))
+        else {
+            continue;
+        };
+        let frame = &life.animation.frames[frame_index];
+        let x = (life.x - frame.origin.0) as f32;
+        let y = (life.y - frame.origin.1) as f32;
+        let uv = if life.flip {
+            [1.0, 0.0, 0.0, 1.0]
+        } else {
+            [0.0, 0.0, 1.0, 1.0]
+        };
+        batch.push_quad(
+            life_key(i, frame_index),
+            [x, y, frame.width as f32, frame.height as f32],
+            10.0 + life.index as f32 * 0.001,
+            uv,
+            [1.0, 1.0, 1.0, 1.0],
+        );
+    }
+}
+
 fn reactor_key(view: usize, stage: usize, hit: bool, frame: usize) -> GpuKey {
     GpuKey(
         20_000 + view as u32 * 1024 + (if hit { 32 } else { 0 }) + stage as u32 * 64 + frame as u32,
@@ -106,6 +141,16 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             state.map_background_time += (now - state.map_background_last).clamp(0.0, 0.1);
         }
         state.map_background_last = now;
+        state.viewport_dirty = true;
+        ui.ctx().request_repaint();
+    }
+    let life_animating = state.map_lifes.iter().any(|l| l.animation.frames.len() > 1);
+    if life_animating {
+        let now = ui.input(|i| i.time);
+        if state.map_life_last > 0.0 {
+            state.map_life_time += (now - state.map_life_last).clamp(0.0, 0.1);
+        }
+        state.map_life_last = now;
         state.viewport_dirty = true;
         ui.ctx().request_repaint();
     }
@@ -260,6 +305,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             || state.viewport_cached_has_back
             || !state.map_background_images.is_empty()
             || !state.map_reactor_images.is_empty()
+            || !state.map_lifes.is_empty()
         {
             // 텍스처 업로드 (새 RenderContext 이므로 매 렌더 필요)
             if let Some((bw, bh, bpx)) = &state.map_back_image {
@@ -297,6 +343,12 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                 for (f, (fw, fh, fpx)) in layer.frames.iter().enumerate() {
                     let _ =
                         rc.create_texture(GpuKey(10_000 + i as u32 * 64 + f as u32), *fw, *fh, fpx);
+                }
+            }
+            for (i, life) in state.map_lifes.iter().enumerate() {
+                for (f, frame) in life.animation.frames.iter().enumerate() {
+                    let _ =
+                        rc.create_texture(life_key(i, f), frame.width, frame.height, &frame.rgba);
                 }
             }
             for (i, layer) in state.map_particle_layers.iter().enumerate() {
@@ -351,6 +403,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             }
             draw_background_layers(&mut batch, state, true);
         }
+        draw_lifes(&mut batch, state);
         draw_reactors(&mut batch, state);
         // map particles: 원본 ParticleSystem.Draw 와 같은 정적 샘플링.
         if !state.map_particle_layers.is_empty() {
@@ -401,6 +454,33 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         ui.add(egui::Image::new(tex).max_width(state.viewport_size.0 as f32));
     } else {
         ui.label("(뷰포트 렌더링 대기)");
+    }
+
+    // 라이프 이름 (원본과 같이 NPC/몹 머리 위에 표시)
+    if let Some(tex) = &state.viewport_texture {
+        let painter = ui.painter();
+        let rect = resp.rect;
+        for life in &state.map_lifes {
+            if life.hidden || life.hide_name {
+                continue;
+            }
+            let Some(name) = &life.name else {
+                continue;
+            };
+            if let Some(frame) = life.draw_frame(state.map_life_time) {
+                let top = glam::Vec2::new(life.x as f32, (life.y - frame.height as i32) as f32);
+                let screen = state.camera.world_to_screen(top);
+                let pos = egui::pos2(rect.min.x + screen.x, rect.min.y + screen.y);
+                painter.text(
+                    pos,
+                    egui::Align2::CENTER_BOTTOM,
+                    name,
+                    egui::FontId::proportional(11.0),
+                    egui::Color32::from_rgb(255, 235, 120),
+                );
+            }
+        }
+        let _ = tex;
     }
 
     // 발판 선분

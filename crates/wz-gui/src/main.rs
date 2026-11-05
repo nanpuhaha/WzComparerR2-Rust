@@ -10,6 +10,7 @@
 mod app;
 mod async_io;
 mod background;
+mod life;
 mod panels;
 mod particles;
 mod reactor;

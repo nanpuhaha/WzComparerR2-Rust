@@ -24,6 +24,171 @@ fn reactor_origin(png: &wz_core::image::PngRef) -> (i32, i32) {
     (0, 0)
 }
 
+fn find_life_image(
+    root: &std::path::Path,
+    npc: bool,
+    id: i32,
+) -> Option<(
+    wz_core::image::Node,
+    std::sync::Arc<dyn wz_pool::ByteSource>,
+)> {
+    let dir = root.join(if npc { "Npc" } else { "Mob" });
+    let image = format!("{id:07}.img");
+    let mut dirs = vec![dir.clone()];
+    dirs.push(dir.join("_Canvas"));
+    for base in dirs {
+        for entry in std::fs::read_dir(base).ok()?.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+                continue;
+            }
+            let Ok(archive) = wz_core::WzArchive::open(&path) else {
+                continue;
+            };
+            let Ok(tree) = archive.read_tree() else {
+                continue;
+            };
+            let Some(image_entry) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(image.as_str()))
+            else {
+                continue;
+            };
+            let Some(offset) = image_entry.offset else {
+                continue;
+            };
+            let Ok(node) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            return Some((node, archive.source().clone()));
+        }
+    }
+    None
+}
+
+fn collect_life_animation(
+    root: &std::path::Path,
+    node: &wz_core::image::Node,
+    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+) -> crate::life::LifeAnimation {
+    let mut animation = crate::life::LifeAnimation::default();
+    let Some(target) = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "stand")
+        .or_else(|| {
+            node.object_children()
+                .iter()
+                .find(|c| c.name.as_ref() == "default")
+        })
+        .or_else(|| {
+            node.object_children()
+                .iter()
+                .find(|c| c.name.as_ref() == "move")
+        })
+    else {
+        return animation;
+    };
+    let mut children: Vec<&wz_core::image::Node> = target
+        .object_children()
+        .iter()
+        .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+        .collect();
+    children.sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+    if children.is_empty() {
+        if let Some((w, h, rgba)) = decode_canvas_node(root, target, source) {
+            animation.frames.push(crate::life::LifeFrame {
+                width: w,
+                height: h,
+                rgba,
+                origin: node_origin(target),
+            });
+            animation
+                .delays
+                .push(node_scalar_int(target, "delay").unwrap_or(100).max(20) as u32);
+        }
+        return animation;
+    }
+    for child in children {
+        let Some((w, h, rgba)) = decode_canvas_node(root, child, source) else {
+            continue;
+        };
+        animation.frames.push(crate::life::LifeFrame {
+            width: w,
+            height: h,
+            rgba,
+            origin: node_origin(child),
+        });
+        animation
+            .delays
+            .push(node_scalar_int(child, "delay").unwrap_or(100).max(20) as u32);
+    }
+    animation
+}
+
+fn load_life_view(root: &std::path::Path, life: &wz_db::MapLife) -> Option<crate::life::LifeView> {
+    let npc = matches!(life.kind(), wz_db::LifeKind::Npc);
+    let mut id = life.id.parse::<i32>().unwrap_or(0);
+    if id == 0 {
+        return None;
+    }
+    let (mut node, mut source) = find_life_image(root, npc, id)?;
+    for _ in 0..8 {
+        let Some(link) = node
+            .object_children()
+            .iter()
+            .find(|c| c.name.as_ref() == "info")
+            .and_then(|info| {
+                info.object_children()
+                    .iter()
+                    .find(|c| c.name.as_ref() == "link")
+            })
+            .and_then(|c| match &c.value {
+                Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
+                _ => None,
+            })
+        else {
+            break;
+        };
+        id = link;
+        let (linked, linked_source) = find_life_image(root, npc, id)?;
+        node = linked;
+        source = linked_source;
+    }
+    let animation = collect_life_animation(root, &node, &source);
+    if animation.frames.is_empty() {
+        return None;
+    }
+    let hide_name = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "info")
+        .and_then(|info| {
+            info.object_children()
+                .iter()
+                .find(|c| c.name.as_ref() == "hideName")
+        })
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Int(v)) => Some(*v != 0),
+            _ => None,
+        })
+        .unwrap_or(false);
+    Some(crate::life::LifeView {
+        id,
+        index: life.index,
+        npc,
+        x: life.x,
+        y: life.y,
+        flip: life.flip,
+        hidden: life.hide,
+        name: None,
+        hide_name,
+        animation,
+    })
+}
+
 fn find_reactor_node(
     root: &std::path::Path,
     id: i32,
@@ -312,6 +477,164 @@ fn collect_frames(
     }
 }
 
+fn node_origin(node: &wz_core::image::Node) -> (i32, i32) {
+    if let Some(origin) = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "origin")
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Vector(v)) => Some((v.x, v.y)),
+            _ => None,
+        })
+    {
+        return origin;
+    }
+    node.first_canvas()
+        .map(|png| reactor_origin(&png))
+        .unwrap_or((0, 0))
+}
+
+fn png_outlink(png: &wz_core::image::PngRef) -> Option<String> {
+    let sub = png.sub_property.as_ref()?;
+    sub.object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "_outlink")
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Str(s)) => Some(s.to_string()),
+            _ => None,
+        })
+}
+
+fn decode_canvas_node(
+    root: &std::path::Path,
+    node: &wz_core::image::Node,
+    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+) -> Option<(u32, u32, Vec<u8>)> {
+    if let Some(outlink) = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "_outlink")
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Str(s)) => Some(s.to_string()),
+            _ => None,
+        })
+    {
+        return decode_outlink_canvas(root, &outlink, 0);
+    }
+    let png = node.first_canvas()?;
+    if let Some(outlink) = png_outlink(&png) {
+        return decode_outlink_canvas(root, &outlink, 0);
+    }
+    wz_image::decode_png_ref_to_rgba(&png, source).ok()
+}
+
+fn decode_outlink_canvas(
+    root: &std::path::Path,
+    outlink: &str,
+    depth: usize,
+) -> Option<(u32, u32, Vec<u8>)> {
+    if depth > 8 {
+        return None;
+    }
+    let (image_part, sub) = outlink.split_once(".img/")?;
+    let image_name = format!("{}.img", image_part.rsplit('/').next()?);
+    let dir = root.join(image_part).parent()?.to_path_buf();
+    let (image, source) = find_image_in_dir(&dir, &image_name)?;
+    let segments: Vec<&str> = sub.split('/').filter(|s| !s.is_empty()).collect();
+    let target = walk_node(&image, &segments)?;
+    if let Some(next) = target
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "_outlink")
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Str(s)) => Some(s.to_string()),
+            _ => None,
+        })
+    {
+        return decode_outlink_canvas(root, &next, depth + 1);
+    }
+    let png = target.first_canvas()?;
+    if let Some(next) = png_outlink(&png) {
+        return decode_outlink_canvas(root, &next, depth + 1);
+    }
+    wz_image::decode_png_ref_to_rgba(&png, &source).ok()
+}
+
+fn find_image_in_dir(
+    dir: &std::path::Path,
+    image_name: &str,
+) -> Option<(
+    wz_core::image::Node,
+    std::sync::Arc<dyn wz_pool::ByteSource>,
+)> {
+    for entry in std::fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = wz_core::WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image_name))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        return Some((node, archive.source().clone()));
+    }
+    None
+}
+
+fn load_minimap_canvas(
+    root: &std::path::Path,
+    map_node: &wz_core::image::Node,
+) -> Option<(u32, u32, Vec<u8>)> {
+    let mini = map_node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "miniMap")?;
+    let canvas = mini
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "canvas")?;
+    if let Some(outlink) = canvas
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "_outlink")
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Str(s)) => Some(s.to_string()),
+            _ => None,
+        })
+    {
+        return decode_outlink_canvas(root, &outlink, 0);
+    }
+    let png = canvas.first_canvas()?;
+    if let Some(outlink) = png_outlink(&png) {
+        return decode_outlink_canvas(root, &outlink, 0);
+    }
+    let source = map_node_source(root, map_node)?;
+    wz_image::decode_png_ref_to_rgba(&png, &source).ok()
+}
+
+fn map_node_source(
+    _root: &std::path::Path,
+    _node: &wz_core::image::Node,
+) -> Option<std::sync::Arc<dyn wz_pool::ByteSource>> {
+    None
+}
+
 fn load_background_layer(
     root: &std::path::Path,
     background: &wz_db::BackItem,
@@ -406,6 +729,12 @@ pub fn load_map_by_path(state: &mut AppState) {
     let data_root = find_data_root(state.archive_path.as_deref());
     state.data_root = data_root.clone();
 
+    state.map_minimap = data_root
+        .as_deref()
+        .and_then(|root| load_minimap_canvas(root, &node))
+        .and_then(|(w, h, rgba)| map.mini_map.clone().map(|info| (w, h, rgba, info)));
+    state.map_minimap_texture = None;
+
     let back_img = if let (Some(root), Some(first)) = (data_root.as_ref(), map.backgrounds.first())
     {
         load_back_image(root, &first.b_s)
@@ -421,6 +750,7 @@ pub fn load_map_by_path(state: &mut AppState) {
         let reactors_clone = map.reactors.clone();
         let backgrounds_clone = map.backgrounds.clone();
         let particles_clone = map.particles.clone();
+        let life_clone = map.life.clone();
         let (tx, rx) = crossbeam_channel::unbounded();
         state.map_images_rx = Some(rx);
         std::thread::spawn(move || {
@@ -473,12 +803,19 @@ pub fn load_map_by_path(state: &mut AppState) {
                     ry: particle.ry,
                 });
             }
+            let mut lifes = Vec::new();
+            for life in &life_clone {
+                if let Some(view) = load_life_view(&root, life) {
+                    lifes.push(view);
+                }
+            }
             let _ = tx.send(crate::state::MapImages {
                 tiles,
                 objs,
                 reactors,
                 backgrounds,
                 particles,
+                lifes,
             });
         });
     }
@@ -550,6 +887,81 @@ pub fn load_map_from_selection(state: &mut AppState) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn loads_real_npc_and_mob_frames() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let npc = wz_db::MapLife {
+            index: 0,
+            id: "1541000".into(),
+            life_type: "n".into(),
+            x: -590,
+            y: 230,
+            flip: true,
+            ..Default::default()
+        };
+        let Some(view) = load_life_view(&root, &npc) else {
+            return;
+        };
+        assert!(view.npc);
+        assert!(view.flip);
+        assert!(!view.animation.frames.is_empty());
+        assert!(view.animation.frames[0].width > 1);
+        assert!(view
+            .animation
+            .frames
+            .iter()
+            .any(|f| f.rgba.chunks(4).any(|p| p[3] != 0)));
+
+        let mob = wz_db::MapLife {
+            index: 1,
+            id: "100100".into(),
+            life_type: "m".into(),
+            x: 0,
+            y: 0,
+            ..Default::default()
+        };
+        if let Some(view) = load_life_view(&root, &mob) {
+            assert!(!view.npc);
+            assert!(!view.animation.frames.is_empty());
+        }
+    }
+
+    #[test]
+    fn loads_real_minimap_canvas() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let path = root
+            .join("Map")
+            .join("Map")
+            .join("Map0")
+            .join("Map0_000.wz");
+        if !path.exists() {
+            return;
+        }
+        let archive = wz_core::WzArchive::open(&path).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let entry = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("000010000.img"))
+            .expect("000010000.img");
+        let node = archive.parse_image_at(entry.offset.unwrap()).unwrap();
+        let map = wz_db::MapData::parse_from_node(&node);
+        let info = map.mini_map.expect("miniMap info");
+        assert_eq!(info.width, 2313);
+        assert_eq!(info.height, 1592);
+        assert_eq!(info.center_x, 1338);
+        assert_eq!(info.mag, 4);
+        let (w, h, rgba) = load_minimap_canvas(&root, &node).expect("minimap canvas");
+        assert!(w > 1 && h > 1);
+        assert_eq!(rgba.len(), (w * h * 4) as usize);
+        assert!(rgba.chunks(4).any(|p| p[3] != 0));
+    }
 
     #[test]
     fn loads_background_frames_with_no_and_tile_mode() {

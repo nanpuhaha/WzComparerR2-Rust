@@ -28,6 +28,16 @@ pub struct MapInfo {
     pub fly: bool,
 }
 
+/// 미니맵 메타데이터 (`MiniMap.cs`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MiniMapInfo {
+    pub width: i32,
+    pub height: i32,
+    pub center_x: i32,
+    pub center_y: i32,
+    pub mag: i32,
+}
+
 /// 발판 (Foothold) 선분 데이터.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Foothold {
@@ -116,6 +126,8 @@ pub enum LifeKind {
 /// 라이프 (NPC / Mob) 배치 데이터.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MapLife {
+    /// 맵 내 배치 순서 (`LifeItem.Index`).
+    pub index: i32,
     pub id: String,
     /// WZ 원시 라이프 타입 문자열 ("n": NPC, "m": Mob).
     pub life_type: String,
@@ -339,6 +351,7 @@ pub struct MapData {
     pub tiles: Vec<TileItem>,
     pub reactors: Vec<MapReactor>,
     pub light: Option<MapLight>,
+    pub mini_map: Option<MiniMapInfo>,
     pub particles: Vec<MapParticle>,
     pub map_events: Vec<MapEvent>,
 }
@@ -350,6 +363,16 @@ impl MapData {
 
         if let Some(info_id) = arena.find_child(root, "info") {
             data.info = parse_map_info_arena(arena, info_id);
+        }
+
+        if let Some(mini_id) = arena.find_child(root, "miniMap") {
+            data.mini_map = Some(MiniMapInfo {
+                width: get_arena_int(arena, mini_id, "width").unwrap_or(0),
+                height: get_arena_int(arena, mini_id, "height").unwrap_or(0),
+                center_x: get_arena_int(arena, mini_id, "centerX").unwrap_or(0),
+                center_y: get_arena_int(arena, mini_id, "centerY").unwrap_or(0),
+                mag: get_arena_int(arena, mini_id, "mag").unwrap_or(0),
+            });
         }
 
         if let Some(fh_id) = arena.find_child(root, "foothold") {
@@ -649,7 +672,7 @@ fn parse_portals_arena(arena: &crate::Arena, p_root: crate::NodeId, map: &mut Ma
 }
 
 fn parse_life_arena(arena: &crate::Arena, life_root: crate::NodeId, map: &mut MapData) {
-    for &child_id in arena.children(life_root) {
+    for (index, &child_id) in arena.children(life_root).iter().enumerate() {
         let id = get_arena_string(arena, child_id, "id").unwrap_or_default();
         let life_type = get_arena_string(arena, child_id, "type").unwrap_or_default();
         let x = get_arena_int(arena, child_id, "x").unwrap_or(0);
@@ -660,6 +683,7 @@ fn parse_life_arena(arena: &crate::Arena, life_root: crate::NodeId, map: &mut Ma
         let hide = get_arena_bool(arena, child_id, "hide");
 
         map.life.push(MapLife {
+            index: index as i32,
             id,
             life_type,
             x,
