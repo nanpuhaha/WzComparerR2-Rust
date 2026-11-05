@@ -392,3 +392,74 @@ mod mob_tests {
         assert_eq!(rows.len(), 55);
     }
 }
+
+pub fn cmd_db2_skills(
+    wz_path: &Path,
+    string_wz: &Path,
+    json: bool,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let mut rows = wz_db::db2_skill_grid_rows(&archive, &tree, &linker);
+    rows.truncate(limit);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        println!(
+            "{:<10} {:<6} {:<8} {:<24} {:>4} h",
+            "id", "type", "book", "name", "icon"
+        );
+        for row in rows {
+            println!(
+                "{:<10} {:<6} {:<8} {:<24} {:>4} {}",
+                row.id, row.row_type, row.book, row.name, row.has_icon, row.h_count
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod skill_tests {
+    use super::*;
+    use wz_db::{Arena, StringLinker};
+
+    #[test]
+    fn db2_skills_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let wz = root.join("Skill/_Canvas/_Canvas_000.wz");
+        let string_wz = root.join("String/String_000.wz");
+        if !wz.exists() || !string_wz.exists() {
+            return;
+        }
+        let archive = WzArchive::open(&wz).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let string_archive = WzArchive::open(&string_wz).unwrap();
+        let (arena, root_id) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, root_id));
+        let rows = wz_db::db2_skill_grid_rows(&archive, &tree, &linker);
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/db2_skills_canvas000.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(serde_json::to_value(&rows).unwrap(), expected);
+        assert_eq!(rows.len(), 165);
+    }
+}

@@ -520,6 +520,59 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void SkillGrid(string skillWzPath, string stringWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(skillWzPath);
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        if (!linker.Load(str.wz_files[0], null, null))
+        {
+            Console.WriteLine("{\"error\":\"string linker load failed\"}");
+            return;
+        }
+        var rows = new List<object>();
+        foreach (Wz_Node n in st.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            var book = n.Text.Replace(".img", "");
+            if (book.Length == 0 || !book.All(char.IsDigit)) continue;
+            img.TryExtract();
+            linker.StringSkill2.TryGetValue(book, out var bookSr);
+            rows.Add(new {
+                id = book,
+                row_type = "book",
+                book,
+                name = bookSr?["bookName"] ?? "",
+                desc = "",
+                has_icon = img.Node.FindNodeByPath(@"info\icon") != null,
+                has_common = false,
+                h_count = 0,
+            });
+            var skillRoot = img.Node.Nodes["skill"];
+            if (skillRoot == null) continue;
+            foreach (Wz_Node child in skillRoot.Nodes)
+            {
+                int id;
+                if (!int.TryParse(child.Text, out id)) continue;
+                linker.StringSkill.TryGetValue(id, out var sr);
+                var ss = sr as StringResultSkill;
+                rows.Add(new {
+                    id = child.Text,
+                    row_type = "skill",
+                    book,
+                    name = sr?.Name ?? "",
+                    desc = sr?.Desc ?? "",
+                    has_icon = child.Nodes["icon"] != null,
+                    has_common = child.Nodes["common"] != null,
+                    h_count = ss?.SkillH.Count ?? 0,
+                });
+            }
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -531,6 +584,7 @@ class Program
         else if (args[0] == "items") ItemGrid(args[1], args[2], args[3]);
         else if (args[0] == "maps") MapGrid(args[1], args[2]);
         else if (args[0] == "mobs") MobGrid(args[1], args[2]);
+        else if (args[0] == "skills") SkillGrid(args[1], args[2]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

@@ -29,6 +29,9 @@ Commands:
   (`id/street_name/map_name/has_minimap/link`).
 - `mobs <mob.wz> <String_000.wz>` — emits the DB2 Mob grid rows
   (`id/name/stand/fly/move/hit/die/thumbnail/link`) using `StringLinker.StringMob`.
+- `skills <skill.wz> <String_000.wz>` — emits DB2 Skill book/skill rows
+  (`id/row_type/book/name/desc/icon/common/h_count`) using
+  `StringLinker.StringSkill/StringSkill2`.
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -93,3 +96,10 @@ dotnet run ... -- mobs ../../Data/Mob/_Canvas/_Canvas_011.wz ../../Data/String/S
 Rust `wz db2-mobs ... --json` matches all 55 rows exactly.
 This client's split `Mob/_Canvas` files mostly contain animation canvases without
 the full `info` stat block, so the DB2 stat column is empty for this fixture.
+
+Verified DB2 Skill grid output:
+```
+dotnet run ... -- skills ../../Data/Skill/_Canvas/_Canvas_000.wz ../../Data/String/String_000.wz
+→ 165 rows
+```
+Rust `wz db2-skills ... --json` matches all 165 rows exactly.

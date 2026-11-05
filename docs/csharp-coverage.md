@@ -14,7 +14,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | WzComparerR2.MapRender | 124 | 29,291 | `wz-db::map`, `wz-gui`, `wz-render` | 🟡 |
 | WzComparerR2.Avatar | 13 | 7,055 | `wz-avatar` | ✅ |
 | WzComparerR2 (main) | 150 | 61,035 | `wz-cli`, `wz-gui` | 🟡 |
-| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`, `wz db2-mobs`, GUI tables | 🟡 |
+| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, GUI tables | 🟡 |
 | CharaSimResource | 2 | 7,490 | — (WinForms 리소스) | ⬜ |
 | WzComparerR2.Network | 28 | 1,954 | — | ⬜ |
 | WzComparerR2.LuaConsole | 10 | 1,451 | — | ⬜ |
@@ -77,9 +77,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 3. `WzComparerR2.Common/CharaSim` (10,121 LOC) — Gear/Set/Potential/MaxStar만.
 4. `MapRender/UI` (8,753 LOC) — Minimap/WorldMap 일부.
 5. `WzComparerR2.DB2` (6,292 LOC) — node table + icon/image viewer + Item/Map/
-   Mob grid 구현 (`wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`,
-   `wz db2-mobs`, GUI Catalog). 나머지 전용 그리드와 전체 화면 이미지 뷰어 UI는
-   미구현.
+   Mob/Skill grid 구현 (`wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`,
+   `wz db2-mobs`, `wz db2-skills`, GUI Catalog). 나머지 35개 전용 그리드와 전체
+   화면 이미지 뷰어 UI는 미구현.
 6. `WzComparerR2.Common/Controls` (2,138 LOC), `OpenAPI` (2,086 LOC) — 미구현.
 7. `LuaConsole` (1,451), `Network` (1,954), `PluginBase` (693) — 미구현.
 
@@ -100,6 +100,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   `wz db2-maps` 87 rows (id/street/map/minimap/link 완전 일치).
 - DB2 Mob grid `_Canvas_011.wz`: C# `StringLinker.StringMob` 55 rows == Rust
   `wz db2-mobs` 55 rows (id/name/stand/fly/move/hit/die/thumbnail/link 완전 일치).
+- DB2 Skill grid `_Canvas_000.wz`: C# `StringLinker.StringSkill/StringSkill2`
+  165 rows == Rust `wz db2-skills` 165 rows
+  (id/row_type/book/name/desc/icon/common/h_count 완전 일치).
 
 ## 남은 작업
 

@@ -461,3 +461,16 @@ merge semantics (recursive directory merge, conflict errors).
   Catalog has a DB2 Mob grid table.
 - Executed C# reference: `tools/csharp-worldmap mobs ...` uses the original
   `StringLinker`. `_Canvas_011.wz` → C# 55 == Rust 55 rows, exact match.
+
+## DB2 Skill grid
+
+- `wz-db::db2_skills` mirrors `DB2Form.LoadSkill`: each numeric `Skill/<book>.img`
+  yields a book row, and each `skill/<id>` yields a skill row with
+  `id/row_type/book/name/desc/has_icon/has_common/h_count`.
+- Book names use `StringLinker.string_skill_str[book].values["bookName"]`;
+  skill name/desc use `string_skill[id]`.
+- `wz db2-skills <skill.wz> --string <String_000.wz>` prints the grid; the GUI
+  Catalog has a DB2 Skill grid table.
+- Executed C# reference: `tools/csharp-worldmap skills ...` uses the original
+  `StringLinker.StringSkill/StringSkill2`. `_Canvas_000.wz` → C# 165 == Rust
+  165 rows, exact match.
