@@ -1,0 +1,26 @@
+{
+  "Cash": {
+    "rows": 3539,
+    "sha256": "07ad2aa1949d34839b88795398ce5e815508fda0a4d9876b3e3b9a7888c244e7"
+  },
+  "Consume": {
+    "rows": 18377,
+    "sha256": "51969bbcec88cd2091969d98affdb9aae1d9f1e1e83eb9b82e4ffd6e8e7f8f87"
+  },
+  "Etc": {
+    "rows": 5238,
+    "sha256": "8686b8ea36884b7d9c327f57f449bf5070beb8297cac92504478cbaab2b2e76f"
+  },
+  "Install": {
+    "rows": 3851,
+    "sha256": "501dad5cfe278697fce72bab93cfe8da4026f8638e1d68b790bab378231fdc21"
+  },
+  "Pet": {
+    "rows": 614,
+    "sha256": "7b5add208c7f44bf69f42ccdb0add14030ea096363d58dd2bbe2320eaee322cb"
+  },
+  "Special": {
+    "rows": 1224,
+    "sha256": "5892e0c395508479399f0a5ae159308dc7850dbafc8f614df94afcbbd868e262"
+  }
+}

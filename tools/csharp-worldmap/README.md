@@ -300,3 +300,11 @@ Additional verified Character categories (same `characters` mode):
 Android 215, ArcaneForce 7, AuthenticForce 8, Bits 79, EquipBag 2
 ```
 All match Rust `wz db2-characters` exactly.
+
+Verified DB2 Item tab grids (`itemtab <Data> <dir> <String_000.wz>`):
+```
+Cash 3539, Consume 18377, Etc 5238, Install 3851, Pet 614, Special 1224
+```
+All 32,843 rows match Rust `wz db2-item-tab` exactly. The harness mirrors
+`DB2Form.LoadItem`: `IDString()` = `int.Parse(...).ToString()`, `"  "` only when
+the String node is missing, Special filtered by `Etc/CashPackage.img`.

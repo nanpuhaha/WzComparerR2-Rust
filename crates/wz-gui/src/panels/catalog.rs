@@ -255,6 +255,61 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             });
     }
     ui.horizontal(|ui| {
+        ui.label("DB2 Item 탭:");
+        for dir in ["Cash", "Consume", "Etc", "Install", "Pet", "Special"] {
+            if ui.button(dir).clicked() {
+                let Some(root) = state.data_root.clone() else {
+                    state.db2_status = "Data 루트 없음".into();
+                    return;
+                };
+                let Some(archive_path) = state.archive_path.clone() else {
+                    state.db2_status = "아카이브 경로 없음".into();
+                    return;
+                };
+                let string_wz = archive_path
+                    .parent()
+                    .map(|p| p.join("String/String_000.wz"))
+                    .filter(|p| p.exists())
+                    .unwrap_or_else(|| root.join("String/String_000.wz"));
+                let image = wz_db::db2_item_tab_string_image(&string_wz, dir);
+                if image.is_none() && dir != "Special" {
+                    state.db2_status = format!("String/{dir}.img 없음");
+                    return;
+                }
+                state.db2_item_tab_rows = wz_db::db2_item_tab_rows(&root, dir, image.as_ref());
+                state.db2_item_tab = dir.to_string();
+                state.db2_status = format!(
+                    "item tab {dir} rows {}",
+                    state.db2_item_tab_rows.len()
+                );
+            }
+        }
+    });
+    if !state.db2_item_tab_rows.is_empty() {
+        egui::ScrollArea::vertical()
+            .id_salt("db2_item_tab_grid_scroll")
+            .max_height(200.0)
+            .show(ui, |ui| {
+                egui::Grid::new("db2_item_tab_grid")
+                    .striped(true)
+                    .num_columns(4)
+                    .show(ui, |ui| {
+                        ui.strong("id");
+                        ui.strong("name");
+                        ui.strong("desc");
+                        ui.strong("icon");
+                        ui.end_row();
+                        for row in state.db2_item_tab_rows.iter().take(200) {
+                            ui.label(&row.id);
+                            ui.label(&row.name);
+                            ui.label(row.desc.replace('\n', " "));
+                            ui.label(if row.has_icon { "Y" } else { "" });
+                            ui.end_row();
+                        }
+                    });
+            });
+    }
+    ui.horizontal(|ui| {
         if ui.button("현재 WZ DB2 Map 그리드").clicked() {
             let Some(linker) = state.string_linker.as_ref() else {
                 state.db2_status = "StringLinker를 먼저 로드하세요".into();

@@ -26,6 +26,7 @@ pub mod chara_prop;
 pub mod db2;
 pub mod db2_characters;
 pub mod db2_damage_skins;
+pub mod db2_item_tabs;
 pub mod db2_items;
 pub mod db2_maps;
 pub mod db2_mobs;
@@ -57,6 +58,10 @@ pub use db2_characters::{
     character_grid_rows_for as db2_character_grid_rows_for, Db2CharacterRow,
 };
 pub use db2_damage_skins::{damage_skin_rows as db2_damage_skin_rows, Db2DamageSkinRow};
+pub use db2_item_tabs::{
+    item_tab_rows as db2_item_tab_rows, load_string_image as db2_item_tab_string_image,
+    Db2ItemTabRow,
+};
 pub use db2_items::{item_grid_rows as db2_item_grid_rows, Db2ItemRow};
 pub use db2_maps::{map_grid_rows as db2_map_grid_rows, Db2MapRow};
 pub use db2_mobs::{mob_grid_rows as db2_mob_grid_rows, Db2MobRow};

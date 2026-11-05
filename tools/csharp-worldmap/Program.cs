@@ -984,6 +984,98 @@ class Program
             attributes = tags,
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static HashSet<string> ReadCashPackages(string dataRoot)
+    {
+        var set = new HashSet<string>();
+        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Etc"), "*.wz").OrderBy(x => x))
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == "CashPackage.img");
+            if (imgNode?.Value is Wz_Image img && img.TryExtract())
+                foreach (Wz_Node c in img.Node.Nodes) set.Add(c.Text);
+        }
+        return set;
+    }
+    static Wz_Node OpenStringChild(Wz_Structure str, string dir)
+    {
+        var imageName = dir == "Install" ? "Ins.img" : dir + ".img";
+        var imgNode = str.WzNode.Nodes.FirstOrDefault(n => n.Text == imageName);
+        if (imgNode?.Value is not Wz_Image img || !img.TryExtract()) return null;
+        var node = img.Node;
+        return dir == "Etc" ? node.Nodes["Etc"] : node;
+    }
+    static string StrField(Wz_Node child, string idString, string field)
+    {
+        var found = child?.FindNodeByPath(false, idString, field);
+        return found?.Value?.ToString() ?? "  ";
+    }
+    static string? OwnValue(Wz_Node node, string field)
+    {
+        var v = node.Nodes[field]?.Value;
+        return v?.ToString();
+    }
+    static void ItemTab(string dataRoot, string dir, string stringWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var special = dir == "Special";
+        var childNode = special ? null : OpenStringChild(str, dir);
+        if (!special && childNode == null)
+        {
+            Console.WriteLine("{\"error\":\"string image not found\"}");
+            return;
+        }
+        var cash = special ? ReadCashPackages(dataRoot) : new HashSet<string>();
+        var rows = new List<object>();
+        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Item", dir), "*.wz").OrderBy(x => x))
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            foreach (Wz_Node n in st.WzNode.Nodes)
+            {
+                if (n.Value is not Wz_Image img) continue;
+                if (special && n.Text != "0910.img") continue;
+                if (!img.TryExtract()) continue;
+                if (dir == "Pet")
+                {
+                    var petId = n.Text.Replace(".img", "");
+                    rows.Add(new {
+                        id = petId,
+                        name = StrField(childNode, petId, "name"),
+                        desc = StrField(childNode, petId, "desc"),
+                        has_icon = img.Node.FindNodeByPath(@"info\iconD") != null,
+                    });
+                    continue;
+                }
+                foreach (Wz_Node item in img.Node.Nodes)
+                {
+                    if (special && !cash.Contains(item.Text)) continue;
+                    int idNum;
+                    if (!int.TryParse(item.Text, out idNum)) continue;
+                    var idString = idNum.ToString();
+                    string name, desc;
+                    bool hasIcon;
+                    if (special)
+                    {
+                        name = OwnValue(item, "name") ?? "  ";
+                        desc = OwnValue(item, "desc") ?? "  ";
+                        hasIcon = item.Nodes["icon"] != null;
+                    }
+                    else
+                    {
+                        name = StrField(childNode, idString, "name");
+                        desc = StrField(childNode, idString, "desc");
+                        hasIcon = item.FindNodeByPath(@"info\icon") != null;
+                    }
+                    rows.Add(new { id = item.Text, name, desc, has_icon = hasIcon });
+                }
+            }
+        }
+        var deduped = rows
+            .GroupBy(r => (string)r.GetType().GetProperty("id").GetValue(r))
+            .Select(g => g.First())
+            .OrderBy(r => (string)r.GetType().GetProperty("id").GetValue(r), StringComparer.Ordinal)
+            .ToList();
+        Console.WriteLine(JsonSerializer.Serialize(deduped, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1005,6 +1097,7 @@ class Program
         else if (args[0] == "characters") CharacterGrid(args[1], args[2]);
         else if (args[0] == "skillsummary") SkillSummary(args[1], int.Parse(args[2]));
         else if (args[0] == "itemtooltip") ItemTooltip(args[1], args[2], args[3], args[4]);
+        else if (args[0] == "itemtab") ItemTab(args[1], args[2], args[3]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

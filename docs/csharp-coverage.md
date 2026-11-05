@@ -14,7 +14,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | WzComparerR2.MapRender | 124 | 29,291 | `wz-db::map`, `wz-gui`, `wz-render` | 🟡 |
 | WzComparerR2.Avatar | 13 | 7,055 | `wz-avatar` | ✅ |
 | WzComparerR2 (main) | 150 | 61,035 | `wz-cli`, `wz-gui` | 🟡 |
-| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`, `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`, `wz db2-characters`, GUI tables | 🟡 |
+| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-item-tab`, `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`, `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`, `wz db2-characters`, GUI 표/이미지 뷰어 | 🟢 |
 | CharaSimResource | 2 | 7,490 | — (WinForms 리소스) | ⬜ |
 | WzComparerR2.Network | 28 | 1,954 | — | ⬜ |
 | WzComparerR2.LuaConsole | 10 | 1,451 | — | ⬜ |
@@ -153,6 +153,12 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   `wz db2-characters` 9004 rows, `default/hairOverHead` 아이콘 경로 포함 일치.
 - DB2 Character/Face grid `Face_000.wz`: C# 7424 rows == Rust
   `wz db2-characters` 7424 rows, `default/face` 아이콘 경로 포함 일치.
+- DB2 Item 6탭 (`Item/<dir>` 전체): C# `LoadItem` 의미 그대로 구현해
+  Cash 3539 / Consume 18377 / Etc 5238 / Install 3851 / Pet 614 / Special 1224
+  = **32,843행 완전 일치** (id/name/desc/has_icon, 해시 fixture).
+- 데이터 부재 재확인: `wz parity-scan Data` → Skill common 0, WorldMap
+  QuestLimit/Fog 0, Familiar 파일 0, BIN 파일 0. weather는 원본 C# 소스에
+  구현이 없다.
 - DB2 Character/Mechanic grid `Mechanic_000.wz`: C# 23 rows == Rust
   `wz db2-characters` 23 rows (동일 컬럼 완전 일치).
 - DB2 Character/Dragon grid `Dragon_000.wz`: C# 16 rows == Rust

@@ -3,6 +3,7 @@ pub use avatar::*;
 mod corpus;
 pub use corpus::*;
 mod db2;
+pub mod parity;
 pub use db2::*;
 mod diff;
 pub use diff::*;

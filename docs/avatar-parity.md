@@ -683,3 +683,12 @@ merge semantics (recursive directory merge, conflict errors).
   C# `characters` 출력과 비교해 모두 완전 일치했다.
 - DB2 전체 화면 이미지 뷰어: Catalog에서 선택 이미지의 최대 Canvas를 디코딩해
   zoom/scroll 창으로 표시한다.
+
+## DB2 Item 탭 (디렉터리 전체)
+
+- `wz-db::db2_item_tabs`는 `DB2Form.LoadItem`을 그대로 옮겼다. 문자열 노드
+  조회는 `int.Parse(...).ToString()` 키를 쓰고, 노드가 없을 때만 `"  "`다.
+- `wz db2-item-tab <Data> <dir> --string <String_000.wz>`로 출력하고, GUI
+  Catalog에는 6개 탭 버튼(Cash/Consume/Etc/Install/Pet/Special)과 표가 있다.
+- C# `itemtab` 모드와 비교: 6탭 32,843행 완전 일치.
+  `02439339 `(뒤 공백) 행도 원본과 동일하게 포함된다.

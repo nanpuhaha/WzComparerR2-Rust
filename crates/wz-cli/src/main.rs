@@ -408,6 +408,29 @@ enum Command {
         json: bool,
     },
 
+    /// 데이터 부재 항목 전수 스캔 (Skill common/level, WorldMap Fog, Familiar, BIN)
+    ParityScan {
+        /// Data 루트
+        data_root: PathBuf,
+    },
+
+    /// DB2 Item 탭 그리드 (디렉터리 전체)
+    Db2ItemTab {
+        /// Data 루트
+        data_root: PathBuf,
+        /// Item 하위 디렉터리 (Cash/Consume/Etc/Install/Pet/Special)
+        dir: String,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+        /// 최대 행
+        #[arg(long, default_value_t = 20000)]
+        limit: usize,
+    },
+
     /// DB2 아이콘/이미지 뷰어 (Canvas RGBA SHA-256)
     Db2Icons {
         /// WZ 파일
@@ -738,6 +761,14 @@ fn main() {
             string,
             json,
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
+        Command::ParityScan { data_root } => commands::parity::cmd_parity_scan(&data_root),
+        Command::Db2ItemTab {
+            data_root,
+            dir,
+            string,
+            json,
+            limit,
+        } => cmd_db2_item_tab(&data_root, &dir, &string, json, limit),
         Command::Db2Icons {
             wz,
             image,

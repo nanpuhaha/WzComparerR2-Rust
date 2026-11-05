@@ -253,3 +253,44 @@ dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- mapnodes ../../Da
 
 DB2 전체 화면 이미지 뷰어는 GUI Catalog에서 선택 이미지의 가장 큰 Canvas를
 디코딩해 확대/스크롤 창으로 표시한다.
+
+## DB2 Item 탭 (디렉터리 단위)
+
+원본 `DB2Form.LoadItem` 의미 그대로 구현했다. `Iter.Text.IDString()`은
+`int.Parse(...).ToString()`이라 앞뒤 공백이 허용되고, 문자열 노드가 **없을
+때만** `"  "`를 쓴다(노드가 있고 값이 비면 빈 문자열 유지). Special은
+`Etc/CashPackage.img` 목록으로 거르고 아이콘은 `icon`, Pet은 이미지 자체가
+펫이며 아이콘은 `info/iconD`.
+
+| 탭 | 행 수 | C# 비교 |
+|---|---:|---|
+| Cash | 3539 | 완전 일치 |
+| Consume | 18377 | 완전 일치 (`02439339 ` 뒤공백 ID 포함) |
+| Etc | 5238 | 완전 일치 |
+| Install | 3851 | 완전 일치 |
+| Pet | 614 | 완전 일치 |
+| Special | 1224 | 완전 일치 |
+| 합계 | **32843** | 6/6 탭 완전 일치 |
+
+회귀 테스트는 `crates/wz-cli/tests/fixtures/db2_item_tabs.expected.json`의
+행 수 + SHA-256으로 32,843행 전체를 고정한다
+(`commands::db2::item_tab_tests::db2_item_tabs_match_csharp`).
+
+## 데이터 부재 전수 스캔
+
+`wz parity-scan Data` 실행 결과(2026-11-06, 실제 클라이언트 데이터):
+
+```
+Skill: 7055 skill nodes, 0 common nodes, 3 level nodes
+WorldMap: 168 images
+WorldMap node QuestLimit/Fog: 0
+Familiar files: 0
+BIN files: 0
+weather: 원본 C# 소스에 weather 구현 없음
+```
+
+- Skill `common`이 0이라 `SummaryParser`의 수치 치환 경로는 검증할 데이터가
+  없다(resolver 실패 경로 20,629행은 일치).
+- WorldMap `QuestLimit`/`Fog` 노드가 없다.
+- Familiar(`Character/Familiar`, `Etc/FamiliarInfo.img`)와 `.BIN` 파일이 없다.
+- weather는 원본 `WzComparerR2`/`Common`/`WzLib` 소스에 등장하지 않는다.

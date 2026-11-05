@@ -1747,3 +1747,91 @@ mod extra_character_tests {
         }
     }
 }
+
+pub fn cmd_db2_item_tab(
+    data_root: &Path,
+    dir: &str,
+    string_wz: &Path,
+    json: bool,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let string_image = wz_db::db2_item_tab_string_image(string_wz, dir);
+    if string_image.is_none() && dir != "Special" {
+        return Err(format!("String/{dir}.img를 찾을 수 없습니다").into());
+    }
+    let mut rows = wz_db::db2_item_tab_rows(data_root, dir, string_image.as_ref());
+    rows.truncate(limit);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        println!("{:<10} {:<28} icon", "id", "name");
+        for row in rows {
+            println!("{:<10} {:<28} {}", row.id, row.name, row.has_icon);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod item_tab_tests {
+
+    fn canonical(rows: &[wz_db::Db2ItemTabRow]) -> String {
+        rows.iter()
+            .map(|r| {
+                format!(
+                    "{}\t{}\t{}\t{}",
+                    r.id,
+                    r.name,
+                    r.desc,
+                    if r.has_icon { 1 } else { 0 }
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn db2_item_tabs_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let string_wz = root.join("String/String_000.wz");
+        if !root.join("Item").exists() || !string_wz.exists() {
+            return;
+        }
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/db2_item_tabs.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        for dir in ["Cash", "Consume", "Etc", "Install", "Pet", "Special"] {
+            if !root.join("Item").join(dir).exists() {
+                continue;
+            }
+            let image = wz_db::db2_item_tab_string_image(&string_wz, dir);
+            let rows = wz_db::db2_item_tab_rows(&root, dir, image.as_ref());
+            let want = &expected[dir];
+            assert_eq!(
+                rows.len() as u64,
+                want["rows"].as_u64().unwrap(),
+                "{dir} rows"
+            );
+            assert_eq!(
+                sha256_hex(canonical(&rows).as_bytes()),
+                want["sha256"].as_str().unwrap(),
+                "{dir} hash"
+            );
+        }
+    }
+}
