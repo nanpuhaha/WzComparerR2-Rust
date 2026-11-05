@@ -145,6 +145,82 @@ impl LightMap {
     }
 }
 
+/// 2D 부채꼴/원형 스포트라이트 (`Light2D`).
+///
+/// 각도는 원본과 같이 위쪽이 0도, 오른쪽이 90도, 아래가 180도다.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SpotLight {
+    pub pos: [f32; 2],
+    pub inner_radius: f32,
+    pub outer_radius: f32,
+    pub inner_angle: f32,
+    pub outer_angle: f32,
+    /// 중심 색상 [r, g, b, a].
+    pub color: [f32; 4],
+}
+
+impl SpotLight {
+    /// 원본 `LightRenderer.DrawSpotLight` 와 동일한 36분할 메시를 배치에 추가한다.
+    pub fn append(&self, batch: &mut SpriteBatch, white_texture: GpuKey, z: f32) {
+        const ARC_POINTS: usize = 36;
+        let mut inner_angle = self.inner_angle;
+        let outer_angle = self.outer_angle;
+        let is_circle = (inner_angle - outer_angle).abs() < f32::EPSILON;
+        if inner_angle <= outer_angle {
+            inner_angle += 360.0;
+        }
+        let rad_start = outer_angle.to_radians();
+        let rad_end = inner_angle.to_radians();
+        let inc = (rad_end - rad_start) / ARC_POINTS as f32;
+
+        let radius_steps: Vec<f32> = if self.inner_radius <= 0.0 {
+            vec![self.outer_radius]
+        } else {
+            vec![self.inner_radius, self.outer_radius]
+        };
+        let edge_color = [self.color[0], self.color[1], self.color[2], 0.0];
+        let color_steps: Vec<[f32; 4]> = if self.inner_radius <= 0.0 {
+            vec![edge_color]
+        } else {
+            vec![self.color, edge_color]
+        };
+
+        let ring_len = ARC_POINTS + usize::from(!is_circle);
+        let mut verts = Vec::with_capacity(1 + ring_len * radius_steps.len());
+        verts.push(SpriteVertex::new(self.pos, z, [0.5, 0.5], self.color));
+        for (s, radius) in radius_steps.iter().enumerate() {
+            let color = color_steps[s];
+            for i in 0..ring_len {
+                let angle = if i == ARC_POINTS {
+                    rad_end
+                } else {
+                    rad_start + inc * i as f32
+                };
+                let px = self.pos[0] + angle.sin() * radius;
+                let py = self.pos[1] - angle.cos() * radius;
+                verts.push(SpriteVertex::new([px, py], z, [0.5, 0.5], color));
+            }
+        }
+
+        let mut indices = Vec::with_capacity(ARC_POINTS * (radius_steps.len() * 2 - 1) * 3);
+        let base = |s: usize, i: usize| -> u32 { (1 + s * ring_len + (i % ring_len)) as u32 };
+        for i in 0..ARC_POINTS {
+            let a = base(0, i);
+            let b = base(0, i + 1);
+            if radius_steps.len() == 1 {
+                indices.extend_from_slice(&[0, a, b]);
+            } else {
+                indices.extend_from_slice(&[0, a, b]);
+                let c = base(1, i);
+                let d = base(1, i + 1);
+                indices.extend_from_slice(&[a, c, d, a, d, b]);
+            }
+        }
+
+        batch.push_triangles(white_texture, BlendMode::Additive, &verts, &indices);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -183,6 +259,44 @@ mod tests {
         // 빛 영향권 밖에서는 앰비언트(0.2)만 남음
         let evaluated_far = lightmap.evaluate_color([100.0, 100.0], [1.0, 1.0, 1.0, 1.0]);
         assert!((evaluated_far[0] - 0.2).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_spot_light_mesh_matches_original_counts() {
+        let spot = SpotLight {
+            pos: [10.0, 20.0],
+            inner_radius: 30.0,
+            outer_radius: 100.0,
+            inner_angle: 0.0,
+            outer_angle: 90.0,
+            color: [1.0, 0.9, 0.5, 0.8],
+        };
+        let mut batch = SpriteBatch::new();
+        spot.append(&mut batch, GpuKey(9), 5.0);
+        batch.finish();
+        // inner+outer ring, 37 points each (36 + closing point) + center.
+        assert_eq!(batch.vertices.len(), 1 + 37 * 2);
+        // 36 fan triangles + 36 quads (72 triangles) = 108 triangles.
+        assert_eq!(batch.indices.len(), 108 * 3);
+        assert_eq!(batch.commands[0].blend_mode, BlendMode::Additive);
+        assert_eq!(batch.commands[0].texture_key, GpuKey(9));
+    }
+
+    #[test]
+    fn test_circle_spot_light_has_no_duplicate_closing_point() {
+        let spot = SpotLight {
+            pos: [0.0, 0.0],
+            inner_radius: 0.0,
+            outer_radius: 50.0,
+            inner_angle: 30.0,
+            outer_angle: 30.0,
+            color: [1.0, 1.0, 1.0, 1.0],
+        };
+        let mut batch = SpriteBatch::new();
+        spot.append(&mut batch, GpuKey(9), 0.0);
+        batch.finish();
+        assert_eq!(batch.vertices.len(), 1 + 36);
+        assert_eq!(batch.indices.len(), 36 * 3);
     }
 
     #[test]

@@ -165,6 +165,70 @@ pub fn cmd_oracle_mapscene(
         .collect();
     res.insert("reactors".into(), serde_json::Value::Array(reactor_items));
 
+    // light
+    if let Some(light) = &map_data.light {
+        let lights: Vec<serde_json::Value> = light
+            .lights
+            .iter()
+            .map(|l| {
+                serde_json::json!({
+                    "type": l.light_type,
+                    "x": l.x,
+                    "y": l.y,
+                    "color": format!("0x{:08X}", l.color),
+                    "inner_radius": l.inner_radius,
+                    "outer_radius": l.outer_radius,
+                    "inner_angle": l.inner_angle,
+                    "outer_angle": l.outer_angle,
+                    "direction_angle": l.direction_angle,
+                })
+            })
+            .collect();
+        res.insert(
+            "light".into(),
+            serde_json::json!({
+                "mode": light.mode,
+                "ambient_color": format!("0x{:08X}", light.ambient_color),
+                "directional_light_color": format!("0x{:08X}", light.directional_light_color),
+                "luminance_limit": light.luminance_limit,
+                "back_color": format!("0x{:08X}", light.back_color),
+                "lights": lights,
+            }),
+        );
+    }
+
+    // particles
+    let particle_items: Vec<serde_json::Value> = map_data
+        .particles
+        .iter()
+        .map(|p| {
+            serde_json::json!({
+                "name": p.name,
+                "rx": p.rx,
+                "ry": p.ry,
+                "z": p.z,
+                "points": p.points.iter().map(|(x, y)| serde_json::json!([x, y])).collect::<Vec<_>>(),
+            })
+        })
+        .collect();
+    res.insert("particles".into(), serde_json::Value::Array(particle_items));
+
+    // map events (effect)
+    let event_items: Vec<serde_json::Value> = map_data
+        .map_events
+        .iter()
+        .map(|e| {
+            serde_json::json!({
+                "index": e.index,
+                "type": e.event_type,
+                "default_animation": e.default_animation,
+                "changed_animation": e.changed_animation,
+                "tags": e.tags,
+            })
+        })
+        .collect();
+    res.insert("map_events".into(), serde_json::Value::Array(event_items));
+
     // ladders / ropes
     let mut sorted_lr = map_data.ladders_ropes.clone();
     sorted_lr.sort_by_key(|l| (l.x, l.y1, l.y2, l.id));

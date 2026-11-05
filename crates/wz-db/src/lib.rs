@@ -27,6 +27,7 @@ pub mod gear_stats;
 pub mod linker;
 pub mod map;
 pub mod node;
+pub mod particle;
 pub mod query;
 pub mod resolve;
 
@@ -45,6 +46,7 @@ pub use map::{
     MapLife, MapPortal, MapVirtualRect, ObjItem, TileItem,
 };
 pub use node::{NodeId, NodeValue, RawDataRef};
+pub use particle::{parse_particle_desc, ParticleDesc, ParticleTexture};
 pub use query::{
     execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,
     QueryRule, QueryRuleKind, QueryValueType, StringComparisonMode, ValueRule, DEFAULT_MAX_RESULTS,

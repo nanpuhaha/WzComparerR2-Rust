@@ -1586,3 +1586,129 @@ fn domain_specific_lookup_disambiguates_colliding_ids() {
         Some("몹")
     );
 }
+
+#[test]
+fn map_scene_particles_real_wz() {
+    use crate::MapData;
+    use wz_core::WzArchive;
+
+    let path = std::env::var_os("WZ_DATA_ROOT")
+        .map(std::path::PathBuf::from)
+        .map(|root| {
+            root.join("Map")
+                .join("Map")
+                .join("Map0")
+                .join("Map0_000.wz")
+        });
+    let Some(path) = path else { return };
+    if !path.exists() {
+        return;
+    }
+    let arch = WzArchive::open(&path).unwrap();
+    let tree = arch.read_tree().unwrap();
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some("000110000.img"))
+        .expect("000110000.img");
+    let node = arch.parse_image_at(entry.offset.unwrap()).unwrap();
+    let map = MapData::parse_from_node(&node);
+    assert_eq!(map.particles.len(), 13);
+    let fog = map
+        .particles
+        .iter()
+        .find(|p| p.name == "adventure2022_tree_burn_00_Fog2")
+        .expect("fog particle");
+    assert_eq!(fog.points.len(), 4);
+    assert_eq!(fog.rx, -100);
+    assert_eq!(fog.ry, -100);
+    assert_eq!(fog.points[0], (-825, -167));
+}
+
+#[test]
+fn map_scene_events_real_wz() {
+    use crate::MapData;
+    use wz_core::WzArchive;
+
+    let path = std::env::var_os("WZ_DATA_ROOT")
+        .map(std::path::PathBuf::from)
+        .map(|root| {
+            root.join("Map")
+                .join("Map")
+                .join("Map1")
+                .join("Map1_000.wz")
+        });
+    let Some(path) = path else { return };
+    if !path.exists() {
+        return;
+    }
+    let arch = WzArchive::open(&path).unwrap();
+    let tree = arch.read_tree().unwrap();
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some("100000000.img"))
+        .expect("100000000.img");
+    let node = arch.parse_image_at(entry.offset.unwrap()).unwrap();
+    let map = MapData::parse_from_node(&node);
+    assert!(!map.map_events.is_empty());
+    let event = map
+        .map_events
+        .iter()
+        .find(|e| e.index == "01")
+        .expect("effect 01");
+    assert_eq!(
+        event.event_type.as_deref(),
+        Some("SetAnimationOnceAndReturn")
+    );
+    assert_eq!(event.default_animation.as_deref(), Some("01_NB"));
+    assert_eq!(event.changed_animation.as_deref(), Some("01_BB"));
+    assert_eq!(event.tags.as_deref(), Some("Hband1"));
+}
+
+#[test]
+fn particle_desc_real_wz() {
+    use crate::particle::parse_particle_desc;
+    use wz_core::WzArchive;
+
+    let path = std::env::var_os("WZ_DATA_ROOT")
+        .map(std::path::PathBuf::from)
+        .map(|root| root.join("Effect").join("Effect_001.wz"));
+    let Some(path) = path else { return };
+    if !path.exists() {
+        return;
+    }
+    let arch = WzArchive::open(&path).unwrap();
+    let tree = arch.read_tree().unwrap();
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some("particle.img"))
+        .expect("particle.img");
+    let node = arch.parse_image_at(entry.offset.unwrap()).unwrap();
+    let fog = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "adventure2022_tree_burn_00_Fog1")
+        .expect("Fog1 particle");
+
+    let desc = parse_particle_desc(fog);
+    assert_eq!(desc.data_type, 0);
+    assert_eq!(desc.total_particle, 60);
+    assert_eq!(desc.angle, 90.0);
+    assert_eq!(desc.start_size, 300.0);
+    assert_eq!(desc.end_size, 500.0);
+    assert_eq!(desc.life, 7.0);
+    assert_eq!(desc.start_color, 0x007F7F7F);
+    assert_eq!(desc.blend_func_src, 5);
+    assert_eq!(desc.blend_func_dst, 6);
+    assert_eq!(desc.gravity.as_ref().map(|g| g.speed), Some(45.0));
+    assert_eq!(
+        desc.texture.outlink.as_deref(),
+        Some("Effect/_Canvas/particle.img/adventure2022_tree_burn_00_Fog1/texture")
+    );
+    assert_eq!(desc.texture.origin, Some((350, 350)));
+}

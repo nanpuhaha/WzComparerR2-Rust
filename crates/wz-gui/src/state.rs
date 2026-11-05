@@ -20,6 +20,7 @@ pub struct MapImages {
     pub objs: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub reactors: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub backgrounds: Vec<(i32, i32, u32, u32, Vec<u8>, bool)>,
+    pub particles: Vec<crate::particles::MapParticleLayer>,
 }
 
 // ── 로딩 메시지 ───────────────────────────────────────────────────────
@@ -96,6 +97,9 @@ pub struct AppState {
     pub map_tile_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub map_obj_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub map_reactor_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
+    pub map_particle_layers: Vec<crate::particles::MapParticleLayer>,
+    pub map_particle_time: f64,
+    pub map_particle_last: f64,
     pub map_status: String,
     pub map_images_rx: Option<crossbeam_channel::Receiver<MapImages>>,
     pub avatar_image: Option<(u32, u32, Vec<u8>)>,
@@ -219,6 +223,9 @@ impl Default for AppState {
             map_tile_images: Vec::new(),
             map_obj_images: Vec::new(),
             map_reactor_images: Vec::new(),
+            map_particle_layers: Vec::new(),
+            map_particle_time: 0.0,
+            map_particle_last: 0.0,
             map_status: "맵 ID 를 입력하고 'Load Map'".into(),
             map_images_rx: None,
             avatar_image: None,

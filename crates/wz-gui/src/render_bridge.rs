@@ -5,9 +5,26 @@
 use crate::state::AppState;
 use wz_render::atlas::AtlasShelfPacker;
 use wz_render::batch::SpriteBatch;
-use wz_render::GpuKey;
+use wz_render::{GpuKey, SpotLight};
+
+fn argb_components(packed: u32) -> [f32; 4] {
+    let b = (packed & 0xFF) as f32 / 255.0;
+    let g = ((packed >> 8) & 0xFF) as f32 / 255.0;
+    let r = ((packed >> 16) & 0xFF) as f32 / 255.0;
+    let a = ((packed >> 24) & 0xFF) as f32 / 255.0;
+    [r, g, b, a]
+}
 
 pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
+    if !state.map_particle_layers.is_empty() {
+        let now = ui.input(|i| i.time);
+        if state.map_particle_last > 0.0 {
+            state.map_particle_time += (now - state.map_particle_last).clamp(0.0, 0.1);
+        }
+        state.map_particle_last = now;
+        state.viewport_dirty = true;
+        ui.ctx().request_repaint();
+    }
     let resp = ui.allocate_response(
         egui::vec2(state.viewport_size.0 as f32, state.viewport_size.1 as f32),
         egui::Sense::click_and_drag(),
@@ -133,6 +150,10 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             for (i, (_, _, bw, bh, bpx, _)) in state.map_background_images.iter().enumerate() {
                 let _ = rc.create_texture(GpuKey(400 + i as u32), *bw, *bh, bpx);
             }
+            for (i, layer) in state.map_particle_layers.iter().enumerate() {
+                let (pw, ph, ppx) = &layer.texture;
+                let _ = rc.create_texture(GpuKey(600 + i as u32), *pw, *ph, ppx);
+            }
             // 캐시된 레이어를 z 순서로 정렬해 push
             let mut sorted: Vec<&(GpuKey, [f32; 4], f32)> =
                 state.viewport_cached_layers.iter().collect();
@@ -179,6 +200,38 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                 }
             }
         }
+        // map particles: 원본 ParticleSystem.Draw 와 같은 정적 샘플링.
+        if !state.map_particle_layers.is_empty() {
+            let center = [state.camera.center.x, state.camera.center.y];
+            let time = state.map_particle_time;
+            for (i, layer) in state.map_particle_layers.iter().enumerate() {
+                let blend = crate::particles::blend_mode(&layer.desc);
+                let z = 100.0 + layer.z as f32;
+                for sprite in crate::particles::sample_layer(layer, time, center) {
+                    crate::particles::append_sprite(
+                        &mut batch,
+                        GpuKey(600 + i as u32),
+                        &sprite,
+                        z,
+                        blend,
+                    );
+                }
+            }
+        }
+        // map light: 원본 LightRenderer.DrawSpotLight 와 동일한 가산 메시.
+        if let Some(light) = state.current_map.as_ref().and_then(|m| m.light.as_ref()) {
+            for l in &light.lights {
+                SpotLight {
+                    pos: [l.x as f32, l.y as f32],
+                    inner_radius: l.inner_radius as f32,
+                    outer_radius: l.outer_radius as f32,
+                    inner_angle: l.inner_angle as f32,
+                    outer_angle: l.outer_angle as f32,
+                    color: argb_components(l.color),
+                }
+                .append(&mut batch, atlas_key, 2000.0);
+            }
+        }
         batch.finish();
 
         let uniforms = state.camera.build_uniforms(0.0, 0.0);
@@ -214,12 +267,14 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             painter.line_segment([p1, p2], egui::Stroke::new(1.5, egui::Color32::GREEN));
         }
         ui.label(format!(
-            "발판 {}개, 배경 {}개, 타일 {}개, 오브젝트 {}개, 리액터 {}개 표시",
+            "발판 {}개, 배경 {}개, 타일 {}개, 오브젝트 {}개, 리액터 {}개, 파티클 {}개, 광원 {}개 표시",
             m.footholds.len(),
             state.map_background_images.len(),
             state.map_tile_images.len(),
             state.map_obj_images.len(),
-            state.map_reactor_images.len()
+            state.map_reactor_images.len(),
+            state.map_particle_layers.len(),
+            m.light.as_ref().map(|l| l.lights.len()).unwrap_or(0)
         ));
     }
 

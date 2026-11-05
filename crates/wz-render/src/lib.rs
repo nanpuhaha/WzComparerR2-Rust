@@ -38,7 +38,7 @@ pub use atlas::{AtlasPage, AtlasShelfPacker};
 pub use batch::{BlendMode, DrawCommand, SpriteBatch, SpriteVertex};
 pub use camera::{Camera2D, SpriteUniformsGpu};
 pub use device::RenderContext;
-pub use light::{LightMap, LightSource};
+pub use light::{LightMap, LightSource, SpotLight};
 pub use shader::{
     all_pipelines, pipeline_table, MaplePixelShader, SpritePipelineDesc, SpriteVertexShader,
 };

@@ -267,6 +267,51 @@ impl FootholdTree {
     }
 }
 
+/// 맵 조명 (`MapLight.cs`).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct MapLight {
+    pub mode: i32,
+    pub ambient_color: u32,
+    pub directional_light_color: u32,
+    pub luminance_limit: f32,
+    pub back_color: u32,
+    pub lights: Vec<MapLight2D>,
+}
+
+/// 개별 2D 광원 (`Light2D`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MapLight2D {
+    pub light_type: i32,
+    pub x: i32,
+    pub y: i32,
+    pub color: u32,
+    pub inner_radius: i32,
+    pub outer_radius: i32,
+    pub inner_angle: i32,
+    pub outer_angle: i32,
+    pub direction_angle: i32,
+}
+
+/// 파티클 배치 (`ParticleItem.cs`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MapParticle {
+    pub name: String,
+    pub rx: i32,
+    pub ry: i32,
+    pub z: i32,
+    pub points: Vec<(i32, i32)>,
+}
+
+/// 맵 이벤트 (`MapEvent`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MapEvent {
+    pub index: String,
+    pub event_type: Option<String>,
+    pub default_animation: Option<String>,
+    pub changed_animation: Option<String>,
+    pub tags: Option<String>,
+}
+
 /// 맵 리액터 (`ReactorItem.cs`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MapReactor {
@@ -280,7 +325,7 @@ pub struct MapReactor {
 }
 
 /// 전체 맵 물리 씬 데이터 컨테이너 (`MapData`).
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct MapData {
     pub info: MapInfo,
     pub footholds: Vec<Foothold>,
@@ -293,6 +338,9 @@ pub struct MapData {
     pub objects: Vec<ObjItem>,
     pub tiles: Vec<TileItem>,
     pub reactors: Vec<MapReactor>,
+    pub light: Option<MapLight>,
+    pub particles: Vec<MapParticle>,
+    pub map_events: Vec<MapEvent>,
 }
 
 impl MapData {
@@ -339,6 +387,84 @@ impl MapData {
             data.reactors.sort_by_key(|reactor| reactor.index);
         }
 
+        if let Some(light_id) = arena.find_child(root, "light") {
+            let mut light = MapLight {
+                mode: get_arena_int(arena, light_id, "mode").unwrap_or(0),
+                ambient_color: get_arena_int(arena, light_id, "ambient_color").unwrap_or(0) as u32,
+                directional_light_color: get_arena_int(arena, light_id, "directional_light_color")
+                    .unwrap_or(0) as u32,
+                luminance_limit: get_arena_float(arena, light_id, "luminance_limit").unwrap_or(0.0),
+                back_color: get_arena_int(arena, light_id, "back_color").unwrap_or(0) as u32,
+                lights: Vec::new(),
+            };
+            for &node in arena.children(light_id) {
+                let Some(name) = arena.name(node) else {
+                    continue;
+                };
+                if name.parse::<i32>().is_err() {
+                    continue;
+                }
+                light.lights.push(MapLight2D {
+                    light_type: get_arena_int(arena, node, "type").unwrap_or(0),
+                    x: get_arena_int(arena, node, "x").unwrap_or(0),
+                    y: get_arena_int(arena, node, "y").unwrap_or(0),
+                    color: get_arena_int(arena, node, "color").unwrap_or(0) as u32,
+                    inner_radius: get_arena_int(arena, node, "inner_radius").unwrap_or(0),
+                    outer_radius: get_arena_int(arena, node, "outer_radius").unwrap_or(0),
+                    inner_angle: get_arena_int(arena, node, "inner_angle").unwrap_or(0),
+                    outer_angle: get_arena_int(arena, node, "outer_angle").unwrap_or(0),
+                    direction_angle: get_arena_int(arena, node, "direction_angle").unwrap_or(0),
+                });
+            }
+            data.light = Some(light);
+        }
+
+        if let Some(particle_id) = arena.find_child(root, "particle") {
+            for &node in arena.children(particle_id) {
+                let name = arena.name(node).unwrap_or("").to_string();
+                let mut points = Vec::new();
+                for &sub in arena.children(node) {
+                    if arena
+                        .name(sub)
+                        .and_then(|name| name.parse::<i32>().ok())
+                        .is_none()
+                    {
+                        continue;
+                    }
+                    points.push((
+                        get_arena_int(arena, sub, "x").unwrap_or(0),
+                        get_arena_int(arena, sub, "y").unwrap_or(0),
+                    ));
+                }
+                if points.is_empty() {
+                    points.push((
+                        get_arena_int(arena, node, "x").unwrap_or(0),
+                        get_arena_int(arena, node, "y").unwrap_or(0),
+                    ));
+                }
+                data.particles.push(MapParticle {
+                    name,
+                    rx: get_arena_int(arena, node, "rx").unwrap_or(-100),
+                    ry: get_arena_int(arena, node, "ry").unwrap_or(-100),
+                    z: get_arena_int(arena, node, "z").unwrap_or(0),
+                    points,
+                });
+            }
+        }
+
+        if let Some(effect_id) = arena.find_child(root, "effect") {
+            for &node in arena.children(effect_id) {
+                let index = arena.name(node).unwrap_or("").to_string();
+                data.map_events.push(MapEvent {
+                    index,
+                    event_type: get_arena_string(arena, node, "type"),
+                    default_animation: get_arena_string(arena, node, "defaultAnimation"),
+                    changed_animation: get_arena_string(arena, node, "changedAnimation"),
+                    tags: get_arena_string(arena, node, "tags"),
+                });
+            }
+        }
+
         if let Some(back_id) = arena.find_child(root, "back") {
             parse_back_arena(arena, back_id, &mut data);
         }
@@ -369,6 +495,17 @@ fn get_arena_int(arena: &crate::Arena, node_id: crate::NodeId, key: &str) -> Opt
         crate::NodeValue::Long(v) => Some(*v as i32),
         crate::NodeValue::Uint(v) => Some(*v as i32),
         crate::NodeValue::Str(s) | crate::NodeValue::Uol(s) => s.parse().ok(),
+        _ => None,
+    }
+}
+
+fn get_arena_float(arena: &crate::Arena, node_id: crate::NodeId, key: &str) -> Option<f32> {
+    let child_id = arena.find_child(node_id, key)?;
+    match arena.value(child_id)? {
+        crate::NodeValue::Float(v) => Some(*v),
+        crate::NodeValue::Double(v) => Some(*v as f32),
+        crate::NodeValue::Int(v) => Some(*v as f32),
+        crate::NodeValue::Short(v) => Some(*v as f32),
         _ => None,
     }
 }
@@ -707,6 +844,81 @@ mod tests {
         reactor_root.children.push(reactor0);
         root.children.push(reactor_root);
 
+        // light
+        let mut light_root = Node::new("light");
+        for (key, value) in [
+            ("mode", ImageValue::Int(1)),
+            ("ambient_color", ImageValue::Int(0x40404040)),
+            ("directional_light_color", ImageValue::Int(-1)),
+            ("back_color", ImageValue::Int(0xFF000000u32 as i32)),
+        ] {
+            let mut child = Node::new(key);
+            child.value = Some(value);
+            light_root.children.push(child);
+        }
+        let mut limit = Node::new("luminance_limit");
+        limit.value = Some(ImageValue::Float(0.75));
+        light_root.children.push(limit);
+        let mut light0 = Node::new("0");
+        for (key, value) in [
+            ("type", ImageValue::Int(1)),
+            ("x", ImageValue::Int(30)),
+            ("y", ImageValue::Int(-40)),
+            ("color", ImageValue::Int(0x80FFCC00u32 as i32)),
+            ("inner_radius", ImageValue::Int(10)),
+            ("outer_radius", ImageValue::Int(200)),
+            ("inner_angle", ImageValue::Int(20)),
+            ("outer_angle", ImageValue::Int(60)),
+            ("direction_angle", ImageValue::Int(90)),
+        ] {
+            let mut child = Node::new(key);
+            child.value = Some(value);
+            light0.children.push(child);
+        }
+        light_root.children.push(light0);
+        root.children.push(light_root);
+
+        // particle/fog/0,x,y + 1,x,y
+        let mut particle_root = Node::new("particle");
+        let mut fog = Node::new("fog");
+        for (key, x, y) in [("0", -10, 20), ("1", 30, -40)] {
+            let mut point = Node::new(key);
+            let mut px = Node::new("x");
+            px.value = Some(ImageValue::Int(x));
+            let mut py = Node::new("y");
+            py.value = Some(ImageValue::Int(y));
+            point.children.push(px);
+            point.children.push(py);
+            fog.children.push(point);
+        }
+        for (key, value) in [
+            ("rx", ImageValue::Int(-80)),
+            ("ry", ImageValue::Int(-90)),
+            ("z", ImageValue::Int(3)),
+        ] {
+            let mut child = Node::new(key);
+            child.value = Some(value);
+            fog.children.push(child);
+        }
+        particle_root.children.push(fog);
+        root.children.push(particle_root);
+
+        // effect/01
+        let mut effect_root = Node::new("effect");
+        let mut effect0 = Node::new("01");
+        for (key, value) in [
+            ("type", ImageValue::Str("SetAnimationOnceAndReturn".into())),
+            ("defaultAnimation", ImageValue::Str("01_NB".into())),
+            ("changedAnimation", ImageValue::Str("01_BB".into())),
+            ("tags", ImageValue::Str("Hband1".into())),
+        ] {
+            let mut child = Node::new(key);
+            child.value = Some(value);
+            effect0.children.push(child);
+        }
+        effect_root.children.push(effect0);
+        root.children.push(effect_root);
+
         let map_data = MapData::parse_from_node(&root);
         assert_eq!(map_data.info.bgm.as_deref(), Some("Bgm00/Sleepywood"));
         assert!(map_data.info.vrect.is_some());
@@ -720,6 +932,27 @@ mod tests {
         assert_eq!(map_data.reactors[0].x, 120);
         assert!(map_data.reactors[0].flip);
         assert_eq!(map_data.reactors[0].name.as_deref(), Some("testReactor"));
+
+        let light = map_data.light.as_ref().expect("light parsed");
+        assert_eq!(light.mode, 1);
+        assert_eq!(light.luminance_limit, 0.75);
+        assert_eq!(light.lights.len(), 1);
+        assert_eq!(light.lights[0].light_type, 1);
+        assert_eq!(light.lights[0].outer_radius, 200);
+        assert_eq!(light.lights[0].direction_angle, 90);
+
+        assert_eq!(map_data.particles.len(), 1);
+        assert_eq!(map_data.particles[0].name, "fog");
+        assert_eq!(map_data.particles[0].rx, -80);
+        assert_eq!(map_data.particles[0].points, vec![(-10, 20), (30, -40)]);
+
+        assert_eq!(map_data.map_events.len(), 1);
+        assert_eq!(map_data.map_events[0].index, "01");
+        assert_eq!(
+            map_data.map_events[0].event_type.as_deref(),
+            Some("SetAnimationOnceAndReturn")
+        );
+        assert_eq!(map_data.map_events[0].tags.as_deref(), Some("Hband1"));
 
         // FootholdTree 검증
         let tree = FootholdTree::build(&map_data.footholds);

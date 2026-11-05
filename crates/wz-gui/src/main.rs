@@ -10,6 +10,7 @@
 mod app;
 mod async_io;
 mod panels;
+mod particles;
 mod render_bridge;
 mod state;
 

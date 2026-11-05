@@ -82,6 +82,108 @@ fn load_reactor_image(
     None
 }
 
+fn find_particle_desc_node(root: &std::path::Path, name: &str) -> Option<wz_core::image::Node> {
+    let base = root.join("Effect");
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = wz_core::WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("particle.img"))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        if let Some(found) = node
+            .object_children()
+            .iter()
+            .find(|c| c.name.as_ref() == name)
+        {
+            return Some(found.clone());
+        }
+    }
+    None
+}
+
+fn walk_node<'a>(
+    node: &'a wz_core::image::Node,
+    segments: &[&str],
+) -> Option<&'a wz_core::image::Node> {
+    if segments.is_empty() {
+        return Some(node);
+    }
+    let head = segments[0];
+    let next = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == head)
+        .or_else(|| match &node.value {
+            Some(wz_core::image::ImageValue::Png(png)) => {
+                png.sub_property.as_ref().and_then(|sub| {
+                    sub.object_children()
+                        .iter()
+                        .find(|c| c.name.as_ref() == head)
+                })
+            }
+            _ => None,
+        })?;
+    walk_node(next, &segments[1..])
+}
+
+fn load_particle_texture(root: &std::path::Path, outlink: &str) -> Option<(u32, u32, Vec<u8>)> {
+    let (image, sub) = outlink.split_once(".img/")?;
+    let image_name = format!("{}.img", image.rsplit('/').next()?);
+    let segments: Vec<&str> = sub.split('/').filter(|s| !s.is_empty()).collect();
+    let base = root.join("Effect").join("_Canvas");
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = wz_core::WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let target = walk_node(&node, &segments)?;
+        let png = target.first_canvas()?;
+        if let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(&png, archive.source()) {
+            return Some((w, h, rgba));
+        }
+    }
+    None
+}
+
 pub fn load_map_by_path(state: &mut AppState) {
     if state.tree.is_none() {
         state.map_status = "WZ 파일을 먼저 열어 주세요".into();
@@ -119,6 +221,7 @@ pub fn load_map_by_path(state: &mut AppState) {
         let objs_clone = map.objects.clone();
         let reactors_clone = map.reactors.clone();
         let backgrounds_clone = map.backgrounds.clone();
+        let particles_clone = map.particles.clone();
         let (tx, rx) = crossbeam_channel::unbounded();
         state.map_images_rx = Some(rx);
         std::thread::spawn(move || {
@@ -151,21 +254,47 @@ pub fn load_map_by_path(state: &mut AppState) {
                     backgrounds.push((background.x, background.y, w, h, rgba, background.front));
                 }
             }
+            let mut particles = Vec::new();
+            for particle in &particles_clone {
+                let Some(desc_node) = find_particle_desc_node(&root, &particle.name) else {
+                    continue;
+                };
+                let desc = wz_db::particle::parse_particle_desc(&desc_node);
+                let Some(outlink) = desc.texture.outlink.clone() else {
+                    continue;
+                };
+                let Some(texture) = load_particle_texture(&root, &outlink) else {
+                    continue;
+                };
+                particles.push(crate::particles::MapParticleLayer {
+                    origin: desc.texture.origin.unwrap_or((0, 0)),
+                    desc,
+                    texture,
+                    points: particle.points.clone(),
+                    z: particle.z,
+                    rx: particle.rx,
+                    ry: particle.ry,
+                });
+            }
             let _ = tx.send(crate::state::MapImages {
                 tiles,
                 objs,
                 reactors,
                 backgrounds,
+                particles,
             });
         });
     }
 
+    state.map_particle_layers.clear();
+    state.map_particle_time = 0.0;
+    state.map_particle_last = 0.0;
     state.map_status = format!(
-        "map_id={:?} bgm={:?} town={} fh={} portals={} life={} back={} obj={} tile={} reactor={} (back_img={})",
+        "map_id={:?} bgm={:?} town={} fh={} portals={} life={} back={} obj={} tile={} reactor={} particle={} (back_img={})",
         map.info.map_id, map.info.bgm, map.info.town,
         map.footholds.len(), map.portals.len(), map.life.len(),
         map.backgrounds.len(), map.objects.len(), map.tiles.len(),
-        map.reactors.len(),
+        map.reactors.len(), map.particles.len(),
         state.map_back_image.is_some()
     );
     state.current_map = Some(map);
@@ -222,6 +351,37 @@ pub fn load_map_from_selection(state: &mut AppState) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn loads_particle_desc_and_texture() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let name = "adventure2022_tree_burn_00_Fog2";
+        let Some(node) = find_particle_desc_node(&root, name) else {
+            return;
+        };
+        let desc = wz_db::particle::parse_particle_desc(&node);
+        assert_eq!(desc.total_particle, 10);
+        assert_eq!(desc.life, 2.0);
+        let outlink = desc.texture.outlink.clone().expect("outlink");
+        let Some((w, h, rgba)) = load_particle_texture(&root, &outlink) else {
+            return;
+        };
+        assert!(w > 1 && h > 1);
+        assert_eq!(rgba.len(), (w * h * 4) as usize);
+        let layer = crate::particles::MapParticleLayer {
+            desc,
+            texture: (w, h, rgba),
+            origin: (0, 0),
+            points: vec![(-825, -167)],
+            z: 0,
+            rx: -100,
+            ry: -100,
+        };
+        let sprites = crate::particles::sample_layer(&layer, 0.5, [0.0, 0.0]);
+        assert_eq!(sprites.len(), 10);
+    }
 
     #[test]
     fn loads_reactor_image_from_canvas() {

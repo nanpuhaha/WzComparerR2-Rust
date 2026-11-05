@@ -143,6 +143,14 @@ remaining CharaSim gaps.
   `Reactor/<id>.img/0/0` first frame with origin/flip.
 - Map backgrounds: all `back/<n>` entries are loaded; non-front at z=-1000 and
   front at z=1000 (static first frame, no parallax/animation yet).
+- Map light/particle/effect: `MapData.light` parses `MapLight`/`Light2D`
+  (`mode`, ambient/directional/back color, luminance limit, per-light type/x/y/color/
+  radii/angles). The viewport draws the same 36-segment additive spot-light mesh as
+  `LightRenderer.DrawSpotLight`. `MapData.particles` parses `ParticleItem` nodes and
+  `wz-db::particle` parses `Effect/particle.img` descriptors; the viewport loads the
+  particle texture via `_outlink` and samples position/size/color/alpha/rotation like
+  `ParticleSystem.Draw`. `MapData.map_events` parses `effect/<n>` (`type`,
+  `defaultAnimation`, `changedAnimation`, `tags`).
 - Equipment slots: `FaceAccessory`, `EyeAccessory`, `Earrings`, `Pendant`, `Belt`,
   `ShoulderPad`, `Pocket`, `Emblem` load from `Character/Accessory`; `Saddle` loads
   from `Character/TamingMob`; `CashWeapon` maps to `Weapon`. Icon-only images are
