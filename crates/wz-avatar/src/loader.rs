@@ -72,9 +72,87 @@ fn part_z_tag(part_name: &str) -> String {
     }
 }
 
-/// 파트 이름 → 앵커 이름 추론.
+/// 파트 이름 → 앵커 이름 추론 (fallback).
 fn part_anchor(_part_name: &str) -> &'static str {
     "navel"
+}
+
+/// `Canvas` 의 mini property 에서 `origin` 과 `map` 을 읽는다.
+///
+/// `map` 은 `{ "navel": Vector, "neck": Vector, ... }` 형태다. 첫 엔트리
+/// (`muzzle` 제외)를 앵커로 쓴다. 전체 체인은 `frame_layers::collect_frame_layers`
+/// 가 처리하지만, 이 로더는 파트 단위 PoC 이므로 첫 엔트리만 쓴다.
+fn png_map_meta(png: &wz_core::image::PngRef) -> (Option<String>, crate::Point, crate::Point) {
+    use wz_core::image::ImageValue;
+
+    let mut origin = crate::Point::ZERO;
+    let mut map_name = None;
+    let mut map_origin = crate::Point::ZERO;
+
+    if let Some(sub) = &png.sub_property {
+        for ch in &sub.children {
+            match (ch.name.as_ref(), &ch.value) {
+                ("origin", Some(ImageValue::Vector(v))) => {
+                    origin = crate::Point::new(v.x, v.y);
+                }
+                ("map", Some(ImageValue::Property(p))) => {
+                    for m in &p.children {
+                        if m.name.as_ref() == "muzzle" {
+                            continue;
+                        }
+                        if let Some(ImageValue::Vector(v)) = &m.value {
+                            map_name = Some(m.name.to_string());
+                            map_origin = crate::Point::new(v.x, v.y);
+                            break;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    (map_name, origin, map_origin)
+}
+
+/// `origin` 을 채우고 `map` 이 있으면 그 이름/좌표로, 없으면 `navel` 로 붙인다.
+fn append_loaded_part(root: &mut Bone, png: &wz_core::image::PngRef, mut skin: SkinLayer) {
+    let (map_name, origin, map_origin) = png_map_meta(png);
+    skin.origin = origin;
+    let anchor = map_name
+        .as_deref()
+        .unwrap_or_else(|| part_anchor(&skin.name));
+    root.append_bone(skin, anchor, map_origin);
+}
+
+/// `Base/zmap.img` 에서 z-order 를 읽는다. 없으면 `None` (호출부가 표준 순서로 폴백).
+fn load_zmap_order(data_root: Option<&std::path::Path>) -> Option<Vec<String>> {
+    use wz_core::image::ImageValue;
+
+    let root = data_root?;
+    let base = root.join("Base");
+    let candidates = [base.join("Base_000.wz"), base.join("Base.wz")];
+    let path = candidates.iter().find(|p| p.exists())?;
+    let archive = WzArchive::open(path).ok()?;
+    let tree = archive.read_tree().ok()?;
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some("zmap.img"))?;
+    let node = archive.parse_image_at(entry.offset?).ok()?;
+
+    let mut order: Vec<String> = node.children.iter().map(|c| c.name.to_string()).collect();
+    if let Some(ImageValue::Property(p)) = &node.value {
+        order.extend(p.children.iter().map(|c| c.name.to_string()));
+    }
+    let mut seen = std::collections::HashSet::new();
+    order.retain(|name| !name.is_empty() && seen.insert(name.clone()));
+    if order.is_empty() {
+        None
+    } else {
+        Some(order)
+    }
 }
 
 pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAvatar> {
@@ -85,6 +163,10 @@ pub fn load_from_character_wz_with_skin(
     char_wz_path: &std::path::Path,
     body_skin: i32,
 ) -> Option<LoadedAvatar> {
+    let data_root = char_wz_path
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.to_path_buf());
     let canvas_path = char_wz_path
         .parent()?
         .join("_Canvas")
@@ -198,14 +280,13 @@ pub fn load_from_character_wz_with_skin(
         };
 
         let slot_name = pn.name.to_string();
-        let anchor = part_anchor(&slot_name);
 
         let mut skin = SkinLayer::new(slot_name.clone());
         skin.z = z_tag;
         skin.z_index = z_index;
         skin.width = w;
         skin.height = h;
-        root.append_bone(skin, anchor, crate::Point::new(0, 0));
+        append_loaded_part(&mut root, &pr, skin);
 
         parts.push(AvatarPart {
             slot: slot_name,
@@ -280,7 +361,7 @@ pub fn load_from_character_wz_with_skin(
                         skin.z = z_tag;
                         skin.width = w;
                         skin.height = h;
-                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                        append_loaded_part(&mut root, &pr, skin);
 
                         parts.push(AvatarPart {
                             slot: slot_name,
@@ -322,7 +403,7 @@ pub fn load_from_character_wz_with_skin(
                                         skin.z = z_tag;
                                         skin.width = w;
                                         skin.height = h;
-                                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                                        append_loaded_part(&mut root, &png, skin);
                                         parts.push(AvatarPart {
                                             slot: slot_name,
                                             width: w,
@@ -365,7 +446,7 @@ pub fn load_from_character_wz_with_skin(
                                         skin.z = z_tag;
                                         skin.width = w;
                                         skin.height = h;
-                                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                                        append_loaded_part(&mut root, &png, skin);
                                         parts.push(AvatarPart {
                                             slot: slot_name.to_lowercase(),
                                             width: w,
@@ -413,7 +494,7 @@ pub fn load_from_character_wz_with_skin(
                                         skin.z = "weapon".to_string();
                                         skin.width = w;
                                         skin.height = h;
-                                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                                        append_loaded_part(&mut root, &png, skin);
                                         parts.push(AvatarPart {
                                             slot: "weapon".to_string(),
                                             width: w,
@@ -462,7 +543,7 @@ pub fn load_from_character_wz_with_skin(
                                         skin.z = z_tag;
                                         skin.width = w;
                                         skin.height = h;
-                                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                                        append_loaded_part(&mut root, &png, skin);
                                         parts.push(AvatarPart {
                                             slot: slot_name.to_string(),
                                             width: w,
@@ -483,8 +564,9 @@ pub fn load_from_character_wz_with_skin(
         return None;
     }
 
-    // 표준 MapleStory z-map 순서 사용
-    let mut zmap_order: Vec<String> = STANDARD_ZMAP.iter().map(|s| s.to_string()).collect();
+    // `Base/zmap.img` 가 있으면 그 순서를, 없으면 표준 MapleStory 순서를 쓴다.
+    let mut zmap_order: Vec<String> = load_zmap_order(data_root.as_deref())
+        .unwrap_or_else(|| STANDARD_ZMAP.iter().map(|s| s.to_string()).collect());
     // 로드된 파트의 z-tag 가 표준에 없으면 추가
     for p in &parts {
         let zt = part_z_tag(&p.slot);
@@ -647,7 +729,7 @@ pub fn load_avatar_with_equipment(
                             skin.z = z_tag;
                             skin.width = w;
                             skin.height = h;
-                            root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                            append_loaded_part(&mut root, &pr, skin);
                             parts.push(AvatarPart {
                                 slot: slot_name,
                                 width: w,
@@ -720,7 +802,7 @@ pub fn load_avatar_with_equipment(
                         skin.z = z_tag;
                         skin.width = w;
                         skin.height = h;
-                        root.append_bone(skin, "navel", crate::Point::new(0, 0));
+                        append_loaded_part(&mut root, &pr, skin);
                         parts.push(AvatarPart {
                             slot: slot_name,
                             width: w,
@@ -764,7 +846,9 @@ pub fn load_avatar_with_equipment(
         return None;
     }
 
-    let mut zmap_order: Vec<String> = STANDARD_ZMAP.iter().map(|s| s.to_string()).collect();
+    // `Base/zmap.img` 가 있으면 그 순서를, 없으면 표준 MapleStory 순서를 쓴다.
+    let mut zmap_order: Vec<String> = load_zmap_order(Some(data_root))
+        .unwrap_or_else(|| STANDARD_ZMAP.iter().map(|s| s.to_string()).collect());
     for p in &parts {
         let zt = part_z_tag(&p.slot);
         if !zmap_order.contains(&zt) {

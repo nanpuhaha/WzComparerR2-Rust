@@ -38,7 +38,7 @@ pub use calc::{evaluate_expression, CalcError};
 pub use chara_prop::CharaProp;
 pub use gear_stats::extract_gear_props;
 pub use linker::{
-    extract_gear_stats, LoadMode, StringLinker, StringResult, StringRoot, StringRoots,
+    extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,
 };
 pub use map::{
     BackItem, Foothold, FootholdTree, LadderRope, LadderRopeKind, LifeKind, MapData, MapInfo,

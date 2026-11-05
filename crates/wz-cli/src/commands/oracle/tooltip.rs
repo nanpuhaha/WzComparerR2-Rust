@@ -4,9 +4,10 @@ pub fn cmd_oracle_tooltip(
     item_id: i32,
     item_wz: Option<&std::path::Path>,
     etc_wz: Option<&std::path::Path>,
+    domain: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use wz_core::WzArchive;
-    use wz_db::{Arena, StringLinker, StringRoot, StringRoots};
+    use wz_db::{Arena, StringDomain, StringLinker, StringRoot, StringRoots};
 
     let archive = WzArchive::open(wz_path)?;
     let detection = archive.detection();
@@ -38,7 +39,17 @@ pub fn cmd_oracle_tooltip(
     let mut linker = StringLinker::new();
     linker.load_roots(&roots);
 
-    let text = linker.format_tooltip(item_id).unwrap_or_default();
+    let domain = match domain {
+        Some(text) => Some(
+            StringDomain::parse(text)
+                .ok_or_else(|| format!("알 수 없는 도메인: {text} (item/eqp/skill/map/mob/npc)"))?,
+        ),
+        None => None,
+    };
+    let text = match domain {
+        Some(d) => linker.format_tooltip_in(d, item_id).unwrap_or_default(),
+        None => linker.format_tooltip(item_id).unwrap_or_default(),
+    };
 
     let mut doc = oracle_envelope("tooltip", detection);
     let mut res = serde_json::Map::new();

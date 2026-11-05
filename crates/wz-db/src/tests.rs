@@ -1549,3 +1549,40 @@ fn load_roots_loads_optional_quest_root_in_one_call() {
         Some("퀘스트")
     );
 }
+
+#[test]
+fn domain_specific_lookup_disambiguates_colliding_ids() {
+    let mut a = Arena::with_root("");
+    let root = string_root_direct(&a);
+    add_img(
+        &mut a,
+        root,
+        "Consume.img",
+        vec![with_children(
+            node("100"),
+            vec![node_val("name", NodeValue::Str(Arc::from("아이템")))],
+        )],
+    );
+    add_img(
+        &mut a,
+        root,
+        "Mob.img",
+        vec![with_children(
+            node("100"),
+            vec![node_val("name", NodeValue::Str(Arc::from("몹")))],
+        )],
+    );
+
+    let mut linker = crate::linker::StringLinker::new();
+    assert!(linker.load_string_wz(&a, root));
+
+    use crate::linker::StringDomain;
+    assert_eq!(linker.get(StringDomain::Item, 100).unwrap().name, "아이템");
+    assert_eq!(linker.get(StringDomain::Mob, 100).unwrap().name, "몹");
+    // ADR-0006: get_by_id is a convenience; item precedes mob.
+    assert_eq!(linker.get_by_id(100).unwrap().name, "아이템");
+    assert_eq!(
+        linker.format_tooltip_in(StringDomain::Mob, 100).as_deref(),
+        Some("몹")
+    );
+}

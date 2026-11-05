@@ -240,13 +240,15 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
 | `WorldArchiveEntry` | 8-인자 data clump → struct 하나 | `cargo clippy -D warnings` |
 | `AvatarScene` | `Deref`/`DerefMut` 제거, `canvas` 필드 private, `canvas()`/`canvas_mut()` 단일 접근 경로 | workspace 테스트 |
 | `mapscene` 출력 | `ladders_ropes`/`backgrounds`/`objects`/`tiles` 및 `kind` 필드 추가. `LadderRopeKind`/`LifeKind` 가 실제 소비됨 | `cargo test --workspace` |
+| `StringDomain` | 도메인별 `get`/`format_tooltip_in` + `tooltip --domain`, 충돌 회귀 테스트 | 56 wz-db tests |
+| GUI 다중 루트 | GUI StringLinker 가 String/Item/Etc/Quest/Reactor 를 `WZ_DATA_ROOT` 에서 로드 | GUI build/clippy |
+| 아바타 origin/map/zmap | `PngRef.sub_property` 의 `origin`/`map` 사용, `Base/zmap.img` 로 z-order 로드 | `cargo test --workspace` |
 
 ### 남은 후보
 
-- **GUI 다중 루트 로딩** — GUI StringLinker 가 아직 String.wz 만 읽는다.
-- **아바타 앵커/프리즘/zmap 파리티** — C# `CharaSim`/`AvatarCommon` 포팅 필요.
-- **`get_by_id` 충돌** — ADR-0006 으로 “편의용”임을 고정했지만, 도메인별 조회 API와 충돌 회귀 테스트는 후속.
-- **공개 릴리스 체크리스트** — 브랜치 보호, Dependabot 정책, 저장소 공개 전환.
+- **아바타 전체 파리티** — `frame_layers::collect_frame_layers` 로 `loader.rs` 를 일원화하고 프리즘 적용까지 옮기는 후속 작업 (`docs/avatar-parity.md`).
+- **공개 릴리스 최종 전환** — `docs/release-checklist.md` 의 수동 항목 (Dependabot PR 검토, visibility 전환).
+- **오라클 하네스 CI** — 공개 C# 트리에 `WzComparerR2.Oracle` 프로젝트가 없어 수동 workflow 입력이 필요.
 
 ### 산출물
 

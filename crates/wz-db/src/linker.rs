@@ -74,6 +74,55 @@ impl LoadMode {
     }
 }
 
+/// `StringLinker` 의 도메인별 문자열 사전.
+///
+/// `get_by_id` 의 fallback 순서는 편의일 뿐이고, 오라클 op 는 도메인을 명시해야
+/// 한다 (ADR-0006). 이 타입이 그 도메인 이름을 타입으로 만든다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StringDomain {
+    Item,
+    Eqp,
+    Skill,
+    Map,
+    Mob,
+    Npc,
+}
+
+impl StringDomain {
+    /// `get_by_id` 가 사용하는 편의 순서 (ADR-0006).
+    pub const ALL: [Self; 6] = [
+        Self::Item,
+        Self::Eqp,
+        Self::Skill,
+        Self::Map,
+        Self::Mob,
+        Self::Npc,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Item => "item",
+            Self::Eqp => "eqp",
+            Self::Skill => "skill",
+            Self::Map => "map",
+            Self::Mob => "mob",
+            Self::Npc => "npc",
+        }
+    }
+
+    pub fn parse(text: &str) -> Option<Self> {
+        match text.to_ascii_lowercase().as_str() {
+            "item" => Some(Self::Item),
+            "eqp" | "equip" => Some(Self::Eqp),
+            "skill" => Some(Self::Skill),
+            "map" => Some(Self::Map),
+            "mob" => Some(Self::Mob),
+            "npc" => Some(Self::Npc),
+            _ => None,
+        }
+    }
+}
+
 /// 하나의 WZ 루트와 그 노드를 가리키는 borrowed view.
 #[derive(Clone, Copy)]
 pub struct StringRoot<'a> {
@@ -842,21 +891,43 @@ impl StringLinker {
         }
     }
 
+    /// 도메인을 명시해 문자열을 조회한다 (ADR-0006).
+    ///
+    /// `get_by_id` 의 fallback 순서에 기대지 않으려면 이 메서드를 쓴다.
+    pub fn get(&self, domain: StringDomain, id: i32) -> Option<&StringResult> {
+        match domain {
+            StringDomain::Item => self.string_item.get(&id),
+            StringDomain::Eqp => self.string_eqp.get(&id),
+            StringDomain::Skill => self.string_skill.get(&id),
+            StringDomain::Map => self.string_map.get(&id),
+            StringDomain::Mob => self.string_mob.get(&id),
+            StringDomain::Npc => self.string_npc.get(&id),
+        }
+    }
+
     /// ID로 등록된 문자열을 `item → eqp → skill → map → mob → npc` 순으로 조회한다.
     ///
     /// 원본에 이 순서를 정한 단일 함수는 없다 — 렌더러마다 필요한 사전 하나만
     /// 본다 (`ItemTooltipRender.cs:64`, `GearTooltipRender.cs:144`,
-    /// `MapTooltipRenderer.cs:395`). 이 순서는 그 관습을 하나로 모은 것이며
-    /// `familiar_skill` / `monster_book` / `world_archive_*` /
-    /// `set_item` 은 원본처럼 별도 사전에서 직접 접근한다.
+    /// `MapTooltipRenderer.cs:395`). 이 순서는 그 관습을 하나로 모은 **편의**이며
+    /// (ADR-0006), 도메인이 정해진 오라클 op 는 [`Self::get`] 을 써야 한다.
     pub fn get_by_id(&self, id: i32) -> Option<&StringResult> {
-        self.string_item
-            .get(&id)
-            .or_else(|| self.string_eqp.get(&id))
-            .or_else(|| self.string_skill.get(&id))
-            .or_else(|| self.string_map.get(&id))
-            .or_else(|| self.string_mob.get(&id))
-            .or_else(|| self.string_npc.get(&id))
+        StringDomain::ALL
+            .iter()
+            .find_map(|&domain| self.get(domain, id))
+    }
+
+    /// 하나의 `StringResult` 를 오라클 `tooltip` 텍스트로 만든다.
+    pub fn format_tooltip_result(sr: &StringResult) -> String {
+        match sr.desc.as_deref() {
+            Some(desc) if !desc.is_empty() => format!("{}\n{}", sr.name, desc),
+            _ => sr.name.clone(),
+        }
+    }
+
+    /// 도메인을 명시한 툴팁 조회. 도메인별 사전을 직접 본다.
+    pub fn format_tooltip_in(&self, domain: StringDomain, id: i32) -> Option<String> {
+        self.get(domain, id).map(Self::format_tooltip_result)
     }
 
     /// 오라클 `tooltip` 검증용 텍스트: `name`, 그리고 `desc` 가 있으면
@@ -871,11 +942,7 @@ impl StringLinker {
     /// **발명하지 않는다** — 그러면 대조가 불가능해질 뿐이다.
     /// C# GUI 와 달라지는 지점은 `Desc + AutoDesc` 연결과 `"(null)"` 이름 대체다.
     pub fn format_tooltip(&self, id: i32) -> Option<String> {
-        let sr = self.get_by_id(id)?;
-        match sr.desc.as_deref() {
-            Some(desc) if !desc.is_empty() => Some(format!("{}\n{}", sr.name, desc)),
-            _ => Some(sr.name.clone()),
-        }
+        self.get_by_id(id).map(Self::format_tooltip_result)
     }
 }
 
@@ -1070,5 +1137,18 @@ mod unit_tests {
         assert_eq!(parse_csharp_int(" 100 "), Ok(100));
         assert_eq!(parse_csharp_int("-7"), Ok(-7));
         assert_eq!(parse_csharp_int("1.5"), Err(()));
+    }
+}
+
+#[cfg(test)]
+mod domain_tests {
+    use super::*;
+
+    #[test]
+    fn string_domain_parse_is_case_insensitive_and_explicit() {
+        assert_eq!(StringDomain::parse("ITEM"), Some(StringDomain::Item));
+        assert_eq!(StringDomain::parse("equip"), Some(StringDomain::Eqp));
+        assert_eq!(StringDomain::parse("mob"), Some(StringDomain::Mob));
+        assert_eq!(StringDomain::parse("unknown"), None);
     }
 }

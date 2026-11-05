@@ -242,6 +242,10 @@ enum OracleAction {
         #[arg(long)]
         etc_wz: Option<PathBuf>,
 
+        /// 조회 도메인 (item/eqp/skill/map/mob/npc). 생략하면 편의 순서.
+        #[arg(long)]
+        domain: Option<String>,
+
         /// 아이템/장비/스킬 ID (예: 2000000)
         #[arg(long)]
         item: i32,
