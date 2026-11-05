@@ -125,6 +125,7 @@ WorldMap 실제 클라이언트 데이터는 QuestLimit/Fog 노드가 없어, �
 | `Npc/_Canvas/_Canvas_000.wz` DB2 NPC grid | 943 rows | Rust `wz db2-npcs` 943행 id/name/stand/default/link 완전 일치 |
 | `Reactor/_Canvas/_Canvas_000.wz` DB2 Reactor grid | 441 rows | Rust `wz db2-reactors` 441행 id/icon/info/link 완전 일치 |
 | `Sound/Sound_000.wz` DB2 Music grid | 40 rows | Rust `wz db2-music` 40행 path/bytes/ms 완전 일치 |
+| `Item/Consume/Consume_000.wz` DB2 DamageSkin grid | 952 rows | Rust `wz db2-damage-skins` 952행 id/name/desc/icon/sample 완전 일치 |
 | `Etc_000.wz` set -1 | `{"name":"결속의 반지","complete":5,"effects":[...]}` | Rust set effects 동일 |
 | `Item_000.wz` potential 1/1 | `["STR : +1"]` | Rust potential lines 동일 |
 
@@ -195,6 +196,9 @@ dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- mapnodes ../../Da
 - `wz db2-music <sound.wz>` builds `DB2Form.LoadMusic` (recursive
   `Bgm*/PL_*` sound paths + bytes/duration); C# `music` mode matches 40/40 rows
   for `Sound_000.wz`.
+- `wz db2-damage-skins <consume.wz> --string <String_000.wz>` builds
+  `DB2Form.LoadDamageSkin` (name keyword + 0243/0263 icon/sample); C#
+  `damageskins` mode matches 952/952 rows for `Consume_000.wz`.
 - GUI `Catalog` panel loads the selected image into a filterable DB2 grid.
 - C# WzLib harness `db2` mode prints the same rows. Real test:
   `Weapon_000.wz/01302000.img` → C# 270 == Rust 270 rows, exact match.

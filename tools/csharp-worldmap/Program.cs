@@ -670,6 +670,56 @@ class Program
             (string)b.GetType().GetProperty("path").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static bool IsDamageSkinName(string name) =>
+        name.Contains("스킨") || name.Contains("Damage Skin") || name.Contains("字型")
+        || name.Contains("ジスキン") || name.Contains("伤害皮肤");
+    static void DamageSkinGrid(string consumeWzPath, string stringWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(consumeWzPath);
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        if (!linker.Load(str.wz_files[0], null, null))
+        {
+            Console.WriteLine("{\"error\":\"string linker load failed\"}");
+            return;
+        }
+        var images = new List<(string name, Wz_Node node)>();
+        foreach (var name in new[] { "0243.img", "0263.img" })
+        {
+            var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == name);
+            if (imgNode?.Value is Wz_Image img && img.TryExtract())
+                images.Add((name.Replace(".img", ""), img.Node));
+        }
+        var rows = new List<object>();
+        foreach (var kv in linker.StringItem)
+        {
+            var sr = kv.Value;
+            if (!(sr.FullPath ?? "").Contains("Consume.img")) continue;
+            if (!IsDamageSkinName(sr.Name ?? "")) continue;
+            var id = "0" + kv.Key.ToString();
+            string iconImage = null;
+            bool hasSample = false;
+            foreach (var (imageName, imageNode) in images)
+            {
+                var item = imageNode.Nodes[id];
+                var info = item?.Nodes["info"];
+                if (info == null) continue;
+                if (info.Nodes["icon"] != null) iconImage = imageName;
+                if (info.Nodes["sample"] != null) hasSample = true;
+            }
+            rows.Add(new {
+                id,
+                name = sr.Name ?? "",
+                desc = sr.Desc ?? "",
+                icon_image = iconImage,
+                has_sample = hasSample,
+            });
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -685,6 +735,7 @@ class Program
         else if (args[0] == "npcs") NpcGrid(args[1], args[2]);
         else if (args[0] == "reactors") ReactorGrid(args[1]);
         else if (args[0] == "music") MusicGrid(args[1]);
+        else if (args[0] == "damageskins") DamageSkinGrid(args[1], args[2]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

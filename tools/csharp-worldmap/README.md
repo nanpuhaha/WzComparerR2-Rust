@@ -38,6 +38,8 @@ Commands:
   (`id/has_icon/has_info/has_link/link`).
 - `music <sound.wz>` — recursively lists `Bgm*`/`PL_*` `Sound_DX8` paths with
   byte length and duration.
+- `damageskins <consume.wz> <String_000.wz>` — emits DB2 DamageSkin rows
+  (`id/name/desc/icon_image/has_sample`) using `StringLinker.StringItem`.
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -130,3 +132,10 @@ dotnet run ... -- music ../../Data/Sound/Sound_000.wz
 → 40 rows
 ```
 Rust `wz db2-music ... --json` matches all 40 rows exactly.
+
+Verified DB2 DamageSkin grid output:
+```
+dotnet run ... -- damageskins ../../Data/Item/Consume/Consume_000.wz ../../Data/String/String_000.wz
+→ 952 rows
+```
+Rust `wz db2-damage-skins ... --json` matches all 952 rows exactly.

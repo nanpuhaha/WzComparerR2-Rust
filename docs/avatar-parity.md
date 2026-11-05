@@ -509,3 +509,16 @@ merge semantics (recursive directory merge, conflict errors).
   table.
 - Executed C# reference: `tools/csharp-worldmap music ...` uses WzLib.
   `Sound_000.wz` → C# 40 == Rust 40 rows, exact match.
+
+## DB2 DamageSkin grid
+
+- `wz-db::db2_damage_skins` mirrors `DB2Form.LoadDamageSkin`: iterate
+  `StringLinker.string_item` entries from `Consume.img`, keep names containing
+  `스킨`/`Damage Skin`/`字型`/`ジスキン`/`伤害皮肤`, then check
+  `Item/Consume/0243.img` and `0263.img` for `info/icon` (0263 wins) and
+  `info/sample`.
+- `wz db2-damage-skins <consume.wz> --string <String_000.wz>` prints the grid;
+  the GUI Catalog has a DB2 DamageSkin table.
+- Executed C# reference: `tools/csharp-worldmap damageskins ...` uses the
+  original StringLinker. `Consume_000.wz` → C# 952 == Rust 952 rows, exact
+  match.
