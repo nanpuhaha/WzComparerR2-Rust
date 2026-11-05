@@ -161,6 +161,27 @@ pub struct PartChairAnimationInfo {
     pub pos_lv: Vec<crate::Point>,
 }
 
+/// `outfitVoteChairInfo` — 투표 점수/아바타 레이어.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct OutfitVoteChairInfo {
+    pub score_text_pos: crate::Point,
+    pub score_layer_pos: crate::Point,
+    pub score_layer_size: crate::Point,
+    pub avatar_layer_pos: crate::Point,
+    pub avatar_layer_size: crate::Point,
+    pub avatar_gap: i32,
+    pub z: i32,
+    pub button_lt: crate::Point,
+    pub button_rb: crate::Point,
+}
+
+/// `bgmSelectionChairInfo` — BGM 선택 버튼 영역.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct BgmSelectionChairInfo {
+    pub button_lt: crate::Point,
+    pub button_rb: crate::Point,
+}
+
 /// `popChairInfo` / `popButtonChairInfo` — pop 수치 텍스트.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PopChairInfo {
@@ -291,6 +312,8 @@ pub struct CustomChairInfo {
     pub score: Option<ScoreChairInfo>,
     pub pop: Option<PopChairInfo>,
     pub time: Option<TimeChairInfo>,
+    pub outfit_vote: Option<OutfitVoteChairInfo>,
+    pub bgm_selection: Option<BgmSelectionChairInfo>,
     /// 중첩 Property 를 `a/b/c` 경로의 문자열로 평탄화해 보존한다.
     pub extra: std::collections::BTreeMap<String, String>,
 }
@@ -417,6 +440,23 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
             part_z,
             pos_lv,
         })
+    });
+
+    let outfit_vote = child_node(node, "outfitVoteChairInfo").map(|n| OutfitVoteChairInfo {
+        score_text_pos: node_vec(n, "scoreTextPos").unwrap_or(crate::Point::ZERO),
+        score_layer_pos: node_vec(n, "scoreLayerPos").unwrap_or(crate::Point::ZERO),
+        score_layer_size: node_vec(n, "scoreLayerSize").unwrap_or(crate::Point::ZERO),
+        avatar_layer_pos: node_vec(n, "avatarLayerPos").unwrap_or(crate::Point::ZERO),
+        avatar_layer_size: node_vec(n, "avatarLayerSize").unwrap_or(crate::Point::ZERO),
+        avatar_gap: node_int(n, "avatarGap").unwrap_or(0),
+        z: node_int(n, "z").unwrap_or(0),
+        button_lt: node_vec(n, "buttonPos/lt").unwrap_or(crate::Point::ZERO),
+        button_rb: node_vec(n, "buttonPos/rb").unwrap_or(crate::Point::ZERO),
+    });
+
+    let bgm_selection = child_node(node, "bgmSelectionChairInfo").map(|n| BgmSelectionChairInfo {
+        button_lt: node_vec(n, "buttonPos/lt").unwrap_or(crate::Point::ZERO),
+        button_rb: node_vec(n, "buttonPos/rb").unwrap_or(crate::Point::ZERO),
     });
 
     let pop = child_node(node, "popChairInfo")
@@ -587,6 +627,8 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         score,
         pop,
         time,
+        outfit_vote,
+        bgm_selection,
         extra,
     }
 }
@@ -2747,6 +2789,20 @@ pub fn load_avatar_with_equipment_and_mix(
                                 parts.extend(text_parts);
                             }
                         }
+                        if let (Some(vote), Some(score)) =
+                            (custom.outfit_vote.as_ref(), mix.chair.score)
+                        {
+                            if let Some((text_root, text_parts)) = text_chair_part(
+                                "vote_text",
+                                &score.to_string(),
+                                vote.score_text_pos,
+                                vote.z,
+                                2,
+                            ) {
+                                merge_bone_tree(&mut root, text_root);
+                                parts.extend(text_parts);
+                            }
+                        }
                     }
                 }
                 continue;
@@ -3627,6 +3683,52 @@ mod chair_custom_type_tests {
                 ..Default::default()
             },
         )
+    }
+
+    #[test]
+    fn outfit_vote_chair_renders_score_text() {
+        let Some(av) = load_chair_with(
+            3018996,
+            ChairUserData {
+                score: Some(1234),
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let vote = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.outfit_vote.as_ref())
+            .expect("outfit vote info");
+        assert_eq!(vote.score_text_pos, crate::Point::new(18, 1));
+        assert_eq!(vote.z, 2);
+        assert!(!has_slot(&av, "body"));
+        let part = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "vote_text")
+            .expect("vote_text part");
+        assert!(part.width > 1 && part.height > 1);
+        assert!(part.rgba.chunks(4).any(|p| p[3] != 0));
+    }
+
+    #[test]
+    fn bgm_selection_chair_parses_button_and_taming() {
+        let Some(av) = load_chair(3019043) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let bgm = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.bgm_selection.as_ref())
+            .expect("bgm info");
+        assert_eq!(bgm.button_lt, crate::Point::new(140, -75));
+        assert_eq!(bgm.button_rb, crate::Point::new(210, 0));
+        assert_eq!(info.taming_mob, Some(1983898));
+        assert!(av.parts.iter().any(|p| p.slot.starts_with("tamingmob")));
     }
 
     #[test]

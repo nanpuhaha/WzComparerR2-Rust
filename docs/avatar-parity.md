@@ -106,6 +106,10 @@ remaining CharaSim gaps.
     built-in 5x7 bitmap font at `textPos`/`popPos` (`popMin`/`popMax` clamped).
   - `timeChair` → the GUI `Time` minutes value is rendered as `HH:MM` at `textPos`
     (clamped by `timeMax`).
+  - `outfitVoteChair` → the GUI `Score` value is rendered at `scoreTextPos` with
+    the built-in font; the avatar layer/button rectangles are parsed.
+  - `bgmSelectionChair` → button rectangle and taming are loaded; BGM selection
+    itself is metadata-only (no BGM list/value in the chair WZ).
   - `Item/Install` category lookup accepts both 5-digit (`03018.img`) and 6-digit
     (`030156.img`) image names.
   - Every other `customChair` type exposes its flattened `customChair fields`
