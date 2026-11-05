@@ -84,6 +84,9 @@ jobs:
         with:
           key: differential-ci-windows-gates
 
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
       - name: cargo test --workspace
         run: cargo test --workspace
 
@@ -96,6 +99,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cargo fmt --manifest-path crates/wz-gui/Cargo.toml --all -- --check
           cargo build --manifest-path crates/wz-gui/Cargo.toml --no-default-features
           cargo clippy --manifest-path crates/wz-gui/Cargo.toml --no-default-features -- -D warnings
 
@@ -284,7 +288,7 @@ jobs:
           fi
 
       - name: C# 오라클 체크아웃 (핀)
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: ${{ inputs.csharp_repository }}
           ref: ${{ inputs.csharp_ref }}
