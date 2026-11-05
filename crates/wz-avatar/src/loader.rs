@@ -150,6 +150,14 @@ pub struct RollingHouseInfo {
     pub quest_id: i32,
 }
 
+/// `eventPointChair` — 이벤트 포인트 체어의 게임플레이 메타데이터.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct EventPointChairInfo {
+    pub index: i32,
+    pub point: i32,
+    pub term: i32,
+}
+
 /// `androidChairInfo` — 안드로이드/홀로그램 효과.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AndroidChairInfo {
@@ -189,6 +197,7 @@ pub struct CustomChairInfo {
     pub rolling_house: Option<RollingHouseInfo>,
     pub android: Option<AndroidChairInfo>,
     pub pet: Option<PetChairInfo>,
+    pub event_point: Option<EventPointChairInfo>,
     /// 중첩 Property 를 `a/b/c` 경로의 문자열로 평탄화해 보존한다.
     pub extra: std::collections::BTreeMap<String, String>,
 }
@@ -280,6 +289,12 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         }
     });
 
+    let event_point = child_node(node, "eventPointChair").map(|n| EventPointChairInfo {
+        index: node_int(n, "index").unwrap_or(0),
+        point: node_int(n, "point").unwrap_or(0),
+        term: node_int(n, "term").unwrap_or(0),
+    });
+
     let android = child_node(node, "androidChairInfo").map(|n| {
         let effect_frames = child_node(n, "customEffect")
             .map(|ce| {
@@ -356,6 +371,7 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         rolling_house,
         android,
         pet,
+        event_point,
         extra,
     }
 }
@@ -3086,6 +3102,12 @@ mod chair_custom_type_tests {
             return;
         };
         let info = chair_info(&av);
+        let event = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.event_point.as_ref())
+            .expect("event point info");
+        assert_eq!((event.index, event.point, event.term), (1, 3, 10000));
         assert_eq!(info.taming_mob, Some(1983422));
         assert!(!has_slot(&av, "body"));
         assert!(has_slot(&av, "chair"));

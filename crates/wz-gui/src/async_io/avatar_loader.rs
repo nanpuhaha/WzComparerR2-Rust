@@ -6,6 +6,24 @@
 
 use crate::state::{AppState, AvatarPartData};
 
+fn apply_chair_metadata(state: &mut AppState, av: &wz_avatar::LoadedAvatar) {
+    state.chair_type = av.chair_info.as_ref().and_then(|info| {
+        info.custom_chair
+            .as_ref()
+            .map(|custom| match &custom.chair_type {
+                wz_avatar::CustomChairType::ScaleAvatarChair => "ScaleAvatarChair".to_string(),
+                wz_avatar::CustomChairType::Unsupported => "Unsupported".to_string(),
+                wz_avatar::CustomChairType::Other(name) => name.clone(),
+            })
+    });
+    state.chair_event_point = av
+        .chair_info
+        .as_ref()
+        .and_then(|info| info.custom_chair.as_ref())
+        .and_then(|custom| custom.event_point.as_ref())
+        .map(|event| (event.index, event.point, event.term));
+}
+
 fn part_data(p: &wz_avatar::AvatarPart) -> AvatarPartData {
     AvatarPartData {
         slot: p.slot.clone(),
@@ -41,6 +59,8 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             state.chair_delays.clear();
             state.chair_frame = 0;
             state.chair_last_time = 0.0;
+            state.chair_type = None;
+            state.chair_event_point = None;
             render_loaded_avatar(state);
         }
         None => {
@@ -127,6 +147,7 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
             state.chair_delays = av.chair_delays.clone();
             state.chair_frame = 0;
             state.chair_last_time = 0.0;
+            apply_chair_metadata(state, &av);
             render_loaded_avatar(state);
         }
         None => {
@@ -468,6 +489,22 @@ mod tests {
             "frame render failed: {}",
             state.avatar_status
         );
+    }
+
+    #[test]
+    fn extracts_event_point_chair_metadata() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let Some(av) =
+            wz_avatar::load_avatar_with_equipment(&root, 2000, &[("Chair".to_string(), 3018093)])
+        else {
+            return;
+        };
+        let mut state = AppState::default();
+        apply_chair_metadata(&mut state, &av);
+        assert_eq!(state.chair_type.as_deref(), Some("eventPointChair"));
+        assert_eq!(state.chair_event_point, Some((1, 3, 10000)));
     }
 
     #[test]

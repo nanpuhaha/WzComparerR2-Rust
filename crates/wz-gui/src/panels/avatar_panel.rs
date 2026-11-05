@@ -179,6 +179,14 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         }
     }
     ui.checkbox(&mut state.effect_auto_play, "Effect 자동 재생");
+    if let Some(chair_type) = &state.chair_type {
+        ui.label(format!("Chair type: {chair_type}"));
+    }
+    if let Some((index, point, term)) = state.chair_event_point {
+        ui.label(format!(
+            "Event point: index {index}, point {point}, term {term}ms"
+        ));
+    }
     if !state.chair_frames.is_empty() {
         let max_frame = state.chair_frames.len() - 1;
         if state.chair_frame > max_frame {

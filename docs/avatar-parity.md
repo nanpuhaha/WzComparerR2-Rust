@@ -88,6 +88,9 @@ remaining CharaSim gaps.
   - `petChair` → `petChairInfo` slots (`pos`, `reverseFlip`, `wonderGrade`,
     `tGapMin/Max`) are parsed and the taming/base is loaded. Actual pet sprites
     require the player's equipped-pet data, which is not part of the chair WZ.
+  - `eventPointChair` → `index`/`point`/`term` are parsed and shown in the GUI
+    (`Chair type`, `Event point`). Rendering uses the taming part; the chair body
+    is hidden (`removeBody`).
   - `AvatarPart` now carries final `position`, `origin`, and `z_index`; the GUI
     centers/scales the assembled avatar and draws parts at those coordinates.
 - Custom origin: the two-step C# semantics are implemented:
