@@ -187,6 +187,24 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             "Event point: index {index}, point {point}, term {term}ms"
         ));
     }
+    ui.horizontal(|ui| {
+        ui.label("Level:");
+        ui.add(egui::DragValue::new(&mut state.chair_level).range(1..=300));
+        ui.label("Score:");
+        ui.add(egui::DragValue::new(&mut state.chair_score).range(0..=99999));
+    });
+    ui.label("identity/score 체어 값은 장비 로드 시 적용됩니다");
+    if !state.chair_custom_fields.is_empty() {
+        egui::CollapsingHeader::new("customChair fields").show(ui, |ui| {
+            egui::ScrollArea::vertical()
+                .max_height(120.0)
+                .show(ui, |ui| {
+                    for (key, value) in &state.chair_custom_fields {
+                        ui.label(format!("{key} = {value}"));
+                    }
+                });
+        });
+    }
     if !state.chair_frames.is_empty() {
         let max_frame = state.chair_frames.len() - 1;
         if state.chair_frame > max_frame {

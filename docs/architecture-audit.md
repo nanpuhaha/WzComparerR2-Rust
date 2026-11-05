@@ -246,7 +246,7 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
 
 ### 남은 후보
 
-- **WZ-only customChair 타입 동작** — C# `CustomChairType` 은 `Unsupported`/`ScaleAvatarChair` 두 개뿐이다. Rust 로더는 C# 공통 규칙(`sitAction`, `removeBody`, `fixFrameIdx`, `tamingMob`, `info/scale`)을 포팅했고, C#에 없는 `flipXYChair`/`rotatedSleepingBagChair`/`dummyAvatarChair`는 WZ 스키마 기반 확장으로 플립/회전/더미 taming을 적용한다. `rollingHouseChair`는 `_outlink` 로 8개 파츠를 해석하고, 모든 프레임/딜레이를 로드해 GUI 에서 슬라이더/자동 재생한다. `androidChair`는 `customEffect` 16프레임을 같은 체어 애니메이션 경로로 재생하고, `petChair`는 슬롯/타이밍을 파싱한다(펫 스프라이트는 장착 펫 데이터 필요). `eventPointChair`는 `index`/`point`/`term`을 GUI에 표시하고, `hashTagChair`는 첫 action 포즈를 적용하며, `mirrorChair`는 무기를 숨긴다. `2019rollingHouseChair`/`yetiChair`는 `part/N` 애니메이션을 재생한다. 나머지 `identity`/`score`/`pop`/`outfitVote`/`time`/`bgmSelection` 등은 평탄화된 `customChair fields`로 표시만 한다(게임 값 시뮬레이션 없음).
+- **WZ-only customChair 타입 동작** — C# `CustomChairType` 은 `Unsupported`/`ScaleAvatarChair` 두 개뿐이다. Rust 로더는 C# 공통 규칙(`sitAction`, `removeBody`, `fixFrameIdx`, `tamingMob`, `info/scale`)을 포팅했고, C#에 없는 `flipXYChair`/`rotatedSleepingBagChair`/`dummyAvatarChair`는 WZ 스키마 기반 확장으로 플립/회전/더미 taming을 적용한다. `rollingHouseChair`는 `_outlink` 로 8개 파츠를 해석하고, 모든 프레임/딜레이를 로드해 GUI 에서 슬라이더/자동 재생한다. `androidChair`는 `customEffect` 16프레임을 같은 체어 애니메이션 경로로 재생하고, `petChair`는 슬롯/타이밍을 파싱한다(펫 스프라이트는 장착 펫 데이터 필요). `eventPointChair`는 `index`/`point`/`term`을 GUI에 표시하고, `hashTagChair`는 첫 action 포즈를 적용하며, `mirrorChair`는 무기를 숨긴다. `2019rollingHouseChair`/`yetiChair`는 `part/N` 애니메이션을 재생한다. `identityChair`는 레벨 숫자 스프라이트를 렌더하고, `scoreChair`는 점수 구간별 이펙트를 재생한다. 나머지 `pop`/`outfitVote`/`time`/`bgmSelection` 등은 평탄화된 `customChair fields`로 표시만 한다(게임 값 시뮬레이션 없음).
 - **오라클 하네스 CI** — 공개 C# 트리에 `WzComparerR2.Oracle` 프로젝트가 없어 수동 workflow 입력이 필요.
 
 ### 산출물

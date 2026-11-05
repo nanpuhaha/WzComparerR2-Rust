@@ -96,9 +96,15 @@ remaining CharaSim gaps.
   - `mirrorChair` → `avatarPosY`/`avatarInvisibleWeapon` parsed; weapon hidden.
   - `2019rollingHouseChair` / `yetiChair` → generic `part/N/part0..` animation
     frames are loaded through the same chair frame slider/auto-play.
+  - `identityChair` → the player level is rendered from `identityChairInfo/number`
+    digit sprites at `numPos` (GUI `Level` input). Name/job/gender text still needs
+    a text renderer.
+  - `scoreChair` → the `scoreEffect` group whose `[min,max]` contains the GUI
+    `Score` input is selected and its effect frames play through the chair
+    animation path.
   - Every other `customChair` type exposes its flattened `customChair fields`
-    (type + nested key/value) in the GUI; gameplay-only values (name, score,
-    level, BGM, vote, etc.) are not simulated.
+    (type + nested key/value) in the GUI; remaining gameplay-only values (name,
+    BGM, vote, time, pop counts, etc.) are not simulated.
   - `AvatarPart` now carries final `position`, `origin`, and `z_index`; the GUI
     centers/scales the assembled avatar and draws parts at those coordinates.
 - Custom origin: the two-step C# semantics are implemented:

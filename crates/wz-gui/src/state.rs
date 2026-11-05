@@ -119,6 +119,9 @@ pub struct AppState {
     pub chair_event_point: Option<(i32, i32, i32)>,
     /// `customChair` 의 평탄화된 메타데이터 (모든 UI 타입 표시용).
     pub chair_custom_fields: Vec<(String, String)>,
+    /// identityChair 레벨 / scoreChair 점수 (장비 로드 시 적용).
+    pub chair_level: i32,
+    pub chair_score: i32,
     pub camera: Camera2D,
     pub viewport_texture: Option<TextureHandle>,
     pub viewport_dirty: bool,
@@ -195,6 +198,8 @@ impl Default for AppState {
             chair_type: None,
             chair_event_point: None,
             chair_custom_fields: Vec::new(),
+            chair_level: 200,
+            chair_score: 0,
             camera: Camera2D::new(512.0, 512.0),
             viewport_texture: None,
             viewport_dirty: true,

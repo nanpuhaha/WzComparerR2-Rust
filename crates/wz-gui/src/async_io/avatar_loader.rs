@@ -132,6 +132,11 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
                 .then_some((state.face_mix_color, state.face_mix_opacity)),
             effect_frame: state.effect_frame,
             custom_origins: parse_custom_origins(&state.custom_origin_input),
+            chair: wz_avatar::ChairUserData {
+                level: Some(state.chair_level),
+                score: Some(state.chair_score),
+                ..Default::default()
+            },
         },
     ) {
         Some(av) => {

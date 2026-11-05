@@ -161,6 +161,41 @@ pub struct PartChairAnimationInfo {
     pub pos_lv: Vec<crate::Point>,
 }
 
+/// `identityChairInfo` — 레벨/이름/직업/성별 레이어.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct IdentityChairInfo {
+    pub num_pos: crate::Point,
+    pub name_pos: crate::Point,
+    pub job_pos: crate::Point,
+    pub gender_pos: crate::Point,
+    pub layer_pos: crate::Point,
+    pub layer_size: crate::Point,
+    pub digits: usize,
+}
+
+/// `scoreChairInfo/scoreEffect/N` 범위.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ScoreChairGroup {
+    pub min: i32,
+    pub max: Option<i32>,
+}
+
+/// `scoreChairInfo` — 점수 구간별 이펙트.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ScoreChairInfo {
+    pub groups: Vec<ScoreChairGroup>,
+}
+
+/// 호출자가 공급하는 체어 표시 값 (C# `PrismData` 처럼 WZ 밖의 값).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ChairUserData {
+    pub level: Option<i32>,
+    pub name: Option<String>,
+    pub job: Option<String>,
+    pub gender: Option<String>,
+    pub score: Option<i32>,
+}
+
 /// `hashTagChairInfo/action/N` — 동작별 강제 포즈.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct HashTagAction {
@@ -233,6 +268,8 @@ pub struct CustomChairInfo {
     pub hash_tag: Option<HashTagChairInfo>,
     pub mirror: Option<MirrorChairInfo>,
     pub part_animation: Option<PartChairAnimationInfo>,
+    pub identity: Option<IdentityChairInfo>,
+    pub score: Option<ScoreChairInfo>,
     /// 중첩 Property 를 `a/b/c` 경로의 문자열로 평탄화해 보존한다.
     pub extra: std::collections::BTreeMap<String, String>,
 }
@@ -361,6 +398,34 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         })
     });
 
+    let identity = child_node(node, "identityChairInfo").map(|n| IdentityChairInfo {
+        num_pos: node_vec(n, "numPos").unwrap_or(crate::Point::ZERO),
+        name_pos: node_vec(n, "namePos").unwrap_or(crate::Point::ZERO),
+        job_pos: node_vec(n, "jobPos").unwrap_or(crate::Point::ZERO),
+        gender_pos: node_vec(n, "genderPos").unwrap_or(crate::Point::ZERO),
+        layer_pos: node_vec(n, "layerPos").unwrap_or(crate::Point::ZERO),
+        layer_size: node_vec(n, "layerSize").unwrap_or(crate::Point::ZERO),
+        digits: child_node(n, "number")
+            .map(|num| num.object_children().len())
+            .unwrap_or(0),
+    });
+
+    let score = child_node(node, "scoreChairInfo").map(|n| {
+        let mut groups = Vec::new();
+        if let Some(effect) = child_node(n, "scoreEffect") {
+            for child in effect.object_children() {
+                if child.name.parse::<usize>().is_err() {
+                    continue;
+                }
+                groups.push(ScoreChairGroup {
+                    min: node_int(child, "min").unwrap_or(0),
+                    max: node_int(child, "max"),
+                });
+            }
+        }
+        ScoreChairInfo { groups }
+    });
+
     let hash_tag = child_node(node, "hashTagChairInfo").map(|n| {
         let mut actions = Vec::new();
         let Some(action_root) = child_node(n, "action") else {
@@ -475,6 +540,8 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         hash_tag,
         mirror,
         part_animation,
+        identity,
+        score,
         extra,
     }
 }
@@ -1115,6 +1182,134 @@ pub fn load_chair_info(data_root: &std::path::Path, item_id: i32) -> Option<Chai
         chair.taming = load_taming_info(data_root, id);
     }
     Some(chair)
+}
+
+/// 메타데이터 Canvas 또는 `_outlink` 대상 픽셀을 해석한다.
+fn decode_chair_canvas(
+    node: &ImageNode,
+    meta_archive: &WzArchive,
+    canvas_archive: &WzArchive,
+) -> Option<(u32, u32, Vec<u8>)> {
+    if let Some(link) = node_str(node, "_outlink") {
+        let resolved = crate::frame_layers::resolve_outlink(canvas_archive, &link).ok()?;
+        return Some((resolved.w, resolved.h, resolved.rgba));
+    }
+    let png = node.first_canvas()?;
+    wz_image::decode_png_ref_to_rgba(&png, meta_archive.source()).ok()
+}
+
+/// `identityChairInfo/number/0..9` 로 레벨 숫자를 조립한다.
+fn load_identity_digits(
+    data_root: &std::path::Path,
+    item_id: i32,
+    identity: &IdentityChairInfo,
+    level: i32,
+) -> Option<(Bone, Vec<AvatarPart>)> {
+    if level < 0 {
+        return None;
+    }
+    let (meta_archive, meta_item) = find_install_item(data_root, "", item_id)?;
+    let (canvas_archive, _) = find_install_item(data_root, "_Canvas", item_id)?;
+    let mut digits = std::collections::BTreeMap::new();
+    for d in 0..10 {
+        let path = format!("info/customChair/identityChairInfo/number/{d}");
+        let Some(node) = find_path_node(&meta_item, &path) else {
+            continue;
+        };
+        if let Some(decoded) = decode_chair_canvas(node, &meta_archive, &canvas_archive) {
+            digits.insert(d, decoded);
+        }
+    }
+    if digits.is_empty() {
+        return None;
+    }
+
+    let mut root = Bone::new("@identity");
+    let mut parts = Vec::new();
+    let mut cursor = 0i32;
+    for (i, ch) in level.to_string().chars().enumerate() {
+        let Some(d) = ch.to_digit(10) else {
+            continue;
+        };
+        let Some((w, h, rgba)) = digits.get(&d) else {
+            continue;
+        };
+        let pos = crate::Point::new(identity.num_pos.x + cursor, identity.num_pos.y);
+        let slot = format!("identity_digit_{i}");
+        let mut skin = SkinLayer::new(&slot);
+        skin.z = "identity".into();
+        skin.z_index = 1;
+        skin.origin = crate::Point::ZERO;
+        skin.width = *w;
+        skin.height = *h;
+        root.append_bone(skin, &slot, pos);
+        parts.push(AvatarPart {
+            slot,
+            width: *w,
+            height: *h,
+            rgba: rgba.clone(),
+            position: pos,
+            origin: crate::Point::ZERO,
+            z_index: 1,
+            custom_origin_map: Default::default(),
+        });
+        cursor += *w as i32;
+    }
+    if parts.is_empty() {
+        return None;
+    }
+    Some((root, parts))
+}
+
+/// `scoreChairInfo/scoreEffect` 에서 점수 구간에 맞는 이펙트 프레임을 로드한다.
+fn load_score_chair_effect(
+    data_root: &std::path::Path,
+    item_id: i32,
+    score: i32,
+) -> Option<(Bone, Vec<AvatarPart>, ChairFrames)> {
+    let (meta_archive, meta_item) = find_install_item(data_root, "", item_id)?;
+    let (canvas_archive, _) = find_install_item(data_root, "_Canvas", item_id)?;
+    let root_node = find_path_node(&meta_item, "info/customChair/scoreChairInfo/scoreEffect")?;
+    let group = root_node.object_children().iter().find(|group| {
+        let min = node_int(group, "min").unwrap_or(0);
+        let max = node_int(group, "max");
+        score >= min && max.is_none_or(|m| score <= m)
+    })?;
+    let effect = child_node(group, "effect")?;
+    let z = node_int(effect, "z").unwrap_or(-1);
+
+    let mut frames = Vec::new();
+    let mut delays = Vec::new();
+    for child in effect.object_children() {
+        if child.name.parse::<usize>().is_err() {
+            continue;
+        }
+        let Some((w, h, rgba)) = decode_chair_canvas(child, &meta_archive, &canvas_archive) else {
+            continue;
+        };
+        let origin = node_vec(child, "origin").unwrap_or(crate::Point::ZERO);
+        frames.push(vec![AvatarPart {
+            slot: "score_effect".into(),
+            width: w,
+            height: h,
+            rgba,
+            position: crate::Point::new(-origin.x, -origin.y),
+            origin,
+            z_index: z,
+            custom_origin_map: Default::default(),
+        }]);
+        delays.push(100);
+    }
+    let first = frames.first()?.clone();
+    let mut root = Bone::new("@score");
+    let mut skin = SkinLayer::new("score_effect");
+    skin.z = "score".into();
+    skin.z_index = z;
+    skin.origin = crate::Point::ZERO;
+    skin.width = first[0].width;
+    skin.height = first[0].height;
+    root.append_bone(skin, "score_effect", crate::Point::ZERO);
+    Some((root, first, ChairFrames { frames, delays }))
 }
 
 /// `part/N/part0..` 구조의 체어 애니메이션을 로드한다.
@@ -2219,6 +2414,8 @@ pub struct MixOptions {
     pub effect_frame: usize,
     /// `name:x,y` 로 지정한 커스텀 오리진. `SkinLayer.name` 과 매칭한다.
     pub custom_origins: std::collections::BTreeMap<String, crate::Point>,
+    /// identity/score 체어에 표시할 호출자 값.
+    pub chair: ChairUserData,
 }
 
 pub fn load_avatar_with_equipment(
@@ -2320,6 +2517,30 @@ pub fn load_avatar_with_equipment_and_mix(
                         }
                         merge_bone_tree(&mut root, item_root);
                         parts.extend(item_parts);
+                    }
+                    if let Some(custom) = &info.custom_chair {
+                        if let (Some(identity), Some(level)) =
+                            (custom.identity.as_ref(), mix.chair.level)
+                        {
+                            if let Some((digit_root, digit_parts)) =
+                                load_identity_digits(data_root, *item_id, identity, level)
+                            {
+                                merge_bone_tree(&mut root, digit_root);
+                                parts.extend(digit_parts);
+                            }
+                        }
+                        if custom.score.is_some() {
+                            if let Some(score) = mix.chair.score {
+                                if let Some((score_root, score_parts, frames)) =
+                                    load_score_chair_effect(data_root, *item_id, score)
+                                {
+                                    chair_frames = frames.frames;
+                                    chair_delays = frames.delays;
+                                    merge_bone_tree(&mut root, score_root);
+                                    parts.extend(score_parts);
+                                }
+                            }
+                        }
                     }
                 }
                 continue;
@@ -3187,6 +3408,93 @@ mod chair_custom_type_tests {
         // flipXYChair 는 removeBody/sitAction 이 없으므로 C# 은 sit 을 쓴다.
         assert!(has_slot(&av, "body"));
         assert!(has_slot(&av, "chair"));
+    }
+
+    fn load_chair_with(id: i32, chair: ChairUserData) -> Option<LoadedAvatar> {
+        let root = data_root()?;
+        load_avatar_with_equipment_and_mix(
+            &root,
+            2000,
+            &[("Chair".to_string(), id)],
+            &MixOptions {
+                chair,
+                ..Default::default()
+            },
+        )
+    }
+
+    #[test]
+    fn identity_chair_renders_level_digits() {
+        let Some(av) = load_chair_with(
+            3018108,
+            ChairUserData {
+                level: Some(200),
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let identity = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.identity.as_ref())
+            .expect("identity info");
+        assert_eq!(identity.digits, 10);
+        for i in 0..3 {
+            assert!(
+                av.parts
+                    .iter()
+                    .any(|p| p.slot == format!("identity_digit_{i}")),
+                "digit {i} missing"
+            );
+        }
+        let digit0 = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "identity_digit_0")
+            .unwrap();
+        let digit1 = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "identity_digit_1")
+            .unwrap();
+        let digit2 = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "identity_digit_2")
+            .unwrap();
+        assert_eq!(digit0.position, crate::Point::new(58, 43));
+        assert_eq!(digit1.position.x, 58 + digit0.width as i32);
+        assert_eq!(
+            digit2.position.x,
+            58 + digit0.width as i32 + digit1.width as i32
+        );
+    }
+
+    #[test]
+    fn score_chair_selects_group_by_score() {
+        let Some(av) = load_chair_with(
+            3018256,
+            ChairUserData {
+                score: Some(2500),
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let score = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.score.as_ref())
+            .expect("score info");
+        assert_eq!(score.groups.len(), 6);
+        assert_eq!(score.groups[1].min, 2000);
+        assert_eq!(score.groups[1].max, Some(3999));
+        assert_eq!(av.chair_frames.len(), 8);
+        assert_eq!(av.chair_delays.len(), 8);
+        assert!(av.parts.iter().any(|p| p.slot == "score_effect"));
     }
 
     #[test]
