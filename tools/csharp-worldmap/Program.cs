@@ -768,6 +768,55 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static int ValueInt(Wz_Node node, string key)
+    {
+        var c = node?.Nodes[key];
+        return c?.Value == null ? 0 : Convert.ToInt32(c.Value);
+    }
+    static string ValueStr(Wz_Node node, string key)
+    {
+        var c = node?.Nodes[key];
+        return c?.Value == null ? "" : Convert.ToString(c.Value);
+    }
+    static void TamingMobGrid(string tamingWzPath, string stringWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(tamingWzPath);
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        if (!linker.Load(str.wz_files[0], null, null))
+        {
+            Console.WriteLine("{\"error\":\"string linker load failed\"}");
+            return;
+        }
+        var rows = new List<object>();
+        foreach (Wz_Node n in st.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            if (!n.Text.StartsWith("0")) continue;
+            var id = n.Text.Replace(".img", "");
+            int idNum;
+            if (!int.TryParse(id, out idNum)) continue;
+            img.TryExtract();
+            linker.StringEqp.TryGetValue(idNum, out var sr);
+            var info = img.Node.Nodes["info"];
+            rows.Add(new {
+                id,
+                name = sr?.Name ?? "",
+                desc = sr?.Desc ?? "",
+                h1 = sr?["h1"] ?? "",
+                has_icon = info?.Nodes["icon"] != null,
+                req_level = ValueInt(info, "reqLevel"),
+                req_job = ValueInt(info, "reqJob"),
+                tuc = ValueInt(info, "tuc"),
+                islot = ValueStr(info, "islot"),
+                taming_mob = ValueInt(info, "tamingMob"),
+            });
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -785,6 +834,7 @@ class Program
         else if (args[0] == "music") MusicGrid(args[1]);
         else if (args[0] == "damageskins") DamageSkinGrid(args[1], args[2]);
         else if (args[0] == "morphs") MorphGrid(args[1], args[2], args[3]);
+        else if (args[0] == "tamingmobs") TamingMobGrid(args[1], args[2]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

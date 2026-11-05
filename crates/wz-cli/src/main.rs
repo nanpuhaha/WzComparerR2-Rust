@@ -350,6 +350,21 @@ enum Command {
         limit: usize,
     },
 
+    /// DB2 TamingMob 그리드
+    Db2TamingMobs {
+        /// Character/TamingMob WZ 파일
+        wz: PathBuf,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+        /// 최대 행
+        #[arg(long, default_value_t = 2000)]
+        limit: usize,
+    },
+
     /// DB2 아이콘/이미지 뷰어 (Canvas RGBA SHA-256)
     Db2Icons {
         /// WZ 파일
@@ -656,6 +671,12 @@ fn main() {
             json,
             limit,
         } => cmd_db2_morphs(&wz, &morph, &string, json, limit),
+        Command::Db2TamingMobs {
+            wz,
+            string,
+            json,
+            limit,
+        } => cmd_db2_taming_mobs(&wz, &string, json, limit),
         Command::Db2Icons {
             wz,
             image,

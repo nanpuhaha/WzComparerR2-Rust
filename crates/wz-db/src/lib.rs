@@ -33,6 +33,7 @@ pub mod db2_music;
 pub mod db2_npcs;
 pub mod db2_reactors;
 pub mod db2_skills;
+pub mod db2_taming_mobs;
 pub mod gear_stats;
 pub mod linker;
 pub mod map;
@@ -57,6 +58,7 @@ pub use db2_music::{music_grid_rows as db2_music_grid_rows, Db2MusicRow};
 pub use db2_npcs::{npc_grid_rows as db2_npc_grid_rows, Db2NpcRow};
 pub use db2_reactors::{reactor_grid_rows as db2_reactor_grid_rows, Db2ReactorRow};
 pub use db2_skills::{skill_grid_rows as db2_skill_grid_rows, Db2SkillRow};
+pub use db2_taming_mobs::{taming_mob_grid_rows as db2_taming_mob_grid_rows, Db2TamingMobRow};
 pub use gear_stats::extract_gear_props;
 pub use linker::{
     extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,

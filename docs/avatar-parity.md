@@ -534,3 +534,17 @@ merge semantics (recursive directory merge, conflict errors).
   `Data/Morph/Morph_000.wz`).
 - Executed C# reference: `tools/csharp-worldmap morphs ...`. `Consume_000.wz` +
   `Morph_000.wz` → C# 234 == Rust 234 rows, exact match.
+
+## DB2 TamingMob grid
+
+- `wz-db::db2_taming_mobs` mirrors the `TamingMob` branch of
+  `DB2Form.LoadCharacter`: each `Character/TamingMob/<id>.img` becomes
+  `id/name/desc/h1/has_icon/req_level/req_job/tuc/islot/taming_mob`, using
+  `StringLinker.string_eqp` for the Eqp/Taming name and description.
+- This is the comparable core of the original row; the original also packs the
+  whole `info` block into a concatenated text column, which is not reproduced
+  as one string here.
+- `wz db2-taming-mobs <taming.wz> --string <String_000.wz>` prints the grid;
+  the GUI Catalog has a DB2 TamingMob table.
+- Executed C# reference: `tools/csharp-worldmap tamingmobs ...`.
+  `TamingMob_000.wz` → C# 1265 == Rust 1265 rows, exact match.

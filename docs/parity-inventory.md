@@ -127,6 +127,7 @@ WorldMap 실제 클라이언트 데이터는 QuestLimit/Fog 노드가 없어, �
 | `Sound/Sound_000.wz` DB2 Music grid | 40 rows | Rust `wz db2-music` 40행 path/bytes/ms 완전 일치 |
 | `Item/Consume/Consume_000.wz` DB2 DamageSkin grid | 952 rows | Rust `wz db2-damage-skins` 952행 id/name/desc/icon/sample 완전 일치 |
 | `Consume_000.wz` + `Morph_000.wz` DB2 Morph grid | 234 rows | Rust `wz db2-morphs` 234행 id/name/desc/morph/icon/walk 완전 일치 |
+| `Character/TamingMob/TamingMob_000.wz` DB2 TamingMob grid | 1265 rows | Rust `wz db2-taming-mobs` 1265행 id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/tamingMob 완전 일치 |
 | `Etc_000.wz` set -1 | `{"name":"결속의 반지","complete":5,"effects":[...]}` | Rust set effects 동일 |
 | `Item_000.wz` potential 1/1 | `["STR : +1"]` | Rust potential lines 동일 |
 
@@ -203,6 +204,9 @@ dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- mapnodes ../../Da
 - `wz db2-morphs <consume.wz> --morph <morph.wz> --string <String_000.wz>`
   builds `DB2Form.LoadMorph` (spec/morph + Morph walk/0); C# `morphs` mode
   matches 234/234 rows.
+- `wz db2-taming-mobs <taming.wz> --string <String_000.wz>` builds the
+  `DB2Form.LoadCharacter` TamingMob slice (Eqp names + info fields); C#
+  `tamingmobs` mode matches 1265/1265 rows.
 - GUI `Catalog` panel loads the selected image into a filterable DB2 grid.
 - C# WzLib harness `db2` mode prints the same rows. Real test:
   `Weapon_000.wz/01302000.img` → C# 270 == Rust 270 rows, exact match.
