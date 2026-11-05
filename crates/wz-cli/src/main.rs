@@ -182,6 +182,23 @@ enum Command {
         json: bool,
     },
 
+    /// `Sound_DX8` 정보 확인/추출/재생
+    Sound {
+        /// Sound WZ 파일
+        wz: PathBuf,
+
+        /// 사운드 경로 (예: Bgm00.img/DragonDream)
+        path: String,
+
+        /// 추출 파일 경로 (확장자 생략 시 코덱에 맞춰 붙임)
+        #[arg(long)]
+        out: Option<PathBuf>,
+
+        /// 추출 후 시스템 플레이어로 재생 (macOS afplay)
+        #[arg(long)]
+        play: bool,
+    },
+
     /// MapleStory `.patch` 레코드 확인/적용
     Patch {
         /// .patch 파일 경로
@@ -415,6 +432,12 @@ fn main() {
             props,
             json,
         } => cmd_query(&wz, &name, &props, json),
+        Command::Sound {
+            wz,
+            path,
+            out,
+            play,
+        } => cmd_sound(&wz, &path, out.as_deref(), play),
         Command::Patch {
             patch,
             old,

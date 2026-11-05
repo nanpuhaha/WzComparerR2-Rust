@@ -192,6 +192,35 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     }
 
     ui.separator();
+    ui.heading("사운드");
+    ui.horizontal(|ui| {
+        if ui.button("맵 BGM 재생").clicked() {
+            match crate::sound_player::play_map_bgm(state) {
+                Ok(()) => {}
+                Err(e) => state.sound_status = format!("BGM 오류: {e}"),
+            }
+        }
+        if ui.button("정지").clicked() {
+            crate::sound_player::stop(state);
+        }
+    });
+    ui.horizontal(|ui| {
+        ui.label("Sound 경로:");
+        ui.text_edit_singleline(&mut state.sound_path);
+        if ui.button("재생").clicked() {
+            let Some(wz) = state.archive_path.clone() else {
+                state.sound_status = "WZ 파일을 먼저 여세요".into();
+                return;
+            };
+            let path = state.sound_path.clone();
+            match crate::sound_player::play_from_archive(state, &wz, &path) {
+                Ok(()) => {}
+                Err(e) => state.sound_status = format!("재생 오류: {e}"),
+            }
+        }
+    });
+    ui.label(&state.sound_status);
+    ui.separator();
     ui.heading("맵 (PoC 2.5)");
     ui.horizontal(|ui| {
         ui.label("맵 경로:");

@@ -34,6 +34,7 @@ pub mod offset;
 pub mod patch;
 pub mod profile;
 pub mod read;
+pub mod sound;
 pub mod text;
 
 pub use archive::WzArchive;
@@ -42,6 +43,7 @@ pub use offset::{
     OffsetCalc, Pkg1OffsetCalc, Pkg2OffsetCalc32, Pkg2OffsetCalc64V1, Pkg2OffsetCalc64V2,
 };
 pub use patch::{compute_patch_checksum, PatchHeader, PatchPart, PatchPartType};
+pub use sound::{decode_wave_format, extract_sound, ExtractedSound, SoundCodec, WaveFormat};
 pub use wz_error as error;
 
 #[cfg(test)]

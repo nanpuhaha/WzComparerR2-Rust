@@ -12,6 +12,7 @@ mod async_io;
 mod panels;
 mod particles;
 mod render_bridge;
+mod sound_player;
 mod state;
 
 use app::PocApp;

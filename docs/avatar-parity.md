@@ -193,3 +193,12 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   415 modify, 1 delete, 1024+ hash entries; all 43 created files match the
   reference extraction SHA-256 and every modify output length sums to
   42,701,118,706 bytes.
+
+## Sound
+
+- `wz-core::sound` decodes `Sound_DX8` `WAVEFORMATEX` (plain / KMS / GMS),
+  classifies PCM/MP3/binary, builds RIFF headers for PCM and extracts raw MP3.
+- `wz sound <wz> <img/name> [--out file] [--play]` inspects, extracts and plays.
+- GUI: map `info/bgm` playback and arbitrary Sound path playback with stop.
+- Verified with `Sound_000.wz/Bgm00.img/DragonDream` (1,261,192-byte MP3,
+  44.1k/22.05k stereo) and `AchievementEff.img/GradeUp` (afplay exit 0).
