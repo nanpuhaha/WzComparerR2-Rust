@@ -53,21 +53,36 @@ remaining CharaSim gaps.
   updates the effect bone skin for scene renderers, and the GUI applies the current
   frame's origin to the effect quad (`state.effect_origin`) while stepping frames
   manually or auto-playing with `tick_effect` using the WZ delays.
-- Chair: `ChairInfo` captures `info/scale`, `customChair`, group taming IDs/`bodyRelMove`.
-  Group taming members are loaded from `Character/TamingMob` (via their `sit` action)
-  and merged with their `bodyRelMove` offsets. Real sample: chair `03016200`
-  (`03016.img`) with taming mobs `01983279`..`01983282`. `CustomChairType` is an enum
-  (`Unsupported`, `ScaleAvatarChair`, `Other(String)`); `CustomChairInfo` keeps known
-  fields plus unknown `customChair` fields in `extra`. `effective_scale()` handles
-  `ScaleAvatarChair` and falls back to `info/scale` for other/unknown types.
+- Chair: `ChairInfo` captures `info/sitAction`, `removeBody`, `fixFrameIdx`/
+  `fixActionFrame`, `sitEmotion`, `tamingMob`, `customChair`, and group taming IDs/
+  `bodyRelMove`. Group taming members are loaded from `Character/TamingMob` (via their
+  `sit` action) and merged with their `bodyRelMove` offsets. Real sample: chair
+  `03016200` (`03016.img`) with taming mobs `01983279`..`01983282`.
+- C# `CustomChairType` has **only** `Unsupported` and `ScaleAvatarChair`. The other
+  WZ type strings (`flipXYChair`, `dummyAvatarChair`, `rotatedSleepingBagChair`, …)
+  are **not implemented by the C# avatar renderer**; they fall through to
+  `Unsupported`. `CustomChairType::Other` preserves the raw type, and
+  `CustomChairInfo` parses `flipXYChairInfo`, `rotatedSleepingBagChairInfo`, and
+  `dummyAvatarChair` data plus flattened unknown fields in `extra`.
+- C# chair behavior ported here:
+  - `sitAction` wins; `hide`/`hideBody` and `removeBody` hide body+head.
+  - `ScaleAvatarChair` uses `scaleAvatar/scale`; other types use 100.
+    `info/scale` is **not** a chair scale — it belongs to taming mobs.
+  - `fixFrameIdx`/`fixActionFrame` selects the body frame.
+  - `info/tamingMob` and `customChair/self/tamingMob` add a `TamingMob` part;
+    the chair image stays (C# adds `ChairPart` and `TamingPart` together).
+  - `customChair/self` and `customChair/avatar/*` are parsed for future rendering.
+- The visual behavior of `flipXYChair` / `rotatedSleepingBagChair` /
+  `dummyAvatarChair` (flip, rotation, multiple dummy avatars) is **WZ data, not
+  C# source**. It is preserved but not yet applied by the renderer.
 - Custom origin: the two-step C# semantics are implemented:
   `CustomOriginMap` (originValue → childName) + `CustomOrigin` (childName → Point)
   → `apply_custom_origin_map`. The GUI accepts `childName:x,y;...`.
 - Chair pose: when a `Chair` is in the equipment list, the body frame prefers `sit`
   over `stand1`/`stand`. Group taming members also use `sit`.
-- Current-client parity: no known avatar gaps. Future clients may add new
-  `CustomChairType` variants (preserved as `Other`, with unknown fields in
-  `CustomChairInfo::extra`).
+- Current-client parity for the C#-implemented chair behavior: complete. The remaining
+  gap is data-driven behavior for WZ-only custom chair types, which has no C# reference
+  implementation.
 
 ## Verification
 

@@ -246,7 +246,7 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
 
 ### 남은 후보
 
-- **미래 클라이언트의 customChair 타입** — `CustomChairType::Other(String)`으로 보존하고, 알 수 없는 필드는 `CustomChairInfo::extra`에 남긴다. `info/scale`로 폴백하며 타입별 동작은 신규 클라이언트에서 확인 후 추가.
+- **WZ-only customChair 타입 동작** — C# `CustomChairType` 은 `Unsupported`/`ScaleAvatarChair` 두 개뿐이다. `flipXYChair`/`dummyAvatarChair`/`rotatedSleepingBagChair` 등은 C# 렌더러가 처리하지 않는다. Rust 로더는 `info/sitAction`, `removeBody`, `fixFrameIdx`, `tamingMob`, `info/scale` 등 C# 공통 규칙을 포팅했고, 타입별 중첩 데이터는 `CustomChairInfo`에 보존한다. 플립/회전/더미 렌더링은 WZ 스키마 기반 후속 작업.
 - **오라클 하네스 CI** — 공개 C# 트리에 `WzComparerR2.Oracle` 프로젝트가 없어 수동 workflow 입력이 필요.
 
 ### 산출물

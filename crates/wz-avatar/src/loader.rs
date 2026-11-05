@@ -63,7 +63,12 @@ pub struct LoadedAvatar {
     pub chair_info: Option<ChairInfo>,
 }
 
-/// C# `CustomChairType` — 미래 타입은 `Other` 로 보존한다.
+/// C# `CustomChairType` — 현재 C# 원본은 `ScaleAvatarChair` 만 구현한다.
+///
+/// 나머지 WZ `type` 문자열(`flipXYChair`, `dummyAvatarChair`, ...)은 C# 에서
+/// `Unsupported` 로 떨어지고, 동작은 `info/sitAction`, `removeBody`, `scale`,
+/// `tamingMob` 같은 공통 필드로만 결정된다. 여기서는 원문을 잃지 않도록
+/// `Other` 로 보존한다.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum CustomChairType {
     #[default]
@@ -84,44 +89,153 @@ impl CustomChairType {
     }
 }
 
-/// `customChair` 의 알려진 필드 + 미래 필드 보존.
+/// `flipXYChairInfo` — WZ 데이터에는 있지만 C# 아바타 렌더러는 사용하지 않는다.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct FlipXYChairInfo {
+    pub flip_horizontal: bool,
+    pub flip_vertical: bool,
+    pub avatar_pos: crate::Point,
+    pub avatar_z: i32,
+    pub invisible_weapon: bool,
+}
+
+/// `rotatedSleepingBagChairInfo` — WZ 데이터에는 있지만 C# 은 사용하지 않는다.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RotatedChairInfo {
+    pub avatar_pos: crate::Point,
+    pub rotate: i32,
+    pub hide_weapon: bool,
+    pub hide_nick: bool,
+}
+
+/// `dummyAvatarChair` 의 더미 아바타 한 명.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DummyAvatarEntry {
+    pub taming_mob: i32,
+    pub position: crate::Point,
+    pub z: i32,
+    pub left: bool,
+}
+
+/// `dummyAvatarChair` 의 더미 아바타 목록.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DummyChairInfo {
+    pub self_entry: Option<DummyAvatarEntry>,
+    pub avatars: Vec<DummyAvatarEntry>,
+    pub avatar_count: usize,
+    pub chat_balloon_move: crate::Point,
+}
+
+/// `customChair` 의 알려진 필드 + 미래/미구현 필드 보존.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CustomChairInfo {
     pub chair_type: CustomChairType,
     pub scale_avatar: Option<i32>,
-    /// 알 수 없는 스칼라/벡터 필드를 문자열로 보존한다.
+    pub self_taming_mob: Option<i32>,
+    pub flip: Option<FlipXYChairInfo>,
+    pub rotate: Option<RotatedChairInfo>,
+    pub dummy: Option<DummyChairInfo>,
+    /// 중첩 Property 를 `a/b/c` 경로의 문자열로 평탄화해 보존한다.
     pub extra: std::collections::BTreeMap<String, String>,
 }
 
-/// `customChair` 노드를 파싱한다. 미래 타입도 `Other` + `extra` 로 남긴다.
-fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
+fn image_scalar_string(value: &wz_core::image::ImageValue) -> Option<String> {
     use wz_core::image::ImageValue;
+    match value {
+        ImageValue::Int(v) => Some(v.to_string()),
+        ImageValue::Short(v) => Some(v.to_string()),
+        ImageValue::Str(v) => Some(v.to_string()),
+        ImageValue::Vector(v) => Some(format!("{},{}", v.x, v.y)),
+        ImageValue::Bool(v) => Some(v.to_string()),
+        _ => None,
+    }
+}
 
+fn flatten_extra(
+    node: &ImageNode,
+    prefix: &str,
+    out: &mut std::collections::BTreeMap<String, String>,
+) {
+    for child in node.object_children() {
+        let name = child.name.to_string();
+        let path = if prefix.is_empty() {
+            name
+        } else {
+            format!("{prefix}/{name}")
+        };
+        if let Some(value) = child.value.as_ref().and_then(image_scalar_string) {
+            out.insert(path.clone(), value);
+        }
+        if !child.object_children().is_empty() {
+            flatten_extra(child, &path, out);
+        }
+    }
+}
+
+fn parse_dummy_entry(node: &ImageNode) -> Option<DummyAvatarEntry> {
+    let taming_mob = node_int(node, "tamingMob")?;
+    Some(DummyAvatarEntry {
+        taming_mob,
+        position: node_vec(node, "pos").unwrap_or(crate::Point::ZERO),
+        z: node_int(node, "z").unwrap_or(0),
+        left: node_int(node, "left").unwrap_or(0) != 0,
+    })
+}
+
+fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
     let chair_type = node_str(node, "type")
         .map(|t| CustomChairType::parse(&t))
         .unwrap_or_default();
     let scale_avatar = node_int(node, "scaleAvatar/scale");
+    let self_taming_mob = node_int(node, "self/tamingMob").filter(|v| *v != 0);
+
+    let flip = child_node(node, "flipXYChairInfo").map(|n| FlipXYChairInfo {
+        flip_horizontal: node_int(n, "flipHorizontal").unwrap_or(0) != 0,
+        flip_vertical: node_int(n, "flipVertical").unwrap_or(0) != 0,
+        avatar_pos: node_vec(n, "flipCharacterPos").unwrap_or(crate::Point::ZERO),
+        avatar_z: node_int(n, "flipCharacterZ").unwrap_or(0),
+        invisible_weapon: node_int(n, "avatarInvisibleWeapon").unwrap_or(0) != 0,
+    });
+
+    let rotate = child_node(node, "rotatedSleepingBagChairInfo").map(|n| RotatedChairInfo {
+        avatar_pos: node_vec(n, "avatarPos").unwrap_or(crate::Point::ZERO),
+        rotate: node_int(n, "avatarRotate").unwrap_or(0),
+        // WZ 키의 오타(`avartarInvisibleWeapon`)를 그대로 따른다.
+        hide_weapon: node_int(n, "avartarInvisibleWeapon")
+            .or_else(|| node_int(n, "avatarInvisibleWeapon"))
+            .unwrap_or(0)
+            != 0,
+        hide_nick: node_int(n, "forcedHideNick").unwrap_or(0) != 0,
+    });
+
+    let dummy = child_node(node, "avatar").map(|_| {
+        let avatar_count = node_int(node, "avatarCount").unwrap_or(0).max(0) as usize;
+        let mut avatars = Vec::new();
+        let mut i = 0;
+        while let Some(entry) = find_path_node(node, &format!("avatar/{i}")) {
+            if let Some(parsed) = parse_dummy_entry(entry) {
+                avatars.push(parsed);
+            }
+            i += 1;
+        }
+        DummyChairInfo {
+            self_entry: child_node(node, "self").and_then(parse_dummy_entry),
+            avatars,
+            avatar_count,
+            chat_balloon_move: node_vec(node, "chatBalloonMove").unwrap_or(crate::Point::ZERO),
+        }
+    });
+
     let mut extra = std::collections::BTreeMap::new();
-    for child in node.object_children() {
-        let name = child.name.to_string();
-        if name == "type" || name == "scaleAvatar" {
-            continue;
-        }
-        let value = match &child.value {
-            Some(ImageValue::Int(v)) => Some(v.to_string()),
-            Some(ImageValue::Short(v)) => Some(v.to_string()),
-            Some(ImageValue::Str(v)) => Some(v.to_string()),
-            Some(ImageValue::Vector(v)) => Some(format!("{},{}", v.x, v.y)),
-            Some(ImageValue::Bool(v)) => Some(v.to_string()),
-            _ => None,
-        };
-        if let Some(value) = value {
-            extra.insert(name, value);
-        }
-    }
+    flatten_extra(node, "", &mut extra);
+
     CustomChairInfo {
         chair_type,
         scale_avatar,
+        self_taming_mob,
+        flip,
+        rotate,
+        dummy,
         extra,
     }
 }
@@ -129,12 +243,105 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
 /// C# `ChairPart` 의 메타데이터 중 정적 로더가 해석하는 부분.
 #[derive(Debug, Clone, Default)]
 pub struct ChairInfo {
+    /// `info/scale` — C# `AddTamingPart` 가 아바타 전체 배율로 쓴다.
     pub scale: i32,
     pub custom_chair: Option<CustomChairInfo>,
     pub group_count: usize,
     pub group_taming_ids: Vec<i32>,
     pub group_body_rel_move: Vec<crate::Point>,
     pub body_rel_move: Option<crate::Point>,
+    /// C# `SetChairDefault`: `info/sitAction` (예: `hide`).
+    pub sit_action: Option<String>,
+    /// C# `SetChairDefault`: `info/removeBody` → `hideBody`.
+    pub remove_body: bool,
+    /// C# `SetChairDefault`: `info/fixFrameIdx` 또는 `info/fixActionFrame`.
+    pub fix_frame_idx: Option<i32>,
+    /// C# `SetChairDefault`: `info/sitEmotion` (감정 인덱스).
+    pub sit_emotion: Option<i32>,
+    /// `info/tamingMob` 또는 `info/customChair/self/tamingMob`.
+    pub taming_mob: Option<i32>,
+    /// 위 `taming_mob` 의 메타데이터.
+    pub taming: Option<TamingInfo>,
+}
+
+/// TamingMob 메타데이터 (`info/scale`, `removeBody`, `flip`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TamingInfo {
+    pub id: i32,
+    pub scale: i32,
+    pub remove_body: bool,
+    pub flip: bool,
+}
+
+/// 체어가 본체에 강제하는 동작.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChairBodyAction {
+    /// `sitAction=hide` / `removeBody` / taming `removeBody`.
+    Hide,
+    /// 동작 이름 + 고정 프레임.
+    Action { name: String, frame: Option<usize> },
+}
+
+impl ChairInfo {
+    /// C# `SetChairDefault` 순서를 그대로 따른다.
+    ///
+    /// 1. `sitAction` 이 있으면 그 동작
+    /// 2. `removeBody != 0` 이면 `hideBody`
+    /// 3. `ScaleAvatarChair` 이면 `stand1`
+    /// 4. taming 이 없으면 `sit`
+    /// 5. taming 이 있으면 `sit` (C# `SetTamingDefaultBodyAction`)
+    pub fn body_action(&self) -> ChairBodyAction {
+        let frame = self.fix_frame_idx.filter(|v| *v >= 0).map(|v| v as usize);
+        if let Some(action) = &self.sit_action {
+            if action.eq_ignore_ascii_case("hide") || action.eq_ignore_ascii_case("hideBody") {
+                return ChairBodyAction::Hide;
+            }
+            return ChairBodyAction::Action {
+                name: action.clone(),
+                frame,
+            };
+        }
+        if self.remove_body {
+            return ChairBodyAction::Hide;
+        }
+        if self.taming.as_ref().is_some_and(|t| t.remove_body) {
+            return ChairBodyAction::Hide;
+        }
+        if self
+            .custom_chair
+            .as_ref()
+            .is_some_and(|c| c.chair_type == CustomChairType::ScaleAvatarChair)
+        {
+            return ChairBodyAction::Action {
+                name: "stand1".into(),
+                frame,
+            };
+        }
+        ChairBodyAction::Action {
+            name: "sit".into(),
+            frame,
+        }
+    }
+
+    /// C# `CustomChairAvatarScale`: `ScaleAvatarChair` 만 `scaleAvatar.scale` 를 쓰고,
+    /// 나머지 타입은 100 이다. `info/scale` 은 체어가 아니라 taming 에만 쓰인다.
+    pub fn effective_scale(&self) -> i32 {
+        if let Some(custom) = &self.custom_chair {
+            if custom.chair_type == CustomChairType::ScaleAvatarChair {
+                return custom.scale_avatar.unwrap_or(100);
+            }
+        }
+        100
+    }
+
+    /// 아바타 전체에 적용할 배율. taming 이 있으면 taming `info/scale`,
+    /// 없으면 체어의 `CustomChairAvatarScale`.
+    pub fn avatar_scale(&self) -> i32 {
+        self.taming
+            .as_ref()
+            .map(|t| t.scale)
+            .unwrap_or_else(|| self.effective_scale())
+    }
 }
 
 /// Effect 한 항목의 전체 프레임/딜레이/origin/z.
@@ -145,18 +352,6 @@ pub struct EffectFrames {
     pub delays: Vec<u32>,
     pub origins: Vec<crate::Point>,
     pub z_indices: Vec<i32>,
-}
-
-impl ChairInfo {
-    /// `ScaleAvatarChair` 이면 `scaleAvatar.scale`, 아니면 `info.scale`.
-    pub fn effective_scale(&self) -> i32 {
-        if let Some(custom) = &self.custom_chair {
-            if custom.chair_type == CustomChairType::ScaleAvatarChair {
-                return custom.scale_avatar.unwrap_or(100);
-            }
-        }
-        self.scale
-    }
 }
 
 fn set_effect_skin(bone: &mut Bone, origin: crate::Point, z_index: i32) -> bool {
@@ -232,6 +427,16 @@ fn load_frame_parts(
     image_name: &str,
     action_names: &[&str],
 ) -> Option<(Bone, Vec<AvatarPart>)> {
+    load_frame_parts_at(archive, image_name, action_names, None)
+}
+
+/// `load_frame_parts` + 고정 프레임 인덱스 (C# `fixFrameIdx`).
+fn load_frame_parts_at(
+    archive: &WzArchive,
+    image_name: &str,
+    action_names: &[&str],
+    frame_index: Option<usize>,
+) -> Option<(Bone, Vec<AvatarPart>)> {
     use wz_core::image::ImageValue;
 
     let tree = archive.read_tree().ok()?;
@@ -264,8 +469,11 @@ fn load_frame_parts(
         // `front` 처럼 액션 노드 자체가 프레임이고 자식이 Canvas 인 경우.
         action
     } else {
-        // `stand1/0` 처럼 첫 자식이 프레임인 경우.
-        action_children.first().unwrap_or(action)
+        // `stand1/0` 처럼 자식이 프레임인 경우. `fixFrameIdx` 가 있으면 그 프레임.
+        action_children
+            .get(frame_index.unwrap_or(0))
+            .or_else(|| action_children.first())
+            .unwrap_or(action)
     };
 
     let assembly = crate::collect_frame_assembly(frame, archive, Some(archive)).ok()?;
@@ -358,6 +566,7 @@ fn node_int(node: &ImageNode, path: &str) -> Option<i32> {
         Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
         Some(wz_core::image::ImageValue::Short(v)) => Some(i32::from(*v)),
         Some(wz_core::image::ImageValue::Str(v)) => v.parse::<i32>().ok(),
+        Some(wz_core::image::ImageValue::Bool(v)) => Some(i32::from(*v)),
         _ => None,
     }
 }
@@ -462,6 +671,113 @@ fn find_install_item(
     None
 }
 
+/// `Character/TamingMob` 메타데이터에서 taming mob 의 `info` 를 찾는다.
+fn find_taming_meta(data_root: &std::path::Path, item_id: i32) -> Option<ImageNode> {
+    let base = data_root.join("Character").join("TamingMob");
+    let image = format!("{:08}.img", item_id);
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(item_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image.as_str()))
+        else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(item_entry.offset?) else {
+            continue;
+        };
+        return Some(node);
+    }
+    None
+}
+
+/// C# `AddTamingPart`: `info/scale`, `info/removeBody`, `info/flip`.
+pub fn load_taming_info(data_root: &std::path::Path, item_id: i32) -> Option<TamingInfo> {
+    let node = find_taming_meta(data_root, item_id)?;
+    let info = child_node(&node, "info")?;
+    Some(TamingInfo {
+        id: item_id,
+        scale: node_int(info, "scale").unwrap_or(100),
+        remove_body: node_int(info, "removeBody").unwrap_or(0) != 0,
+        flip: node_int(info, "flip").unwrap_or(0) != 0,
+    })
+}
+
+fn parse_chair_info(item: &ImageNode, info: &ImageNode) -> ChairInfo {
+    let custom_chair = child_node(info, "customChair").map(parse_custom_chair);
+    let taming_mob = node_int(info, "tamingMob")
+        .filter(|v| *v != 0)
+        .or_else(|| custom_chair.as_ref().and_then(|c| c.self_taming_mob));
+
+    let mut group_count = 0;
+    let mut group_taming_ids = Vec::new();
+    let mut group_body_rel_move = Vec::new();
+    for group in info.object_children() {
+        if !group.name.to_ascii_lowercase().contains("group") {
+            continue;
+        }
+        for entry in group.object_children() {
+            let lower = entry.name.to_ascii_lowercase();
+            if !(lower.contains("sit") || lower.contains("mainuser")) {
+                continue;
+            }
+            group_count = entry.object_children().len();
+            for member in entry.object_children() {
+                let id = node_int(member, "tamingMobM")
+                    .or_else(|| node_int(member, "tamingMobF"))
+                    .or_else(|| node_int(member, "tamingMob"))
+                    .unwrap_or(0);
+                group_taming_ids.push(id);
+                group_body_rel_move
+                    .push(node_vec(member, "bodyRelMove").unwrap_or(crate::Point::ZERO));
+            }
+        }
+    }
+    let body_rel_move = child_node(item, "0")
+        .and_then(|n| node_vec(n, "bodyRelMove"))
+        .or_else(|| child_node(item, "1").and_then(|n| node_vec(n, "bodyRelMove")))
+        .or_else(|| group_body_rel_move.first().copied());
+
+    ChairInfo {
+        scale: node_int(info, "scale").unwrap_or(100),
+        custom_chair,
+        group_count,
+        group_taming_ids,
+        group_body_rel_move,
+        body_rel_move,
+        sit_action: node_str(info, "sitAction").filter(|v| !v.is_empty()),
+        remove_body: node_int(info, "removeBody").unwrap_or(0) != 0,
+        fix_frame_idx: node_int(info, "fixFrameIdx").or_else(|| node_int(info, "fixActionFrame")),
+        sit_emotion: node_int(info, "sitEmotion"),
+        taming_mob,
+        taming: None,
+    }
+}
+
+/// C# `AddChairPart` 의 메타데이터 부분을 먼저 읽는다.
+///
+/// 본체 액션을 체어 정보로 결정하려면 픽셀 로드보다 먼저 필요하다.
+pub fn load_chair_info(data_root: &std::path::Path, item_id: i32) -> Option<ChairInfo> {
+    let (_, meta) = find_install_item(data_root, "", item_id)?;
+    let info = child_node(&meta, "info")?;
+    let mut chair = parse_chair_info(&meta, info);
+    if let Some(id) = chair.taming_mob {
+        chair.taming = load_taming_info(data_root, id);
+    }
+    Some(chair)
+}
+
 /// `Item/Install/_Canvas` 의 체어 이미지를 정적 1프레임으로 로드한다.
 ///
 /// 체어 카테고리 이미지는 `03010.img` 처럼 5자리이고, 그 자식이 아이템 ID 다.
@@ -469,9 +785,9 @@ fn find_install_item(
 fn load_chair_item(
     data_root: &std::path::Path,
     item_id: i32,
-) -> Option<(Bone, Vec<AvatarPart>, ChairInfo)> {
+    info: &ChairInfo,
+) -> Option<(Bone, Vec<AvatarPart>)> {
     let (archive, item) = find_install_item(data_root, "_Canvas", item_id)?;
-    let meta = find_install_item(data_root, "", item_id).map(|(_, node)| node);
 
     let png = child_node(&item, "effect")
         .and_then(|effect| child_node(effect, "0"))
@@ -482,45 +798,6 @@ fn load_chair_item(
     let (w, h, rgba) = wz_image::decode_png_ref_to_rgba(&png, archive.source()).ok()?;
     let (origin, z_index) = png_origin_z(&png);
 
-    let info = meta
-        .as_ref()
-        .and_then(|node| child_node(node, "info"))
-        .or_else(|| child_node(&item, "info"));
-    let scale = info.and_then(|i| node_int(i, "scale")).unwrap_or(100);
-    let custom_chair = info
-        .and_then(|i| child_node(i, "customChair"))
-        .map(parse_custom_chair);
-    let mut group_count = 0;
-    let mut group_taming_ids = Vec::new();
-    let mut group_body_rel_move = Vec::new();
-    if let Some(info) = info {
-        for group in info.object_children() {
-            if !group.name.to_ascii_lowercase().contains("group") {
-                continue;
-            }
-            for entry in group.object_children() {
-                let lower = entry.name.to_ascii_lowercase();
-                if !(lower.contains("sit") || lower.contains("mainuser")) {
-                    continue;
-                }
-                group_count = entry.object_children().len();
-                for member in entry.object_children() {
-                    let id = node_int(member, "tamingMobM")
-                        .or_else(|| node_int(member, "tamingMobF"))
-                        .or_else(|| node_int(member, "tamingMob"))
-                        .unwrap_or(0);
-                    group_taming_ids.push(id);
-                    group_body_rel_move
-                        .push(node_vec(member, "bodyRelMove").unwrap_or(crate::Point::ZERO));
-                }
-            }
-        }
-    }
-    let body_rel_move = child_node(&item, "0")
-        .and_then(|n| node_vec(n, "bodyRelMove"))
-        .or_else(|| child_node(&item, "1").and_then(|n| node_vec(n, "bodyRelMove")))
-        .or_else(|| group_body_rel_move.first().copied());
-
     let mut skin = SkinLayer::new("chair");
     skin.z = "chair".into();
     skin.z_index = z_index;
@@ -529,7 +806,7 @@ fn load_chair_item(
     skin.height = h;
 
     let mut root = Bone::new("@chair");
-    root.position = body_rel_move.unwrap_or(crate::Point::ZERO);
+    root.position = info.body_rel_move.unwrap_or(crate::Point::ZERO);
     root.append_bone(skin, "chair", crate::Point::ZERO);
     let part = AvatarPart {
         slot: "chair".into(),
@@ -538,15 +815,7 @@ fn load_chair_item(
         rgba,
         ..Default::default()
     };
-    let chair_info = ChairInfo {
-        scale,
-        custom_chair,
-        group_count,
-        group_taming_ids,
-        group_body_rel_move,
-        body_rel_move,
-    };
-    Some((root, vec![part], chair_info))
+    Some((root, vec![part]))
 }
 
 /// RGBA8 버퍼를 최근접 이웃으로 `factor` 배 확대/축소한다.
@@ -1136,22 +1405,31 @@ pub fn load_avatar_with_equipment_and_mix(
 
     let arch = WzArchive::open(&canvas_path).ok()?;
 
-    let (mut root, mut parts) = load_frame_parts(
-        &arch,
-        &format!("{:08}.img", body_skin),
-        if equipment.iter().any(|(slot, _)| slot == "Chair") {
-            &["sit", "stand1", "stand"]
-        } else {
-            &["stand1", "stand", "alert"]
-        },
-    )?;
+    let chair_info = equipment.iter().find_map(|(slot, item_id)| {
+        (slot == "Chair")
+            .then(|| load_chair_info(data_root, *item_id))
+            .flatten()
+    });
+    let chair_action = chair_info.as_ref().map(|c| c.body_action());
+    let body_image = format!("{:08}.img", body_skin);
+    let (mut root, mut parts) = match &chair_action {
+        Some(ChairBodyAction::Hide) => (Bone::new("@root"), Vec::new()),
+        Some(ChairBodyAction::Action { name, frame }) => {
+            let actions = [name.as_str(), "sit", "stand1", "stand"];
+            load_frame_parts_at(&arch, &body_image, &actions, *frame)?
+        }
+        None => load_frame_parts(&arch, &body_image, &["stand1", "stand", "alert"])?,
+    };
 
-    if let Some((head_root, head_parts)) =
-        load_frame_parts(&arch, "00012000.img", &["front", "back"])
-    {
-        root.skins.extend(head_root.skins);
-        root.children.extend(head_root.children);
-        parts.extend(head_parts);
+    // C# `hideBody`: bodyAction 이 null 이면 LinkPlayerParts 가 body+head 를 모두 숨긴다.
+    if !matches!(&chair_action, Some(ChairBodyAction::Hide)) {
+        if let Some((head_root, head_parts)) =
+            load_frame_parts(&arch, "00012000.img", &["front", "back"])
+        {
+            root.skins.extend(head_root.skins);
+            root.children.extend(head_root.children);
+            parts.extend(head_parts);
+        }
     }
 
     // Equipment 로드
@@ -1160,7 +1438,7 @@ pub fn load_avatar_with_equipment_and_mix(
     let mut effect_delays: Vec<u32> = Vec::new();
     let mut effect_origins: Vec<crate::Point> = Vec::new();
     let mut effect_z_indices: Vec<i32> = Vec::new();
-    let mut chair_info: Option<ChairInfo> = None;
+    let mut chair_info = chair_info;
     for (slot, item_id) in equipment {
         if let Some(dir) = slot_dir_name(slot) {
             if dir == "Effect" {
@@ -1185,10 +1463,18 @@ pub fn load_avatar_with_equipment_and_mix(
                 continue;
             }
             if dir == "Chair" {
-                if let Some((item_root, item_parts, info)) = load_chair_item(data_root, *item_id) {
-                    chair_info = Some(info);
-                    merge_bone_tree(&mut root, item_root);
-                    parts.extend(item_parts);
+                if chair_info.is_none() {
+                    chair_info = load_chair_info(data_root, *item_id);
+                }
+                // C# 은 `info/tamingMob` 이 있어도 ChairPart 와 TamingPart 를
+                // **둘 다** 추가한다 (removeChairPart 는 이전 체어만 지운다).
+                if let Some(info) = &chair_info {
+                    if let Some((item_root, item_parts)) =
+                        load_chair_item(data_root, *item_id, info)
+                    {
+                        merge_bone_tree(&mut root, item_root);
+                        parts.extend(item_parts);
+                    }
                 }
                 continue;
             }
@@ -1224,26 +1510,51 @@ pub fn load_avatar_with_equipment_and_mix(
     }
 
     if let Some(info) = &chair_info {
-        for (i, id) in info.group_taming_ids.iter().enumerate() {
-            if *id == 0 {
-                continue;
-            }
-            if let Some((mut taming_root, mut taming_parts)) = load_taming_item(data_root, *id) {
-                taming_root.position = info
-                    .group_body_rel_move
-                    .get(i)
-                    .copied()
-                    .unwrap_or(crate::Point::ZERO);
-                if i > 0 {
-                    for part in &mut taming_parts {
-                        part.slot = format!("{}_{}", part.slot, i);
-                    }
+        let has_group = !info.group_taming_ids.is_empty();
+        if has_group {
+            for (i, id) in info.group_taming_ids.iter().enumerate() {
+                if *id == 0 {
+                    continue;
                 }
+                if let Some((mut taming_root, mut taming_parts)) = load_taming_item(data_root, *id)
+                {
+                    taming_root.position = info
+                        .group_body_rel_move
+                        .get(i)
+                        .copied()
+                        .unwrap_or(crate::Point::ZERO);
+                    if i > 0 {
+                        for part in &mut taming_parts {
+                            part.slot = format!("{}_{}", part.slot, i);
+                        }
+                    }
+                    merge_bone_tree(&mut root, taming_root);
+                    parts.extend(taming_parts);
+                }
+            }
+        } else if let Some(taming) = &info.taming {
+            // 단일 taming 체어 — C# 은 ChairPart 와 TamingPart 를 함께 추가한다.
+            if let Some((mut taming_root, taming_parts)) = load_taming_item(data_root, taming.id) {
+                taming_root.position = info.body_rel_move.unwrap_or(crate::Point::ZERO);
                 merge_bone_tree(&mut root, taming_root);
                 parts.extend(taming_parts);
             }
         }
-        apply_avatar_scale(&mut root, &mut parts, info.effective_scale());
+
+        // C# `fAvatarScale`: 선택된 taming 의 `info/scale` 이 아바타 전체 배율이다.
+        let scale = if has_group {
+            info.group_taming_ids
+                .iter()
+                .find(|id| **id != 0)
+                .and_then(|id| load_taming_info(data_root, *id))
+                .map(|t| t.scale)
+                .unwrap_or(100)
+        } else if let Some(taming) = &info.taming {
+            taming.scale
+        } else {
+            info.effective_scale()
+        };
+        apply_avatar_scale(&mut root, &mut parts, scale);
     }
 
     if parts.is_empty() {
@@ -1782,7 +2093,7 @@ mod custom_chair_type_tests {
             custom_chair: Some(CustomChairInfo {
                 chair_type: CustomChairType::ScaleAvatarChair,
                 scale_avatar: Some(80),
-                extra: std::collections::BTreeMap::new(),
+                ..Default::default()
             }),
             ..Default::default()
         };
@@ -1790,9 +2101,9 @@ mod custom_chair_type_tests {
         info.custom_chair = Some(CustomChairInfo {
             chair_type: CustomChairType::Other("FutureChair".into()),
             scale_avatar: Some(80),
-            extra: std::collections::BTreeMap::new(),
+            ..Default::default()
         });
-        assert_eq!(info.effective_scale(), 110);
+        assert_eq!(info.effective_scale(), 100);
     }
 
     #[test]
@@ -1866,5 +2177,156 @@ mod chair_pose_tests {
             sit.rgba, stand.rgba,
             "chair should switch the body to the sit action"
         );
+    }
+}
+
+#[cfg(test)]
+mod chair_custom_type_tests {
+    use super::*;
+
+    fn data_root() -> Option<std::path::PathBuf> {
+        std::env::var_os("WZ_DATA_ROOT")
+            .map(std::path::PathBuf::from)
+            .filter(|p| p.exists())
+    }
+
+    fn load_chair(id: i32) -> Option<LoadedAvatar> {
+        let root = data_root()?;
+        load_avatar_with_equipment(&root, 2000, &[("Chair".to_string(), id)])
+    }
+
+    fn chair_info(av: &LoadedAvatar) -> &ChairInfo {
+        av.chair_info.as_ref().expect("chair info")
+    }
+
+    fn has_slot(av: &LoadedAvatar, slot: &str) -> bool {
+        av.parts.iter().any(|p| p.slot == slot)
+    }
+
+    #[test]
+    fn scale_avatar_chair_uses_scale_avatar_and_hides_body() {
+        let Some(av) = load_chair(3018429) else {
+            return;
+        };
+        let info = chair_info(&av);
+        assert_eq!(
+            info.custom_chair.as_ref().unwrap().chair_type,
+            CustomChairType::ScaleAvatarChair
+        );
+        assert_eq!(info.effective_scale(), 300);
+        // C# `SetChairDefault`: `removeBody != 0` 이 `ScaleAvatarChair` 보다 먼저다.
+        assert!(!has_slot(&av, "body"), "removeBody chair must hide body");
+        assert!(has_slot(&av, "chair"));
+    }
+
+    #[test]
+    fn rotated_sleeping_bag_chair_hides_body() {
+        let Some(av) = load_chair(3018018) else {
+            return;
+        };
+        let info = chair_info(&av);
+        assert_eq!(info.sit_action.as_deref(), Some("hide"));
+        assert!(!has_slot(&av, "body"));
+        let rotate = info.custom_chair.as_ref().unwrap().rotate.as_ref().unwrap();
+        assert_eq!(rotate.rotate, 90);
+        assert_eq!(rotate.avatar_pos, crate::Point::new(-26, -23));
+        assert!(rotate.hide_weapon);
+        assert!(rotate.hide_nick);
+    }
+
+    #[test]
+    fn dummy_avatar_chair_parses_entries_and_loads_self_taming() {
+        let Some(av) = load_chair(3018853) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let custom = info.custom_chair.as_ref().unwrap();
+        let dummy = custom.dummy.as_ref().unwrap();
+        assert_eq!(dummy.avatar_count, 4);
+        assert_eq!(dummy.avatars.len(), 4);
+        assert_eq!(dummy.self_entry.as_ref().unwrap().taming_mob, 1983797);
+        assert_eq!(info.taming_mob, Some(1983797));
+        assert_eq!(info.taming.as_ref().unwrap().id, 1983797);
+        assert!(!has_slot(&av, "body"));
+        assert!(has_slot(&av, "chair"));
+        assert!(av.parts.iter().any(|p| p.slot.starts_with("tamingmob")));
+    }
+
+    #[test]
+    fn flip_xy_chair_parses_flip_and_keeps_sit_body() {
+        let Some(av) = load_chair(3019313) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let flip = info.custom_chair.as_ref().unwrap().flip.as_ref().unwrap();
+        assert!(flip.flip_horizontal);
+        assert!(flip.flip_vertical);
+        assert_eq!(flip.avatar_pos, crate::Point::new(-17, -111));
+        assert_eq!(flip.avatar_z, 0);
+        assert!(flip.invisible_weapon);
+        // flipXYChair 는 removeBody/sitAction 이 없으므로 C# 은 sit 을 쓴다.
+        assert!(has_slot(&av, "body"));
+        assert!(has_slot(&av, "chair"));
+    }
+
+    #[test]
+    fn event_point_chair_hides_body_and_loads_taming() {
+        let Some(av) = load_chair(3018093) else {
+            return;
+        };
+        let info = chair_info(&av);
+        assert_eq!(info.taming_mob, Some(1983422));
+        assert!(!has_slot(&av, "body"));
+        assert!(has_slot(&av, "chair"));
+        assert!(av.parts.iter().any(|p| p.slot.starts_with("tamingmob")));
+    }
+
+    #[test]
+    fn body_action_follows_csharp_precedence() {
+        let mut info = ChairInfo {
+            custom_chair: Some(CustomChairInfo {
+                chair_type: CustomChairType::ScaleAvatarChair,
+                scale_avatar: Some(150),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert_eq!(
+            info.body_action(),
+            ChairBodyAction::Action {
+                name: "stand1".into(),
+                frame: None
+            }
+        );
+
+        info.remove_body = true;
+        assert_eq!(info.body_action(), ChairBodyAction::Hide);
+
+        info.sit_action = Some("hide".into());
+        assert_eq!(info.body_action(), ChairBodyAction::Hide);
+
+        info.sit_action = Some("sit".into());
+        sanity_check_action(&info.body_action(), "sit");
+
+        info.sit_action = None;
+        info.remove_body = false;
+        info.taming = Some(TamingInfo {
+            id: 1,
+            scale: 100,
+            remove_body: true,
+            flip: false,
+        });
+        assert_eq!(info.body_action(), ChairBodyAction::Hide);
+
+        info.taming = None;
+        info.custom_chair = None;
+        sanity_check_action(&info.body_action(), "sit");
+    }
+
+    fn sanity_check_action(action: &ChairBodyAction, expected: &str) {
+        match action {
+            ChairBodyAction::Action { name, .. } => assert_eq!(name, expected),
+            other => panic!("expected action {expected}, got {other:?}"),
+        }
     }
 }
