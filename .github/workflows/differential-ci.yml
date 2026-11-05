@@ -195,7 +195,7 @@ jobs:
           cargo run -q -p wz-cli --example map_render_smoke -- "$FIXTURE"
 
       - name: 합성 코퍼스 아티팩트
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: corpus
           path: target/corpus
@@ -412,7 +412,7 @@ jobs:
 
       - name: 차분 리포트 아티팩트
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: oracle-diff-${{ github.run_id }}
           path: |
