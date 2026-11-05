@@ -246,8 +246,9 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
 
 ### 남은 후보
 
-- **체어 레이어** — 이 클라이언트에 `Character/Chair`가 없고 `Item/Install` 기반 체어 프레임 로직이 필요하다.
-- **이펙트 애니메이션/커스텀 오리진 선택 UI** — 현재 이펙트는 첫 프레임, 커스텀 오리진은 파싱/노출까지 (`docs/avatar-parity.md`).
+- **체어 그룹/스케일/바디 오프셋** — 정적 체어 레이어는 `Item/Install`에서 로드하지만, C# `ChairPart`의 그룹/스케일/`bodyRelMove`는 후속.
+- **이펙트 자동 재생/타이밍** — 프레임 인덱스 선택과 GUI 슬라이더까지. 자동 재생과 delay 기반 타이밍은 후속.
+- **커스텀 오리진 정확한 매핑** — GUI `name:x,y` 오버라이드는 동작하지만 C# `CustomOriginMap`의 child-name 의미론 전체는 후속.
 - **오라클 하네스 CI** — 공개 C# 트리에 `WzComparerR2.Oracle` 프로젝트가 없어 수동 workflow 입력이 필요.
 
 ### 산출물

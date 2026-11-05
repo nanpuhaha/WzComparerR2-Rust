@@ -84,6 +84,10 @@ pub struct AppState {
     pub face_mix_enabled: bool,
     pub face_mix_color: i32,
     pub face_mix_opacity: i32,
+    /// Effect 슬롯의 정적 프레임 인덱스.
+    pub effect_frame: usize,
+    /// `name:x,y;...` 형식의 커스텀 오리진 오버라이드.
+    pub custom_origin_input: String,
     pub camera: Camera2D,
     pub viewport_texture: Option<TextureHandle>,
     pub viewport_dirty: bool,
@@ -144,6 +148,8 @@ impl Default for AppState {
             face_mix_enabled: false,
             face_mix_color: 0,
             face_mix_opacity: 100,
+            effect_frame: 0,
+            custom_origin_input: String::new(),
             camera: Camera2D::new(512.0, 512.0),
             viewport_texture: None,
             viewport_dirty: true,

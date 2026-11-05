@@ -49,11 +49,15 @@ remaining CharaSim gaps.
   matching C# `AvatarCanvas.CustomOrigin`.
 - Taming: the `Taming` slot loads `Character/TamingMob` through `load_item_frame`.
 - Effect: the `Effect` slot loads `Effect/Effect_*.wz` → `ItemEff.img/<id>/effect/
-  default/0` and resolves `_outlink` through `Effect/_Canvas`. Only the first frame is
-  composed; animation is post-v0.1.
-- Still out of scope: chair layers (the client has no `Character/Chair`; chairs need
-  `Item/Install` plus chair-specific frame logic), effect animation, and the custom
-  origin selection UI.
+  default/<frame>` and resolves `_outlink` through `Effect/_Canvas`. `MixOptions.effect_frame`
+  selects the static frame; the GUI exposes a frame slider. Automatic playback and
+  per-frame timing are post-v0.1.
+- Chair: the `Chair` slot loads `Item/Install/_Canvas` → `<category>.img/<8-digit id>`
+  and composes the `effect/0` (or `0`/`default`) canvas as a static chair layer.
+- Custom origin UI: the GUI accepts `name:x,y;name2:x,y` and applies the override to
+  `SkinLayer.name` through `apply_custom_origins`.
+- Still out of scope: effect auto-play/timing, chair group/taming scale and
+  `bodyRelMove` offsets, and the exact C# `CustomOriginMap` child-name semantics.
 
 ## Verification
 

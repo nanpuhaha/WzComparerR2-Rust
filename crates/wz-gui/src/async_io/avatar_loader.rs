@@ -80,6 +80,8 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
             face: state
                 .face_mix_enabled
                 .then_some((state.face_mix_color, state.face_mix_opacity)),
+            effect_frame: state.effect_frame,
+            custom_origins: parse_custom_origins(&state.custom_origin_input),
         },
     ) {
         Some(av) => {
@@ -186,4 +188,22 @@ pub fn render_loaded_avatar(state: &mut AppState) {
             state.avatar_status = format!("렌더 실패: {e}");
         }
     }
+}
+
+/// `name:x,y;name2:x,y` 형식의 커스텀 오리진 입력을 파싱한다.
+fn parse_custom_origins(input: &str) -> std::collections::BTreeMap<String, wz_avatar::Point> {
+    let mut out = std::collections::BTreeMap::new();
+    for part in input.split(';') {
+        let Some((name, coords)) = part.split_once(':') else {
+            continue;
+        };
+        let mut xy = coords.split(',');
+        let (Some(x), Some(y)) = (xy.next(), xy.next()) else {
+            continue;
+        };
+        if let (Ok(x), Ok(y)) = (x.trim().parse::<i32>(), y.trim().parse::<i32>()) {
+            out.insert(name.trim().to_string(), wz_avatar::Point::new(x, y));
+        }
+    }
+    out
 }

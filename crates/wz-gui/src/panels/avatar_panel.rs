@@ -144,11 +144,24 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             .add(egui::Slider::new(&mut state.face_mix_opacity, 0..=100).text("Face Opacity"))
             .changed();
     });
-    if ui.button("믹스 적용 (장비 다시 로드)").clicked() {
+    ui.separator();
+    ui.label("Effect / Custom Origin");
+    ui.add(egui::Slider::new(&mut state.effect_frame, 0..=30).text("Effect frame"));
+    ui.horizontal(|ui| {
+        ui.label("Custom origin:");
+        ui.text_edit_singleline(&mut state.custom_origin_input);
+    });
+    ui.label("형식: default:10,20;defaultAc:5,5 (장비 로드 시 적용)");
+    if ui
+        .button("믹스/특수 레이어 적용 (장비 다시 로드)")
+        .clicked()
+    {
         async_io::load_avatar_with_equipment_input(state);
     }
     if mix_changed {
-        ui.label(egui::RichText::new("Hair/Face 믹스는 장비 로드 시 적용됩니다").weak());
+        ui.label(
+            egui::RichText::new("Hair/Face 믹스와 특수 레이어는 장비 로드 시 적용됩니다").weak(),
+        );
     }
     if !state.avatar_loaded_parts.is_empty() {
         ui.separator();

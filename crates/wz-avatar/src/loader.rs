@@ -224,10 +224,111 @@ fn find_effect_canvas_archive(data_root: &std::path::Path, image_name: &str) -> 
     None
 }
 
+/// Canvas mini-property 에서 `origin`/`z` 를 읽는다.
+fn png_origin_z(png: &wz_core::image::PngRef) -> (crate::Point, i32) {
+    use wz_core::image::ImageValue;
+
+    let mut origin = crate::Point::ZERO;
+    let mut z_index = 0;
+    if let Some(sub) = &png.sub_property {
+        for ch in &sub.children {
+            match (ch.name.as_ref(), &ch.value) {
+                ("origin", Some(ImageValue::Vector(v))) => {
+                    origin = crate::Point::new(v.x, v.y);
+                }
+                ("z", Some(ImageValue::Int(v))) => z_index = *v,
+                _ => {}
+            }
+        }
+    }
+    (origin, z_index)
+}
+
+/// `Item/Install/_Canvas` 의 체어 이미지를 정적 1프레임으로 로드한다.
+///
+/// 체어 카테고리 이미지는 `03010.img` 처럼 5자리이고, 그 자식이 아이템 ID 다.
+/// `effect/0`, `0`, `default` 순으로 캔버스를 찾는다.
+fn load_chair_item(data_root: &std::path::Path, item_id: i32) -> Option<(Bone, Vec<AvatarPart>)> {
+    let canvas_dir = data_root.join("Item").join("Install").join("_Canvas");
+    let category = format!("{:05}.img", item_id / 1000);
+    for entry in std::fs::read_dir(canvas_dir).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(cat_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(category.as_str()))
+        else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(cat_entry.offset?) else {
+            continue;
+        };
+        let Some(item) = child_node(&node, &format!("{:08}", item_id)) else {
+            continue;
+        };
+        let png = child_node(item, "effect")
+            .and_then(|effect| child_node(effect, "0"))
+            .and_then(|frame| frame.first_canvas())
+            .or_else(|| child_node(item, "0").and_then(|frame| frame.first_canvas()))
+            .or_else(|| child_node(item, "default").and_then(|frame| frame.first_canvas()))
+            .or_else(|| item.first_canvas())?;
+        let (w, h, rgba) = wz_image::decode_png_ref_to_rgba(&png, archive.source()).ok()?;
+        let (origin, z_index) = png_origin_z(&png);
+
+        let mut skin = SkinLayer::new("chair");
+        skin.z = "chair".into();
+        skin.z_index = z_index;
+        skin.origin = origin;
+        skin.width = w;
+        skin.height = h;
+
+        let mut root = Bone::new("@chair");
+        root.append_bone(skin, "chair", crate::Point::ZERO);
+        let part = AvatarPart {
+            slot: "chair".into(),
+            width: w,
+            height: h,
+            rgba,
+            ..Default::default()
+        };
+        return Some((root, vec![part]));
+    }
+    None
+}
+
+/// `name:x,y` 로 지정한 커스텀 오리진을 bone 의 skin 에 적용한다.
+fn apply_custom_origins(bone: &mut Bone, map: &std::collections::BTreeMap<String, crate::Point>) {
+    if map.is_empty() {
+        return;
+    }
+    for skin in &mut bone.skins {
+        if let Some(origin) = map.get(&skin.name) {
+            skin.origin = *origin;
+        }
+    }
+    for child in &mut bone.children {
+        apply_custom_origins(child, map);
+    }
+}
+
 /// `Effect/Effect_*.wz` 의 `ItemEff.img/<id>/effect/default/0` 을 정적 1프레임으로 로드한다.
 ///
 /// C# 은 effect 를 애니메이션하지만, v0.1 이후 PoC 는 첫 프레임만 합성한다.
-fn load_effect_item(data_root: &std::path::Path, item_id: i32) -> Option<(Bone, Vec<AvatarPart>)> {
+fn load_effect_item(
+    data_root: &std::path::Path,
+    item_id: i32,
+    frame_index: usize,
+) -> Option<(Bone, Vec<AvatarPart>)> {
     use wz_core::image::ImageValue;
 
     let effect_dir = data_root.join("Effect");
@@ -264,7 +365,13 @@ fn load_effect_item(data_root: &std::path::Path, item_id: i32) -> Option<(Bone, 
     let item = child_node(&item_eff, &item_id.to_string())?;
     let effect = child_node(item, "effect")?;
     let default = child_node(effect, "default")?;
-    let frame = child_node(default, "0").or_else(|| default.children.first())?;
+    // `default` children are `z`, `pos`, `0`, `1`, … — only numeric children are frames.
+    let frames: Vec<&ImageNode> = default
+        .object_children()
+        .iter()
+        .filter(|c| c.name.parse::<usize>().is_ok())
+        .collect();
+    let frame = frames.get(frame_index % frames.len().max(1))?;
     let png = frame.first_canvas()?;
 
     let canvas_archive = find_effect_canvas_archive(data_root, "ItemEff.img");
@@ -535,6 +642,7 @@ pub fn slot_dir_name(slot: &str) -> Option<&'static str> {
         "Face" => Some("Face"),
         "Taming" => Some("TamingMob"),
         "Effect" => Some("Effect"),
+        "Chair" => Some("Chair"),
         _ => None,
     }
 }
@@ -587,13 +695,17 @@ pub fn load_equipment_item(
 /// 장비 아이템 ID 목록으로 아바타를 로드한다.
 /// data_root: MapleStory Data 디렉터리 경로
 /// equipment: (slot_name, item_id) 쌍의 목록
-/// Hair/Face 믹스 컬러 설정. `(mix_color, opacity)` 이며 opacity 는 0..=100.
+/// Hair/Face 믹스 컬러와 특수 레이어 설정.
 ///
-/// WZ/UI 가 공급한다 (C# `AvatarPart.MixColor`/`MixOpacity`).
-#[derive(Debug, Clone, Copy, Default)]
+/// WZ/UI 가 공급한다 (C# `AvatarPart.MixColor`/`MixOpacity`, `AvatarCanvas.CustomOrigin`).
+#[derive(Debug, Clone, Default)]
 pub struct MixOptions {
     pub hair: Option<(i32, i32)>,
     pub face: Option<(i32, i32)>,
+    /// `Effect` 슬롯의 정적 프레임 인덱스 (프레임 수로 modulo).
+    pub effect_frame: usize,
+    /// `name:x,y` 로 지정한 커스텀 오리진. `SkinLayer.name` 과 매칭한다.
+    pub custom_origins: std::collections::BTreeMap<String, crate::Point>,
 }
 
 pub fn load_avatar_with_equipment(
@@ -639,7 +751,16 @@ pub fn load_avatar_with_equipment_and_mix(
     for (slot, item_id) in equipment {
         if let Some(dir) = slot_dir_name(slot) {
             if dir == "Effect" {
-                if let Some((item_root, item_parts)) = load_effect_item(data_root, *item_id) {
+                if let Some((item_root, item_parts)) =
+                    load_effect_item(data_root, *item_id, mix.effect_frame)
+                {
+                    merge_bone_tree(&mut root, item_root);
+                    parts.extend(item_parts);
+                }
+                continue;
+            }
+            if dir == "Chair" {
+                if let Some((item_root, item_parts)) = load_chair_item(data_root, *item_id) {
                     merge_bone_tree(&mut root, item_root);
                     parts.extend(item_parts);
                 }
@@ -669,6 +790,8 @@ pub fn load_avatar_with_equipment_and_mix(
             }
         }
     }
+
+    apply_custom_origins(&mut root, &mix.custom_origins);
 
     if parts.is_empty() {
         return None;
@@ -814,6 +937,7 @@ mod tests {
             &MixOptions {
                 hair: Some((1, 100)),
                 face: None,
+                ..Default::default()
             },
         );
         let (Some(base), Some(mixed)) = (base, mixed) else {
@@ -960,6 +1084,23 @@ mod custom_origin_tests {
         assert_eq!(map.get("capType").map(String::as_str), Some("cap"));
         assert_eq!(map.get("earType").map(String::as_str), Some("ear"));
     }
+
+    #[test]
+    fn custom_origin_overrides_skin_origin() {
+        let mut root = Bone::new("@root");
+        let skin = SkinLayer::new("default");
+        root.append_bone(skin, "navel", crate::Point::ZERO);
+        let mut map = std::collections::BTreeMap::new();
+        map.insert("default".to_string(), crate::Point::new(7, 9));
+        apply_custom_origins(&mut root, &map);
+        let found = root
+            .children
+            .iter()
+            .flat_map(|b| b.skins.iter())
+            .find(|s| s.name == "default")
+            .expect("skin");
+        assert_eq!(found.origin, crate::Point::new(7, 9));
+    }
 }
 
 #[cfg(test)]
@@ -998,5 +1139,52 @@ mod special_slot_tests {
                 "effect part missing"
             );
         }
+    }
+
+    #[test]
+    fn chair_slot_loads() {
+        let Some(data_root) = data_root() else {
+            return;
+        };
+        let equipment = vec![("Chair".to_string(), 3010000)];
+        if let Some(av) = load_avatar_with_equipment(&data_root, 2000, &equipment) {
+            assert!(
+                av.parts.iter().any(|p| p.slot == "chair"),
+                "chair part missing"
+            );
+        }
+    }
+
+    #[test]
+    fn effect_frame_index_changes_pixels() {
+        let Some(data_root) = data_root() else {
+            return;
+        };
+        let equipment = vec![("Effect".to_string(), 1000070)];
+        let base = load_avatar_with_equipment_and_mix(
+            &data_root,
+            2000,
+            &equipment,
+            &MixOptions::default(),
+        );
+        let next = load_avatar_with_equipment_and_mix(
+            &data_root,
+            2000,
+            &equipment,
+            &MixOptions {
+                effect_frame: 1,
+                ..Default::default()
+            },
+        );
+        let (Some(base), Some(next)) = (base, next) else {
+            return;
+        };
+        let (Some(a), Some(b)) = (
+            base.parts.iter().find(|p| p.slot == "effect"),
+            next.parts.iter().find(|p| p.slot == "effect"),
+        ) else {
+            return;
+        };
+        assert_ne!(a.rgba, b.rgba, "effect frame 0 and 1 should differ");
     }
 }
