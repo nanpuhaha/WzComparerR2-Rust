@@ -35,7 +35,7 @@
 | `ParticleItem`/`ParticleSystem` | `crates/wz-db/src/particle.rs` + `wz-gui/src/particles.rs` | ✅ | 실제 000110000 13개, Fog desc |
 | `MapEvent` effect | `map.rs` | ✅ | 실제 100000000 effect 01 |
 | `ReactorItem` stage/hit | `crates/wz-gui/src/reactor.rs` | ✅ | 1002009/100000 실데이터 |
-| `LifeItem` + `BehaviorController` 이동/전투 | `crates/wz-gui/src/life.rs` | 🟡 | 순찰/hit/die 검증, 공격/추적 AI는 단순화 |
+| `LifeItem` + `BehaviorController` 이동/전투/비행 | `crates/wz-gui/src/life.rs` | ✅ | 순찰/hit/die/attack/chase/fly, 실 mob 9833307 attack/fly |
 | `SkyWhaleItem` | `map.rs` + GUI overlay | ✅ | 합성 파서 테스트 |
 | `IlluminantClusterItem` 시작/끝 스프라이트 | `wz-gui/src/illuminant.rs` | ✅ | sellas cluster 0/1 실데이터 |
 | `ToolTip` 맵 오브젝트 | `map.rs` + `String/ToolTipHelp.img` | ✅ | 실제 000050000 |
@@ -51,6 +51,7 @@
 | `LightRenderer.DrawSpotLight` | `wz-render/src/light.rs` | ✅ | 36분할 메시 테스트 |
 | `waterBack`/`waterFront` 파이프라인 | `wz-render/src/device.rs`, `water.rs` | ✅ | 실제 993258900 텍스처 + 픽셀 리드백 |
 | waterBack→scene→waterFront 합성 | `wz-gui/src/compose.rs` | ✅ | `back_is_behind_scene...`, 993258900 픽셀 회귀 |
+| waterFront bg_tex 장면 캡처 | `render_bridge.rs` | ✅ | 현재 scene RGBA를 bg_tex로 바인딩 |
 | Camera pan/zoom/키보드 관성 | `wz-render/src/camera.rs`, `camera_input.rs` | ✅ | camera_input 2 tests |
 | Minimap UI | `panels/inspector.rs` | ✅ | GUI tests |
 | WorldMap UI | `panels/inspector.rs` | ✅ | 실 WorldMap000 |
@@ -68,8 +69,8 @@
 
 ## 6. 남은 항목
 
-- 🟡 Life 공격/추적 AI: patrol/hit/die는 구현, 원본 `BehaviorController`의
-  공격/추적/비행 전체 상태는 단순화.
+- ✅ Life 공격/추적/비행: attack/chase/fly 상태, 실 mob `9833307`
+  (fly/attack1) 로드와 합성 상태 테스트.
 - 🟡 WorldMap QuestLimit/Fog: 파서+UI+합성 테스트만. 이 클라이언트
   `WorldMap_000.wz` 85개 이미지에 해당 노드가 없음.
 - 🟡 Weather: 원본 MapRender/클라이언트 데이터에 weather 노드·자산이 없음.

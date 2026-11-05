@@ -375,3 +375,15 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   asserts back/front ordering.
 - `docs/parity-inventory.md` is the explicit C#→Rust feature table with status
   and verification evidence, including data-absent items.
+
+## Life attack/chase/fly & waterFront capture
+
+- `LifeView` adds `Attack`, `Chase`, `Fly` states. Attack animations are all
+  `attack*`/`skill*` children; `fly`/`chase` animations are loaded when present.
+  Speed comes from mob `info.speed/chaseSpeed/flySpeed`. Attack triggers within
+  260 px of the camera target and recovers after the animation.
+- Real mob `9833307` (Mob/_Canvas_087) has `fly`, `attack1`, `hit1`, `die1`;
+  loader test asserts attack/fly frames. Synthetic tests cover attack recovery,
+  chase movement and vertical fly.
+- waterFront now binds the current scene RGBA as `bg_tex` (plus the two WZ
+  textures) for the shader's background capture.

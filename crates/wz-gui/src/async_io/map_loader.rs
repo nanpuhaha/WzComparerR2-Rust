@@ -693,6 +693,23 @@ fn load_life_view(root: &std::path::Path, life: &wz_db::MapLife) -> Option<crate
     let walk = collect_life_animation(root, &node, &source, &["move", "walk1"]);
     let hit = collect_life_animation(root, &node, &source, &["hit1", "hit"]);
     let die = collect_life_animation(root, &node, &source, &["die1", "die"]);
+    let chase = collect_life_animation(root, &node, &source, &["chase"]);
+    let fly = collect_life_animation(root, &node, &source, &["fly"]);
+    let mut attacks = Vec::new();
+    for animation_name in node.object_children().iter().filter_map(|c| {
+        let name = c.name.to_string();
+        (name.starts_with("attack") || name.starts_with("skill")).then_some(name)
+    }) {
+        let animation = collect_life_animation(root, &node, &source, &[animation_name.as_str()]);
+        if !animation.frames.is_empty() {
+            attacks.push(animation);
+        }
+    }
+    let info = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "info");
+    let info_int = |key: &str| info.and_then(|n| node_scalar_int(n, key)).unwrap_or(0) as f32;
     if animation.frames.is_empty() {
         return None;
     }
@@ -724,6 +741,22 @@ fn load_life_view(root: &std::path::Path, life: &wz_db::MapLife) -> Option<crate
         walk,
         hit,
         die,
+        chase,
+        fly,
+        attacks,
+        attack_index: 0,
+        attack_cooldown: 0.0,
+        speed: info_int("speed").max(60.0),
+        chase_speed: info_int("chaseSpeed").max(60.0),
+        fly_speed: info_int("flySpeed").max(60.0),
+        has_chase: node
+            .object_children()
+            .iter()
+            .any(|c| c.name.as_ref() == "chase"),
+        has_fly: node
+            .object_children()
+            .iter()
+            .any(|c| c.name.as_ref() == "fly"),
         state: crate::life::LifeState::Alive,
         state_started: 0.0,
         hp: 100,
@@ -1775,6 +1808,28 @@ mod tests {
     }
 
     #[test]
+    fn loads_real_ambient_mob_attack_and_fly() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let mob = wz_db::MapLife {
+            index: 0,
+            id: "9833307".into(),
+            life_type: "m".into(),
+            x: 0,
+            y: 0,
+            ..Default::default()
+        };
+        let Some(view) = load_life_view(&root, &mob) else {
+            return;
+        };
+        assert!(!view.attacks.is_empty(), "attack animations");
+        assert!(!view.fly.frames.is_empty(), "fly animation");
+        assert!(view.has_fly);
+        assert!(!view.animation.frames.is_empty() || !view.walk.frames.is_empty());
+    }
+
+    #[test]
     fn loads_real_water_back_front_layers() {
         let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
             return;
@@ -2019,7 +2074,7 @@ mod tests {
                 };
                 let mut view = load_life_view(&root, &patrol).expect("mob view");
                 let before = view.position_x;
-                view.tick(1.0, 0.0, &map.footholds_by_id);
+                view.tick(1.0, 0.0, &map.footholds_by_id, [9999.0, 9999.0]);
                 assert!((view.position_x - before).abs() > 1.0);
                 assert!(view.moving);
                 // 발판이 있으면 y가 발판 위로 보정된다.

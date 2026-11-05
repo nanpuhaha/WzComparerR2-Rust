@@ -80,6 +80,16 @@ pub struct LifeView {
     /// `hit1` / `die1` 전투 애니메이션.
     pub hit: LifeAnimation,
     pub die: LifeAnimation,
+    pub chase: LifeAnimation,
+    pub fly: LifeAnimation,
+    pub attacks: Vec<LifeAnimation>,
+    pub attack_index: usize,
+    pub attack_cooldown: f64,
+    pub speed: f32,
+    pub chase_speed: f32,
+    pub fly_speed: f32,
+    pub has_chase: bool,
+    pub has_fly: bool,
     pub state: LifeState,
     pub state_started: f64,
     pub hp: i32,
@@ -93,6 +103,9 @@ pub enum LifeState {
     Hit,
     Dying,
     Dead,
+    Attack,
+    Chase,
+    Fly,
 }
 
 impl LifeView {
@@ -100,6 +113,26 @@ impl LifeView {
     pub fn draw_frame(&self, millis: f64) -> Option<&LifeFrame> {
         let elapsed = (millis - self.state_started).max(0.0);
         match self.state {
+            LifeState::Attack => self
+                .attacks
+                .get(self.attack_index)
+                .and_then(|a| a.frames.get(a.frame_at(elapsed))),
+            LifeState::Chase => {
+                let animation = if !self.chase.frames.is_empty() {
+                    &self.chase
+                } else {
+                    &self.walk
+                };
+                animation.frames.get(animation.frame_at(millis))
+            }
+            LifeState::Fly => {
+                let animation = if !self.fly.frames.is_empty() {
+                    &self.fly
+                } else {
+                    &self.walk
+                };
+                animation.frames.get(animation.frame_at(millis))
+            }
             LifeState::Hit if !self.hit.frames.is_empty() => {
                 self.hit.frames.get(self.hit.frame_at(elapsed))
             }
@@ -146,6 +179,7 @@ impl LifeView {
         dt: f64,
         millis: f64,
         footholds: &std::collections::HashMap<i32, wz_db::Foothold>,
+        target: [f32; 2],
     ) {
         if self.npc || self.hidden {
             self.moving = false;
@@ -174,7 +208,62 @@ impl LifeView {
                 self.moving = false;
                 return;
             }
-            LifeState::Alive => {}
+            LifeState::Attack => {
+                let duration = self
+                    .attacks
+                    .get(self.attack_index)
+                    .map(|a| a.total_delay() as f64 / 1000.0)
+                    .unwrap_or(0.0);
+                if elapsed >= duration {
+                    self.state = LifeState::Alive;
+                    self.state_started = 0.0;
+                    self.attack_cooldown = 1.0;
+                } else {
+                    self.moving = false;
+                    return;
+                }
+            }
+            LifeState::Alive | LifeState::Chase | LifeState::Fly => {}
+        }
+        self.attack_cooldown = (self.attack_cooldown - dt).max(0.0);
+        let dx = target[0] - self.position_x;
+        let dy = target[1] - self.position_y;
+        let dist = (dx * dx + dy * dy).sqrt();
+        if self.state == LifeState::Alive
+            && !self.attacks.is_empty()
+            && dist < 260.0
+            && self.attack_cooldown <= 0.0
+        {
+            self.attack_index = (self.attack_index + 1) % self.attacks.len();
+            self.state = LifeState::Attack;
+            self.state_started = millis;
+            self.moving = false;
+            return;
+        }
+        if self.has_chase && dist < 900.0 && dist > 20.0 {
+            self.state = if self.has_fly && !self.fly.frames.is_empty() {
+                LifeState::Fly
+            } else {
+                LifeState::Chase
+            };
+            self.moving = true;
+            self.direction = if dx < 0.0 { -1.0 } else { 1.0 };
+            self.flip = self.direction < 0.0;
+            if self.state == LifeState::Fly {
+                let speed = self.fly_speed.max(60.0) * dt as f32;
+                let len = dist.max(1.0);
+                self.position_x += dx / len * speed;
+                self.position_y += dy / len * speed;
+            } else {
+                let speed = self.chase_speed.max(60.0) * dt as f32;
+                self.position_x += self.direction * speed;
+                self.update_foothold_y(footholds);
+            }
+            return;
+        }
+        if self.state != LifeState::Alive {
+            self.state = LifeState::Alive;
+            self.state_started = 0.0;
         }
         let (lo, hi) = if self.rx0 < self.rx1 {
             (self.rx0, self.rx1)
@@ -188,7 +277,7 @@ impl LifeView {
             return;
         }
         self.moving = true;
-        let speed = 60.0; // px/s, 원본 LifeInfo.speed 를 단순화
+        let speed = self.speed.max(60.0);
         self.position_x += self.direction * speed * dt as f32;
         if self.position_x >= hi as f32 {
             self.position_x = hi as f32;
@@ -198,6 +287,14 @@ impl LifeView {
             self.direction = 1.0;
         }
         self.flip = self.direction < 0.0;
+        self.update_foothold_y(footholds);
+        // walk 프레임이 없으면 stand 로 대체한다.
+        if self.walk.frames.is_empty() {
+            let _ = millis;
+        }
+    }
+
+    fn update_foothold_y(&mut self, footholds: &std::collections::HashMap<i32, wz_db::Foothold>) {
         if let Some(fh) = footholds.get(&self.fh) {
             if fh.x1 == fh.x2 {
                 self.position_y = fh.y1 as f32;
@@ -205,10 +302,6 @@ impl LifeView {
                 let t = ((self.position_x - fh.x1 as f32) / (fh.x2 - fh.x1) as f32).clamp(0.0, 1.0);
                 self.position_y = fh.y1 as f32 + (fh.y2 - fh.y1) as f32 * t;
             }
-        }
-        // walk 프레임이 없으면 stand 로 대체한다.
-        if self.walk.frames.is_empty() {
-            let _ = millis;
         }
     }
 }
@@ -230,14 +323,14 @@ mod tests {
             ..Default::default()
         };
         let footholds = std::collections::HashMap::new();
-        life.tick(1.0, 0.0, &footholds);
+        life.tick(1.0, 0.0, &footholds, [0.0, 0.0]);
         assert!((life.position_x - 60.0).abs() < 0.01);
         life.position_x = 95.0;
-        life.tick(1.0, 0.0, &footholds);
+        life.tick(1.0, 0.0, &footholds, [0.0, 0.0]);
         assert_eq!(life.position_x, 100.0);
         assert_eq!(life.direction, -1.0);
         assert!(life.flip);
-        life.tick(10.0, 0.0, &footholds);
+        life.tick(10.0, 0.0, &footholds, [0.0, 0.0]);
         assert_eq!(life.position_x, -100.0);
         assert_eq!(life.direction, 1.0);
     }
@@ -250,7 +343,7 @@ mod tests {
             rx1: 100,
             ..Default::default()
         };
-        life.tick(1.0, 0.0, &std::collections::HashMap::new());
+        life.tick(1.0, 0.0, &std::collections::HashMap::new(), [0.0, 0.0]);
         assert!(!life.moving);
         assert_eq!(life.position_x, 0.0);
     }
@@ -277,7 +370,7 @@ mod tests {
                 ..Default::default()
             },
         );
-        life.tick(0.0, 0.0, &footholds);
+        life.tick(0.0, 0.0, &footholds, [0.0, 0.0]);
         assert!((life.position_y - 75.0).abs() < 0.01);
     }
 
@@ -310,14 +403,24 @@ mod tests {
         life.hit(100.0);
         assert_eq!(life.state, LifeState::Hit);
         assert_eq!(life.draw_frame(100.0).unwrap().rgba[0], 2);
-        life.tick(0.1, 250.0, &std::collections::HashMap::new());
+        life.tick(
+            0.1,
+            250.0,
+            &std::collections::HashMap::new(),
+            [9999.0, 9999.0],
+        );
         assert_eq!(life.state, LifeState::Alive);
         for t in [300.0, 400.0, 500.0] {
             life.hit(t);
         }
         assert_eq!(life.state, LifeState::Dying);
         assert_eq!(life.draw_frame(500.0).unwrap().rgba[0], 3);
-        life.tick(0.1, 700.0, &std::collections::HashMap::new());
+        life.tick(
+            0.1,
+            700.0,
+            &std::collections::HashMap::new(),
+            [9999.0, 9999.0],
+        );
         assert_eq!(life.state, LifeState::Dead);
         assert!(!life.moving);
     }
@@ -335,6 +438,65 @@ mod tests {
         life.hit(0.0);
         assert_eq!(life.state, LifeState::Alive);
         assert_eq!(life.hp, 100);
+    }
+
+    fn single(value: u8, delay: u32) -> LifeAnimation {
+        LifeAnimation {
+            frames: vec![LifeFrame {
+                width: 1,
+                height: 1,
+                rgba: vec![value; 4],
+                origin: (0, 0),
+            }],
+            delays: vec![delay],
+        }
+    }
+
+    #[test]
+    fn attack_state_runs_and_recovers() {
+        let mut life = LifeView {
+            attacks: vec![single(7, 100)],
+            has_chase: false,
+            position_x: 0.0,
+            attack_cooldown: 0.0,
+            ..Default::default()
+        };
+        life.tick(0.01, 0.0, &std::collections::HashMap::new(), [10.0, 0.0]);
+        assert_eq!(life.state, LifeState::Attack);
+        assert_eq!(life.draw_frame(0.0).unwrap().rgba[0], 7);
+        life.tick(0.01, 200.0, &std::collections::HashMap::new(), [10.0, 0.0]);
+        assert_eq!(life.state, LifeState::Alive);
+    }
+
+    #[test]
+    fn chase_moves_toward_target() {
+        let mut life = LifeView {
+            has_chase: true,
+            chase_speed: 100.0,
+            position_x: 0.0,
+            position_y: 0.0,
+            ..Default::default()
+        };
+        life.tick(0.5, 0.0, &std::collections::HashMap::new(), [100.0, 0.0]);
+        assert_eq!(life.state, LifeState::Chase);
+        assert!(life.position_x > 1.0);
+        assert!(!life.flip);
+    }
+
+    #[test]
+    fn fly_state_moves_vertically() {
+        let mut life = LifeView {
+            has_chase: true,
+            has_fly: true,
+            fly: single(9, 100),
+            fly_speed: 100.0,
+            position_x: 0.0,
+            position_y: 0.0,
+            ..Default::default()
+        };
+        life.tick(0.5, 0.0, &std::collections::HashMap::new(), [100.0, -100.0]);
+        assert_eq!(life.state, LifeState::Fly);
+        assert!(life.position_y < -1.0);
     }
 
     #[test]

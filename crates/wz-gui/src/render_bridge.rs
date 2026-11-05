@@ -310,7 +310,7 @@ fn apply_water_shaders(
         };
         let pos =
             crate::background::background_position(&water.background, center, state.map_water_time);
-        let keys: Vec<wz_render::GpuKey> = (0..frame.textures.len())
+        let mut keys: Vec<wz_render::GpuKey> = (0..frame.textures.len())
             .map(|t| water_key(i, frame_index, t))
             .collect();
         let time = state.map_water_time as f32 / 1000.0;
@@ -327,6 +327,12 @@ fn apply_water_shaders(
                 )
             }
             crate::water::WaterKind::Front => {
+                // 원본 waterFront 의 bg_tex 는 현재 장면 캡처를 사용한다.
+                let scene_key = wz_render::GpuKey(80_000 + i as u32);
+                let _ = rc.create_texture(scene_key, width, height, rgba);
+                let first = keys.first().copied().unwrap_or(scene_key);
+                let second = keys.get(1).copied().unwrap_or(first);
+                keys = vec![first, second, scene_key];
                 let mut params = wz_render::WaterFrontParams {
                     vp: uniforms.vp,
                     vp_inv: uniforms.vp_inv,
@@ -427,7 +433,12 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             .map(|m| m.footholds_by_id.clone())
             .unwrap_or_default();
         for life in &mut state.map_lifes {
-            life.tick(dt, state.map_life_time, &footholds);
+            life.tick(
+                dt,
+                state.map_life_time,
+                &footholds,
+                [state.camera.center.x, state.camera.center.y],
+            );
         }
         state.viewport_dirty = true;
         ui.ctx().request_repaint();
