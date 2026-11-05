@@ -150,6 +150,38 @@ pub struct RollingHouseInfo {
     pub quest_id: i32,
 }
 
+/// `part/N/part0..` 구조를 가진 체어 애니메이션 (2019rollingHouse, yeti 등).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PartChairAnimationInfo {
+    pub info_name: String,
+    pub parts_count: usize,
+    pub frame_count: usize,
+    pub delays: Vec<u32>,
+    pub part_z: Vec<i32>,
+    pub pos_lv: Vec<crate::Point>,
+}
+
+/// `hashTagChairInfo/action/N` — 동작별 강제 포즈.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct HashTagAction {
+    pub action: String,
+    pub frame: Option<usize>,
+    pub pos: crate::Point,
+}
+
+/// `hashTagChairInfo`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct HashTagChairInfo {
+    pub actions: Vec<HashTagAction>,
+}
+
+/// `mirrorChairInfo`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MirrorChairInfo {
+    pub avatar_pos_y: i32,
+    pub invisible_weapon: bool,
+}
+
 /// `eventPointChair` — 이벤트 포인트 체어의 게임플레이 메타데이터.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct EventPointChairInfo {
@@ -198,6 +230,9 @@ pub struct CustomChairInfo {
     pub android: Option<AndroidChairInfo>,
     pub pet: Option<PetChairInfo>,
     pub event_point: Option<EventPointChairInfo>,
+    pub hash_tag: Option<HashTagChairInfo>,
+    pub mirror: Option<MirrorChairInfo>,
+    pub part_animation: Option<PartChairAnimationInfo>,
     /// 중첩 Property 를 `a/b/c` 경로의 문자열로 평탄화해 보존한다.
     pub extra: std::collections::BTreeMap<String, String>,
 }
@@ -289,6 +324,71 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         }
     });
 
+    let part_animation = node.object_children().iter().find_map(|child| {
+        let info_name = child.name.to_string();
+        if info_name == "rollingHouseChairInfo" || !info_name.ends_with("Info") {
+            return None;
+        }
+        let part_root = child_node(child, "part")?;
+        let first_frame = part_root.object_children().first()?;
+        child_node(first_frame, "part0")?;
+        let parts_count = first_frame
+            .object_children()
+            .iter()
+            .filter(|c| c.name.starts_with("part"))
+            .count();
+        if parts_count == 0 {
+            return None;
+        }
+        let frame_count = part_root.object_children().len();
+        let delays = (0..frame_count)
+            .filter_map(|i| node_int(child, &format!("part/{i}/delay")))
+            .map(|v| v.max(0) as u32)
+            .collect();
+        let part_z = (0..parts_count)
+            .filter_map(|i| node_int(child, &format!("partZ/{i}")))
+            .collect();
+        let pos_lv = (1..=20)
+            .filter_map(|i| node_vec(child, &format!("posLv/lv{i}")))
+            .collect();
+        Some(PartChairAnimationInfo {
+            info_name,
+            parts_count,
+            frame_count,
+            delays,
+            part_z,
+            pos_lv,
+        })
+    });
+
+    let hash_tag = child_node(node, "hashTagChairInfo").map(|n| {
+        let mut actions = Vec::new();
+        let Some(action_root) = child_node(n, "action") else {
+            return HashTagChairInfo { actions };
+        };
+        for child in action_root.object_children() {
+            if child.name.parse::<usize>().is_err() {
+                continue;
+            }
+            let Some(action) = node_str(child, "forceCharacterAction") else {
+                continue;
+            };
+            actions.push(HashTagAction {
+                action,
+                frame: node_int(child, "forceCharacterActionFrameIndex")
+                    .filter(|v| *v >= 0)
+                    .map(|v| v as usize),
+                pos: node_vec(child, "pos").unwrap_or(crate::Point::ZERO),
+            });
+        }
+        HashTagChairInfo { actions }
+    });
+
+    let mirror = child_node(node, "mirrorChairInfo").map(|n| MirrorChairInfo {
+        avatar_pos_y: node_int(n, "avatarPosY").unwrap_or(0),
+        invisible_weapon: node_int(n, "avatarInvisibleWeapon").unwrap_or(0) != 0,
+    });
+
     let event_point = child_node(node, "eventPointChair").map(|n| EventPointChairInfo {
         index: node_int(n, "index").unwrap_or(0),
         point: node_int(n, "point").unwrap_or(0),
@@ -372,6 +472,9 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         android,
         pet,
         event_point,
+        hash_tag,
+        mirror,
+        part_animation,
         extra,
     }
 }
@@ -471,6 +574,14 @@ impl ChairInfo {
                 };
             }
         }
+        if let Some(tag) = self.custom_chair.as_ref().and_then(|c| c.hash_tag.as_ref()) {
+            if let Some(action) = tag.actions.first() {
+                return ChairBodyAction::Action {
+                    name: action.action.clone(),
+                    frame: action.frame,
+                };
+            }
+        }
         if self.remove_body {
             return ChairBodyAction::Hide;
         }
@@ -533,6 +644,7 @@ impl ChairInfo {
         self.custom_chair.as_ref().is_some_and(|c| {
             c.flip.as_ref().is_some_and(|f| f.invisible_weapon)
                 || c.rotate.as_ref().is_some_and(|r| r.hide_weapon)
+                || c.mirror.as_ref().is_some_and(|m| m.invisible_weapon)
         })
     }
 
@@ -1005,6 +1117,56 @@ pub fn load_chair_info(data_root: &std::path::Path, item_id: i32) -> Option<Chai
     Some(chair)
 }
 
+/// `part/N/part0..` 구조의 체어 애니메이션을 로드한다.
+fn load_part_chair_item(
+    data_root: &std::path::Path,
+    item_id: i32,
+    info: &ChairInfo,
+) -> Option<(Bone, Vec<AvatarPart>, ChairFrames)> {
+    let anim = info.custom_chair.as_ref()?.part_animation.as_ref()?;
+    let (meta_archive, meta_item) = find_install_item(data_root, "", item_id)?;
+    let (canvas_archive, canvas_item) = find_install_item(data_root, "_Canvas", item_id)?;
+    let base = format!("info/customChair/{}/part", anim.info_name);
+    let frame_root = find_path_node(&meta_item, &base)?;
+    let canvas_root = find_path_node(&canvas_item, &base);
+    let offset = anim.pos_lv.first().copied().unwrap_or(crate::Point::ZERO);
+
+    let mut frames = Vec::new();
+    let mut delays = Vec::new();
+    let mut first_bone = None;
+    for f in 0..anim.frame_count {
+        let Some(frame_node) = child_node(frame_root, &f.to_string()) else {
+            continue;
+        };
+        let canvas_frame = canvas_root.and_then(|root| child_node(root, &f.to_string()));
+        let Some((bone, parts)) = build_rolling_frame(
+            frame_node,
+            canvas_frame,
+            anim.parts_count,
+            &anim.part_z,
+            &meta_archive,
+            &canvas_archive,
+            offset,
+        ) else {
+            continue;
+        };
+        if first_bone.is_none() {
+            first_bone = Some(bone);
+        }
+        frames.push(parts);
+        let delay = anim
+            .delays
+            .get(f)
+            .copied()
+            .or_else(|| node_int(frame_node, "delay").map(|v| v.max(0) as u32))
+            .unwrap_or(120)
+            .max(20);
+        delays.push(delay);
+    }
+    let first = frames.first()?.clone();
+    Some((first_bone?, first, ChairFrames { frames, delays }))
+}
+
 /// `androidChairInfo/customEffect` 프레임을 로드한다.
 ///
 /// 메타데이터 캔버스는 1x1 + `_outlink` 이고, 실제 픽셀은 `_Canvas` 아카이브에
@@ -1069,13 +1231,14 @@ fn load_android_chair_item(
 fn build_rolling_frame(
     frame_node: &ImageNode,
     canvas_frame: Option<&ImageNode>,
-    rolling: &RollingHouseInfo,
+    parts_count: usize,
+    part_z: &[i32],
     meta_archive: &WzArchive,
     canvas_archive: &WzArchive,
     offset: crate::Point,
 ) -> Option<(Bone, Vec<AvatarPart>)> {
     let mut children = Vec::new();
-    for i in 0..rolling.parts_count {
+    for i in 0..parts_count {
         let Some(part) = child_node(frame_node, &format!("part{i}")) else {
             continue;
         };
@@ -1117,8 +1280,7 @@ fn build_rolling_frame(
             .strip_prefix("part")
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(0);
-        let z = rolling
-            .part_z
+        let z = part_z
             .get(idx)
             .copied()
             .unwrap_or_else(|| layer.z_int.unwrap_or(0));
@@ -1169,7 +1331,8 @@ fn load_rolling_house_item(
         let Some((bone, parts)) = build_rolling_frame(
             frame_node,
             canvas_frame,
-            rolling,
+            rolling.parts_count,
+            &rolling.part_z,
             &meta_archive,
             &canvas_archive,
             offset,
@@ -1211,6 +1374,15 @@ fn load_chair_item(
         .is_some()
     {
         return load_rolling_house_item(data_root, item_id, info)
+            .map(|(bone, parts, frames)| (bone, parts, Some(frames)));
+    }
+    if info
+        .custom_chair
+        .as_ref()
+        .and_then(|c| c.part_animation.as_ref())
+        .is_some()
+    {
+        return load_part_chair_item(data_root, item_id, info)
             .map(|(bone, parts, frames)| (bone, parts, Some(frames)));
     }
     let (archive, item) = find_install_item(data_root, "_Canvas", item_id)?;
@@ -3015,6 +3187,68 @@ mod chair_custom_type_tests {
         // flipXYChair 는 removeBody/sitAction 이 없으므로 C# 은 sit 을 쓴다.
         assert!(has_slot(&av, "body"));
         assert!(has_slot(&av, "chair"));
+    }
+
+    #[test]
+    fn part_animation_chairs_load_frames() {
+        for id in [3018467, 3018634] {
+            let Some(av) = load_chair(id) else {
+                continue;
+            };
+            let info = chair_info(&av);
+            let anim = info
+                .custom_chair
+                .as_ref()
+                .and_then(|c| c.part_animation.as_ref())
+                .unwrap_or_else(|| panic!("part animation missing for {id}"));
+            assert!(anim.parts_count > 0, "id {id}");
+            assert!(anim.frame_count > 1, "id {id}");
+            assert_eq!(av.chair_frames.len(), anim.frame_count, "id {id}");
+            assert_eq!(av.chair_delays.len(), anim.frame_count, "id {id}");
+            assert!(av.parts.iter().any(|p| p.slot.starts_with("rolling_part")));
+        }
+    }
+
+    #[test]
+    fn hash_tag_chair_forces_first_action() {
+        let Some(av) = load_chair(3018079) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let tag = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.hash_tag.as_ref())
+            .expect("hash tag info");
+        assert!(!tag.actions.is_empty());
+        assert_eq!(tag.actions[0].action, "stand1");
+        assert_eq!(tag.actions[0].frame, Some(2));
+        assert_eq!(tag.actions[0].pos, crate::Point::new(27, -105));
+        assert_eq!(
+            info.body_action(),
+            ChairBodyAction::Action {
+                name: "stand1".into(),
+                frame: Some(2)
+            }
+        );
+        assert!(has_slot(&av, "body"));
+    }
+
+    #[test]
+    fn mirror_chair_parses_position_and_hides_weapon() {
+        let Some(av) = load_chair(3019098) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let mirror = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.mirror.as_ref())
+            .expect("mirror info");
+        assert_eq!(mirror.avatar_pos_y, -28);
+        assert!(mirror.invisible_weapon);
+        assert!(info.hides_weapon());
+        assert!(has_slot(&av, "body"));
     }
 
     #[test]

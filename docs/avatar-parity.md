@@ -91,6 +91,14 @@ remaining CharaSim gaps.
   - `eventPointChair` → `index`/`point`/`term` are parsed and shown in the GUI
     (`Chair type`, `Event point`). Rendering uses the taming part; the chair body
     is hidden (`removeBody`).
+  - `hashTagChair` → `action/*` list parsed; the first action
+    (`forceCharacterAction` + frame) drives the body pose.
+  - `mirrorChair` → `avatarPosY`/`avatarInvisibleWeapon` parsed; weapon hidden.
+  - `2019rollingHouseChair` / `yetiChair` → generic `part/N/part0..` animation
+    frames are loaded through the same chair frame slider/auto-play.
+  - Every other `customChair` type exposes its flattened `customChair fields`
+    (type + nested key/value) in the GUI; gameplay-only values (name, score,
+    level, BGM, vote, etc.) are not simulated.
   - `AvatarPart` now carries final `position`, `origin`, and `z_index`; the GUI
     centers/scales the assembled avatar and draws parts at those coordinates.
 - Custom origin: the two-step C# semantics are implemented:

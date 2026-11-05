@@ -117,6 +117,8 @@ pub struct AppState {
     /// 체어 customChair 타입/이벤트 메타데이터 표시용.
     pub chair_type: Option<String>,
     pub chair_event_point: Option<(i32, i32, i32)>,
+    /// `customChair` 의 평탄화된 메타데이터 (모든 UI 타입 표시용).
+    pub chair_custom_fields: Vec<(String, String)>,
     pub camera: Camera2D,
     pub viewport_texture: Option<TextureHandle>,
     pub viewport_dirty: bool,
@@ -192,6 +194,7 @@ impl Default for AppState {
             chair_last_time: 0.0,
             chair_type: None,
             chair_event_point: None,
+            chair_custom_fields: Vec::new(),
             camera: Camera2D::new(512.0, 512.0),
             viewport_texture: None,
             viewport_dirty: true,

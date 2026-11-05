@@ -22,6 +22,19 @@ fn apply_chair_metadata(state: &mut AppState, av: &wz_avatar::LoadedAvatar) {
         .and_then(|info| info.custom_chair.as_ref())
         .and_then(|custom| custom.event_point.as_ref())
         .map(|event| (event.index, event.point, event.term));
+    state.chair_custom_fields = av
+        .chair_info
+        .as_ref()
+        .and_then(|info| info.custom_chair.as_ref())
+        .map(|custom| {
+            custom
+                .extra
+                .iter()
+                .take(64)
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect()
+        })
+        .unwrap_or_default();
 }
 
 fn part_data(p: &wz_avatar::AvatarPart) -> AvatarPartData {
@@ -61,6 +74,7 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             state.chair_last_time = 0.0;
             state.chair_type = None;
             state.chair_event_point = None;
+            state.chair_custom_fields.clear();
             render_loaded_avatar(state);
         }
         None => {
@@ -505,6 +519,10 @@ mod tests {
         apply_chair_metadata(&mut state, &av);
         assert_eq!(state.chair_type.as_deref(), Some("eventPointChair"));
         assert_eq!(state.chair_event_point, Some((1, 3, 10000)));
+        assert!(state
+            .chair_custom_fields
+            .iter()
+            .any(|(k, v)| k == "eventPointChair/index" && v == "1"));
     }
 
     #[test]
