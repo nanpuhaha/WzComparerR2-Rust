@@ -73,11 +73,15 @@ cargo run -p wz-cli -- diff old.wz new.wz
 
 ## 문서
 
+- [`GLOSSARY.md`](GLOSSARY.md) — WZ/문자열/아바타/맵/검증 도메인 용어
+- [`docs/adr/`](docs/adr/) — 아키텍처 결정 기록 (ADR 0001~0006)
 - [`docs/known-bugs.md`](docs/known-bugs.md) — 원본 C# 버그와 포팅 시 수정 사항
 - [`docs/oracle-spec.md`](docs/oracle-spec.md) — C# 오라클 차분 검증 스펙
 - [`docs/differential.md`](docs/differential.md) — 차분 스크립트 사용법
 - [`docs/gui-architecture.md`](docs/gui-architecture.md) — GUI 설계
 - [`docs/architecture-audit.md`](docs/architecture-audit.md) — 모듈 구조 감사
+- [`docs/avatar-parity.md`](docs/avatar-parity.md) — 아바타 앵커/프리즘/zmap 현황
+- [`docs/release-checklist.md`](docs/release-checklist.md) — 공개 릴리스 체크리스트
 
 ## 보안
 
