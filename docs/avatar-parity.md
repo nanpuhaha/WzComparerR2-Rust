@@ -319,3 +319,16 @@ body/head loading, equipment loading, zmap, and the prism unit test.
 - This client's `WorldMap_000.wz` contains no `QuestLimit`/`Fog` nodes (checked
   across all 85 images), so those selectors are data-driven and covered by the
   parser/UI path; base-image + 7 spots are verified against real data.
+
+## Illuminant cluster sprites
+
+- `wz-gui::illuminant` loads the original start/end animations from
+  `Map/Obj/sellas.img/fieldGimmick/cluster/<startPoint*2>` and
+  `<endPoint*2+1>`.
+- Frames keep RGBA/origin/delay; the viewport draws them at
+  `(start + size/2, start - size/2)` and the matching end point, animating by
+  accumulated delay. The existing path overlay remains for the fly layer.
+- Real test: `sellas.img` cluster `0`/`1` frames decode with non-empty RGBA.
+- This client has no `water`/`weather` map nodes and no MsCustomSprite shader
+  data in `Map0`; the waterBack/waterFront WGSL pipelines remain unused until a
+  map carrying those custom sprites is available.

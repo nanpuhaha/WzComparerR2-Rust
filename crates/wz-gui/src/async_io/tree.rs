@@ -72,6 +72,7 @@ pub fn poll_map_images(state: &mut AppState, ctx: &egui::Context) {
             state.map_particle_layers = imgs.particles;
             state.map_lifes = imgs.lifes;
             state.map_portals = imgs.portals;
+            state.map_illuminants = imgs.illuminants;
             if let Some(linker) = &state.string_linker {
                 for life in &mut state.map_lifes {
                     let table = if life.npc {

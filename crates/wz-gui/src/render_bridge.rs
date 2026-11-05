@@ -15,6 +15,47 @@ fn argb_components(packed: u32) -> [f32; 4] {
     [r, g, b, a]
 }
 
+fn illuminant_key(view: usize, side: usize, frame: usize) -> GpuKey {
+    GpuKey(60_000 + view as u32 * 128 + side as u32 * 64 + frame as u32)
+}
+
+fn draw_illuminants(batch: &mut SpriteBatch, state: &AppState) {
+    for (i, view) in state.map_illuminants.iter().enumerate() {
+        for (side, (x, y, animation)) in [
+            (
+                view.start.0 + view.size / 2,
+                view.start.1 - view.size / 2,
+                &view.start_anim,
+            ),
+            (
+                view.end.0 + view.size / 2,
+                view.end.1 - view.size / 2,
+                &view.end_anim,
+            ),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let frame_index = animation.frame_at(state.map_illuminant_time);
+            let Some(frame) = animation.frames.get(frame_index) else {
+                continue;
+            };
+            batch.push_quad(
+                illuminant_key(i, side, frame_index),
+                [
+                    (x - frame.origin.0) as f32,
+                    (y - frame.origin.1) as f32,
+                    frame.width as f32,
+                    frame.height as f32,
+                ],
+                3.0,
+                [0.0, 0.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+            );
+        }
+    }
+}
+
 fn draw_skill(batch: &mut SpriteBatch, state: &AppState) {
     let Some(skill) = &state.skill_view else {
         return;
@@ -232,6 +273,19 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         for life in &mut state.map_lifes {
             life.tick(dt, state.map_life_time, &footholds);
         }
+        state.viewport_dirty = true;
+        ui.ctx().request_repaint();
+    }
+    let illuminant_animating = state
+        .map_illuminants
+        .iter()
+        .any(|v| v.start_anim.frames.len() > 1 || v.end_anim.frames.len() > 1);
+    if illuminant_animating {
+        let now = ui.input(|i| i.time);
+        if state.map_illuminant_last > 0.0 {
+            state.map_illuminant_time += (now - state.map_illuminant_last).clamp(0.0, 0.1);
+        }
+        state.map_illuminant_last = now;
         state.viewport_dirty = true;
         ui.ctx().request_repaint();
     }
@@ -460,6 +514,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             || !state.map_lifes.is_empty()
             || !state.map_portals.is_empty()
             || state.skill_view.is_some()
+            || !state.map_illuminants.is_empty()
         {
             // 텍스처 업로드 (새 RenderContext 이므로 매 렌더 필요)
             if let Some((bw, bh, bpx)) = &state.map_back_image {
@@ -509,6 +564,24 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                 for (f, frame) in portal.animation.frames.iter().enumerate() {
                     let _ =
                         rc.create_texture(portal_key(i, f), frame.width, frame.height, &frame.rgba);
+                }
+            }
+            for (i, view) in state.map_illuminants.iter().enumerate() {
+                for (f, frame) in view.start_anim.frames.iter().enumerate() {
+                    let _ = rc.create_texture(
+                        illuminant_key(i, 0, f),
+                        frame.width,
+                        frame.height,
+                        &frame.rgba,
+                    );
+                }
+                for (f, frame) in view.end_anim.frames.iter().enumerate() {
+                    let _ = rc.create_texture(
+                        illuminant_key(i, 1, f),
+                        frame.width,
+                        frame.height,
+                        &frame.rgba,
+                    );
                 }
             }
             if let Some(skill) = &state.skill_view {
@@ -575,6 +648,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         }
         draw_lifes(&mut batch, state);
         draw_portals(&mut batch, state);
+        draw_illuminants(&mut batch, state);
         draw_skill(&mut batch, state);
         draw_reactors(&mut batch, state);
         // map particles: 원본 ParticleSystem.Draw 와 같은 정적 샘플링.

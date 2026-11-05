@@ -52,6 +52,7 @@ pub struct MapImages {
     pub particles: Vec<crate::particles::MapParticleLayer>,
     pub lifes: Vec<crate::life::LifeView>,
     pub portals: Vec<crate::portal::PortalView>,
+    pub illuminants: Vec<crate::illuminant::IlluminantView>,
 }
 
 // ── 로딩 메시지 ───────────────────────────────────────────────────────
@@ -139,6 +140,9 @@ pub struct AppState {
     pub map_life_time: f64,
     pub map_life_last: f64,
     pub map_portals: Vec<crate::portal::PortalView>,
+    pub map_illuminants: Vec<crate::illuminant::IlluminantView>,
+    pub map_illuminant_time: f64,
+    pub map_illuminant_last: f64,
     pub map_portal_time: f64,
     pub map_portal_last: f64,
     pub map_minimap_icons: Option<MinimapIcons>,
@@ -300,6 +304,9 @@ impl Default for AppState {
             map_life_time: 0.0,
             map_life_last: 0.0,
             map_portals: Vec::new(),
+            map_illuminants: Vec::new(),
+            map_illuminant_time: 0.0,
+            map_illuminant_last: 0.0,
             map_portal_time: 0.0,
             map_portal_last: 0.0,
             map_minimap_icons: None,

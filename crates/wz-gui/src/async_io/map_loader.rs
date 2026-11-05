@@ -433,6 +433,84 @@ fn collect_portal_animation(
     animation
 }
 
+fn find_obj_image(
+    root: &std::path::Path,
+    name: &str,
+) -> Option<(
+    wz_core::image::Node,
+    std::sync::Arc<dyn wz_pool::ByteSource>,
+)> {
+    find_image_in_dir(&root.join("Map").join("Obj").join("_Canvas"), name)
+}
+
+fn collect_illuminant_animation(
+    root: &std::path::Path,
+    node: &wz_core::image::Node,
+    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+) -> crate::illuminant::IlluminantAnimation {
+    let mut animation = crate::illuminant::IlluminantAnimation::default();
+    let mut children: Vec<&wz_core::image::Node> = node
+        .object_children()
+        .iter()
+        .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+        .collect();
+    children.sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+    if children.is_empty() {
+        if let Some((w, h, rgba)) = decode_canvas_node(root, node, source) {
+            animation.frames.push(crate::illuminant::IlluminantFrame {
+                width: w,
+                height: h,
+                rgba,
+                origin: node_origin(node),
+            });
+            animation
+                .delays
+                .push(node_scalar_int(node, "delay").unwrap_or(100).max(20) as u32);
+        }
+        return animation;
+    }
+    for child in children {
+        let Some((w, h, rgba)) = decode_canvas_node(root, child, source) else {
+            continue;
+        };
+        animation.frames.push(crate::illuminant::IlluminantFrame {
+            width: w,
+            height: h,
+            rgba,
+            origin: node_origin(child),
+        });
+        animation
+            .delays
+            .push(node_scalar_int(child, "delay").unwrap_or(100).max(20) as u32);
+    }
+    animation
+}
+
+fn load_illuminant_view(
+    root: &std::path::Path,
+    helper: &wz_core::image::Node,
+    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+    cluster: &wz_db::IlluminantCluster,
+) -> Option<crate::illuminant::IlluminantView> {
+    let start_index = (cluster.start_point * 2).to_string();
+    let end_index = (cluster.end_point * 2 + 1).to_string();
+    let start_node = helper_path(helper, &["fieldGimmick", "cluster", &start_index])?;
+    let end_node = helper_path(helper, &["fieldGimmick", "cluster", &end_index])?;
+    let start_anim = collect_illuminant_animation(root, start_node, source);
+    let end_anim = collect_illuminant_animation(root, end_node, source);
+    if start_anim.frames.is_empty() && end_anim.frames.is_empty() {
+        return None;
+    }
+    Some(crate::illuminant::IlluminantView {
+        name: cluster.name.clone(),
+        start: cluster.start,
+        end: cluster.end,
+        size: cluster.size,
+        start_anim,
+        end_anim,
+    })
+}
+
 fn load_portal_view(
     root: &std::path::Path,
     helper: &wz_core::image::Node,
@@ -1234,6 +1312,7 @@ pub fn load_map_by_path(state: &mut AppState) {
         let particles_clone = map.particles.clone();
         let life_clone = map.life.clone();
         let portals_clone = map.portals.clone();
+        let clusters_clone = map.illuminant_clusters.clone();
         let (tx, rx) = crossbeam_channel::unbounded();
         state.map_images_rx = Some(rx);
         std::thread::spawn(move || {
@@ -1300,6 +1379,16 @@ pub fn load_map_by_path(state: &mut AppState) {
                     }
                 }
             }
+            let mut illuminants = Vec::new();
+            if let Some((sellas, sellas_source)) = find_obj_image(&root, "sellas.img") {
+                for cluster in &clusters_clone {
+                    if let Some(view) =
+                        load_illuminant_view(&root, &sellas, &sellas_source, cluster)
+                    {
+                        illuminants.push(view);
+                    }
+                }
+            }
             let _ = tx.send(crate::state::MapImages {
                 tiles,
                 objs,
@@ -1308,6 +1397,7 @@ pub fn load_map_by_path(state: &mut AppState) {
                 particles,
                 lifes,
                 portals,
+                illuminants,
             });
         });
     }
@@ -1441,6 +1531,34 @@ mod tests {
         assert!(!view.frames.is_empty());
         assert!(view.frames[0].width > 1);
         assert!(view
+            .frames
+            .iter()
+            .any(|f| f.rgba.chunks(4).any(|p| p[3] != 0)));
+    }
+
+    #[test]
+    fn loads_real_illuminant_cluster_sprites() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let Some((sellas, source)) = find_obj_image(&root, "sellas.img") else {
+            return;
+        };
+        let cluster = wz_db::IlluminantCluster {
+            name: "test".into(),
+            start: (10, 20),
+            end: (100, 200),
+            size: 24,
+            start_point: 0,
+            end_point: 0,
+            ..Default::default()
+        };
+        let view =
+            load_illuminant_view(&root, &sellas, &source, &cluster).expect("illuminant view");
+        assert!(!view.start_anim.frames.is_empty());
+        assert!(!view.end_anim.frames.is_empty());
+        assert!(view
+            .start_anim
             .frames
             .iter()
             .any(|f| f.rgba.chunks(4).any(|p| p[3] != 0)));
