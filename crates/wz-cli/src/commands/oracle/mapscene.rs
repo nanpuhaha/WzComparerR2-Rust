@@ -147,6 +147,24 @@ pub fn cmd_oracle_mapscene(
         .collect();
     res.insert("life".into(), serde_json::Value::Array(life_items));
 
+    // reactors
+    let reactor_items: Vec<serde_json::Value> = map_data
+        .reactors
+        .iter()
+        .map(|reactor| {
+            serde_json::json!({
+                "index": reactor.index,
+                "id": reactor.id,
+                "x": reactor.x,
+                "y": reactor.y,
+                "flip": reactor.flip,
+                "name": reactor.name,
+                "reactor_time": reactor.reactor_time,
+            })
+        })
+        .collect();
+    res.insert("reactors".into(), serde_json::Value::Array(reactor_items));
+
     // ladders / ropes
     let mut sorted_lr = map_data.ladders_ropes.clone();
     sorted_lr.sort_by_key(|l| (l.x, l.y1, l.y2, l.id));

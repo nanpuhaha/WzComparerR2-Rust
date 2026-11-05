@@ -10,6 +10,78 @@ use wz_db::MapData;
 
 // ── 파일 열기 ─────────────────────────────────────────────────────────
 
+fn reactor_origin(png: &wz_core::image::PngRef) -> (i32, i32) {
+    let Some(sub) = &png.sub_property else {
+        return (0, 0);
+    };
+    for child in &sub.children {
+        if child.name.as_ref() == "origin" {
+            if let Some(wz_core::image::ImageValue::Vector(v)) = &child.value {
+                return (v.x, v.y);
+            }
+        }
+    }
+    (0, 0)
+}
+
+fn flip_rgba_horizontal(src: &[u8], w: u32, h: u32) -> Vec<u8> {
+    let mut out = vec![0u8; src.len()];
+    for y in 0..h {
+        for x in 0..w {
+            let sx = w - 1 - x;
+            let s = ((y * w + sx) * 4) as usize;
+            let d = ((y * w + x) * 4) as usize;
+            out[d..d + 4].copy_from_slice(&src[s..s + 4]);
+        }
+    }
+    out
+}
+
+fn load_reactor_image(
+    root: &std::path::Path,
+    id: i32,
+    x: i32,
+    y: i32,
+    flip: bool,
+) -> Option<(i32, i32, u32, u32, Vec<u8>)> {
+    let base = root.join("Reactor").join("_Canvas");
+    let image = format!("{id:07}.img");
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = wz_core::WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image.as_str()))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let png = node.first_canvas()?;
+        let (w, h, mut rgba) = wz_image::decode_png_ref_to_rgba(&png, archive.source()).ok()?;
+        if flip {
+            rgba = flip_rgba_horizontal(&rgba, w, h);
+        }
+        let (ox, oy) = reactor_origin(&png);
+        return Some((x - ox, y - oy, w, h, rgba));
+    }
+    None
+}
+
 pub fn load_map_by_path(state: &mut AppState) {
     if state.tree.is_none() {
         state.map_status = "WZ 파일을 먼저 열어 주세요".into();
@@ -45,6 +117,7 @@ pub fn load_map_by_path(state: &mut AppState) {
     if let Some(root) = data_root.clone() {
         let tiles_clone = map.tiles.clone();
         let objs_clone = map.objects.clone();
+        let reactors_clone = map.reactors.clone();
         let (tx, rx) = crossbeam_channel::unbounded();
         state.map_images_rx = Some(rx);
         std::thread::spawn(move || {
@@ -63,15 +136,28 @@ pub fn load_map_by_path(state: &mut AppState) {
                     objs.push((obj.x, obj.y, w, h, rgba));
                 }
             }
-            let _ = tx.send(crate::state::MapImages { tiles, objs });
+            let mut reactors = Vec::new();
+            for reactor in &reactors_clone {
+                if let Some(image) =
+                    load_reactor_image(&root, reactor.id, reactor.x, reactor.y, reactor.flip)
+                {
+                    reactors.push(image);
+                }
+            }
+            let _ = tx.send(crate::state::MapImages {
+                tiles,
+                objs,
+                reactors,
+            });
         });
     }
 
     state.map_status = format!(
-        "map_id={:?} bgm={:?} town={} fh={} portals={} life={} back={} obj={} tile={} (back_img={})",
+        "map_id={:?} bgm={:?} town={} fh={} portals={} life={} back={} obj={} tile={} reactor={} (back_img={})",
         map.info.map_id, map.info.bgm, map.info.town,
         map.footholds.len(), map.portals.len(), map.life.len(),
         map.backgrounds.len(), map.objects.len(), map.tiles.len(),
+        map.reactors.len(),
         state.map_back_image.is_some()
     );
     state.current_map = Some(map);
@@ -123,4 +209,22 @@ pub fn load_map_from_selection(state: &mut AppState) {
     // 이미지 로딩은 load_map_by_path 의 워커가 처리한다.
     // (map_path 가 설정되어 있으므로 그대로 호출)
     load_map_by_path(state);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn loads_reactor_image_from_canvas() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let Some((x, y, w, h, rgba)) = load_reactor_image(&root, 1002009, -302, 253, false) else {
+            return;
+        };
+        assert!(w > 1 && h > 1);
+        assert_eq!(rgba.len(), (w * h * 4) as usize);
+        assert!(x != 0 || y != 0);
+    }
 }

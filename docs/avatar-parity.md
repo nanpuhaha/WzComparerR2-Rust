@@ -138,6 +138,9 @@ remaining CharaSim gaps.
   → `apply_custom_origin_map`. The GUI accepts `childName:x,y;...`.
 - Chair pose: when a `Chair` is in the equipment list, the body frame prefers `sit`
   over `stand1`/`stand`. Group taming members also use `sit`.
+- Map reactors: `MapData.reactors` parses `reactor/<n>` (`id` string/int, x/y/f/name/
+  reactorTime); `oracle map-scene` and the GUI viewport load/render
+  `Reactor/<id>.img/0/0` first frame with origin/flip.
 - Equipment slots: `FaceAccessory`, `EyeAccessory`, `Earrings`, `Pendant`, `Belt`,
   `ShoulderPad`, `Pocket`, `Emblem` load from `Character/Accessory`; `Saddle` loads
   from `Character/TamingMob`; `CashWeapon` maps to `Weapon`. Icon-only images are

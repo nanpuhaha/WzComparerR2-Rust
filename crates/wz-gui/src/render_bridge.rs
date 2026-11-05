@@ -93,6 +93,14 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                         z,
                     ));
                 }
+                // reactors: z = 0
+                for (i, (rx, ry, rw, rh, _)) in state.map_reactor_images.iter().enumerate() {
+                    state.viewport_cached_layers.push((
+                        GpuKey(300 + i as u32),
+                        [*rx as f32, *ry as f32, *rw as f32, *rh as f32],
+                        0.0,
+                    ));
+                }
             }
         }
 
@@ -107,6 +115,9 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             }
             for (i, (_, _, ow, oh, opx)) in state.map_obj_images.iter().enumerate() {
                 let _ = rc.create_texture(GpuKey(200 + i as u32), *ow, *oh, opx);
+            }
+            for (i, (_, _, rw, rh, rpx)) in state.map_reactor_images.iter().enumerate() {
+                let _ = rc.create_texture(GpuKey(300 + i as u32), *rw, *rh, rpx);
             }
             // 캐시된 레이어를 z 순서로 정렬해 push
             let mut sorted: Vec<&(GpuKey, [f32; 4], f32)> =
@@ -130,6 +141,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         } else if state.map_back_image.is_none()
             && state.map_tile_images.is_empty()
             && state.map_obj_images.is_empty()
+            && state.map_reactor_images.is_empty()
         {
             // 그리드 폴백
             for gx in -2..=2i32 {
@@ -187,10 +199,11 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             painter.line_segment([p1, p2], egui::Stroke::new(1.5, egui::Color32::GREEN));
         }
         ui.label(format!(
-            "발판 {}개, 타일 {}개, 오브젝트 {}개 표시",
+            "발판 {}개, 타일 {}개, 오브젝트 {}개, 리액터 {}개 표시",
             m.footholds.len(),
             state.map_tile_images.len(),
-            state.map_obj_images.len()
+            state.map_obj_images.len(),
+            state.map_reactor_images.len()
         ));
     }
 

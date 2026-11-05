@@ -267,6 +267,18 @@ impl FootholdTree {
     }
 }
 
+/// 맵 리액터 (`ReactorItem.cs`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MapReactor {
+    pub index: i32,
+    pub id: i32,
+    pub x: i32,
+    pub y: i32,
+    pub flip: bool,
+    pub name: Option<String>,
+    pub reactor_time: i32,
+}
+
 /// 전체 맵 물리 씬 데이터 컨테이너 (`MapData`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MapData {
@@ -280,6 +292,7 @@ pub struct MapData {
     pub backgrounds: Vec<BackItem>,
     pub objects: Vec<ObjItem>,
     pub tiles: Vec<TileItem>,
+    pub reactors: Vec<MapReactor>,
 }
 
 impl MapData {
@@ -305,6 +318,25 @@ impl MapData {
 
         if let Some(life_id) = arena.find_child(root, "life") {
             parse_life_arena(arena, life_id, &mut data);
+        }
+
+        if let Some(reactor_id) = arena.find_child(root, "reactor") {
+            for &node in arena.children(reactor_id) {
+                let index = arena
+                    .name(node)
+                    .and_then(|name| name.parse::<i32>().ok())
+                    .unwrap_or(0);
+                data.reactors.push(MapReactor {
+                    index,
+                    id: get_arena_int(arena, node, "id").unwrap_or(0),
+                    x: get_arena_int(arena, node, "x").unwrap_or(0),
+                    y: get_arena_int(arena, node, "y").unwrap_or(0),
+                    flip: get_arena_bool(arena, node, "f"),
+                    name: get_arena_string(arena, node, "name"),
+                    reactor_time: get_arena_int(arena, node, "reactorTime").unwrap_or(0),
+                });
+            }
+            data.reactors.sort_by_key(|reactor| reactor.index);
         }
 
         if let Some(back_id) = arena.find_child(root, "back") {
@@ -336,6 +368,7 @@ fn get_arena_int(arena: &crate::Arena, node_id: crate::NodeId, key: &str) -> Opt
         crate::NodeValue::Int(v) => Some(*v),
         crate::NodeValue::Long(v) => Some(*v as i32),
         crate::NodeValue::Uint(v) => Some(*v as i32),
+        crate::NodeValue::Str(s) | crate::NodeValue::Uol(s) => s.parse().ok(),
         _ => None,
     }
 }
@@ -652,6 +685,28 @@ mod tests {
         fh_root.children.push(layer0);
         root.children.push(fh_root);
 
+        // reactor/0
+        let mut reactor_root = Node::new("reactor");
+        let mut reactor0 = Node::new("0");
+        for (key, value) in [
+            ("id", ImageValue::Int(1000000)),
+            ("x", ImageValue::Int(120)),
+            ("y", ImageValue::Int(-30)),
+            ("reactorTime", ImageValue::Int(5000)),
+        ] {
+            let mut child = Node::new(key);
+            child.value = Some(value);
+            reactor0.children.push(child);
+        }
+        let mut flip = Node::new("f");
+        flip.value = Some(ImageValue::Bool(true));
+        reactor0.children.push(flip);
+        let mut name = Node::new("name");
+        name.value = Some(ImageValue::Str("testReactor".into()));
+        reactor0.children.push(name);
+        reactor_root.children.push(reactor0);
+        root.children.push(reactor_root);
+
         let map_data = MapData::parse_from_node(&root);
         assert_eq!(map_data.info.bgm.as_deref(), Some("Bgm00/Sleepywood"));
         assert!(map_data.info.vrect.is_some());
@@ -660,6 +715,11 @@ mod tests {
         assert_eq!(map_data.footholds[0].id, 1);
         assert!(map_data.footholds[0].is_flat());
         assert!(!map_data.footholds[0].is_wall());
+        assert_eq!(map_data.reactors.len(), 1);
+        assert_eq!(map_data.reactors[0].id, 1000000);
+        assert_eq!(map_data.reactors[0].x, 120);
+        assert!(map_data.reactors[0].flip);
+        assert_eq!(map_data.reactors[0].name.as_deref(), Some("testReactor"));
 
         // FootholdTree 검증
         let tree = FootholdTree::build(&map_data.footholds);

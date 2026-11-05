@@ -67,6 +67,7 @@ pub fn poll_map_images(state: &mut AppState, ctx: &egui::Context) {
             // back 은 이미 동기적으로 로드되었으므로 덮어쓰지 않는다.
             state.map_tile_images = imgs.tiles;
             state.map_obj_images = imgs.objs;
+            state.map_reactor_images = imgs.reactors;
             state.map_images_rx = None;
             state.viewport_dirty = true;
             ctx.request_repaint();
