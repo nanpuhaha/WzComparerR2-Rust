@@ -77,7 +77,7 @@ tempfile = "3.13"
 # ── 렌더링 (Tier 3) ──────────────────────────────────────────────────────
 # wgpu = Vulkan / Metal / DX12 3백엔드 → 크로스플랫폼 (리포트 §8.3)
 wgpu = "30"
-glam = "0.29"
+glam = "0.34"
 bytemuck = { version = "1.20", features = ["derive"] }
 pollster = "1.0"
 # WGSL 검증 — 셰이더 문법 오류를 빌드 타임에 잡는다
