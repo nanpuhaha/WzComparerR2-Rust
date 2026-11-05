@@ -378,6 +378,8 @@ fn load_life_view(root: &std::path::Path, life: &wz_db::MapLife) -> Option<crate
     }
     let animation = collect_life_animation(root, &node, &source, &["stand", "default"]);
     let walk = collect_life_animation(root, &node, &source, &["move", "walk1"]);
+    let hit = collect_life_animation(root, &node, &source, &["hit1", "hit"]);
+    let die = collect_life_animation(root, &node, &source, &["die1", "die"]);
     if animation.frames.is_empty() {
         return None;
     }
@@ -407,6 +409,11 @@ fn load_life_view(root: &std::path::Path, life: &wz_db::MapLife) -> Option<crate
         hide_name,
         animation,
         walk,
+        hit,
+        die,
+        state: crate::life::LifeState::Alive,
+        state_started: 0.0,
+        hp: 100,
         rx0: life.rx0.unwrap_or(life.x),
         rx1: life.rx1.unwrap_or(life.x),
         fh: life.fh,
@@ -1223,6 +1230,8 @@ mod tests {
             assert!(!view.npc);
             assert!(!view.animation.frames.is_empty());
             assert!(!view.walk.frames.is_empty(), "mob move frames");
+            assert!(!view.hit.frames.is_empty(), "mob hit frames");
+            assert!(!view.die.frames.is_empty(), "mob die frames");
         }
 
         // 실제 맵 발판 + 실제 몹 프레임으로 AI 이동 검증.

@@ -1712,3 +1712,31 @@ fn particle_desc_real_wz() {
     );
     assert_eq!(desc.texture.origin, Some((350, 350)));
 }
+
+#[test]
+fn map_display_names_real_wz() {
+    use crate::linker::StringLinker;
+    use crate::Arena;
+    use wz_core::WzArchive;
+
+    let path = std::env::var_os("WZ_DATA_ROOT")
+        .map(std::path::PathBuf::from)
+        .map(|root| root.join("String").join("String_000.wz"));
+    let Some(path) = path else { return };
+    if !path.exists() {
+        return;
+    }
+    let arch = WzArchive::open(&path).unwrap();
+    let (arena, root) = Arena::from_archive(&arch);
+    let mut linker = StringLinker::new();
+    assert!(linker.load_string_wz(&arena, root));
+    let mut named = 0;
+    for id in [100000000, 200000000, 10000] {
+        if let Some((street, name)) = linker.map_display_names(id) {
+            if !street.is_empty() || !name.is_empty() {
+                named += 1;
+            }
+        }
+    }
+    assert!(named > 0, "at least one map should have street/name");
+}

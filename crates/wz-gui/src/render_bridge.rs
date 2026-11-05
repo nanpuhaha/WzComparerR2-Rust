@@ -208,8 +208,11 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         }
     }
     let life_animating = state.map_lifes.iter().any(|l| {
-        l.animation.frames.len() > 1
+        l.state != crate::life::LifeState::Alive
+            || l.animation.frames.len() > 1
             || l.walk.frames.len() > 1
+            || l.hit.frames.len() > 1
+            || l.die.frames.len() > 1
             || (!l.npc && !l.hidden && l.rx1 > l.rx0)
     });
     if life_animating {
@@ -306,21 +309,43 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             let world = state.camera.screen_to_world(local);
             let mut hit = false;
             let mut sound = None;
-            for view in state.map_reactor_images.iter_mut().rev() {
-                let Some(draw) = view.draw_at(state.map_reactor_time) else {
+            // 몹 클릭 피격/사망이 리액터보다 우선한다.
+            for life in state.map_lifes.iter_mut().rev() {
+                if life.npc || life.hidden || life.state != crate::life::LifeState::Alive {
+                    continue;
+                }
+                let Some(frame) = life.draw_frame(state.map_life_time) else {
                     continue;
                 };
-                let frame = draw.frame;
-                let x = (view.x - frame.origin.0) as f32;
-                let y = (view.y - frame.origin.1) as f32;
+                let x = life.position_x - frame.origin.0 as f32;
+                let y = life.position_y - frame.origin.1 as f32;
                 if world.x >= x
                     && world.x <= x + frame.width as f32
                     && world.y >= y
                     && world.y <= y + frame.height as f32
                 {
-                    sound = view.click(state.map_reactor_time);
+                    life.hit(state.map_life_time);
                     hit = true;
                     break;
+                }
+            }
+            if !hit {
+                for view in state.map_reactor_images.iter_mut().rev() {
+                    let Some(draw) = view.draw_at(state.map_reactor_time) else {
+                        continue;
+                    };
+                    let frame = draw.frame;
+                    let x = (view.x - frame.origin.0) as f32;
+                    let y = (view.y - frame.origin.1) as f32;
+                    if world.x >= x
+                        && world.x <= x + frame.width as f32
+                        && world.y >= y
+                        && world.y <= y + frame.height as f32
+                    {
+                        sound = view.click(state.map_reactor_time);
+                        hit = true;
+                        break;
+                    }
                 }
             }
             if hit {

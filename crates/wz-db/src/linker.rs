@@ -941,6 +941,22 @@ impl StringLinker {
     /// 없어서 바이트 단위 대조 대상이 될 수 없다. 그러니 여기서 더 풍부한 형식을
     /// **발명하지 않는다** — 그러면 대조가 불가능해질 뿐이다.
     /// C# GUI 와 달라지는 지점은 `Desc + AutoDesc` 연결과 `"(null)"` 이름 대체다.
+    /// 미니맵 지역명/맵 이름 (`streetName`, `mapName`).
+    pub fn map_display_names(&self, id: i32) -> Option<(&str, &str)> {
+        let entry = self.string_map.get(&id)?;
+        let street = entry
+            .street_name
+            .as_deref()
+            .or_else(|| entry.values.get("streetName").map(|s| s.as_str()))
+            .unwrap_or("");
+        let name = entry
+            .map_name
+            .as_deref()
+            .or_else(|| entry.values.get("mapName").map(|s| s.as_str()))
+            .unwrap_or("");
+        Some((street, name))
+    }
+
     pub fn format_tooltip(&self, id: i32) -> Option<String> {
         self.get_by_id(id).map(Self::format_tooltip_result)
     }

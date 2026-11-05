@@ -260,6 +260,25 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         }
     }
 
+    // 미니맵 지역명/맵 이름 (StringLinker)
+    if let (Some(id), Some(linker)) = (
+        state.current_map.as_ref().and_then(|m| m.info.map_id),
+        state.string_linker.as_ref(),
+    ) {
+        if let Some((street, name)) = linker.map_display_names(id) {
+            if !street.is_empty() {
+                ui.label(
+                    egui::RichText::new(street)
+                        .small()
+                        .color(egui::Color32::GRAY),
+                );
+            }
+            if !name.is_empty() {
+                ui.heading(name);
+            }
+        }
+    }
+
     // 미니맵 캔버스 + 현재 카메라 위치 표시
     if state.map_minimap_texture.is_none() {
         if let Some((w, h, rgba, _)) = &state.map_minimap {

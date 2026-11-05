@@ -275,3 +275,16 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   skill preview (ID, ani, x/y, flip) that renders the animation in the viewport.
 - Real tests: mob `100100` move frames + real `000020000` foothold patrol,
   skill `1001005/effect` (11 frames, first 144x128).
+
+## Life combat / death & minimap names
+
+- `LifeView` now loads `hit1`/`die1` frames and keeps
+  `Alive → Hit → Alive` / `Alive → Dying → Dead` state (`BehaviorController`
+  subset). Hit/Dying stop patrol movement; Dead keeps the last die frame.
+- Clicking a visible mob applies 25 damage; four hits trigger death. NPCs ignore
+  clicks. The same click is also used for reactor stage transitions only when no
+  mob was hit.
+- `StringLinker::map_display_names(id)` returns `streetName` / `mapName`; the
+  minimap panel shows region and map name from String.wz.
+- Real tests: mob `100100` has stand/move/hit/die frames; `000020000` foothold
+  patrol; `map_display_names` finds named maps in `String_000.wz`.
