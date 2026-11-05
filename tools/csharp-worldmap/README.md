@@ -32,6 +32,8 @@ Commands:
 - `skills <skill.wz> <String_000.wz>` — emits DB2 Skill book/skill rows
   (`id/row_type/book/name/desc/icon/common/h_count`) using
   `StringLinker.StringSkill/StringSkill2`.
+- `npcs <npc.wz> <String_000.wz>` — emits DB2 NPC rows
+  (`id/name/stand/default/link`) using `StringLinker.StringNpc`.
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -103,3 +105,10 @@ dotnet run ... -- skills ../../Data/Skill/_Canvas/_Canvas_000.wz ../../Data/Stri
 → 165 rows
 ```
 Rust `wz db2-skills ... --json` matches all 165 rows exactly.
+
+Verified DB2 NPC grid output:
+```
+dotnet run ... -- npcs ../../Data/Npc/_Canvas/_Canvas_000.wz ../../Data/String/String_000.wz
+→ 943 rows
+```
+Rust `wz db2-npcs ... --json` matches all 943 rows exactly.

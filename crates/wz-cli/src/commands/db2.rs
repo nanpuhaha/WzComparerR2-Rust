@@ -463,3 +463,74 @@ mod skill_tests {
         assert_eq!(rows.len(), 165);
     }
 }
+
+pub fn cmd_db2_npcs(
+    wz_path: &Path,
+    string_wz: &Path,
+    json: bool,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let mut rows = wz_db::db2_npc_grid_rows(&archive, &tree, &linker);
+    rows.truncate(limit);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        println!(
+            "{:<8} {:<24} {:>5} {:>7} link",
+            "id", "name", "stand", "default"
+        );
+        for row in rows {
+            println!(
+                "{:<8} {:<24} {:>5} {:>7} {:?}",
+                row.id, row.name, row.has_stand_0, row.has_default_0, row.link
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod npc_tests {
+    use super::*;
+    use wz_db::{Arena, StringLinker};
+
+    #[test]
+    fn db2_npcs_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let wz = root.join("Npc/_Canvas/_Canvas_000.wz");
+        let string_wz = root.join("String/String_000.wz");
+        if !wz.exists() || !string_wz.exists() {
+            return;
+        }
+        let archive = WzArchive::open(&wz).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let string_archive = WzArchive::open(&string_wz).unwrap();
+        let (arena, root_id) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, root_id));
+        let rows = wz_db::db2_npc_grid_rows(&archive, &tree, &linker);
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/db2_npcs_canvas000.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(serde_json::to_value(&rows).unwrap(), expected);
+        assert_eq!(rows.len(), 943);
+    }
+}

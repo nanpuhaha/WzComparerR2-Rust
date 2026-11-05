@@ -573,6 +573,42 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void NpcGrid(string npcWzPath, string stringWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(npcWzPath);
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        if (!linker.Load(str.wz_files[0], null, null))
+        {
+            Console.WriteLine("{\"error\":\"string linker load failed\"}");
+            return;
+        }
+        var rows = new List<object>();
+        foreach (Wz_Node n in st.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            var id = n.Text.Replace(".img", "");
+            if (id.Length == 0 || !id.All(char.IsDigit)) continue;
+            img.TryExtract();
+            int idNum;
+            if (!int.TryParse(id, out idNum)) continue;
+            linker.StringNpc.TryGetValue(idNum, out var sr);
+            var linkNode = img.Node.FindNodeByPath(@"info\link");
+            int? link = linkNode?.Value == null ? (int?)null : Convert.ToInt32(linkNode.Value);
+            rows.Add(new {
+                id,
+                name = sr?.Name ?? "",
+                has_stand_0 = img.Node.FindNodeByPath(@"stand\0") != null,
+                has_default_0 = img.Node.FindNodeByPath(@"default\0") != null,
+                has_link = linkNode != null,
+                link,
+            });
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -585,6 +621,7 @@ class Program
         else if (args[0] == "maps") MapGrid(args[1], args[2]);
         else if (args[0] == "mobs") MobGrid(args[1], args[2]);
         else if (args[0] == "skills") SkillGrid(args[1], args[2]);
+        else if (args[0] == "npcs") NpcGrid(args[1], args[2]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

@@ -122,6 +122,7 @@ WorldMap 실제 클라이언트 데이터는 QuestLimit/Fog 노드가 없어, �
 | `Map/Map/Map0/Map0_000.wz` DB2 Map grid | 87 rows | Rust `wz db2-maps` 87행 id/street/map/minimap/link 완전 일치 |
 | `Mob/_Canvas/_Canvas_011.wz` DB2 Mob grid | 55 rows | Rust `wz db2-mobs` 55행 id/name/stand/fly/move/hit/die/thumbnail/link 완전 일치 |
 | `Skill/_Canvas/_Canvas_000.wz` DB2 Skill grid | 165 rows | Rust `wz db2-skills` 165행 id/type/book/name/desc/icon/common/h 완전 일치 |
+| `Npc/_Canvas/_Canvas_000.wz` DB2 NPC grid | 943 rows | Rust `wz db2-npcs` 943행 id/name/stand/default/link 완전 일치 |
 | `Etc_000.wz` set -1 | `{"name":"결속의 반지","complete":5,"effects":[...]}` | Rust set effects 동일 |
 | `Item_000.wz` potential 1/1 | `["STR : +1"]` | Rust potential lines 동일 |
 
@@ -182,6 +183,9 @@ dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- mapnodes ../../Da
   거의 없어 DB2 stat 컬럼은 비어 있다.
 - `wz db2-skills <skill.wz> --string <String_000.wz>` builds `DB2Form.LoadSkill`
   (book + skill rows, icon/common/h); C# `skills` mode matches 165/165 rows for
+  `_Canvas_000.wz`.
+- `wz db2-npcs <npc.wz> --string <String_000.wz>` builds `DB2Form.LoadNpc`
+  (id/name/stand/default/link); C# `npcs` mode matches 943/943 rows for
   `_Canvas_000.wz`.
 - GUI `Catalog` panel loads the selected image into a filterable DB2 grid.
 - C# WzLib harness `db2` mode prints the same rows. Real test:

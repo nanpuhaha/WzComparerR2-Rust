@@ -474,3 +474,15 @@ merge semantics (recursive directory merge, conflict errors).
 - Executed C# reference: `tools/csharp-worldmap skills ...` uses the original
   `StringLinker.StringSkill/StringSkill2`. `_Canvas_000.wz` → C# 165 == Rust
   165 rows, exact match.
+
+## DB2 NPC grid
+
+- `wz-db::db2_npcs` mirrors `DB2Form.LoadNpc`: each numeric `Npc/<id>.img`
+  becomes `id/name/has_stand_0/has_default_0/has_link/link`, with names from
+  `StringLinker.StringNpc` and icon-source flags matching `stand/0` →
+  `default/0` preference.
+- `wz db2-npcs <npc.wz> --string <String_000.wz>` prints the grid; the GUI
+  Catalog has a DB2 NPC grid table.
+- Executed C# reference: `tools/csharp-worldmap npcs ...` uses the original
+  `StringLinker.StringNpc`. `_Canvas_000.wz` → C# 943 == Rust 943 rows, exact
+  match.
