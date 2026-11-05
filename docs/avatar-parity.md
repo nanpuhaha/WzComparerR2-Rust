@@ -702,3 +702,10 @@ merge semantics (recursive directory merge, conflict errors).
 - C# `gearprops` 모드와 실제 데이터 비교: Coat/Weapon/Cap/Accessory/Face/Ring/
   TamingMob 총 5,102개 (key,value) 쌍이 완전 일치.
 - 회귀 테스트: `gear_props_match_csharp` (쌍 수 + SHA-256 fixture).
+
+## ItemTooltip 6탭 전수
+
+- `wz-db::db2_item_tabs::item_tab_tooltips`가 LoadItem 순회 그대로 각 아이템의
+  name/desc와 `GetItemAttributeString` 태그를 만든다.
+- C# `itemtooltips`와 6탭 32,843개 아이템 완전 일치.
+  `sharableOnce`/`accountSharableAfterExchange`의 개행도 원본과 동일.

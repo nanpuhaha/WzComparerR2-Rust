@@ -76,7 +76,7 @@ pub fn item_attribute_lines(item: &Node, item_id: i32) -> Vec<String> {
             tags.push("사용시 교환 불가".to_string());
         }
         if value(info, "sharableOnce").unwrap_or(0) != 0 {
-            tags.push("월드 내 나의 캐릭터 간 1회 이동 가능 (이동 후 교환불가)".to_string());
+            tags.push("월드 내 나의 캐릭터 간 1회 이동 가능\n(이동 후 교환불가)".to_string());
         } else {
             tags.push("월드 내 나의 캐릭터 간 이동만 가능".to_string());
         }
@@ -94,7 +94,7 @@ pub fn item_attribute_lines(item: &Node, item_id: i32) -> Vec<String> {
         tags.push("일반펫 (다른 일반펫과 중복 사용불가)".to_string());
     }
     if value(info, "accountSharableAfterExchange").unwrap_or(0) != 0 {
-        tags.push("1회 교환 가능 (거래 후 월드 내 나의 캐릭터 간 이동만 가능)".to_string());
+        tags.push("1회 교환 가능\n(거래 후 월드 내 나의 캐릭터 간 이동만 가능)".to_string());
     }
     if value(info, "mintable").unwrap_or(0) != 0 {
         tags.push("민팅 가능".to_string());
@@ -129,7 +129,7 @@ mod tests {
         let item = item_with(&[("accountSharable", 1), ("sharableOnce", 1)]);
         assert_eq!(
             item_attribute_lines(&item, 2_000_012),
-            vec!["월드 내 나의 캐릭터 간 1회 이동 가능 (이동 후 교환불가)"]
+            vec!["월드 내 나의 캐릭터 간 1회 이동 가능\n(이동 후 교환불가)"]
         );
     }
 }

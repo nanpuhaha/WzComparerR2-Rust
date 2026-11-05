@@ -984,18 +984,6 @@ class Program
             attributes = tags,
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
-    static HashSet<string> ReadCashPackages(string dataRoot)
-    {
-        var set = new HashSet<string>();
-        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Etc"), "*.wz").OrderBy(x => x))
-        {
-            var st = new Wz_Structure(); st.Load(file);
-            var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == "CashPackage.img");
-            if (imgNode?.Value is Wz_Image img && img.TryExtract())
-                foreach (Wz_Node c in img.Node.Nodes) set.Add(c.Text);
-        }
-        return set;
-    }
     static Wz_Node OpenStringChild(Wz_Structure str, string dir)
     {
         var imageName = dir == "Install" ? "Ins.img" : dir + ".img";
@@ -1009,10 +997,66 @@ class Program
         var found = child?.FindNodeByPath(false, idString, field);
         return found?.Value?.ToString() ?? "  ";
     }
-    static string? OwnValue(Wz_Node node, string field)
+    static string OwnValue(Wz_Node node, string field)
     {
-        var v = node.Nodes[field]?.Value;
-        return v?.ToString();
+        return node.Nodes[field]?.Value?.ToString();
+    }
+    static HashSet<string> ReadCashPackages(string dataRoot)
+    {
+        var set = new HashSet<string>();
+        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Etc"), "*.wz").OrderBy(x => x))
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == "CashPackage.img");
+            if (imgNode?.Value is Wz_Image img && img.TryExtract())
+                foreach (Wz_Node c in img.Node.Nodes) set.Add(c.Text);
+        }
+        return set;
+    }
+    static List<string> BuildItemAttributes(Wz_Node info, int itemId)
+    {
+        var props = new Dictionary<ItemPropType, long>();
+        if (info != null)
+            foreach (Wz_Node c in info.Nodes)
+            {
+                if (c.Value == null || !Enum.TryParse(c.Text, out ItemPropType type)) continue;
+                try { props[type] = Convert.ToInt64(c.Value); } catch { }
+            }
+        var tags = new List<string>();
+        long v;
+        if (props.TryGetValue(ItemPropType.only, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.only, v));
+        if (props.TryGetValue(ItemPropType.quest, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.quest, v));
+        if (props.TryGetValue(ItemPropType.pquest, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.pquest, v));
+        if (props.TryGetValue(ItemPropType.tradeBlock, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.tradeBlock, v));
+        if (props.TryGetValue(ItemPropType.useTradeBlock, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.useTradeBlock, v));
+        else if (itemId / 10000 == 501 || itemId / 10000 == 502 || itemId / 10000 == 516)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.tradeBlock, 1));
+        if (props.TryGetValue(ItemPropType.accountSharable, out v) && v != 0)
+        {
+            long v2;
+            if (props.TryGetValue(ItemPropType.exp_minLev, out v2) && v2 != 0)
+                tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.useTradeBlock, 1));
+            if (props.TryGetValue(ItemPropType.sharableOnce, out v2) && v2 != 0)
+                tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.sharableOnce, v2));
+            else
+                tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.accountSharable, v));
+        }
+        if (props.TryGetValue(ItemPropType.exchangeableOnce, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.exchangeableOnce, v));
+        if (props.TryGetValue(ItemPropType.multiPet, out v))
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.multiPet, v));
+        else if (itemId / 10000 == 500)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.multiPet, 0));
+        if (props.TryGetValue(ItemPropType.accountSharableAfterExchange, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.accountSharableAfterExchange, v));
+        if (props.TryGetValue(ItemPropType.mintable, out v))
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.mintable, v));
+        return tags.Where(t => !string.IsNullOrEmpty(t)).ToList();
     }
     static void ItemTab(string dataRoot, string dir, string stringWzPath)
     {
@@ -1066,6 +1110,70 @@ class Program
                         hasIcon = item.FindNodeByPath(@"info\icon") != null;
                     }
                     rows.Add(new { id = item.Text, name, desc, has_icon = hasIcon });
+                }
+            }
+        }
+        var deduped = rows
+            .GroupBy(r => (string)r.GetType().GetProperty("id").GetValue(r))
+            .Select(g => g.First())
+            .OrderBy(r => (string)r.GetType().GetProperty("id").GetValue(r), StringComparer.Ordinal)
+            .ToList();
+        Console.WriteLine(JsonSerializer.Serialize(deduped, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    static void ItemTooltips(string dataRoot, string dir, string stringWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var special = dir == "Special";
+        var childNode = special ? null : OpenStringChild(str, dir);
+        if (!special && childNode == null)
+        {
+            Console.WriteLine("{\"error\":\"string image not found\"}");
+            return;
+        }
+        var cash = special ? ReadCashPackages(dataRoot) : new HashSet<string>();
+        var rows = new List<object>();
+        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Item", dir), "*.wz").OrderBy(x => x))
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            foreach (Wz_Node n in st.WzNode.Nodes)
+            {
+                if (n.Value is not Wz_Image img) continue;
+                if (special && n.Text != "0910.img") continue;
+                if (!img.TryExtract()) continue;
+                if (dir == "Pet")
+                {
+                    var petId = n.Text.Replace(".img", "");
+                    rows.Add(new {
+                        id = petId,
+                        name = StrField(childNode, petId, "name"),
+                        desc = StrField(childNode, petId, "desc"),
+                        attributes = BuildItemAttributes(img.Node.Nodes["info"], int.Parse(petId)),
+                    });
+                    continue;
+                }
+                foreach (Wz_Node item in img.Node.Nodes)
+                {
+                    if (special && !cash.Contains(item.Text)) continue;
+                    int idNum;
+                    if (!int.TryParse(item.Text, out idNum)) continue;
+                    var idString = idNum.ToString();
+                    string name, desc;
+                    if (special)
+                    {
+                        name = OwnValue(item, "name") ?? "  ";
+                        desc = OwnValue(item, "desc") ?? "  ";
+                    }
+                    else
+                    {
+                        name = StrField(childNode, idString, "name");
+                        desc = StrField(childNode, idString, "desc");
+                    }
+                    rows.Add(new {
+                        id = item.Text,
+                        name,
+                        desc,
+                        attributes = BuildItemAttributes(item.Nodes["info"], idNum),
+                    });
                 }
             }
         }
@@ -1148,6 +1256,7 @@ class Program
         else if (args[0] == "skillsummary") SkillSummary(args[1], int.Parse(args[2]));
         else if (args[0] == "itemtooltip") ItemTooltip(args[1], args[2], args[3], args[4]);
         else if (args[0] == "itemtab") ItemTab(args[1], args[2], args[3]);
+        else if (args[0] == "itemtooltips") ItemTooltips(args[1], args[2], args[3]);
         else if (args[0] == "gearprops") GearProps(args[1]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "summaryprobe")

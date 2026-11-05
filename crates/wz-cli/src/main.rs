@@ -440,6 +440,20 @@ enum Command {
         limit: usize,
     },
 
+    /// DB2 Item 탭 전체의 ItemTooltip 속성
+    Db2ItemTabTooltips {
+        /// Data 루트
+        data_root: PathBuf,
+        /// Item 하위 디렉터리 (Cash/Consume/Etc/Install/Pet/Special)
+        dir: String,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// DB2 아이콘/이미지 뷰어 (Canvas RGBA SHA-256)
     Db2Icons {
         /// WZ 파일
@@ -779,6 +793,12 @@ fn main() {
             json,
             limit,
         } => cmd_db2_item_tab(&data_root, &dir, &string, json, limit),
+        Command::Db2ItemTabTooltips {
+            data_root,
+            dir,
+            string,
+            json,
+        } => commands::cmd_db2_item_tab_tooltips(&data_root, &dir, &string, json),
         Command::Db2Icons {
             wz,
             image,

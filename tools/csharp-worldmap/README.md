@@ -324,3 +324,10 @@ dotnet run ... -- openapi OBDLADCO...
 ```
 Rust `wz-openapi` matches 16/32/64-byte vectors exactly, including the
 8-char `GetItemID` exception case.
+
+Verified ItemTooltip sweep (`itemtooltips <Data> <dir> <String_000.wz>`):
+```
+Cash 3539, Consume 18377, Etc 5238, Install 3851, Pet 614, Special 1224
+= 32843 items
+```
+All name/desc/attributes match Rust `wz db2-item-tab-tooltips` exactly.

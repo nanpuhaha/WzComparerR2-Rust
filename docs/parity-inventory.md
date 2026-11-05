@@ -332,3 +332,26 @@ fixture: `crates/wz-openapi/tests/openapi_vectors.json`,
 C# 하네스: `tools/csharp-worldmap ... -- openapi <text>`.
 
 HTTP 기반 캐릭터/아바타 조회는 API 키가 필요해 대상에서 제외한다.
+
+## ItemTooltip 6탭 전수 비교
+
+`wz db2-item-tab-tooltips <Data> <dir>`로 Item 6탭 모든 아이템의
+name/desc/attributes를 만들고, C# `itemtooltips` 모드(같은 LoadItem 순회 +
+`GetItemAttributeString`)와 비교했다.
+
+| 탭 | 행 수 | 결과 |
+|---|---:|---|
+| Cash | 3539 | 완전 일치 |
+| Consume | 18377 | 완전 일치 |
+| Etc | 5238 | 완전 일치 |
+| Install | 3851 | 완전 일치 |
+| Pet | 614 | 완전 일치 |
+| Special | 1224 | 완전 일치 |
+| 합계 | **32843** | 6/6 완전 일치 |
+
+`sharableOnce`는 `"월드 내 나의 캐릭터 간 1회 이동 가능\n(이동 후 교환불가)"`,
+`accountSharableAfterExchange`는
+`"1회 교환 가능\n(거래 후 월드 내 나의 캐릭터 간 이동만 가능)"`로 개행 위치까지
+원본과 같다. 회귀 테스트는
+`crates/wz-cli/tests/fixtures/db2_item_tab_tooltips.expected.json`의 행 수 +
+SHA-256으로 고정한다 (`db2_item_tab_tooltips_match_csharp`).

@@ -225,6 +225,79 @@ pub fn item_tab_rows(
     rows
 }
 
+/// ItemTooltip 속성까지 포함한 탭 행.
+pub fn item_tab_tooltips(
+    data_root: &Path,
+    dir: &str,
+    string_image: Option<&Node>,
+) -> Vec<crate::item_tooltip::ItemTooltipView> {
+    let special = dir == "Special";
+    let cash = if special {
+        cash_packages(data_root)
+    } else {
+        HashSet::new()
+    };
+    let mut rows = Vec::new();
+    for path in wz_files(&data_root.join("Item").join(dir)) {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        for (image_name, offset) in image_entries(&tree) {
+            if special && image_name != "0910.img" {
+                continue;
+            }
+            let Ok(image) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            if dir == "Pet" {
+                let id = image_name.trim_end_matches(".img").to_string();
+                let Ok(id_num) = id.trim().parse::<i32>() else {
+                    continue;
+                };
+                rows.push(crate::item_tooltip::ItemTooltipView {
+                    id: id.clone(),
+                    name: value2(string_image, &[id.as_str(), "name"]),
+                    desc: value2(string_image, &[id.as_str(), "desc"]),
+                    auto_desc: String::new(),
+                    attributes: crate::item_tooltip::item_attribute_lines(&image, id_num),
+                });
+                continue;
+            }
+            for item in image.object_children() {
+                if special && !cash.contains(item.name.as_ref()) {
+                    continue;
+                }
+                let id = item.name.to_string();
+                let Ok(id_num) = id.trim().parse::<i32>() else {
+                    continue;
+                };
+                let id_string = id_num.to_string();
+                let (name, desc) = if special {
+                    (value2(Some(item), &["name"]), value2(Some(item), &["desc"]))
+                } else {
+                    (
+                        value2(string_image, &[id_string.as_str(), "name"]),
+                        value2(string_image, &[id_string.as_str(), "desc"]),
+                    )
+                };
+                rows.push(crate::item_tooltip::ItemTooltipView {
+                    id,
+                    name,
+                    desc,
+                    auto_desc: String::new(),
+                    attributes: crate::item_tooltip::item_attribute_lines(item, id_num),
+                });
+            }
+        }
+    }
+    rows.sort_by(|a, b| a.id.cmp(&b.id));
+    rows.dedup_by(|a, b| a.id == b.id);
+    rows
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
