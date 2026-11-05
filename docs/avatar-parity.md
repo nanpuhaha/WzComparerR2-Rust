@@ -548,3 +548,14 @@ merge semantics (recursive directory merge, conflict errors).
   the GUI Catalog has a DB2 TamingMob table.
 - Executed C# reference: `tools/csharp-worldmap tamingmobs ...`.
   `TamingMob_000.wz` → C# 1265 == Rust 1265 rows, exact match.
+
+## DB2 Character equipment grid
+
+- `wz-db::db2_characters` mirrors the general `DB2Form.LoadCharacter` branch:
+  each `Character/<Dir>/<id>.img` becomes
+  `id/name/desc/h1/has_icon/reqLevel/reqJob/tuc/islot/vslot` plus
+  STR/DEX/INT/LUK/PAD/MAD/PDD/MDD, using `StringLinker.string_eqp`.
+- `wz db2-characters <character.wz> --string <String_000.wz>` prints the grid;
+  the GUI Catalog has a DB2 Character table.
+- Executed C# reference: `tools/csharp-worldmap characters ...`.
+  `Coat_000.wz` → C# 682 == Rust 682 rows, exact match.

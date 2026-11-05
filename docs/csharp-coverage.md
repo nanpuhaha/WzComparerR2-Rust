@@ -14,7 +14,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | WzComparerR2.MapRender | 124 | 29,291 | `wz-db::map`, `wz-gui`, `wz-render` | 🟡 |
 | WzComparerR2.Avatar | 13 | 7,055 | `wz-avatar` | ✅ |
 | WzComparerR2 (main) | 150 | 61,035 | `wz-cli`, `wz-gui` | 🟡 |
-| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`, `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`, GUI tables | 🟡 |
+| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`, `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`, `wz db2-characters`, GUI tables | 🟡 |
 | CharaSimResource | 2 | 7,490 | — (WinForms 리소스) | ⬜ |
 | WzComparerR2.Network | 28 | 1,954 | — | ⬜ |
 | WzComparerR2.LuaConsole | 10 | 1,451 | — | ⬜ |
@@ -77,11 +77,12 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 3. `WzComparerR2.Common/CharaSim` (10,121 LOC) — Gear/Set/Potential/MaxStar만.
 4. `MapRender/UI` (8,753 LOC) — Minimap/WorldMap 일부.
 5. `WzComparerR2.DB2` (6,292 LOC) — node table + icon/image viewer + Item/Map/
-   Mob/Skill/NPC/Reactor/Music/DamageSkin/Morph/TamingMob grid 구현 (`wz db2`,
-   `wz db2-icons`, `wz db2-items`, `wz db2-maps`, `wz db2-mobs`,
+   Mob/Skill/NPC/Reactor/Music/DamageSkin/Morph/TamingMob/Character grid 구현
+   (`wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`, `wz db2-mobs`,
    `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`,
-   `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`, GUI Catalog).
-   나머지 29개 전용 그리드와 전체 화면 이미지 뷰어 UI는 미구현.
+   `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`,
+   `wz db2-characters`, GUI Catalog). 나머지 28개 전용 그리드와 전체 화면
+   이미지 뷰어 UI는 미구현.
 6. `WzComparerR2.Common/Controls` (2,138 LOC), `OpenAPI` (2,086 LOC) — 미구현.
 7. `LuaConsole` (1,451), `Network` (1,954), `PluginBase` (693) — 미구현.
 
@@ -120,6 +121,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - DB2 TamingMob grid `TamingMob_000.wz`: C# `StringLinker.StringEqp`
   1265 rows == Rust `wz db2-taming-mobs` 1265 rows
   (id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/tamingMob 완전 일치).
+- DB2 Character grid `Coat_000.wz`: C# `StringLinker.StringEqp` 682 rows ==
+  Rust `wz db2-characters` 682 rows
+  (id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat 완전 일치).
 
 ## 남은 작업
 

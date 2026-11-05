@@ -44,6 +44,8 @@ Commands:
   (`id/name/desc/morph_id/has_icon/has_morph`).
 - `tamingmobs <taming.wz> <String_000.wz>` — emits DB2 TamingMob rows
   (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/tamingMob`).
+- `characters <character.wz> <String_000.wz>` — emits DB2 Character equipment
+  rows (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -157,3 +159,10 @@ dotnet run ... -- tamingmobs ../../Data/Character/TamingMob/TamingMob_000.wz ../
 → 1265 rows
 ```
 Rust `wz db2-taming-mobs ... --json` matches all 1265 rows exactly.
+
+Verified DB2 Character grid output (Coat):
+```
+dotnet run ... -- characters ../../Data/Character/Coat/Coat_000.wz ../../Data/String/String_000.wz
+→ 682 rows
+```
+Rust `wz db2-characters ... --json` matches all 682 rows exactly.
