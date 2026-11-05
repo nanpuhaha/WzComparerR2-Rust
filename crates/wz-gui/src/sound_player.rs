@@ -9,6 +9,34 @@ use crate::state::AppState;
 use wz_core::image::ImageValue;
 use wz_core::{extract_sound, WzArchive};
 
+fn node_at<'a>(
+    root: &'a wz_core::image::Node,
+    path: &[String],
+) -> Option<&'a wz_core::image::Node> {
+    let mut cur = root;
+    for segment in path.iter().skip(1) {
+        cur = cur
+            .object_children()
+            .iter()
+            .find(|c| c.name.as_ref() == segment)?;
+    }
+    Some(cur)
+}
+
+fn resolve_uol(path: &[String], uol: &str) -> Option<Vec<String>> {
+    let mut out: Vec<String> = path[..path.len().saturating_sub(1)].to_vec();
+    for segment in uol.split('/') {
+        match segment {
+            "" | "." => {}
+            ".." => {
+                out.pop()?;
+            }
+            other => out.push(other.to_string()),
+        }
+    }
+    Some(out)
+}
+
 fn open_sound(
     wz: &Path,
     sound_path: &str,
@@ -30,19 +58,39 @@ fn open_sound(
         .iter()
         .find(|e| e.name.as_deref() == Some(img_name.as_str()))
         .ok_or_else(|| format!("이미지 없음: {img_name}"))?;
-    let node = archive.parse_image_at(entry.offset.ok_or("이미지 오프셋 없음")?)?;
-    let mut cur = &node;
-    for segment in sub.split('/') {
-        cur = cur
-            .object_children()
-            .iter()
-            .find(|c| c.name.as_ref() == segment)
-            .ok_or_else(|| format!("사운드 없음: {sound_path}"))?;
+    let root_node = archive.parse_image_at(entry.offset.ok_or("이미지 오프셋 없음")?)?;
+
+    let mut path: Vec<String> = vec![img_name];
+    path.extend(sub.split('/').map(|s| s.to_string()));
+    for _ in 0..16 {
+        let node = node_at(&root_node, &path)
+            .ok_or_else(|| format!("사운드 경로 없음: {}", path.join("/")))?;
+        match &node.value {
+            Some(ImageValue::Sound(sound)) => {
+                return Ok(extract_sound(archive.source(), sound)?);
+            }
+            Some(ImageValue::Uol(uol)) => {
+                path = resolve_uol(&path, uol).ok_or_else(|| format!("UOL 해석 실패: {uol}"))?;
+            }
+            Some(ImageValue::Property(_)) | None => {
+                let child = node
+                    .object_children()
+                    .iter()
+                    .find(|c| {
+                        matches!(
+                            c.value,
+                            Some(ImageValue::Sound(_)) | Some(ImageValue::Uol(_))
+                        )
+                    })
+                    .ok_or_else(|| format!("사운드 자식 없음: {}", path.join("/")))?;
+                path.push(child.name.to_string());
+            }
+            Some(_) => {
+                return Err(format!("Sound_DX8 아님: {}", path.join("/")).into());
+            }
+        }
     }
-    let Some(ImageValue::Sound(sound)) = &cur.value else {
-        return Err(format!("Sound_DX8 아님: {sound_path}").into());
-    };
-    Ok(extract_sound(archive.source(), sound)?)
+    Err("UOL 해석 깊이 초과".into())
 }
 
 fn find_sound_archive(data_root: &Path, image_name: &str) -> Option<PathBuf> {
@@ -148,6 +196,19 @@ pub fn play_map_bgm(state: &mut AppState) -> Result<(), Box<dyn std::error::Erro
     play_from_archive(state, &wz, &format!("{image_name}/{sub}"))
 }
 
+/// 리액터 클릭 효과음 (`Sound/Reactor.img/<id>/<stage>`).
+pub fn play_reactor_sound(state: &mut AppState, id: i32, stage: i32) {
+    let Some(root) = state.data_root.clone() else {
+        return;
+    };
+    let Some(wz) = find_sound_archive(&root, "Reactor.img") else {
+        return;
+    };
+    if let Err(e) = play_from_archive(state, &wz, &format!("Reactor.img/{id}/{stage}")) {
+        state.sound_status = format!("리액터 사운드 오류: {e}");
+    }
+}
+
 /// 현재 재생 프로세스를 중지한다.
 pub fn stop(state: &mut AppState) {
     if let Some(mut child) = state.sound_child.take() {
@@ -177,5 +238,20 @@ mod tests {
             extracted.format.as_ref().map(|f| f.samples_per_sec),
             Some(22050)
         );
+    }
+    #[test]
+    fn resolves_reactor_hit_uol() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(PathBuf::from) else {
+            return;
+        };
+        let Some(wz) = find_sound_archive(&root, "Reactor.img") else {
+            return;
+        };
+        let extracted = open_sound(&wz, "Reactor.img/1209001/0").expect("reactor hit");
+        assert!(extracted.bytes.len() > 100);
+        assert!(matches!(
+            extracted.codec,
+            wz_core::SoundCodec::Mp3 | wz_core::SoundCodec::Pcm
+        ));
     }
 }

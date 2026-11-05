@@ -12,6 +12,7 @@ mod async_io;
 mod background;
 mod panels;
 mod particles;
+mod reactor;
 mod render_bridge;
 mod sound_player;
 mod state;

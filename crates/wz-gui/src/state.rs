@@ -18,7 +18,7 @@ use wz_render::GpuKey;
 pub struct MapImages {
     pub tiles: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub objs: Vec<(i32, i32, u32, u32, Vec<u8>)>,
-    pub reactors: Vec<(i32, i32, u32, u32, Vec<u8>)>,
+    pub reactors: Vec<crate::reactor::ReactorView>,
     pub backgrounds: Vec<crate::background::BackgroundLayer>,
     pub particles: Vec<crate::particles::MapParticleLayer>,
 }
@@ -98,7 +98,9 @@ pub struct AppState {
     pub string_linker_status: String,
     pub map_tile_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub map_obj_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
-    pub map_reactor_images: Vec<(i32, i32, u32, u32, Vec<u8>)>,
+    pub map_reactor_images: Vec<crate::reactor::ReactorView>,
+    pub map_reactor_time: f64,
+    pub map_reactor_last: f64,
     pub map_particle_layers: Vec<crate::particles::MapParticleLayer>,
     pub map_particle_time: f64,
     pub map_particle_last: f64,
@@ -230,6 +232,8 @@ impl Default for AppState {
             map_tile_images: Vec::new(),
             map_obj_images: Vec::new(),
             map_reactor_images: Vec::new(),
+            map_reactor_time: 0.0,
+            map_reactor_last: 0.0,
             map_particle_layers: Vec::new(),
             map_particle_time: 0.0,
             map_particle_last: 0.0,

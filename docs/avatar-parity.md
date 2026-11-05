@@ -214,3 +214,18 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   (with width/height fallback for both-tile), flip UV and `a` alpha.
 - Real `000010000.img` test: 14 backgrounds, tile modes 1/4, `cx=1200/2000`,
   non-empty `no` values load the correct 900x11 / 900x584 etc. frames.
+
+## Reactors (stage / hit)
+
+- `wz-gui::reactor` loads every numeric stage and `hit` animation from
+  `Reactor/<id>.img`, resolving `info/link` to the linked reactor.
+- Each frame keeps its canvas size, RGBA and origin; frame delays follow the
+  same accumulated-delay selection as the original animator.
+- Clicking a visible reactor applies `NextStage = Stage + 1`: the current
+  stage's `hit` animation plays once, then the next stage becomes current
+  (`ReactorItem.Controller`). Hidden reactors (stage without frames) are not
+  hit-tested, matching a null render object.
+- Click also resolves `Sound/Reactor.img/<id>/<stage>`; UOL nodes such as
+  `../../1002009/0/Hit` are followed before decoding.
+- Real-data tests: `1002009` hit frames (64x45, 86x56), `100000` stage 0
+  (29x35), `Reactor.img/1209001/0` UOL sound decode.

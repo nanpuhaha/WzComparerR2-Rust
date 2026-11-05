@@ -15,6 +15,52 @@ fn argb_components(packed: u32) -> [f32; 4] {
     [r, g, b, a]
 }
 
+fn reactor_key(view: usize, stage: usize, hit: bool, frame: usize) -> GpuKey {
+    GpuKey(
+        20_000 + view as u32 * 1024 + (if hit { 32 } else { 0 }) + stage as u32 * 64 + frame as u32,
+    )
+}
+
+fn draw_reactors(batch: &mut SpriteBatch, state: &AppState) {
+    for (i, view) in state.map_reactor_images.iter().enumerate() {
+        let Some(draw) = view.draw_at(state.map_reactor_time) else {
+            continue;
+        };
+        let animation = draw.animation;
+        let frame_index = animation.frame_at(if draw.hit {
+            (state.map_reactor_time - view.hit_started).max(0.0) * 1000.0
+        } else {
+            state.map_reactor_time * 1000.0
+        });
+        let stage_index = if draw.hit {
+            view.hits
+                .keys()
+                .position(|k| Some(*k) == view.hit_stage)
+                .unwrap_or(0)
+        } else {
+            view.stages
+                .keys()
+                .position(|k| *k == view.stage)
+                .unwrap_or(0)
+        };
+        let frame = draw.frame;
+        let x = (view.x - frame.origin.0) as f32;
+        let y = (view.y - frame.origin.1) as f32;
+        let uv = if view.flip {
+            [1.0, 0.0, 0.0, 1.0]
+        } else {
+            [0.0, 0.0, 1.0, 1.0]
+        };
+        batch.push_quad(
+            reactor_key(i, stage_index, draw.hit, frame_index),
+            [x, y, frame.width as f32, frame.height as f32],
+            view.index as f32 * 0.001,
+            uv,
+            [1.0, 1.0, 1.0, 1.0],
+        );
+    }
+}
+
 fn draw_background_layers(batch: &mut SpriteBatch, state: &AppState, front: bool) {
     let center = [state.camera.center.x, state.camera.center.y];
     let viewport = [state.viewport_size.0 as f32, state.viewport_size.1 as f32];
@@ -63,6 +109,23 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         state.viewport_dirty = true;
         ui.ctx().request_repaint();
     }
+    let reactor_animating = state.map_reactor_images.iter().any(|v| {
+        v.hit_stage.is_some()
+            || v.stages.values().any(|a| a.frames.len() > 1)
+            || v.hits.values().any(|a| a.frames.len() > 1)
+    });
+    if reactor_animating {
+        let now = ui.input(|i| i.time);
+        if state.map_reactor_last > 0.0 {
+            state.map_reactor_time += (now - state.map_reactor_last).clamp(0.0, 0.1);
+        }
+        state.map_reactor_last = now;
+        for view in &mut state.map_reactor_images {
+            view.tick(state.map_reactor_time);
+        }
+        state.viewport_dirty = true;
+        ui.ctx().request_repaint();
+    }
     if !state.map_particle_layers.is_empty() {
         let now = ui.input(|i| i.time);
         if state.map_particle_last > 0.0 {
@@ -101,6 +164,37 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         }
     }
 
+    if resp.clicked() {
+        if let Some(pos) = resp.interact_pointer_pos() {
+            let local = glam::Vec2::new(pos.x - resp.rect.min.x, pos.y - resp.rect.min.y);
+            let world = state.camera.screen_to_world(local);
+            let mut hit = false;
+            let mut sound = None;
+            for view in state.map_reactor_images.iter_mut().rev() {
+                let Some(draw) = view.draw_at(state.map_reactor_time) else {
+                    continue;
+                };
+                let frame = draw.frame;
+                let x = (view.x - frame.origin.0) as f32;
+                let y = (view.y - frame.origin.1) as f32;
+                if world.x >= x
+                    && world.x <= x + frame.width as f32
+                    && world.y >= y
+                    && world.y <= y + frame.height as f32
+                {
+                    sound = view.click(state.map_reactor_time);
+                    hit = true;
+                    break;
+                }
+            }
+            if hit {
+                if let Some((id, stage)) = sound {
+                    crate::sound_player::play_reactor_sound(state, id, stage);
+                }
+                state.viewport_dirty = true;
+            }
+        }
+    }
     if state.viewport_dirty {
         state.viewport_dirty = false;
         let (w, h) = state.viewport_size;
@@ -158,14 +252,6 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                         z,
                     ));
                 }
-                // reactors: z = 0
-                for (i, (rx, ry, rw, rh, _)) in state.map_reactor_images.iter().enumerate() {
-                    state.viewport_cached_layers.push((
-                        GpuKey(300 + i as u32),
-                        [*rx as f32, *ry as f32, *rw as f32, *rh as f32],
-                        0.0,
-                    ));
-                }
             }
         }
 
@@ -173,6 +259,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         if !state.viewport_cached_layers.is_empty()
             || state.viewport_cached_has_back
             || !state.map_background_images.is_empty()
+            || !state.map_reactor_images.is_empty()
         {
             // 텍스처 업로드 (새 RenderContext 이므로 매 렌더 필요)
             if let Some((bw, bh, bpx)) = &state.map_back_image {
@@ -184,8 +271,27 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             for (i, (_, _, ow, oh, opx)) in state.map_obj_images.iter().enumerate() {
                 let _ = rc.create_texture(GpuKey(200 + i as u32), *ow, *oh, opx);
             }
-            for (i, (_, _, rw, rh, rpx)) in state.map_reactor_images.iter().enumerate() {
-                let _ = rc.create_texture(GpuKey(300 + i as u32), *rw, *rh, rpx);
+            for (i, view) in state.map_reactor_images.iter().enumerate() {
+                for (si, (_, animation)) in view.stages.iter().enumerate() {
+                    for (f, frame) in animation.frames.iter().enumerate() {
+                        let _ = rc.create_texture(
+                            reactor_key(i, si, false, f),
+                            frame.width,
+                            frame.height,
+                            &frame.rgba,
+                        );
+                    }
+                }
+                for (si, (_, animation)) in view.hits.iter().enumerate() {
+                    for (f, frame) in animation.frames.iter().enumerate() {
+                        let _ = rc.create_texture(
+                            reactor_key(i, si, true, f),
+                            frame.width,
+                            frame.height,
+                            &frame.rgba,
+                        );
+                    }
+                }
             }
             for (i, layer) in state.map_background_images.iter().enumerate() {
                 for (f, (fw, fh, fpx)) in layer.frames.iter().enumerate() {
@@ -245,6 +351,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             }
             draw_background_layers(&mut batch, state, true);
         }
+        draw_reactors(&mut batch, state);
         // map particles: 원본 ParticleSystem.Draw 와 같은 정적 샘플링.
         if !state.map_particle_layers.is_empty() {
             let center = [state.camera.center.x, state.camera.center.y];

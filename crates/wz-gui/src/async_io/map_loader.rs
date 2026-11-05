@@ -24,26 +24,13 @@ fn reactor_origin(png: &wz_core::image::PngRef) -> (i32, i32) {
     (0, 0)
 }
 
-fn flip_rgba_horizontal(src: &[u8], w: u32, h: u32) -> Vec<u8> {
-    let mut out = vec![0u8; src.len()];
-    for y in 0..h {
-        for x in 0..w {
-            let sx = w - 1 - x;
-            let s = ((y * w + sx) * 4) as usize;
-            let d = ((y * w + x) * 4) as usize;
-            out[d..d + 4].copy_from_slice(&src[s..s + 4]);
-        }
-    }
-    out
-}
-
-fn load_reactor_image(
+fn find_reactor_node(
     root: &std::path::Path,
     id: i32,
-    x: i32,
-    y: i32,
-    flip: bool,
-) -> Option<(i32, i32, u32, u32, Vec<u8>)> {
+) -> Option<(
+    wz_core::image::Node,
+    std::sync::Arc<dyn wz_pool::ByteSource>,
+)> {
     let base = root.join("Reactor").join("_Canvas");
     let image = format!("{id:07}.img");
     for entry in std::fs::read_dir(base).ok()?.flatten() {
@@ -71,15 +58,119 @@ fn load_reactor_image(
         let Ok(node) = archive.parse_image_at(offset) else {
             continue;
         };
-        let png = node.first_canvas()?;
-        let (w, h, mut rgba) = wz_image::decode_png_ref_to_rgba(&png, archive.source()).ok()?;
-        if flip {
-            rgba = flip_rgba_horizontal(&rgba, w, h);
-        }
-        let (ox, oy) = reactor_origin(&png);
-        return Some((x - ox, y - oy, w, h, rgba));
+        return Some((node, archive.source().clone()));
     }
     None
+}
+
+fn collect_reactor_animation(
+    node: &wz_core::image::Node,
+    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+) -> crate::reactor::ReactorAnimation {
+    let mut animation = crate::reactor::ReactorAnimation::default();
+    let mut children: Vec<&wz_core::image::Node> = node
+        .object_children()
+        .iter()
+        .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+        .collect();
+    children.sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+    if children.is_empty() {
+        if let Some(png) = node.first_canvas() {
+            if let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(&png, source) {
+                animation.frames.push(crate::reactor::ReactorFrame {
+                    width: w,
+                    height: h,
+                    rgba,
+                    origin: reactor_origin(&png),
+                });
+                animation
+                    .delays
+                    .push(node_scalar_int(node, "delay").unwrap_or(100).max(20) as u32);
+            }
+        }
+        return animation;
+    }
+    for child in children {
+        let Some(png) = child.first_canvas() else {
+            continue;
+        };
+        let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(&png, source) else {
+            continue;
+        };
+        animation.frames.push(crate::reactor::ReactorFrame {
+            width: w,
+            height: h,
+            rgba,
+            origin: reactor_origin(&png),
+        });
+        animation
+            .delays
+            .push(node_scalar_int(child, "delay").unwrap_or(100).max(20) as u32);
+    }
+    animation
+}
+
+fn load_reactor_view(
+    root: &std::path::Path,
+    reactor: &wz_db::MapReactor,
+) -> Option<crate::reactor::ReactorView> {
+    let mut id = reactor.id;
+    let (mut node, mut source) = find_reactor_node(root, id)?;
+    if let Some(info) = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "info")
+    {
+        if let Some(link) = info
+            .object_children()
+            .iter()
+            .find(|c| c.name.as_ref() == "link")
+            .and_then(|c| match &c.value {
+                Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
+                _ => None,
+            })
+        {
+            id = link;
+            let (linked, linked_source) = find_reactor_node(root, link)?;
+            node = linked;
+            source = linked_source;
+        }
+    }
+
+    let mut view = crate::reactor::ReactorView {
+        index: reactor.index,
+        id,
+        x: reactor.x,
+        y: reactor.y,
+        flip: reactor.flip,
+        ..Default::default()
+    };
+    let mut stages: Vec<(i32, &wz_core::image::Node)> = node
+        .object_children()
+        .iter()
+        .filter_map(|c| c.name.as_ref().parse::<i32>().ok().map(|i| (i, c)))
+        .collect();
+    stages.sort_by_key(|(i, _)| *i);
+    for (stage, stage_node) in stages {
+        let animation = collect_reactor_animation(stage_node, &source);
+        if !animation.is_empty() {
+            view.stages.insert(stage, animation);
+        }
+        if let Some(hit) = stage_node
+            .object_children()
+            .iter()
+            .find(|c| c.name.as_ref() == "hit")
+        {
+            let hit_animation = collect_reactor_animation(hit, &source);
+            if !hit_animation.is_empty() {
+                view.hits.insert(stage, hit_animation);
+            }
+        }
+    }
+    if view.stages.is_empty() && view.hits.is_empty() {
+        return None;
+    }
+    Some(view)
 }
 
 fn find_particle_desc_node(root: &std::path::Path, name: &str) -> Option<wz_core::image::Node> {
@@ -350,10 +441,8 @@ pub fn load_map_by_path(state: &mut AppState) {
             }
             let mut reactors = Vec::new();
             for reactor in &reactors_clone {
-                if let Some(image) =
-                    load_reactor_image(&root, reactor.id, reactor.x, reactor.y, reactor.flip)
-                {
-                    reactors.push(image);
+                if let Some(view) = load_reactor_view(&root, reactor) {
+                    reactors.push(view);
                 }
             }
             let mut backgrounds = Vec::new();
@@ -530,15 +619,38 @@ mod tests {
     }
 
     #[test]
-    fn loads_reactor_image_from_canvas() {
+    fn loads_reactor_stages_and_hit() {
         let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
             return;
         };
-        let Some((x, y, w, h, rgba)) = load_reactor_image(&root, 1002009, -302, 253, false) else {
+        let reactor = wz_db::MapReactor {
+            index: 0,
+            id: 1002009,
+            x: -302,
+            y: 253,
+            ..Default::default()
+        };
+        let Some(view) = load_reactor_view(&root, &reactor) else {
             return;
         };
-        assert!(w > 1 && h > 1);
-        assert_eq!(rgba.len(), (w * h * 4) as usize);
-        assert!(x != 0 || y != 0);
+        assert_eq!(view.id, 1002009);
+        // 이 리액터는 stage 0/3 이 hit 프레임만 가진다.
+        assert!(view.hits.contains_key(&0));
+        let hit = &view.hits[&0];
+        assert_eq!(hit.frames.len(), 2);
+        assert_eq!((hit.frames[0].width, hit.frames[0].height), (64, 45));
+        assert!(hit.frames[0].rgba.chunks(4).any(|p| p[3] != 0));
+
+        let visible = wz_db::MapReactor {
+            index: 1,
+            id: 100000,
+            x: 0,
+            y: 0,
+            ..Default::default()
+        };
+        if let Some(view) = load_reactor_view(&root, &visible) {
+            let stage0 = view.stages.get(&0).expect("stage 0");
+            assert_eq!((stage0.frames[0].width, stage0.frames[0].height), (29, 35));
+        }
     }
 }
