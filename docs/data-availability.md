@@ -14,6 +14,9 @@ Data root: Data
 Skill: 7055 skill nodes, 0 common nodes, 3 level nodes
 WorldMap: 168 images
 WorldMap node QuestLimit/Fog: 0
+Mob: 3524 images, 227 info nodes, 0 level, 0 elemAttr
+Achievement files: 6
+Recipe.img files: 0
 Familiar files: 0
 BIN files: 0
 weather: 원본 C# 소스에 weather 구현 없음
@@ -28,6 +31,9 @@ weather: 원본 C# 소스에 weather 구현 없음
 | Familiar | `Character/Familiar`, `Etc/FamiliarInfo.img` 파일 0개 | 데이터 없음 |
 | BIN | `.BIN` 파일 0개 | 데이터 없음 (포맷 파서만 구현) |
 | weather | 원본 `WzComparerR2`, `WzComparerR2.Common`, `WzComparerR2.WzLib`에 `weather` 문자열 없음 | 원본 기능 아님 |
+| MobTooltip 스탯 | Mob 3,524 이미지 중 info 227개, `level`/`elemAttr` 0개 | 스탯/속성 라인은 데이터 없음. 이름/ID는 StringMob으로 검증 가능 |
+| RecipeTooltip | `Recipe.img` 0개 | 데이터 없음 |
+| AchievementTooltip | Achievement 파일 6개 | 데이터 있음 (후속 구현 대상) |
 
 이 항목들은 구현 누락이 아니라 검증 대상 데이터가 없는 경우이며, 데이터가
 추가되면 `wz parity-scan` 수치가 바뀌므로 즉시 드러난다.

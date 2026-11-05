@@ -72,7 +72,9 @@ pub use db2_reactors::{reactor_grid_rows as db2_reactor_grid_rows, Db2ReactorRow
 pub use db2_skills::{skill_grid_rows as db2_skill_grid_rows, Db2SkillRow};
 pub use db2_taming_mobs::{taming_mob_grid_rows as db2_taming_mob_grid_rows, Db2TamingMobRow};
 pub use gear_stats::extract_gear_props;
-pub use item_tooltip::{build_item_tooltip, item_attribute_lines, ItemTooltipView};
+pub use item_tooltip::{
+    build_item_tooltip, item_attribute_lines, item_core_spec_string, ItemTooltipView,
+};
 pub use linker::{
     extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,
 };

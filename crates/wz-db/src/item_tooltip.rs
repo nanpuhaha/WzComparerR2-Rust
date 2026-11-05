@@ -50,6 +50,46 @@ pub fn build_item_tooltip(
     })
 }
 
+/// `ItemStringHelper.GetItemCoreSpecString` — 코어 아이템 설명.
+///
+/// `kind`는 `ItemCoreSpecType` 이름(`Ctrl_mobLv` 등)이다.
+pub fn item_core_spec_string(kind: &str, value: i32, desc: Option<&str>) -> Option<String> {
+    let has_coda = desc
+        .filter(|d| !d.is_empty())
+        .and_then(|d| d.chars().last())
+        .map(|c| {
+            let code = c as u32;
+            (0xAC00..=0xD7A3).contains(&code) && !(code - 0xAC00).is_multiple_of(28)
+        })
+        .unwrap_or(false);
+    let with_coda = |text: &str| {
+        if has_coda {
+            format!("{text}으로")
+        } else {
+            format!("{text}로")
+        }
+    };
+    Some(match kind {
+        "Ctrl_mobLv" if value != 0 => format!("몬스터 레벨 {value} 증가"),
+        "Ctrl_mobHPRate" if value != 0 => format!("몬스터 HP {value}% 증가"),
+        "Ctrl_mobRate" if value != 0 => format!("몬스터 개체 수 {value}% 증가"),
+        "Ctrl_mobRateSpecial" if value != 0 => format!("몬스터 개체 수 {value}% 추가 증가"),
+        "Ctrl_change_Mob" => format!("{} 몬스터 이미지 변경", with_coda(desc?)),
+        "Ctrl_change_BGM" => format!("{} 배경 음악 변경", with_coda(desc?)),
+        "Ctrl_change_BackGrnd" => format!("{} 배경 이미지 변경", with_coda(desc?)),
+        "Ctrl_partyExp" if value != 0 => format!("파티 경험치 {value}% 증가"),
+        "Ctrl_partyExpSpecial" if value != 0 => format!("파티 경험치 {value}% 추가 증가"),
+        "Ctrl_addMob" if value != 0 => format!("{}, 링크{value} 지역에 추가", desc?),
+        "Ctrl_dropRate" if value != 0 => format!("드롭률 {value}% 증가"),
+        "Ctrl_dropRateSpecial" if value != 0 => format!("드롭률 {value}% 추가 증가"),
+        "Ctrl_dropRate_Herb" if value != 0 => format!("약초 드롭률 {value}% 증가"),
+        "Ctrl_dropRate_Mineral" if value != 0 => format!("광물 드롭률 {value}% 증가"),
+        "Ctrl_dropRareEquip" if value != 0 => "장비 아이템이 미확인 상태로 드롭".to_string(),
+        "Ctrl_reward" | "Ctrl_addMission" => desc?.to_string(),
+        _ => return None,
+    })
+}
+
 /// `GetItemAttributeString`과 같은 순서/문구의 태그 목록.
 pub fn item_attribute_lines(item: &Node, item_id: i32) -> Vec<String> {
     let info = child(item, "info").unwrap_or(item);

@@ -1245,6 +1245,75 @@ class Program
         var outBytes = encryptor.TransformFinalBlock(data, 0, data.Length);
         Console.WriteLine(Convert.ToHexString(outBytes).ToLowerInvariant());
     }
+    static void JobNames(int max)
+    {
+        var rows = new List<object>();
+        for (int code = 0; code <= max; code++)
+        {
+            var name = ItemStringHelper.GetJobName(code);
+            if (name != null) rows.Add(new { code, name });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    static void CoreSpecs()
+    {
+        var rows = new List<object>();
+        var descs = new string[] { null, "", "테스트", "사과", "고양이", "ABC" };
+        foreach (ItemCoreSpecType kind in Enum.GetValues(typeof(ItemCoreSpecType)))
+        {
+            foreach (var value in new[] { 0, 1, 5, 100 })
+            {
+                foreach (var desc in descs)
+                {
+                    rows.Add(new {
+                        kind = kind.ToString(),
+                        value,
+                        desc,
+                        text = ItemStringHelper.GetItemCoreSpecString(kind, value, desc),
+                    });
+                }
+            }
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    static void FifthJobNames()
+    {
+        int[] skills = { 0, 10000, 11200, 2200, 14200, 16400, 40000, 50000, 23200 };
+        var lists = new List<int[]>
+        {
+            Array.Empty<int>(),
+            new[] { 0 },
+            new[] { 112 },
+            new[] { 1120, 1210 },
+            new[] { 5100, 5200 },
+            new[] { 2000, 3100 },
+            new[] { 1120, 0 },
+            new[] { 2100 },
+            new[] { 2200, 2300 },
+            new[] { 3100, 3200 },
+            new[] { 4100, 4200 },
+            new[] { 6100, 6200 },
+            new[] { 10100 },
+            new[] { 11100 },
+            new[] { 12100 },
+            new[] { 13100 },
+            new[] { 14100 },
+            new[] { 15100 },
+            new[] { 16100 },
+            new[] { 17100 },
+            new[] { 18100 },
+            new[] { 19100 },
+        };
+        var rows = new List<object>();
+        foreach (var skill in skills)
+            foreach (var list in lists)
+            {
+                string text = null;
+                try { text = ItemStringHelper.GetFifthJobName(skill, list.ToList()); } catch { }
+                rows.Add(new { skill, job_id = list, text });
+            }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1271,6 +1340,9 @@ class Program
         else if (args[0] == "gearprops") GearProps(args[1]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
+        else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));
+        else if (args[0] == "corespec") CoreSpecs();
+        else if (args[0] == "fifthjobnames") FifthJobNames();
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

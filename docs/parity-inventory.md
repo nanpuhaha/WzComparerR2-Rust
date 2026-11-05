@@ -368,3 +368,18 @@ fixture: `crates/wz-network/tests/rc4_vectors.json`,
 C# 하네스: `tools/csharp-worldmap ... -- networkrc4 <Network.dll> <keyhex> <datahex>`.
 
 TCP 연결, 재접속, 로그인 상태 머신은 서버가 필요해 제외한다.
+
+## CharaSimControl 텍스트 헬퍼 (`ItemStringHelper`)
+
+GDI 없이 호출 가능한 순수 텍스트 함수를 포팅하고 C# 실행 결과와 비교했다.
+
+| 함수 | 입력 범위 | 결과 |
+|---|---|---|
+| `GetJobName` | 0..=60000 전 코드 | 417개 매핑 완전 일치 |
+| `GetFifthJobName` | skill 9종 × jobId 22종 = 198 | 완전 일치 |
+| `GetItemCoreSpecString` | 17종 × value 4종 × desc 6종 = 408 | 완전 일치 (받침 판정 포함) |
+
+fixture: `crates/wz-avatar/tests/job_names.json`,
+`crates/wz-avatar/tests/fifth_job_names.json`,
+`crates/wz-db/tests/core_specs.json`.
+C# 하네스: `jobnames 60000`, `fifthjobnames`, `corespec`.

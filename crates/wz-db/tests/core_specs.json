@@ -1,0 +1,2450 @@
+[
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 1,
+    "desc": null,
+    "text": "몬스터 레벨 1 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 1,
+    "desc": "",
+    "text": "몬스터 레벨 1 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 1,
+    "desc": "테스트",
+    "text": "몬스터 레벨 1 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 1,
+    "desc": "사과",
+    "text": "몬스터 레벨 1 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 1,
+    "desc": "고양이",
+    "text": "몬스터 레벨 1 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 1,
+    "desc": "ABC",
+    "text": "몬스터 레벨 1 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 5,
+    "desc": null,
+    "text": "몬스터 레벨 5 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 5,
+    "desc": "",
+    "text": "몬스터 레벨 5 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 5,
+    "desc": "테스트",
+    "text": "몬스터 레벨 5 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 5,
+    "desc": "사과",
+    "text": "몬스터 레벨 5 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 5,
+    "desc": "고양이",
+    "text": "몬스터 레벨 5 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 5,
+    "desc": "ABC",
+    "text": "몬스터 레벨 5 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 100,
+    "desc": null,
+    "text": "몬스터 레벨 100 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 100,
+    "desc": "",
+    "text": "몬스터 레벨 100 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 100,
+    "desc": "테스트",
+    "text": "몬스터 레벨 100 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 100,
+    "desc": "사과",
+    "text": "몬스터 레벨 100 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 100,
+    "desc": "고양이",
+    "text": "몬스터 레벨 100 증가"
+  },
+  {
+    "kind": "Ctrl_mobLv",
+    "value": 100,
+    "desc": "ABC",
+    "text": "몬스터 레벨 100 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 1,
+    "desc": null,
+    "text": "몬스터 HP 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 1,
+    "desc": "",
+    "text": "몬스터 HP 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 1,
+    "desc": "테스트",
+    "text": "몬스터 HP 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 1,
+    "desc": "사과",
+    "text": "몬스터 HP 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 1,
+    "desc": "고양이",
+    "text": "몬스터 HP 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 1,
+    "desc": "ABC",
+    "text": "몬스터 HP 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 5,
+    "desc": null,
+    "text": "몬스터 HP 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 5,
+    "desc": "",
+    "text": "몬스터 HP 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 5,
+    "desc": "테스트",
+    "text": "몬스터 HP 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 5,
+    "desc": "사과",
+    "text": "몬스터 HP 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 5,
+    "desc": "고양이",
+    "text": "몬스터 HP 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 5,
+    "desc": "ABC",
+    "text": "몬스터 HP 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 100,
+    "desc": null,
+    "text": "몬스터 HP 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 100,
+    "desc": "",
+    "text": "몬스터 HP 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 100,
+    "desc": "테스트",
+    "text": "몬스터 HP 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 100,
+    "desc": "사과",
+    "text": "몬스터 HP 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 100,
+    "desc": "고양이",
+    "text": "몬스터 HP 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobHPRate",
+    "value": 100,
+    "desc": "ABC",
+    "text": "몬스터 HP 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 1,
+    "desc": null,
+    "text": "몬스터 개체 수 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 1,
+    "desc": "",
+    "text": "몬스터 개체 수 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 1,
+    "desc": "테스트",
+    "text": "몬스터 개체 수 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 1,
+    "desc": "사과",
+    "text": "몬스터 개체 수 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 1,
+    "desc": "고양이",
+    "text": "몬스터 개체 수 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 1,
+    "desc": "ABC",
+    "text": "몬스터 개체 수 1% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 5,
+    "desc": null,
+    "text": "몬스터 개체 수 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 5,
+    "desc": "",
+    "text": "몬스터 개체 수 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 5,
+    "desc": "테스트",
+    "text": "몬스터 개체 수 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 5,
+    "desc": "사과",
+    "text": "몬스터 개체 수 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 5,
+    "desc": "고양이",
+    "text": "몬스터 개체 수 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 5,
+    "desc": "ABC",
+    "text": "몬스터 개체 수 5% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 100,
+    "desc": null,
+    "text": "몬스터 개체 수 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 100,
+    "desc": "",
+    "text": "몬스터 개체 수 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 100,
+    "desc": "테스트",
+    "text": "몬스터 개체 수 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 100,
+    "desc": "사과",
+    "text": "몬스터 개체 수 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 100,
+    "desc": "고양이",
+    "text": "몬스터 개체 수 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRate",
+    "value": 100,
+    "desc": "ABC",
+    "text": "몬스터 개체 수 100% 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 1,
+    "desc": null,
+    "text": "몬스터 개체 수 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 1,
+    "desc": "",
+    "text": "몬스터 개체 수 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 1,
+    "desc": "테스트",
+    "text": "몬스터 개체 수 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 1,
+    "desc": "사과",
+    "text": "몬스터 개체 수 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 1,
+    "desc": "고양이",
+    "text": "몬스터 개체 수 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 1,
+    "desc": "ABC",
+    "text": "몬스터 개체 수 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 5,
+    "desc": null,
+    "text": "몬스터 개체 수 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 5,
+    "desc": "",
+    "text": "몬스터 개체 수 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 5,
+    "desc": "테스트",
+    "text": "몬스터 개체 수 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 5,
+    "desc": "사과",
+    "text": "몬스터 개체 수 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 5,
+    "desc": "고양이",
+    "text": "몬스터 개체 수 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 5,
+    "desc": "ABC",
+    "text": "몬스터 개체 수 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 100,
+    "desc": null,
+    "text": "몬스터 개체 수 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 100,
+    "desc": "",
+    "text": "몬스터 개체 수 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 100,
+    "desc": "테스트",
+    "text": "몬스터 개체 수 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 100,
+    "desc": "사과",
+    "text": "몬스터 개체 수 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 100,
+    "desc": "고양이",
+    "text": "몬스터 개체 수 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_mobRateSpecial",
+    "value": 100,
+    "desc": "ABC",
+    "text": "몬스터 개체 수 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 0,
+    "desc": "",
+    "text": "로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 0,
+    "desc": "테스트",
+    "text": "테스트로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 0,
+    "desc": "사과",
+    "text": "사과로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 0,
+    "desc": "고양이",
+    "text": "고양이로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 0,
+    "desc": "ABC",
+    "text": "ABC로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 1,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 1,
+    "desc": "",
+    "text": "로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 1,
+    "desc": "테스트",
+    "text": "테스트로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 1,
+    "desc": "사과",
+    "text": "사과로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 1,
+    "desc": "고양이",
+    "text": "고양이로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 1,
+    "desc": "ABC",
+    "text": "ABC로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 5,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 5,
+    "desc": "",
+    "text": "로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 5,
+    "desc": "테스트",
+    "text": "테스트로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 5,
+    "desc": "사과",
+    "text": "사과로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 5,
+    "desc": "고양이",
+    "text": "고양이로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 5,
+    "desc": "ABC",
+    "text": "ABC로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 100,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 100,
+    "desc": "",
+    "text": "로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 100,
+    "desc": "테스트",
+    "text": "테스트로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 100,
+    "desc": "사과",
+    "text": "사과로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 100,
+    "desc": "고양이",
+    "text": "고양이로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_Mob",
+    "value": 100,
+    "desc": "ABC",
+    "text": "ABC로 몬스터 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 0,
+    "desc": "",
+    "text": "로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 0,
+    "desc": "테스트",
+    "text": "테스트로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 0,
+    "desc": "사과",
+    "text": "사과로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 0,
+    "desc": "고양이",
+    "text": "고양이로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 0,
+    "desc": "ABC",
+    "text": "ABC로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 1,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 1,
+    "desc": "",
+    "text": "로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 1,
+    "desc": "테스트",
+    "text": "테스트로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 1,
+    "desc": "사과",
+    "text": "사과로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 1,
+    "desc": "고양이",
+    "text": "고양이로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 1,
+    "desc": "ABC",
+    "text": "ABC로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 5,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 5,
+    "desc": "",
+    "text": "로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 5,
+    "desc": "테스트",
+    "text": "테스트로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 5,
+    "desc": "사과",
+    "text": "사과로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 5,
+    "desc": "고양이",
+    "text": "고양이로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 5,
+    "desc": "ABC",
+    "text": "ABC로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 100,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 100,
+    "desc": "",
+    "text": "로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 100,
+    "desc": "테스트",
+    "text": "테스트로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 100,
+    "desc": "사과",
+    "text": "사과로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 100,
+    "desc": "고양이",
+    "text": "고양이로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BGM",
+    "value": 100,
+    "desc": "ABC",
+    "text": "ABC로 배경 음악 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 0,
+    "desc": "",
+    "text": "로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 0,
+    "desc": "테스트",
+    "text": "테스트로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 0,
+    "desc": "사과",
+    "text": "사과로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 0,
+    "desc": "고양이",
+    "text": "고양이로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 0,
+    "desc": "ABC",
+    "text": "ABC로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 1,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 1,
+    "desc": "",
+    "text": "로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 1,
+    "desc": "테스트",
+    "text": "테스트로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 1,
+    "desc": "사과",
+    "text": "사과로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 1,
+    "desc": "고양이",
+    "text": "고양이로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 1,
+    "desc": "ABC",
+    "text": "ABC로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 5,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 5,
+    "desc": "",
+    "text": "로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 5,
+    "desc": "테스트",
+    "text": "테스트로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 5,
+    "desc": "사과",
+    "text": "사과로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 5,
+    "desc": "고양이",
+    "text": "고양이로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 5,
+    "desc": "ABC",
+    "text": "ABC로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 100,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 100,
+    "desc": "",
+    "text": "로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 100,
+    "desc": "테스트",
+    "text": "테스트로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 100,
+    "desc": "사과",
+    "text": "사과로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 100,
+    "desc": "고양이",
+    "text": "고양이로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_change_BackGrnd",
+    "value": 100,
+    "desc": "ABC",
+    "text": "ABC로 배경 이미지 변경"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 1,
+    "desc": null,
+    "text": "파티 경험치 1% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 1,
+    "desc": "",
+    "text": "파티 경험치 1% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 1,
+    "desc": "테스트",
+    "text": "파티 경험치 1% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 1,
+    "desc": "사과",
+    "text": "파티 경험치 1% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 1,
+    "desc": "고양이",
+    "text": "파티 경험치 1% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 1,
+    "desc": "ABC",
+    "text": "파티 경험치 1% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 5,
+    "desc": null,
+    "text": "파티 경험치 5% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 5,
+    "desc": "",
+    "text": "파티 경험치 5% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 5,
+    "desc": "테스트",
+    "text": "파티 경험치 5% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 5,
+    "desc": "사과",
+    "text": "파티 경험치 5% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 5,
+    "desc": "고양이",
+    "text": "파티 경험치 5% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 5,
+    "desc": "ABC",
+    "text": "파티 경험치 5% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 100,
+    "desc": null,
+    "text": "파티 경험치 100% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 100,
+    "desc": "",
+    "text": "파티 경험치 100% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 100,
+    "desc": "테스트",
+    "text": "파티 경험치 100% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 100,
+    "desc": "사과",
+    "text": "파티 경험치 100% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 100,
+    "desc": "고양이",
+    "text": "파티 경험치 100% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExp",
+    "value": 100,
+    "desc": "ABC",
+    "text": "파티 경험치 100% 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 1,
+    "desc": null,
+    "text": "파티 경험치 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 1,
+    "desc": "",
+    "text": "파티 경험치 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 1,
+    "desc": "테스트",
+    "text": "파티 경험치 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 1,
+    "desc": "사과",
+    "text": "파티 경험치 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 1,
+    "desc": "고양이",
+    "text": "파티 경험치 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 1,
+    "desc": "ABC",
+    "text": "파티 경험치 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 5,
+    "desc": null,
+    "text": "파티 경험치 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 5,
+    "desc": "",
+    "text": "파티 경험치 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 5,
+    "desc": "테스트",
+    "text": "파티 경험치 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 5,
+    "desc": "사과",
+    "text": "파티 경험치 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 5,
+    "desc": "고양이",
+    "text": "파티 경험치 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 5,
+    "desc": "ABC",
+    "text": "파티 경험치 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 100,
+    "desc": null,
+    "text": "파티 경험치 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 100,
+    "desc": "",
+    "text": "파티 경험치 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 100,
+    "desc": "테스트",
+    "text": "파티 경험치 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 100,
+    "desc": "사과",
+    "text": "파티 경험치 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 100,
+    "desc": "고양이",
+    "text": "파티 경험치 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_partyExpSpecial",
+    "value": 100,
+    "desc": "ABC",
+    "text": "파티 경험치 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 1,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 1,
+    "desc": "",
+    "text": ", 링크1 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 1,
+    "desc": "테스트",
+    "text": "테스트, 링크1 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 1,
+    "desc": "사과",
+    "text": "사과, 링크1 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 1,
+    "desc": "고양이",
+    "text": "고양이, 링크1 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 1,
+    "desc": "ABC",
+    "text": "ABC, 링크1 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 5,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 5,
+    "desc": "",
+    "text": ", 링크5 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 5,
+    "desc": "테스트",
+    "text": "테스트, 링크5 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 5,
+    "desc": "사과",
+    "text": "사과, 링크5 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 5,
+    "desc": "고양이",
+    "text": "고양이, 링크5 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 5,
+    "desc": "ABC",
+    "text": "ABC, 링크5 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 100,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 100,
+    "desc": "",
+    "text": ", 링크100 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 100,
+    "desc": "테스트",
+    "text": "테스트, 링크100 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 100,
+    "desc": "사과",
+    "text": "사과, 링크100 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 100,
+    "desc": "고양이",
+    "text": "고양이, 링크100 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_addMob",
+    "value": 100,
+    "desc": "ABC",
+    "text": "ABC, 링크100 지역에 추가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 1,
+    "desc": null,
+    "text": "드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 1,
+    "desc": "",
+    "text": "드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 1,
+    "desc": "테스트",
+    "text": "드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 1,
+    "desc": "사과",
+    "text": "드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 1,
+    "desc": "고양이",
+    "text": "드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 1,
+    "desc": "ABC",
+    "text": "드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 5,
+    "desc": null,
+    "text": "드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 5,
+    "desc": "",
+    "text": "드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 5,
+    "desc": "테스트",
+    "text": "드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 5,
+    "desc": "사과",
+    "text": "드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 5,
+    "desc": "고양이",
+    "text": "드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 5,
+    "desc": "ABC",
+    "text": "드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 100,
+    "desc": null,
+    "text": "드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 100,
+    "desc": "",
+    "text": "드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 100,
+    "desc": "테스트",
+    "text": "드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 100,
+    "desc": "사과",
+    "text": "드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 100,
+    "desc": "고양이",
+    "text": "드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate",
+    "value": 100,
+    "desc": "ABC",
+    "text": "드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 1,
+    "desc": null,
+    "text": "드롭률 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 1,
+    "desc": "",
+    "text": "드롭률 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 1,
+    "desc": "테스트",
+    "text": "드롭률 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 1,
+    "desc": "사과",
+    "text": "드롭률 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 1,
+    "desc": "고양이",
+    "text": "드롭률 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 1,
+    "desc": "ABC",
+    "text": "드롭률 1% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 5,
+    "desc": null,
+    "text": "드롭률 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 5,
+    "desc": "",
+    "text": "드롭률 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 5,
+    "desc": "테스트",
+    "text": "드롭률 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 5,
+    "desc": "사과",
+    "text": "드롭률 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 5,
+    "desc": "고양이",
+    "text": "드롭률 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 5,
+    "desc": "ABC",
+    "text": "드롭률 5% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 100,
+    "desc": null,
+    "text": "드롭률 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 100,
+    "desc": "",
+    "text": "드롭률 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 100,
+    "desc": "테스트",
+    "text": "드롭률 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 100,
+    "desc": "사과",
+    "text": "드롭률 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 100,
+    "desc": "고양이",
+    "text": "드롭률 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRateSpecial",
+    "value": 100,
+    "desc": "ABC",
+    "text": "드롭률 100% 추가 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 1,
+    "desc": null,
+    "text": "약초 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 1,
+    "desc": "",
+    "text": "약초 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 1,
+    "desc": "테스트",
+    "text": "약초 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 1,
+    "desc": "사과",
+    "text": "약초 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 1,
+    "desc": "고양이",
+    "text": "약초 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 1,
+    "desc": "ABC",
+    "text": "약초 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 5,
+    "desc": null,
+    "text": "약초 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 5,
+    "desc": "",
+    "text": "약초 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 5,
+    "desc": "테스트",
+    "text": "약초 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 5,
+    "desc": "사과",
+    "text": "약초 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 5,
+    "desc": "고양이",
+    "text": "약초 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 5,
+    "desc": "ABC",
+    "text": "약초 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 100,
+    "desc": null,
+    "text": "약초 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 100,
+    "desc": "",
+    "text": "약초 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 100,
+    "desc": "테스트",
+    "text": "약초 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 100,
+    "desc": "사과",
+    "text": "약초 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 100,
+    "desc": "고양이",
+    "text": "약초 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Herb",
+    "value": 100,
+    "desc": "ABC",
+    "text": "약초 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 1,
+    "desc": null,
+    "text": "광물 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 1,
+    "desc": "",
+    "text": "광물 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 1,
+    "desc": "테스트",
+    "text": "광물 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 1,
+    "desc": "사과",
+    "text": "광물 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 1,
+    "desc": "고양이",
+    "text": "광물 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 1,
+    "desc": "ABC",
+    "text": "광물 드롭률 1% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 5,
+    "desc": null,
+    "text": "광물 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 5,
+    "desc": "",
+    "text": "광물 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 5,
+    "desc": "테스트",
+    "text": "광물 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 5,
+    "desc": "사과",
+    "text": "광물 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 5,
+    "desc": "고양이",
+    "text": "광물 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 5,
+    "desc": "ABC",
+    "text": "광물 드롭률 5% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 100,
+    "desc": null,
+    "text": "광물 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 100,
+    "desc": "",
+    "text": "광물 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 100,
+    "desc": "테스트",
+    "text": "광물 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 100,
+    "desc": "사과",
+    "text": "광물 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 100,
+    "desc": "고양이",
+    "text": "광물 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRate_Mineral",
+    "value": 100,
+    "desc": "ABC",
+    "text": "광물 드롭률 100% 증가"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 0,
+    "desc": "",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 0,
+    "desc": "테스트",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 0,
+    "desc": "사과",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 0,
+    "desc": "고양이",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 0,
+    "desc": "ABC",
+    "text": null
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 1,
+    "desc": null,
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 1,
+    "desc": "",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 1,
+    "desc": "테스트",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 1,
+    "desc": "사과",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 1,
+    "desc": "고양이",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 1,
+    "desc": "ABC",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 5,
+    "desc": null,
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 5,
+    "desc": "",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 5,
+    "desc": "테스트",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 5,
+    "desc": "사과",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 5,
+    "desc": "고양이",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 5,
+    "desc": "ABC",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 100,
+    "desc": null,
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 100,
+    "desc": "",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 100,
+    "desc": "테스트",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 100,
+    "desc": "사과",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 100,
+    "desc": "고양이",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_dropRareEquip",
+    "value": 100,
+    "desc": "ABC",
+    "text": "장비 아이템이 미확인 상태로 드롭"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 0,
+    "desc": "",
+    "text": ""
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 0,
+    "desc": "테스트",
+    "text": "테스트"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 0,
+    "desc": "사과",
+    "text": "사과"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 0,
+    "desc": "고양이",
+    "text": "고양이"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 0,
+    "desc": "ABC",
+    "text": "ABC"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 1,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 1,
+    "desc": "",
+    "text": ""
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 1,
+    "desc": "테스트",
+    "text": "테스트"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 1,
+    "desc": "사과",
+    "text": "사과"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 1,
+    "desc": "고양이",
+    "text": "고양이"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 1,
+    "desc": "ABC",
+    "text": "ABC"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 5,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 5,
+    "desc": "",
+    "text": ""
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 5,
+    "desc": "테스트",
+    "text": "테스트"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 5,
+    "desc": "사과",
+    "text": "사과"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 5,
+    "desc": "고양이",
+    "text": "고양이"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 5,
+    "desc": "ABC",
+    "text": "ABC"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 100,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 100,
+    "desc": "",
+    "text": ""
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 100,
+    "desc": "테스트",
+    "text": "테스트"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 100,
+    "desc": "사과",
+    "text": "사과"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 100,
+    "desc": "고양이",
+    "text": "고양이"
+  },
+  {
+    "kind": "Ctrl_reward",
+    "value": 100,
+    "desc": "ABC",
+    "text": "ABC"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 0,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 0,
+    "desc": "",
+    "text": ""
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 0,
+    "desc": "테스트",
+    "text": "테스트"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 0,
+    "desc": "사과",
+    "text": "사과"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 0,
+    "desc": "고양이",
+    "text": "고양이"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 0,
+    "desc": "ABC",
+    "text": "ABC"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 1,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 1,
+    "desc": "",
+    "text": ""
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 1,
+    "desc": "테스트",
+    "text": "테스트"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 1,
+    "desc": "사과",
+    "text": "사과"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 1,
+    "desc": "고양이",
+    "text": "고양이"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 1,
+    "desc": "ABC",
+    "text": "ABC"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 5,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 5,
+    "desc": "",
+    "text": ""
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 5,
+    "desc": "테스트",
+    "text": "테스트"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 5,
+    "desc": "사과",
+    "text": "사과"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 5,
+    "desc": "고양이",
+    "text": "고양이"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 5,
+    "desc": "ABC",
+    "text": "ABC"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 100,
+    "desc": null,
+    "text": null
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 100,
+    "desc": "",
+    "text": ""
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 100,
+    "desc": "테스트",
+    "text": "테스트"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 100,
+    "desc": "사과",
+    "text": "사과"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 100,
+    "desc": "고양이",
+    "text": "고양이"
+  },
+  {
+    "kind": "Ctrl_addMission",
+    "value": 100,
+    "desc": "ABC",
+    "text": "ABC"
+  }
+]

@@ -113,6 +113,33 @@ fn count_names(node: &Node, counts: &mut BTreeMap<String, u64>) {
     }
 }
 
+fn scan_mob(root: &Path) -> (u64, u64, u64, u64) {
+    // (images, info nodes, level, elemAttr)
+    let mut stats = (0, 0, 0, 0);
+    for path in wz_files(root) {
+        if path.file_name().and_then(|s| s.to_str()) == Some("Mob.wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        for image in image_nodes(&archive) {
+            stats.0 += 1;
+            let Some(info) = child(&image, "info") else {
+                continue;
+            };
+            stats.1 += 1;
+            if child(info, "level").is_some() {
+                stats.2 += 1;
+            }
+            if child(info, "elemAttr").is_some() {
+                stats.3 += 1;
+            }
+        }
+    }
+    stats
+}
+
 fn scan_worldmap(root: &Path) -> (u64, BTreeMap<String, u64>) {
     let mut images = 0;
     let mut counts = BTreeMap::new();
@@ -143,6 +170,18 @@ pub fn cmd_parity_scan(data_root: &Path) -> Result<(), Box<dyn Error>> {
     if worldmap_counts.is_empty() {
         println!("WorldMap node QuestLimit/Fog: 0");
     }
+
+    let (mob_images, mob_info, mob_level, mob_elem) = scan_mob(&data_root.join("Mob"));
+    println!(
+        "Mob: {mob_images} images, {mob_info} info nodes, {mob_level} level, {mob_elem} elemAttr"
+    );
+
+    let achievement = find_files(data_root, |name| {
+        name.to_ascii_lowercase().contains("achievement")
+    });
+    println!("Achievement files: {}", achievement.len());
+    let recipe = find_files(data_root, |name| name.eq_ignore_ascii_case("Recipe.img"));
+    println!("Recipe.img files: {}", recipe.len());
 
     let familiar = find_files(data_root, |name| {
         name.to_ascii_lowercase().contains("familiar")

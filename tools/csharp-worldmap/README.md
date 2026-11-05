@@ -337,3 +337,12 @@ Verified Network RC4 (`networkrc4 <WzComparerR2.Network.dll> <keyhex> <datahex>`
 key 8/16/32 bytes × data 1/8/17/64 bytes = 12 vectors
 ```
 All match Rust `wz-network::Rc4` exactly.
+
+Verified `ItemStringHelper` text helpers:
+```
+jobnames 60000      -> 417 non-null codes
+fifthjobnames       -> 198 (skill, jobId) combos
+corespec            -> 408 (kind, value, desc) combos
+```
+All match Rust (`wz-avatar::get_job_name`, `wz_avatar::get_fifth_job_name`,
+`wz_db::item_core_spec_string`) exactly.
