@@ -197,6 +197,11 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label("Time:");
         ui.add(egui::DragValue::new(&mut state.chair_time).range(0..=10080));
     });
+    ui.horizontal(|ui| {
+        ui.label("Showcase items:");
+        ui.text_edit_singleline(&mut state.chair_showcase_input);
+    });
+    ui.label("showcaseChair: 쉼표로 구분한 장비 ID (최대 4개)");
     ui.label("identity/score 체어 값은 장비 로드 시 적용됩니다");
     if !state.chair_custom_fields.is_empty() {
         egui::CollapsingHeader::new("customChair fields").show(ui, |ui| {

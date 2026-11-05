@@ -110,6 +110,10 @@ remaining CharaSim gaps.
     the built-in font; the avatar layer/button rectangles are parsed.
   - `bgmSelectionChair` → button rectangle and taming are loaded; BGM selection
     itself is metadata-only (no BGM list/value in the chair WZ).
+  - `showcaseChair` → `pos/0..3` and `slotSet` are parsed; up to four equipment
+    IDs supplied by the GUI (`Showcase items`) are loaded from `Character/<slot>`
+    and placed at those positions. `item_id_to_slot` now handles both 7-digit
+    (`1000000`) and 8-digit equipment IDs.
   - `Item/Install` category lookup accepts both 5-digit (`03018.img`) and 6-digit
     (`030156.img`) image names.
   - Every other `customChair` type exposes its flattened `customChair fields`

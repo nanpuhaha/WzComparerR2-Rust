@@ -137,6 +137,11 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
                 score: Some(state.chair_score),
                 pop: Some(state.chair_pop),
                 time_minutes: Some(state.chair_time),
+                showcase_items: state
+                    .chair_showcase_input
+                    .split(',')
+                    .filter_map(|v| v.trim().parse::<i32>().ok())
+                    .collect(),
                 ..Default::default()
             },
         },

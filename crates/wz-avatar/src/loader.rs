@@ -161,6 +161,13 @@ pub struct PartChairAnimationInfo {
     pub pos_lv: Vec<crate::Point>,
 }
 
+/// `showcaseChair` — 아이템 4개를 배치하는 슬롯.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ShowcaseChairInfo {
+    pub positions: Vec<crate::Point>,
+    pub slot_set: i32,
+}
+
 /// `outfitVoteChairInfo` — 투표 점수/아바타 레이어.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct OutfitVoteChairInfo {
@@ -234,6 +241,7 @@ pub struct ChairUserData {
     pub score: Option<i32>,
     pub pop: Option<i64>,
     pub time_minutes: Option<i64>,
+    pub showcase_items: Vec<i32>,
 }
 
 /// `hashTagChairInfo/action/N` — 동작별 강제 포즈.
@@ -314,6 +322,7 @@ pub struct CustomChairInfo {
     pub time: Option<TimeChairInfo>,
     pub outfit_vote: Option<OutfitVoteChairInfo>,
     pub bgm_selection: Option<BgmSelectionChairInfo>,
+    pub showcase: Option<ShowcaseChairInfo>,
     /// 중첩 Property 를 `a/b/c` 경로의 문자열로 평탄화해 보존한다.
     pub extra: std::collections::BTreeMap<String, String>,
 }
@@ -441,6 +450,28 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
             pos_lv,
         })
     });
+
+    let showcase = if chair_type == CustomChairType::Other("showcaseChair".into()) {
+        let positions = child_node(node, "pos")
+            .map(|pos| {
+                pos.object_children()
+                    .iter()
+                    .filter_map(|c| match &c.value {
+                        Some(wz_core::image::ImageValue::Vector(v)) => {
+                            Some(crate::Point::new(v.x, v.y))
+                        }
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        Some(ShowcaseChairInfo {
+            positions,
+            slot_set: node_int(node, "slotSet").unwrap_or(0),
+        })
+    } else {
+        None
+    };
 
     let outfit_vote = child_node(node, "outfitVoteChairInfo").map(|n| OutfitVoteChairInfo {
         score_text_pos: node_vec(n, "scoreTextPos").unwrap_or(crate::Point::ZERO),
@@ -629,6 +660,7 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         time,
         outfit_vote,
         bgm_selection,
+        showcase,
         extra,
     }
 }
@@ -1726,6 +1758,38 @@ fn build_rolling_frame(
     Some((root, parts))
 }
 
+/// `Character/<slot>/_Canvas` 에서 장비 이미지를 찾아 로드한다.
+fn load_character_item_by_id(
+    data_root: &std::path::Path,
+    item_id: i32,
+    action_names: &[&str],
+) -> Option<(Bone, Vec<AvatarPart>)> {
+    let dir = item_id_to_slot(item_id)?;
+    let base = data_root.join("Character").join(dir).join("_Canvas");
+    let image = format!("{:08}.img", item_id);
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        if tree
+            .root
+            .entries
+            .iter()
+            .any(|e| e.name.as_deref() == Some(image.as_str()))
+        {
+            return load_item_frame(&archive, Some(&image), action_names, dir);
+        }
+    }
+    None
+}
+
 /// `rollingHouseChairInfo` 의 모든 애니메이션 프레임을 로드한다.
 ///
 /// 메타데이터 캔버스는 1x1 + `_outlink` 이고, 실제 픽셀은 `_Canvas` 아카이브에
@@ -2589,7 +2653,12 @@ pub fn slot_dir_name(slot: &str) -> Option<&'static str> {
 
 /// 아이템 ID → 슬롯 이름 추론 (MapleStory 8자리 ID 규칙).
 pub fn item_id_to_slot(id: i32) -> Option<&'static str> {
-    let prefix = id / 100000;
+    // 7자리 ID(1000000)와 8자리 ID(10000000) 모두 첫 3자리 카테고리로 정규화한다.
+    let prefix = if id < 10_000_000 {
+        id / 10_000
+    } else {
+        id / 100_000
+    };
     match prefix {
         100 => Some("Cap"),
         104 => Some("Coat"),
@@ -2801,6 +2870,40 @@ pub fn load_avatar_with_equipment_and_mix(
                             ) {
                                 merge_bone_tree(&mut root, text_root);
                                 parts.extend(text_parts);
+                            }
+                        }
+                        if let Some(showcase) = &custom.showcase {
+                            for (i, item_id) in mix
+                                .chair
+                                .showcase_items
+                                .iter()
+                                .take(showcase.positions.len())
+                                .enumerate()
+                            {
+                                if *item_id == 0 {
+                                    continue;
+                                }
+                                let Some((mut item_root, mut item_parts)) =
+                                    load_character_item_by_id(
+                                        data_root,
+                                        *item_id,
+                                        &["default", "stand1"],
+                                    )
+                                else {
+                                    continue;
+                                };
+                                let pos = showcase.positions[i];
+                                item_root.position = pos;
+                                for part in &mut item_parts {
+                                    part.slot = format!("showcase{i}_{}", part.slot);
+                                    part.position = crate::Point::new(
+                                        part.position.x + pos.x,
+                                        part.position.y + pos.y,
+                                    );
+                                    part.z_index = 1;
+                                }
+                                merge_bone_tree(&mut root, item_root);
+                                parts.extend(item_parts);
                             }
                         }
                     }
@@ -3683,6 +3786,43 @@ mod chair_custom_type_tests {
                 ..Default::default()
             },
         )
+    }
+
+    #[test]
+    fn showcase_chair_parses_slots_and_renders_items() {
+        let Some(av) = load_chair_with(
+            3019238,
+            ChairUserData {
+                showcase_items: vec![1000000, 1040000],
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        let info = chair_info(&av);
+        let showcase = info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.showcase.as_ref())
+            .expect("showcase info");
+        assert_eq!(showcase.slot_set, 0);
+        assert_eq!(
+            showcase.positions,
+            vec![
+                crate::Point::new(50, -76),
+                crate::Point::new(89, -76),
+                crate::Point::new(50, -40),
+                crate::Point::new(89, -40),
+            ]
+        );
+        for i in 0..2 {
+            assert!(
+                av.parts
+                    .iter()
+                    .any(|p| p.slot.starts_with(&format!("showcase{i}_"))),
+                "showcase {i} item missing"
+            );
+        }
     }
 
     #[test]
