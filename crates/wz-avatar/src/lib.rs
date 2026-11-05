@@ -21,7 +21,9 @@ pub use frame_layers::{
     avatar_z_priority, collect_frame_assembly, collect_frame_layers, decode_canvas_pixels,
     resolve_outlink, split_outlink, FrameAssembly, FrameLayer, ResolvedCanvas,
 };
-pub use gear_tooltip::{build_gear_tooltip, render_gear_tooltip, GearTooltip};
+pub use gear_tooltip::{
+    build_gear_tooltip, build_gear_tooltip_full, render_gear_tooltip, GearTooltip,
+};
 pub use loader::{
     item_id_to_slot, load_avatar_with_equipment, load_avatar_with_equipment_and_mix,
     load_body_action_frames, load_equipment_item, load_from_character_wz,

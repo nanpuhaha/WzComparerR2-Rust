@@ -17,6 +17,8 @@ Commands:
 - `mapnodes <wz> <image.img>` — recursively counts parsed image nodes.
 - `gear <wz> <image.img>` — emits CharaSim gear tooltip lines for the item
   (same `ItemStringHelper.GetGearPropString` labels as Rust).
+- `set <etc.wz> <setId>` — emits SetItem name/completeCount/Effect lines.
+- `potential <item.wz> <code> <level>` — emits ItemOption lines.
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -32,3 +34,13 @@ Verified gear output (Weapon_000.wz / 01302000.img):
 ```
 Rust `gear_tooltip::tests::weapon_tooltip_lines_and_bitmap` compares exactly
 against this output and renders the bitmap.
+
+Verified set/potential output:
+```
+dotnet run ... -- set ../../Data/Etc/Etc_000.wz -1
+→ {"name":"결속의 반지","complete":5,"effects":[{"count":1,"lines":["공격력 : +2",...]},...]}
+dotnet run ... -- potential ../../Data/Item/Item_000.wz 1 1
+→ ["STR : +1"]
+```
+Rust tests compare these fixtures exactly and append the same set/potential
+sections to the gear tooltip bitmap.

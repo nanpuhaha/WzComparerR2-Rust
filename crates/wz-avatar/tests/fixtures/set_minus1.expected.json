@@ -1,0 +1,56 @@
+{
+  "name": "\uACB0\uC18D\uC758 \uBC18\uC9C0",
+  "complete": 5,
+  "effects": [
+    {
+      "count": 1,
+      "lines": [
+        "\uACF5\uACA9\uB825 : \u002B2",
+        "\uB9C8\uB825 : \u002B2",
+        "\uC62C\uC2A4\uD0EF : \u002B5",
+        "\uCD5C\uB300 HP : \u002B500",
+        "\uCD5C\uB300 MP : \u002B500"
+      ]
+    },
+    {
+      "count": 2,
+      "lines": [
+        "\uACF5\uACA9\uB825 : \u002B2",
+        "\uB9C8\uB825 : \u002B2",
+        "\uC62C\uC2A4\uD0EF : \u002B5",
+        "\uCD5C\uB300 HP : \u002B500",
+        "\uCD5C\uB300 MP : \u002B500"
+      ]
+    },
+    {
+      "count": 3,
+      "lines": [
+        "\uACF5\uACA9\uB825 : \u002B2",
+        "\uB9C8\uB825 : \u002B2",
+        "\uC62C\uC2A4\uD0EF : \u002B5",
+        "\uCD5C\uB300 HP : \u002B500",
+        "\uCD5C\uB300 MP : \u002B500"
+      ]
+    },
+    {
+      "count": 4,
+      "lines": [
+        "\uACF5\uACA9\uB825 : \u002B2",
+        "\uB9C8\uB825 : \u002B2",
+        "\uC62C\uC2A4\uD0EF : \u002B5",
+        "\uCD5C\uB300 HP : \u002B500",
+        "\uCD5C\uB300 MP : \u002B500"
+      ]
+    },
+    {
+      "count": 5,
+      "lines": [
+        "\uACF5\uACA9\uB825 : \u002B2",
+        "\uB9C8\uB825 : \u002B2",
+        "\uC62C\uC2A4\uD0EF : \u002B5",
+        "\uCD5C\uB300 HP : \u002B500",
+        "\uCD5C\uB300 MP : \u002B500"
+      ]
+    }
+  ]
+}

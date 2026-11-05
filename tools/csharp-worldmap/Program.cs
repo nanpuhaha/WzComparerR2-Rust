@@ -250,12 +250,68 @@ class Program
         }
         Console.WriteLine(JsonSerializer.Serialize(lines, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static Wz_Node FindImage(Wz_Structure st, string name)
+    {
+        var stack = new Stack<Wz_Node>();
+        stack.Push(st.WzNode);
+        while (stack.Count > 0)
+        {
+            var n = stack.Pop();
+            var img = n.Value as Wz_Image;
+            if (img != null && img.Name == name && img.TryExtract()) return img.Node;
+            foreach (Wz_Node c in n.Nodes) stack.Push(c);
+        }
+        return null;
+    }
+    static void SetTooltip(string path, int setId)
+    {
+        var st = new Wz_Structure(); st.Load(path);
+        var root = FindImage(st, "SetItemInfo.img");
+        var set = root?.Nodes[setId.ToString()];
+        if (set == null) { Console.WriteLine("{\"error\":\"set not found\"}"); return; }
+        var effects = new List<object>();
+        var effectRoot = set.Nodes["Effect"];
+        if (effectRoot != null)
+            foreach (Wz_Node e in effectRoot.Nodes)
+            {
+                var lines = new List<string>();
+                foreach (Wz_Node stat in e.Nodes)
+                {
+                    if (stat.Value == null) continue;
+                    var line = PropLine(stat.Text, Convert.ToInt64(stat.Value));
+                    if (line != null) lines.Add(line);
+                }
+                effects.Add(new { count = Convert.ToInt32(e.Text), lines });
+            }
+        Console.WriteLine(JsonSerializer.Serialize(new {
+            name = set.Nodes["setItemName"]?.Value as string,
+            complete = Convert.ToInt32(set.Nodes["completeCount"]?.Value ?? 0),
+            effects
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    static void PotentialTooltip(string path, int code, int level)
+    {
+        var st = new Wz_Structure(); st.Load(path);
+        var root = FindImage(st, "ItemOption.img");
+        var option = root?.Nodes[$"{code:D6}"]?.Nodes["level"]?.Nodes[level.ToString()];
+        if (option == null) { Console.WriteLine("[]"); return; }
+        var lines = new List<string>();
+        foreach (Wz_Node stat in option.Nodes)
+        {
+            if (stat.Value == null) continue;
+            var line = PropLine(stat.Text, Convert.ToInt64(stat.Value));
+            if (line != null) lines.Add(line);
+        }
+        Console.WriteLine(JsonSerializer.Serialize(lines));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
         else if (args[0] == "mapnodes") MapNodes(args[1], args[2]);
         else if (args[0] == "nodepaths") NodePaths(args[1], args[2]);
         else if (args[0] == "gear") GearTooltip(args[1], args[2]);
+        else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
+        else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);
     }
 }

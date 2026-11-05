@@ -79,8 +79,24 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                                             .zip(tooltip_id)
                                             .and_then(|(slot, id)| {
                                                 data_root.as_deref().and_then(|root| {
-                                                    wz_avatar::build_gear_tooltip(
-                                                        root, slot, id, &title,
+                                                    let potentials: Vec<(i32, i32)> = state
+                                                        .chara_potentials_input
+                                                        .split(',')
+                                                        .filter_map(|part| {
+                                                            let (code, level) =
+                                                                part.trim().split_once(':')?;
+                                                            Some((
+                                                                code.trim().parse().ok()?,
+                                                                level.trim().parse().ok()?,
+                                                            ))
+                                                        })
+                                                        .collect();
+                                                    wz_avatar::build_gear_tooltip_full(
+                                                        root,
+                                                        slot,
+                                                        id,
+                                                        &title,
+                                                        &potentials,
                                                     )
                                                 })
                                             });
