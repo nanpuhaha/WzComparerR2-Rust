@@ -192,6 +192,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.add(egui::DragValue::new(&mut state.chair_level).range(1..=300));
         ui.label("Score:");
         ui.add(egui::DragValue::new(&mut state.chair_score).range(0..=99999));
+        ui.label("Pop:");
+        ui.add(egui::DragValue::new(&mut state.chair_pop).range(-99999..=99999));
+        ui.label("Time:");
+        ui.add(egui::DragValue::new(&mut state.chair_time).range(0..=10080));
     });
     ui.label("identity/score 체어 값은 장비 로드 시 적용됩니다");
     if !state.chair_custom_fields.is_empty() {

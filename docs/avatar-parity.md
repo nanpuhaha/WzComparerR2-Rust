@@ -102,6 +102,12 @@ remaining CharaSim gaps.
   - `scoreChair` → the `scoreEffect` group whose `[min,max]` contains the GUI
     `Score` input is selected and its effect frames play through the chair
     animation path.
+  - `popChair` / `popButtonChair` → the GUI `Pop` value is rendered with a small
+    built-in 5x7 bitmap font at `textPos`/`popPos` (`popMin`/`popMax` clamped).
+  - `timeChair` → the GUI `Time` minutes value is rendered as `HH:MM` at `textPos`
+    (clamped by `timeMax`).
+  - `Item/Install` category lookup accepts both 5-digit (`03018.img`) and 6-digit
+    (`030156.img`) image names.
   - Every other `customChair` type exposes its flattened `customChair fields`
     (type + nested key/value) in the GUI; remaining gameplay-only values (name,
     BGM, vote, time, pop counts, etc.) are not simulated.

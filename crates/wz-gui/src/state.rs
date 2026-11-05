@@ -122,6 +122,8 @@ pub struct AppState {
     /// identityChair 레벨 / scoreChair 점수 (장비 로드 시 적용).
     pub chair_level: i32,
     pub chair_score: i32,
+    pub chair_pop: i64,
+    pub chair_time: i64,
     pub camera: Camera2D,
     pub viewport_texture: Option<TextureHandle>,
     pub viewport_dirty: bool,
@@ -200,6 +202,8 @@ impl Default for AppState {
             chair_custom_fields: Vec::new(),
             chair_level: 200,
             chair_score: 0,
+            chair_pop: 0,
+            chair_time: 0,
             camera: Camera2D::new(512.0, 512.0),
             viewport_texture: None,
             viewport_dirty: true,

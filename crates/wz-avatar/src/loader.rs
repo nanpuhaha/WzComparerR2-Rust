@@ -161,6 +161,23 @@ pub struct PartChairAnimationInfo {
     pub pos_lv: Vec<crate::Point>,
 }
 
+/// `popChairInfo` / `popButtonChairInfo` — pop 수치 텍스트.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PopChairInfo {
+    pub text_pos: crate::Point,
+    pub text_z: i32,
+    pub min: Option<i64>,
+    pub max: Option<i64>,
+}
+
+/// `timeChairInfo` — 시간 텍스트.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TimeChairInfo {
+    pub text_pos: crate::Point,
+    pub text_z: i32,
+    pub max: Option<i64>,
+}
+
 /// `identityChairInfo` — 레벨/이름/직업/성별 레이어.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct IdentityChairInfo {
@@ -194,6 +211,8 @@ pub struct ChairUserData {
     pub job: Option<String>,
     pub gender: Option<String>,
     pub score: Option<i32>,
+    pub pop: Option<i64>,
+    pub time_minutes: Option<i64>,
 }
 
 /// `hashTagChairInfo/action/N` — 동작별 강제 포즈.
@@ -270,6 +289,8 @@ pub struct CustomChairInfo {
     pub part_animation: Option<PartChairAnimationInfo>,
     pub identity: Option<IdentityChairInfo>,
     pub score: Option<ScoreChairInfo>,
+    pub pop: Option<PopChairInfo>,
+    pub time: Option<TimeChairInfo>,
     /// 중첩 Property 를 `a/b/c` 경로의 문자열로 평탄화해 보존한다.
     pub extra: std::collections::BTreeMap<String, String>,
 }
@@ -396,6 +417,28 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
             part_z,
             pos_lv,
         })
+    });
+
+    let pop = child_node(node, "popChairInfo")
+        .map(|n| PopChairInfo {
+            text_pos: node_vec(n, "textPos").unwrap_or(crate::Point::ZERO),
+            text_z: node_int(n, "textZ").unwrap_or(0),
+            min: node_int(n, "popMin").map(i64::from),
+            max: node_int(n, "popMax").map(i64::from),
+        })
+        .or_else(|| {
+            child_node(node, "popButtonChairInfo").map(|n| PopChairInfo {
+                text_pos: node_vec(n, "popPos").unwrap_or(crate::Point::ZERO),
+                text_z: node_int(n, "z").unwrap_or(0),
+                min: node_int(n, "popMin").map(i64::from),
+                max: node_int(n, "popMax").map(i64::from),
+            })
+        });
+
+    let time = child_node(node, "timeChairInfo").map(|n| TimeChairInfo {
+        text_pos: node_vec(n, "textPos").unwrap_or(crate::Point::ZERO),
+        text_z: 0,
+        max: node_int(n, "timeMax").map(i64::from),
     });
 
     let identity = child_node(node, "identityChairInfo").map(|n| IdentityChairInfo {
@@ -542,6 +585,8 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
         part_animation,
         identity,
         score,
+        pop,
+        time,
         extra,
     }
 }
@@ -1046,7 +1091,13 @@ fn find_install_item(
     item_id: i32,
 ) -> Option<(WzArchive, ImageNode)> {
     let base = data_root.join("Item").join("Install").join(dir);
-    let category = format!("{:05}.img", item_id / 1000);
+    // 카테고리 이미지 이름은 5자리(`03018.img`) 또는 6자리(`030156.img`)다.
+    let categories = [
+        format!("{:05}.img", item_id / 1000),
+        format!("{:06}.img", item_id / 100),
+        format!("{:04}.img", item_id / 10000),
+    ];
+    let item_name = format!("{:08}", item_id);
     for entry in std::fs::read_dir(base).ok()?.flatten() {
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) != Some("wz") {
@@ -1058,21 +1109,23 @@ fn find_install_item(
         let Ok(tree) = archive.read_tree() else {
             continue;
         };
-        let Some(cat_entry) = tree
-            .root
-            .entries
-            .iter()
-            .find(|e| e.name.as_deref() == Some(category.as_str()))
-        else {
-            continue;
-        };
-        let Ok(node) = archive.parse_image_at(cat_entry.offset?) else {
-            continue;
-        };
-        let Some(item) = child_node(&node, &format!("{:08}", item_id)) else {
-            continue;
-        };
-        return Some((archive, item.clone()));
+        for category in &categories {
+            let Some(cat_entry) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(category.as_str()))
+            else {
+                continue;
+            };
+            let Ok(node) = archive.parse_image_at(cat_entry.offset?) else {
+                continue;
+            };
+            let Some(item) = child_node(&node, &item_name) else {
+                continue;
+            };
+            return Some((archive, item.clone()));
+        }
     }
     None
 }
@@ -1182,6 +1235,143 @@ pub fn load_chair_info(data_root: &std::path::Path, item_id: i32) -> Option<Chai
         chair.taming = load_taming_info(data_root, id);
     }
     Some(chair)
+}
+
+/// 5x7 비트맵 글리프 (숫자/`-`/`:`/공백).
+fn glyph_rows(ch: char) -> Option<[u8; 7]> {
+    let rows: [u8; 7] = match ch {
+        '0' => [
+            0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110,
+        ],
+        '1' => [
+            0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110,
+        ],
+        '2' => [
+            0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111,
+        ],
+        '3' => [
+            0b11110, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b11110,
+        ],
+        '4' => [
+            0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010,
+        ],
+        '5' => [
+            0b11111, 0b10000, 0b11110, 0b00001, 0b00001, 0b10001, 0b01110,
+        ],
+        '6' => [
+            0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110,
+        ],
+        '7' => [
+            0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000,
+        ],
+        '8' => [
+            0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110,
+        ],
+        '9' => [
+            0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100,
+        ],
+        '-' => [0, 0, 0, 0b11111, 0, 0, 0],
+        ':' => [0, 0b00100, 0b00100, 0, 0b00100, 0b00100, 0],
+        ' ' => [0; 7],
+        _ => return None,
+    };
+    Some(rows)
+}
+
+/// 숫자/기호 텍스트를 RGBA 로 그린다. 검은 그림자 + 흰 글자.
+fn draw_text_rgba(text: &str, scale: u32) -> Option<(u32, u32, Vec<u8>)> {
+    if text.is_empty() {
+        return None;
+    }
+    let scale = scale.max(1);
+    let cell_w = 5 * scale + scale;
+    let w = (text.chars().count() as u32) * cell_w + scale;
+    let h = 7 * scale + scale;
+    let mut out = vec![0u8; (w * h * 4) as usize];
+    let mut put = |x: i32, y: i32, color: [u8; 4]| {
+        if x < 0 || y < 0 || x >= w as i32 || y >= h as i32 {
+            return;
+        }
+        let off = ((y as u32 * w + x as u32) * 4) as usize;
+        out[off..off + 4].copy_from_slice(&color);
+    };
+    for (i, ch) in text.chars().enumerate() {
+        let Some(rows) = glyph_rows(ch) else {
+            continue;
+        };
+        let ox = i as i32 * cell_w as i32;
+        for (ry, row) in rows.iter().enumerate() {
+            for cx in 0..5 {
+                if row & (1 << (4 - cx)) == 0 {
+                    continue;
+                }
+                for sy in 0..scale as i32 {
+                    for sx in 0..scale as i32 {
+                        let x = ox + cx * scale as i32 + sx;
+                        let y = ry as i32 * scale as i32 + sy;
+                        put(x + scale as i32, y + scale as i32, [0, 0, 0, 255]);
+                        put(x, y, [255, 255, 255, 255]);
+                    }
+                }
+            }
+        }
+    }
+    Some((w, h, out))
+}
+
+fn text_chair_part(
+    slot: &str,
+    text: &str,
+    pos: crate::Point,
+    z: i32,
+    scale: u32,
+) -> Option<(Bone, Vec<AvatarPart>)> {
+    let (w, h, rgba) = draw_text_rgba(text, scale)?;
+    let mut skin = SkinLayer::new(slot);
+    skin.z = "text".into();
+    skin.z_index = z;
+    skin.origin = crate::Point::ZERO;
+    skin.width = w;
+    skin.height = h;
+    let mut root = Bone::new("@text");
+    root.append_bone(skin, slot, pos);
+    let part = AvatarPart {
+        slot: slot.to_string(),
+        width: w,
+        height: h,
+        rgba,
+        position: pos,
+        origin: crate::Point::ZERO,
+        z_index: z,
+        custom_origin_map: Default::default(),
+    };
+    Some((root, vec![part]))
+}
+
+fn load_pop_text(info: &PopChairInfo, pop: i64) -> Option<(Bone, Vec<AvatarPart>)> {
+    let mut value = pop;
+    if let Some(min) = info.min {
+        value = value.max(min);
+    }
+    if let Some(max) = info.max {
+        value = value.min(max);
+    }
+    text_chair_part(
+        "pop_text",
+        &value.to_string(),
+        info.text_pos,
+        info.text_z,
+        2,
+    )
+}
+
+fn load_time_text(info: &TimeChairInfo, minutes: i64) -> Option<(Bone, Vec<AvatarPart>)> {
+    let mut value = minutes.max(0);
+    if let Some(max) = info.max {
+        value = value.min(max);
+    }
+    let text = format!("{:02}:{:02}", value / 60, value % 60);
+    text_chair_part("time_text", &text, info.text_pos, info.text_z, 2)
 }
 
 /// 메타데이터 Canvas 또는 `_outlink` 대상 픽셀을 해석한다.
@@ -2541,6 +2731,22 @@ pub fn load_avatar_with_equipment_and_mix(
                                 }
                             }
                         }
+                        if let (Some(pop_info), Some(pop)) = (custom.pop.as_ref(), mix.chair.pop) {
+                            if let Some((text_root, text_parts)) = load_pop_text(pop_info, pop) {
+                                merge_bone_tree(&mut root, text_root);
+                                parts.extend(text_parts);
+                            }
+                        }
+                        if let (Some(time_info), Some(minutes)) =
+                            (custom.time.as_ref(), mix.chair.time_minutes)
+                        {
+                            if let Some((text_root, text_parts)) =
+                                load_time_text(time_info, minutes)
+                            {
+                                merge_bone_tree(&mut root, text_root);
+                                parts.extend(text_parts);
+                            }
+                        }
                     }
                 }
                 continue;
@@ -3421,6 +3627,58 @@ mod chair_custom_type_tests {
                 ..Default::default()
             },
         )
+    }
+
+    #[test]
+    fn pop_chair_renders_value_text() {
+        let Some(av) = load_chair_with(
+            3015603,
+            ChairUserData {
+                pop: Some(1234),
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        let info = chair_info(&av);
+        assert!(info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.pop.as_ref())
+            .is_some());
+        let part = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "pop_text")
+            .expect("pop_text part");
+        assert!(part.width > 1 && part.height > 1);
+        assert!(part.rgba.chunks(4).any(|p| p[3] != 0));
+    }
+
+    #[test]
+    fn time_chair_renders_time_text() {
+        let Some(av) = load_chair_with(
+            3018442,
+            ChairUserData {
+                time_minutes: Some(90),
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        let info = chair_info(&av);
+        assert!(info
+            .custom_chair
+            .as_ref()
+            .and_then(|c| c.time.as_ref())
+            .is_some());
+        let part = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "time_text")
+            .expect("time_text part");
+        assert!(part.width > 1 && part.height > 1);
+        assert!(part.rgba.chunks(4).any(|p| p[3] != 0));
     }
 
     #[test]

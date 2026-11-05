@@ -135,6 +135,8 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
             chair: wz_avatar::ChairUserData {
                 level: Some(state.chair_level),
                 score: Some(state.chair_score),
+                pop: Some(state.chair_pop),
+                time_minutes: Some(state.chair_time),
                 ..Default::default()
             },
         },
