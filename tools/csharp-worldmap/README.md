@@ -19,6 +19,8 @@ Commands:
   (same `ItemStringHelper.GetGearPropString` labels as Rust).
 - `set <etc.wz> <setId>` — emits SetItem name/completeCount/Effect lines.
 - `potential <item.wz> <code> <level>` — emits ItemOption lines.
+- `db2 <wz> <image.img>` — emits the DB2 node table rows
+  (`path/name/node_type/value/children`).
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -44,3 +46,10 @@ dotnet run ... -- potential ../../Data/Item/Item_000.wz 1 1
 ```
 Rust tests compare these fixtures exactly and append the same set/potential
 sections to the gear tooltip bitmap.
+
+Verified DB2 output:
+```
+dotnet run ... -- db2 ../../Data/Character/Weapon/Weapon_000.wz 01302000.img
+→ 270 rows
+```
+Rust `wz db2 ... --json --limit 1000` produces exactly the same 270 rows.

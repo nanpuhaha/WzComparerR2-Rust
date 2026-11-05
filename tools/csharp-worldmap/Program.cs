@@ -304,12 +304,59 @@ class Program
         }
         Console.WriteLine(JsonSerializer.Serialize(lines));
     }
+    static string Db2Value(object v)
+    {
+        if (v == null) return "";
+        if (v is Wz_Png p) return $"{p.Width}x{p.Height} format={(int)p.Format} len={p.DataLength}";
+        if (v is Wz_Vector vec) return $"{vec.X},{vec.Y}";
+        if (v is Wz_Sound snd) return $"sound len={snd.DataLength} duration={snd.Ms}";
+        if (v is Wz_Uol uol) return uol.Uol;
+        return Convert.ToString(v);
+    }
+    static string Db2Type(object v)
+    {
+        if (v == null) return "Directory";
+        return v switch
+        {
+            string => "String",
+            int => "Int",
+            short => "Short",
+            long => "Long",
+            uint => "Uint",
+            float => "Float",
+            double => "Double",
+            bool => "Bool",
+            Wz_Png => "Canvas",
+            Wz_Vector => "Vector",
+            Wz_Uol => "UOL",
+            Wz_Sound => "Sound",
+            _ => v.GetType().Name,
+        };
+    }
+    static void DumpDb2(Wz_Node n, string parent, List<object> rows)
+    {
+        var path = parent == "" ? n.Text : parent + "/" + n.Text;
+        rows.Add(new { path, name = n.Text, node_type = Db2Type(n.Value), value = Db2Value(n.Value), children = n.Nodes.Count });
+        foreach (Wz_Node c in n.Nodes) DumpDb2(c, path, rows);
+    }
+    static void Db2(string path, string imageName)
+    {
+        var st = new Wz_Structure(); st.Load(path);
+        var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == imageName);
+        var img = imgNode?.Value as Wz_Image;
+        if (img == null) { Console.WriteLine("{\"error\":\"image not found\"}"); return; }
+        img.TryExtract();
+        var rows = new List<object>();
+        DumpDb2(img.Node, "", rows);
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
         else if (args[0] == "mapnodes") MapNodes(args[1], args[2]);
         else if (args[0] == "nodepaths") NodePaths(args[1], args[2]);
         else if (args[0] == "gear") GearTooltip(args[1], args[2]);
+        else if (args[0] == "db2") Db2(args[1], args[2]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

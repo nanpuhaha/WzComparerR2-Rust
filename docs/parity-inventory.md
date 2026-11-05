@@ -116,6 +116,7 @@ WorldMap 실제 클라이언트 데이터는 QuestLimit/Fog 노드가 없어, �
 | `Data/Map/WorldMap/WorldMap_000.wz` | `{"images":85,"quest":0,"fog":0}` | `real_worldmap_has_no_quest_or_fog_nodes` 통과 (QuestLimit/Fog 0) |
 | `Map0_000.wz / 000010000.img` | 4721 nodes | oracle `node_count=4722` = 4721 + outer Directory wrapper; per-node path diff 일치 |
 | `Weapon_000.wz / 01302000.img` gear tooltip | `["착용 레벨 : 0","공격력 : +15","업그레이드 가능 횟수 : 8"]` | Rust `gear_tooltip` 동일 + 비트맵 |
+| `Weapon_000.wz / 01302000.img` DB2 | 270 rows | Rust `wz db2` 270 rows path/type/value/children 완전 일치 |
 | `Etc_000.wz` set -1 | `{"name":"결속의 반지","complete":5,"effects":[...]}` | Rust set effects 동일 |
 | `Item_000.wz` potential 1/1 | `["STR : +1"]` | Rust potential lines 동일 |
 
@@ -155,3 +156,12 @@ dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- mapnodes ../../Da
 - C# WzLib 실행 하네스로 WorldMap fixture/실데이터/맵 노드 수 비교.
 - `000010000.img` 4721 vs 4722 차이는 Rust oracle의 outer Directory wrapper
   1개이며, per-node path multiset는 wrapper 제거 후 완전히 일치.
+
+## DB2 data viewer
+
+- `wz-db::db2` flattens a WZ image into `path/name/node_type/value/children`
+  rows; Canvas subproperties (`origin`, `_outlink`, `map/...`) are included.
+- `wz db2 <wz> <image> [--filter] [--json] [--limit]` prints the table.
+- GUI `Catalog` panel loads the selected image into a filterable DB2 grid.
+- C# WzLib harness `db2` mode prints the same rows. Real test:
+  `Weapon_000.wz/01302000.img` → C# 270 == Rust 270 rows, exact match.

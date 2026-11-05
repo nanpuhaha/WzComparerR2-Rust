@@ -14,7 +14,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | WzComparerR2.MapRender | 124 | 29,291 | `wz-db::map`, `wz-gui`, `wz-render` | 🟡 |
 | WzComparerR2.Avatar | 13 | 7,055 | `wz-avatar` | ✅ |
 | WzComparerR2 (main) | 150 | 61,035 | `wz-cli`, `wz-gui` | 🟡 |
-| WzComparerR2.DB2 | 12 | 6,292 | — | ⬜ |
+| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, GUI DB2 table | 🟡 |
 | CharaSimResource | 2 | 7,490 | — (WinForms 리소스) | ⬜ |
 | WzComparerR2.Network | 28 | 1,954 | — | ⬜ |
 | WzComparerR2.LuaConsole | 10 | 1,451 | — | ⬜ |
@@ -76,7 +76,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 2. `CharaSimControl` (21,299 LOC) — 비트맵 툴팁 일부만.
 3. `WzComparerR2.Common/CharaSim` (10,121 LOC) — Gear/Set/Potential/MaxStar만.
 4. `MapRender/UI` (8,753 LOC) — Minimap/WorldMap 일부.
-5. `WzComparerR2.DB2` (6,292 LOC) — WZ 데이터 그리드/아이콘/이미지 뷰어 미구현.
+5. `WzComparerR2.DB2` (6,292 LOC) — generic node table viewer 구현
+   (`wz db2`, GUI Catalog DB2). 아이콘/이미지 뷰어와 39개 전용 그리드는 미구현.
 6. `WzComparerR2.Common/Controls` (2,138 LOC), `OpenAPI` (2,086 LOC) — 미구현.
 7. `LuaConsole` (1,451), `Network` (1,954), `PluginBase` (693) — 미구현.
 
@@ -89,6 +90,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   - 실제 WorldMap 85 images / QuestLimit 0 / Fog 0
   - `000010000.img` C# 4721 nodes, Rust oracle 4722 = outer Directory wrapper.
     per-node path multiset는 wrapper 제거 후 4721 = 4721로 일치.
+- DB2 `01302000.img`: C# WzLib 270 rows == Rust `wz db2` 270 rows
+  (path/type/value/children 완전 일치).
 
 ## 남은 작업
 

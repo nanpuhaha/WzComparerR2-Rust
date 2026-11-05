@@ -2,6 +2,8 @@ mod avatar;
 pub use avatar::*;
 mod corpus;
 pub use corpus::*;
+mod db2;
+pub use db2::*;
 mod diff;
 pub use diff::*;
 mod image;

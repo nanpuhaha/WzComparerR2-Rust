@@ -1,0 +1,1892 @@
+[
+  {
+    "path": "01302000.img",
+    "name": "01302000.img",
+    "node_type": "Directory",
+    "value": "",
+    "children": 16
+  },
+  {
+    "path": "01302000.img/info",
+    "name": "info",
+    "node_type": "Directory",
+    "value": "",
+    "children": 16
+  },
+  {
+    "path": "01302000.img/info/icon",
+    "name": "icon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 2
+  },
+  {
+    "path": "01302000.img/info/icon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "0,30",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/icon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/info/icon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/iconRaw",
+    "name": "iconRaw",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 2
+  },
+  {
+    "path": "01302000.img/info/iconRaw/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "0,30",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/iconRaw/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/info/iconRaw",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/islot",
+    "name": "islot",
+    "node_type": "String",
+    "value": "Wp",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/vslot",
+    "name": "vslot",
+    "node_type": "String",
+    "value": "Wp",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/walk",
+    "name": "walk",
+    "node_type": "Int",
+    "value": "1",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/stand",
+    "name": "stand",
+    "node_type": "Int",
+    "value": "1",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/attack",
+    "name": "attack",
+    "node_type": "Short",
+    "value": "1",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/afterImage",
+    "name": "afterImage",
+    "node_type": "String",
+    "value": "swordOL",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/sfx",
+    "name": "sfx",
+    "node_type": "String",
+    "value": "swordL",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/reqJob",
+    "name": "reqJob",
+    "node_type": "Int",
+    "value": "0",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/reqLevel",
+    "name": "reqLevel",
+    "node_type": "Int",
+    "value": "0",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/incPAD",
+    "name": "incPAD",
+    "node_type": "Int",
+    "value": "15",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/tuc",
+    "name": "tuc",
+    "node_type": "Int",
+    "value": "8",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/price",
+    "name": "price",
+    "node_type": "Int",
+    "value": "0",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/attackSpeed",
+    "name": "attackSpeed",
+    "node_type": "Int",
+    "value": "4",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/info/cash",
+    "name": "cash",
+    "node_type": "Int",
+    "value": "0",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1",
+    "name": "walk1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/walk1/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/walk1/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/walk1/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "25,7",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/walk1/0/weapon/map/hand",
+    "name": "hand",
+    "node_type": "Vector",
+    "value": "8,-2",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/walk1/1/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/walk1/1/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "25,7",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/1/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/walk1/1/weapon/map/hand",
+    "name": "hand",
+    "node_type": "Vector",
+    "value": "6,6",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/1/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/1/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/2",
+    "name": "2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/walk1/2/weapon",
+    "name": "weapon",
+    "node_type": "UOL",
+    "value": "../0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/3",
+    "name": "3",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/walk1/3/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/walk1/3/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "25,7",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/3/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/walk1/3/weapon/map/hand",
+    "name": "hand",
+    "node_type": "Vector",
+    "value": "8,-1",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/3/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/walk1/3/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/3/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stand1",
+    "name": "stand1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 3
+  },
+  {
+    "path": "01302000.img/stand1/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stand1/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/stand1/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "25,7",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stand1/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stand1/0/weapon/map/hand",
+    "name": "hand",
+    "node_type": "Vector",
+    "value": "6,-5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stand1/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stand1/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/3/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stand1/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stand1/1/weapon",
+    "name": "weapon",
+    "node_type": "UOL",
+    "value": "../0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stand1/2",
+    "name": "2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stand1/2/weapon",
+    "name": "weapon",
+    "node_type": "UOL",
+    "value": "../0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert",
+    "name": "alert",
+    "node_type": "Directory",
+    "value": "",
+    "children": 3
+  },
+  {
+    "path": "01302000.img/alert/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/alert/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/alert/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "23,10",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/alert/0/weapon/map/hand",
+    "name": "hand",
+    "node_type": "Vector",
+    "value": "11,1",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponOverHand",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/alert/1/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/alert/1/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "23,10",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/1/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/alert/1/weapon/map/hand",
+    "name": "hand",
+    "node_type": "Vector",
+    "value": "10,0",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/1/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponOverHand",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/1/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/2",
+    "name": "2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/alert/2/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/alert/2/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "23,10",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/2/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/alert/2/weapon/map/hand",
+    "name": "hand",
+    "node_type": "Vector",
+    "value": "11,-1",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/2/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponOverHand",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/alert/2/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1",
+    "name": "swingO1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 3
+  },
+  {
+    "path": "01302000.img/swingO1/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO1/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingO1/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "11,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO1/0/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "-4,-1",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponBelowBody",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO1/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO1/1/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingO1/1/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "11,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/1/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO1/1/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "4,-2",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/1/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponBelowBody",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/1/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO1/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/2",
+    "name": "2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO1/2/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingO1/2/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "11,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/2/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO1/2/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "-23,41",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/2/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO1/2/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO1/2/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2",
+    "name": "swingO2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 3
+  },
+  {
+    "path": "01302000.img/swingO2/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO2/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingO2/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO2/0/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "11,34",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponBelowBody",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO2/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO2/1/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingO2/1/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/1/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO2/1/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "14,35",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/1/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponBelowBody",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/1/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO2/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/2",
+    "name": "2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO2/2/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingO2/2/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/2/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO2/2/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "-26,1",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/2/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO2/2/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO2/2/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3",
+    "name": "swingO3",
+    "node_type": "Directory",
+    "value": "",
+    "children": 3
+  },
+  {
+    "path": "01302000.img/swingO3/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO3/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingO3/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO3/0/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "-26,33",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO1/2/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO3/1/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingO3/1/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/1/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO3/1/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "39,2",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/1/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponOverBody",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/1/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO3/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/2",
+    "name": "2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO3/2/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingO3/2/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/2/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingO3/2/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "-5,1",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/2/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponBelowBody",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingO3/2/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO3/2/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF",
+    "name": "swingOF",
+    "node_type": "Directory",
+    "value": "",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingOF/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingOF/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingOF/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingOF/0/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "-27,10",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingOF/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingOF/1/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingOF/1/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/1/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingOF/1/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "0,20",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/1/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "backWeapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/1/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingOF/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/2",
+    "name": "2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingOF/2/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingOF/2/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/2/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingOF/2/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "1,33",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/2/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponBelowBody",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/2/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingOF/2/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/3",
+    "name": "3",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingOF/3/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/swingOF/3/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/3/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/swingOF/3/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "-23,20",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/3/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponBelowBody",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/swingOF/3/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingOF/3/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO1",
+    "name": "stabO1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 2
+  },
+  {
+    "path": "01302000.img/stabO1/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabO1/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/stabO1/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO1/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabO1/0/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "7,-4",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO1/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO1/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO1/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabO1/1/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/stabO1/1/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO1/1/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabO1/1/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "46,6",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO1/1/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO1/1/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/stabO1/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO2",
+    "name": "stabO2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 2
+  },
+  {
+    "path": "01302000.img/stabO2/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabO2/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/stabO2/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO2/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabO2/0/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "10,11",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO2/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponBelowArm",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO2/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/stabO1/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO2/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabO2/1/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/stabO2/1/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO2/1/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabO2/1/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "44,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO2/1/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabO2/1/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF",
+    "name": "stabOF",
+    "node_type": "Directory",
+    "value": "",
+    "children": 3
+  },
+  {
+    "path": "01302000.img/stabOF/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabOF/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/stabOF/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabOF/0/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "15,0",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabOF/1/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/stabOF/1/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/1/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabOF/1/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "11,-3",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/1/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/1/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/2",
+    "name": "2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabOF/2/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/stabOF/2/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "12,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/2/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/stabOF/2/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "50,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/2/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/stabOF/2/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/proneStab",
+    "name": "proneStab",
+    "node_type": "Directory",
+    "value": "",
+    "children": 2
+  },
+  {
+    "path": "01302000.img/proneStab/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/proneStab/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/proneStab/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "5,3",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/proneStab/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/proneStab/0/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "39,2",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/proneStab/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponBelowArm",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/proneStab/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/proneStab/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/proneStab/1/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/proneStab/1/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "5,3",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/proneStab/1/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/proneStab/1/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "54,2",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/proneStab/1/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponBelowArm",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/proneStab/1/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/walk1/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/prone",
+    "name": "prone",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/prone/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/prone/0/weapon",
+    "name": "weapon",
+    "node_type": "UOL",
+    "value": "../../proneStab/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/heal",
+    "name": "heal",
+    "node_type": "Directory",
+    "value": "",
+    "children": 3
+  },
+  {
+    "path": "01302000.img/heal/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/heal/0/weapon",
+    "name": "weapon",
+    "node_type": "UOL",
+    "value": "../../alert/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/heal/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/heal/1/weapon",
+    "name": "weapon",
+    "node_type": "UOL",
+    "value": "../../swingO2/1/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/heal/2",
+    "name": "2",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/heal/2/weapon",
+    "name": "weapon",
+    "node_type": "UOL",
+    "value": "../../swingO2/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/fly",
+    "name": "fly",
+    "node_type": "Directory",
+    "value": "",
+    "children": 2
+  },
+  {
+    "path": "01302000.img/fly/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/fly/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/fly/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "13,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/fly/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/fly/0/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "-10,28",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/fly/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponOverArm",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/fly/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO2/0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/fly/1",
+    "name": "1",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/fly/1/weapon",
+    "name": "weapon",
+    "node_type": "UOL",
+    "value": "../0/weapon",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/jump",
+    "name": "jump",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/jump/0",
+    "name": "0",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/jump/0/weapon",
+    "name": "weapon",
+    "node_type": "Canvas",
+    "value": "1x1 format=1 len=11",
+    "children": 4
+  },
+  {
+    "path": "01302000.img/jump/0/weapon/origin",
+    "name": "origin",
+    "node_type": "Vector",
+    "value": "13,5",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/jump/0/weapon/map",
+    "name": "map",
+    "node_type": "Directory",
+    "value": "",
+    "children": 1
+  },
+  {
+    "path": "01302000.img/jump/0/weapon/map/navel",
+    "name": "navel",
+    "node_type": "Vector",
+    "value": "-11,27",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/jump/0/weapon/z",
+    "name": "z",
+    "node_type": "String",
+    "value": "weaponOverArm",
+    "children": 0
+  },
+  {
+    "path": "01302000.img/jump/0/weapon/_outlink",
+    "name": "_outlink",
+    "node_type": "String",
+    "value": "Character/Weapon/_Canvas/01302000.img/swingO2/0/weapon",
+    "children": 0
+  }
+]

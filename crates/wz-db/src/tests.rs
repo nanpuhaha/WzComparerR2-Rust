@@ -1821,3 +1821,38 @@ fn map_scene_matches_csharp_expected_fixture() {
     .unwrap();
     assert_eq!(actual, expected);
 }
+
+#[test]
+fn db2_rows_match_csharp_weapon_dump() {
+    use wz_core::WzArchive;
+
+    let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+        return;
+    };
+    let path = root.join("Character/Weapon/Weapon_000.wz");
+    if !path.exists() {
+        return;
+    }
+    let archive = WzArchive::open(&path).unwrap();
+    let tree = archive.read_tree().unwrap();
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some("01302000.img"))
+        .unwrap();
+    let mut node = archive.parse_image_at(entry.offset.unwrap()).unwrap();
+    node.name = std::sync::Arc::from("01302000.img");
+    let rows = crate::db2_image_rows(&node);
+    let actual = serde_json::to_value(&rows).unwrap();
+    let expected: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("tests/fixtures/db2_01302000.expected.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(actual, expected);
+    assert_eq!(rows.len(), 270);
+}

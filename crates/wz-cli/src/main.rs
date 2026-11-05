@@ -199,6 +199,23 @@ enum Command {
         play: bool,
     },
 
+    /// DB2 스타일 WZ 이미지 데이터 테이블
+    Db2 {
+        /// WZ 파일
+        wz: PathBuf,
+        /// 이미지 이름 (예: 01302000.img)
+        image: String,
+        /// path/value 부분 문자열 필터
+        #[arg(long, default_value = "")]
+        filter: String,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+        /// 최대 행
+        #[arg(long, default_value_t = 200)]
+        limit: usize,
+    },
+
     /// MapleStory `.patch` 레코드 확인/적용
     Patch {
         /// .patch 파일 경로
@@ -438,6 +455,13 @@ fn main() {
             out,
             play,
         } => cmd_sound(&wz, &path, out.as_deref(), play),
+        Command::Db2 {
+            wz,
+            image,
+            filter,
+            json,
+            limit,
+        } => cmd_db2(&wz, &image, &filter, json, limit),
         Command::Patch {
             patch,
             old,
