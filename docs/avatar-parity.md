@@ -114,6 +114,10 @@ remaining CharaSim gaps.
     IDs supplied by the GUI (`Showcase items`) are loaded from `Character/<slot>`
     and placed at those positions. `item_id_to_slot` now handles both 7-digit
     (`1000000`) and 8-digit equipment IDs.
+  - Text: `Etc/*.wz::Font.img/NotoSansMP-Medium` (TTF raw data) is loaded with
+    `fontdue` and rasterized for `identityChair` name/job/gender and
+    `popButtonChair` name/guild. The GUI supplies the strings. The font is read
+    from the user's Data directory, not bundled.
   - `Item/Install` category lookup accepts both 5-digit (`03018.img`) and 6-digit
     (`030156.img`) image names.
   - Every other `customChair` type exposes its flattened `customChair fields`

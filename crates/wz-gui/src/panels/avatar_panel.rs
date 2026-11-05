@@ -202,6 +202,18 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.text_edit_singleline(&mut state.chair_showcase_input);
     });
     ui.label("showcaseChair: 쉼표로 구분한 장비 ID (최대 4개)");
+    ui.horizontal(|ui| {
+        ui.label("Name:");
+        ui.text_edit_singleline(&mut state.chair_name);
+        ui.label("Job:");
+        ui.text_edit_singleline(&mut state.chair_job);
+    });
+    ui.horizontal(|ui| {
+        ui.label("Gender:");
+        ui.text_edit_singleline(&mut state.chair_gender);
+        ui.label("Guild:");
+        ui.text_edit_singleline(&mut state.chair_guild);
+    });
     ui.label("identity/score 체어 값은 장비 로드 시 적용됩니다");
     if !state.chair_custom_fields.is_empty() {
         egui::CollapsingHeader::new("customChair fields").show(ui, |ui| {

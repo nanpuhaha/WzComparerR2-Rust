@@ -62,6 +62,7 @@ rayon = "1.10"
 # KMST1206 hashVersion 은 HMAC-SHA256 기반이다 (WzVersionHasher.cs:61-89).
 hmac = "0.12"
 sha2 = "0.10"
+fontdue = "0.9"
 aes = "0.8"
 chacha20 = "0.9"
 flate2 = "1.0"

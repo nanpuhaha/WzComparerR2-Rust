@@ -142,7 +142,10 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
                     .split(',')
                     .filter_map(|v| v.trim().parse::<i32>().ok())
                     .collect(),
-                ..Default::default()
+                name: (!state.chair_name.is_empty()).then(|| state.chair_name.clone()),
+                job: (!state.chair_job.is_empty()).then(|| state.chair_job.clone()),
+                gender: (!state.chair_gender.is_empty()).then(|| state.chair_gender.clone()),
+                guild: (!state.chair_guild.is_empty()).then(|| state.chair_guild.clone()),
             },
         },
     ) {

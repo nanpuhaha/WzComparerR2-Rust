@@ -8,6 +8,11 @@
 [graph]
 all-features = true
 
+[advisories]
+# ttf-parser 는 unmaintained(RUSTSEC-2026-0192) 이지만 취약점은 아니다.
+# fontdue 의 전이 의존성이며, fontdue 가 파서를 교체하면 제거한다.
+ignore = ["RUSTSEC-2026-0192"]
+
 [bans]
 # 여러 버전이 공존하면 WZ 포맷 버전에 따라 동작이 갈릴 수 있다.
 multiple-versions = "warn"

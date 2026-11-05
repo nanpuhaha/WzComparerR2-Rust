@@ -196,6 +196,8 @@ pub struct PopChairInfo {
     pub text_z: i32,
     pub min: Option<i64>,
     pub max: Option<i64>,
+    pub name_pos: Option<crate::Point>,
+    pub guild_pos: Option<crate::Point>,
 }
 
 /// `timeChairInfo` — 시간 텍스트.
@@ -238,6 +240,7 @@ pub struct ChairUserData {
     pub name: Option<String>,
     pub job: Option<String>,
     pub gender: Option<String>,
+    pub guild: Option<String>,
     pub score: Option<i32>,
     pub pop: Option<i64>,
     pub time_minutes: Option<i64>,
@@ -496,6 +499,8 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
             text_z: node_int(n, "textZ").unwrap_or(0),
             min: node_int(n, "popMin").map(i64::from),
             max: node_int(n, "popMax").map(i64::from),
+            name_pos: None,
+            guild_pos: None,
         })
         .or_else(|| {
             child_node(node, "popButtonChairInfo").map(|n| PopChairInfo {
@@ -503,6 +508,8 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
                 text_z: node_int(n, "z").unwrap_or(0),
                 min: node_int(n, "popMin").map(i64::from),
                 max: node_int(n, "popMax").map(i64::from),
+                name_pos: node_vec(n, "namePos"),
+                guild_pos: node_vec(n, "guildPos"),
             })
         });
 
@@ -1309,6 +1316,137 @@ pub fn load_chair_info(data_root: &std::path::Path, item_id: i32) -> Option<Chai
         chair.taming = load_taming_info(data_root, id);
     }
     Some(chair)
+}
+
+fn load_game_font_bytes(data_root: &std::path::Path) -> Option<Arc<fontdue::Font>> {
+    let etc = data_root.join("Etc");
+    for entry in std::fs::read_dir(etc).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(font_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("Font.img"))
+        else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(font_entry.offset?) else {
+            continue;
+        };
+        let Some(font_node) = child_node(&node, "NotoSansMP-Medium") else {
+            continue;
+        };
+        let Some(wz_core::image::ImageValue::RawData(raw)) = &font_node.value else {
+            continue;
+        };
+        let mut bytes = vec![0u8; raw.len as usize];
+        archive.source().read_at(raw.offset, &mut bytes).ok()?;
+        let font = fontdue::Font::from_bytes(bytes, fontdue::FontSettings::default()).ok()?;
+        return Some(Arc::new(font));
+    }
+    None
+}
+
+/// `Etc/*.wz` 의 `Font.img/NotoSansMP-Medium` 을 data_root 별로 캐시한다.
+fn game_font(data_root: &std::path::Path) -> Option<Arc<fontdue::Font>> {
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
+    static CACHE: OnceLock<Mutex<HashMap<std::path::PathBuf, Arc<fontdue::Font>>>> =
+        OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Some(font) = cache.lock().ok()?.get(data_root).cloned() {
+        return Some(font);
+    }
+    let font = load_game_font_bytes(data_root)?;
+    cache
+        .lock()
+        .ok()?
+        .insert(data_root.to_path_buf(), font.clone());
+    Some(font)
+}
+
+/// 게임 TTF 로 문자열을 RGBA 에 그린다.
+fn draw_game_text(font: &fontdue::Font, text: &str, px: f32) -> Option<(u32, u32, Vec<u8>)> {
+    if text.is_empty() {
+        return None;
+    }
+    let mut glyphs = Vec::new();
+    let mut width = 0.0f32;
+    let mut min_y = 0i32;
+    let mut max_y = 0i32;
+    for ch in text.chars() {
+        let metrics = font.metrics(ch, px);
+        let (m, bitmap) = font.rasterize(ch, px);
+        width += metrics.advance_width;
+        min_y = min_y.min(m.ymin);
+        max_y = max_y.max(m.ymin + m.height as i32);
+        glyphs.push((m, bitmap));
+    }
+    let padding = 2i32;
+    let w = width.ceil().max(1.0) as u32 + (padding * 2) as u32;
+    let h = (max_y - min_y).max(1) as u32 + (padding * 2) as u32;
+    let mut out = vec![0u8; (w * h * 4) as usize];
+    let baseline = padding - min_y;
+    let mut cursor = padding as f32;
+    for (m, bitmap) in glyphs {
+        let x0 = cursor + m.xmin as f32;
+        let y0 = baseline - m.ymin - m.height as i32;
+        for gy in 0..m.height {
+            for gx in 0..m.width {
+                let alpha = bitmap[gy * m.width + gx];
+                if alpha == 0 {
+                    continue;
+                }
+                let x = x0 as i32 + gx as i32;
+                let y = y0 + gy as i32;
+                if x < 0 || y < 0 || x >= w as i32 || y >= h as i32 {
+                    continue;
+                }
+                let off = ((y as u32 * w + x as u32) * 4) as usize;
+                out[off..off + 4].copy_from_slice(&[255, 255, 255, alpha]);
+            }
+        }
+        cursor += m.advance_width;
+    }
+    Some((w, h, out))
+}
+
+fn font_text_chair_part(
+    font: &fontdue::Font,
+    slot: &str,
+    text: &str,
+    pos: crate::Point,
+    z: i32,
+) -> Option<(Bone, Vec<AvatarPart>)> {
+    let (w, h, rgba) = draw_game_text(font, text, 12.0)?;
+    let mut skin = SkinLayer::new(slot);
+    skin.z = "text".into();
+    skin.z_index = z;
+    skin.origin = crate::Point::ZERO;
+    skin.width = w;
+    skin.height = h;
+    let mut root = Bone::new("@text");
+    root.append_bone(skin, slot, pos);
+    let part = AvatarPart {
+        slot: slot.to_string(),
+        width: w,
+        height: h,
+        rgba,
+        position: pos,
+        origin: crate::Point::ZERO,
+        z_index: z,
+        custom_origin_map: Default::default(),
+    };
+    Some((root, vec![part]))
 }
 
 /// 5x7 비트맵 글리프 (숫자/`-`/`:`/공백).
@@ -2906,6 +3044,58 @@ pub fn load_avatar_with_equipment_and_mix(
                                 parts.extend(item_parts);
                             }
                         }
+                        if let Some(font) = game_font(data_root) {
+                            if let Some(identity) = &custom.identity {
+                                for (slot, text, pos) in [
+                                    (
+                                        "identity_name",
+                                        mix.chair.name.as_deref(),
+                                        identity.name_pos,
+                                    ),
+                                    ("identity_job", mix.chair.job.as_deref(), identity.job_pos),
+                                    (
+                                        "identity_gender",
+                                        mix.chair.gender.as_deref(),
+                                        identity.gender_pos,
+                                    ),
+                                ] {
+                                    if let Some(text) = text {
+                                        if let Some((text_root, text_parts)) =
+                                            font_text_chair_part(&font, slot, text, pos, 1)
+                                        {
+                                            merge_bone_tree(&mut root, text_root);
+                                            parts.extend(text_parts);
+                                        }
+                                    }
+                                }
+                            }
+                            if let Some(pop) = &custom.pop {
+                                if let (Some(name), Some(pos)) =
+                                    (mix.chair.name.as_deref(), pop.name_pos)
+                                {
+                                    if let Some((text_root, text_parts)) = font_text_chair_part(
+                                        &font, "pop_name", name, pos, pop.text_z,
+                                    ) {
+                                        merge_bone_tree(&mut root, text_root);
+                                        parts.extend(text_parts);
+                                    }
+                                }
+                                if let (Some(guild), Some(pos)) =
+                                    (mix.chair.guild.as_deref(), pop.guild_pos)
+                                {
+                                    if let Some((text_root, text_parts)) = font_text_chair_part(
+                                        &font,
+                                        "pop_guild",
+                                        guild,
+                                        pos,
+                                        pop.text_z,
+                                    ) {
+                                        merge_bone_tree(&mut root, text_root);
+                                        parts.extend(text_parts);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 continue;
@@ -3786,6 +3976,66 @@ mod chair_custom_type_tests {
                 ..Default::default()
             },
         )
+    }
+
+    #[test]
+    fn game_font_renders_korean_text() {
+        let Some(root) = data_root() else { return };
+        let Some(font) = game_font(&root) else {
+            return;
+        };
+        let (w, h, rgba) = draw_game_text(&font, "테스트", 12.0).expect("text bitmap");
+        assert!(w > 1 && h > 1);
+        assert!(rgba.chunks(4).any(|p| p[3] != 0));
+    }
+
+    #[test]
+    fn identity_chair_renders_name_job_gender() {
+        let Some(av) = load_chair_with(
+            3018108,
+            ChairUserData {
+                level: Some(200),
+                name: Some("테스트".into()),
+                job: Some("전사".into()),
+                gender: Some("남".into()),
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        for slot in ["identity_name", "identity_job", "identity_gender"] {
+            let part = av
+                .parts
+                .iter()
+                .find(|p| p.slot == slot)
+                .unwrap_or_else(|| panic!("{slot} missing"));
+            assert!(part.width > 1 && part.height > 1);
+            assert!(part.rgba.chunks(4).any(|p| p[3] != 0));
+        }
+    }
+
+    #[test]
+    fn pop_button_chair_renders_name_and_guild() {
+        let Some(av) = load_chair_with(
+            3015976,
+            ChairUserData {
+                pop: Some(42),
+                name: Some("용사".into()),
+                guild: Some("길드".into()),
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        for slot in ["pop_text", "pop_name", "pop_guild"] {
+            let part = av
+                .parts
+                .iter()
+                .find(|p| p.slot == slot)
+                .unwrap_or_else(|| panic!("{slot} missing"));
+            assert!(part.width > 1 && part.height > 1);
+            assert!(part.rgba.chunks(4).any(|p| p[3] != 0));
+        }
     }
 
     #[test]
