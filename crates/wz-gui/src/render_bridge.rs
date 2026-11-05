@@ -15,6 +15,31 @@ fn argb_components(packed: u32) -> [f32; 4] {
     [r, g, b, a]
 }
 
+fn portal_key(view: usize, frame: usize) -> GpuKey {
+    GpuKey(40_000 + view as u32 * 64 + frame as u32)
+}
+
+fn draw_portals(batch: &mut SpriteBatch, state: &AppState) {
+    for (i, portal) in state.map_portals.iter().enumerate() {
+        if portal.portal_type < 0 {
+            continue;
+        }
+        let Some(frame) = portal.frame_at(state.map_portal_time) else {
+            continue;
+        };
+        let frame_index = portal.animation.frame_at(state.map_portal_time);
+        let x = (portal.x - frame.origin.0) as f32;
+        let y = (portal.y - frame.origin.1) as f32;
+        batch.push_quad(
+            portal_key(i, frame_index),
+            [x, y, frame.width as f32, frame.height as f32],
+            5.0 + portal.id as f32 * 0.000001,
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 1.0],
+        );
+    }
+}
+
 fn life_key(view: usize, frame: usize) -> GpuKey {
     GpuKey(30_000 + view as u32 * 64 + frame as u32)
 }
@@ -151,6 +176,19 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             state.map_life_time += (now - state.map_life_last).clamp(0.0, 0.1);
         }
         state.map_life_last = now;
+        state.viewport_dirty = true;
+        ui.ctx().request_repaint();
+    }
+    let portal_animating = state
+        .map_portals
+        .iter()
+        .any(|p| p.animation.frames.len() > 1);
+    if portal_animating {
+        let now = ui.input(|i| i.time);
+        if state.map_portal_last > 0.0 {
+            state.map_portal_time += (now - state.map_portal_last).clamp(0.0, 0.1);
+        }
+        state.map_portal_last = now;
         state.viewport_dirty = true;
         ui.ctx().request_repaint();
     }
@@ -306,6 +344,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             || !state.map_background_images.is_empty()
             || !state.map_reactor_images.is_empty()
             || !state.map_lifes.is_empty()
+            || !state.map_portals.is_empty()
         {
             // 텍스처 업로드 (새 RenderContext 이므로 매 렌더 필요)
             if let Some((bw, bh, bpx)) = &state.map_back_image {
@@ -349,6 +388,12 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                 for (f, frame) in life.animation.frames.iter().enumerate() {
                     let _ =
                         rc.create_texture(life_key(i, f), frame.width, frame.height, &frame.rgba);
+                }
+            }
+            for (i, portal) in state.map_portals.iter().enumerate() {
+                for (f, frame) in portal.animation.frames.iter().enumerate() {
+                    let _ =
+                        rc.create_texture(portal_key(i, f), frame.width, frame.height, &frame.rgba);
                 }
             }
             for (i, layer) in state.map_particle_layers.iter().enumerate() {
@@ -404,6 +449,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             draw_background_layers(&mut batch, state, true);
         }
         draw_lifes(&mut batch, state);
+        draw_portals(&mut batch, state);
         draw_reactors(&mut batch, state);
         // map particles: 원본 ParticleSystem.Draw 와 같은 정적 샘플링.
         if !state.map_particle_layers.is_empty() {

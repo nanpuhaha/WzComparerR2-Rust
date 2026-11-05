@@ -246,3 +246,17 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   marker.
 - Real tests: NPC `1541000` (48x75 stand) + hidden `1541067`, mob `100100`,
   `000010000` minimap `2313x1592 center=(1338,635) mag=4`, canvas pixels.
+
+## Portals & minimap icons
+
+- `MapData.portals` now keeps `image`, impact/range and `shownAtMinimap` /
+  `enchantPortal`.
+- `wz-gui::portal` mirrors `PortalItem.PortalTypes` and loads
+  `MapHelper.img/portal/game/<type>/<image|default>` (fallback to the type node),
+  preferring `portalStart` frames, with origin/delay animation.
+- The viewport draws portal frames with animation time and world origin.
+- Minimap icons load `MapHelper.img/minimap/{portal,npc,mob,hiddenportal}`
+  canvases and draw portals (types 2/7/10, and 8/11 when `shownAtMinimap`) plus
+  visible NPC/mob markers over the minimap canvas.
+- Real test: map `000010000` portal type 2 (`pv`) loads its frames; all four
+  minimap icons decode to non-empty RGBA.

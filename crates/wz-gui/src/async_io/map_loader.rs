@@ -24,6 +24,150 @@ fn reactor_origin(png: &wz_core::image::PngRef) -> (i32, i32) {
     (0, 0)
 }
 
+fn find_map_helper(
+    root: &std::path::Path,
+) -> Option<(
+    wz_core::image::Node,
+    std::sync::Arc<dyn wz_pool::ByteSource>,
+)> {
+    let base = root.join("Map");
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = wz_core::WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("MapHelper.img"))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        return Some((node, archive.source().clone()));
+    }
+    None
+}
+
+fn helper_path<'a>(
+    node: &'a wz_core::image::Node,
+    segments: &[&str],
+) -> Option<&'a wz_core::image::Node> {
+    let mut cur = node;
+    for segment in segments {
+        cur = cur
+            .object_children()
+            .iter()
+            .find(|c| c.name.as_ref() == *segment)?;
+    }
+    Some(cur)
+}
+
+fn collect_portal_animation(
+    root: &std::path::Path,
+    node: &wz_core::image::Node,
+    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+) -> crate::portal::PortalAnimation {
+    let target = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "portalStart")
+        .unwrap_or(node);
+    let mut animation = crate::portal::PortalAnimation::default();
+    let mut children: Vec<&wz_core::image::Node> = target
+        .object_children()
+        .iter()
+        .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+        .collect();
+    children.sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+    if children.is_empty() {
+        if let Some((w, h, rgba)) = decode_canvas_node(root, target, source) {
+            animation.frames.push(crate::portal::PortalFrame {
+                width: w,
+                height: h,
+                rgba,
+                origin: node_origin(target),
+            });
+            animation
+                .delays
+                .push(node_scalar_int(target, "delay").unwrap_or(100).max(20) as u32);
+        }
+        return animation;
+    }
+    for child in children {
+        let Some((w, h, rgba)) = decode_canvas_node(root, child, source) else {
+            continue;
+        };
+        animation.frames.push(crate::portal::PortalFrame {
+            width: w,
+            height: h,
+            rgba,
+            origin: node_origin(child),
+        });
+        animation
+            .delays
+            .push(node_scalar_int(child, "delay").unwrap_or(100).max(20) as u32);
+    }
+    animation
+}
+
+fn load_portal_view(
+    root: &std::path::Path,
+    helper: &wz_core::image::Node,
+    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+    portal: &wz_db::MapPortal,
+) -> Option<crate::portal::PortalView> {
+    let type_name = crate::portal::type_name(portal.p_type);
+    let image_name = if portal.image == 0 {
+        "default".to_string()
+    } else {
+        portal.image.to_string()
+    };
+    let node = helper_path(helper, &["portal", "game", type_name, &image_name])
+        .or_else(|| helper_path(helper, &["portal", "game", type_name]))?;
+    let animation = collect_portal_animation(root, node, source);
+    if animation.frames.is_empty() {
+        return None;
+    }
+    Some(crate::portal::PortalView {
+        id: portal.id,
+        portal_type: portal.p_type,
+        x: portal.x,
+        y: portal.y,
+        shown_at_minimap: portal.shown_at_minimap || portal.enchant_portal,
+        animation,
+    })
+}
+
+fn load_minimap_icons(
+    root: &std::path::Path,
+    helper: &wz_core::image::Node,
+    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+) -> Option<crate::state::MinimapIcons> {
+    let load = |name: &str| {
+        helper_path(helper, &["minimap", name])
+            .and_then(|node| decode_canvas_node(root, node, source))
+    };
+    Some(crate::state::MinimapIcons {
+        portal: load("portal"),
+        npc: load("npc"),
+        mob: load("mob"),
+        hidden_portal: load("hiddenportal"),
+    })
+}
+
 fn find_life_image(
     root: &std::path::Path,
     npc: bool,
@@ -734,6 +878,11 @@ pub fn load_map_by_path(state: &mut AppState) {
         .and_then(|root| load_minimap_canvas(root, &node))
         .and_then(|(w, h, rgba)| map.mini_map.clone().map(|info| (w, h, rgba, info)));
     state.map_minimap_texture = None;
+    state.map_minimap_icons = data_root.as_deref().and_then(|root| {
+        let (helper, source) = find_map_helper(root)?;
+        load_minimap_icons(root, &helper, &source)
+    });
+    state.map_minimap_icon_textures = None;
 
     let back_img = if let (Some(root), Some(first)) = (data_root.as_ref(), map.backgrounds.first())
     {
@@ -751,6 +900,7 @@ pub fn load_map_by_path(state: &mut AppState) {
         let backgrounds_clone = map.backgrounds.clone();
         let particles_clone = map.particles.clone();
         let life_clone = map.life.clone();
+        let portals_clone = map.portals.clone();
         let (tx, rx) = crossbeam_channel::unbounded();
         state.map_images_rx = Some(rx);
         std::thread::spawn(move || {
@@ -809,6 +959,14 @@ pub fn load_map_by_path(state: &mut AppState) {
                     lifes.push(view);
                 }
             }
+            let mut portals = Vec::new();
+            if let Some((helper, helper_source)) = find_map_helper(&root) {
+                for portal in &portals_clone {
+                    if let Some(view) = load_portal_view(&root, &helper, &helper_source, portal) {
+                        portals.push(view);
+                    }
+                }
+            }
             let _ = tx.send(crate::state::MapImages {
                 tiles,
                 objs,
@@ -816,6 +974,7 @@ pub fn load_map_by_path(state: &mut AppState) {
                 backgrounds,
                 particles,
                 lifes,
+                portals,
             });
         });
     }
@@ -887,6 +1046,44 @@ pub fn load_map_from_selection(state: &mut AppState) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn loads_real_portal_and_minimap_icons() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let Some((helper, source)) = find_map_helper(&root) else {
+            return;
+        };
+        let portal = wz_db::MapPortal {
+            id: 3,
+            p_name: "out00".into(),
+            p_type: 2,
+            x: 544,
+            y: 423,
+            ..Default::default()
+        };
+        let view = load_portal_view(&root, &helper, &source, &portal).expect("portal view");
+        assert!(!view.animation.frames.is_empty());
+        assert!(view.animation.frames[0].width > 1);
+        assert!(view
+            .animation
+            .frames
+            .iter()
+            .any(|f| f.rgba.chunks(4).any(|p| p[3] != 0)));
+
+        let icons = load_minimap_icons(&root, &helper, &source).expect("icons");
+        for (name, icon) in [
+            ("portal", &icons.portal),
+            ("npc", &icons.npc),
+            ("mob", &icons.mob),
+            ("hidden", &icons.hidden_portal),
+        ] {
+            let (w, h, rgba) = icon.as_ref().unwrap_or_else(|| panic!("{name} icon"));
+            assert!(*w > 1 && *h > 1, "{name}: {w}x{h}");
+            assert_eq!(rgba.len(), (*w * *h * 4) as usize);
+        }
+    }
 
     #[test]
     fn loads_real_npc_and_mob_frames() {

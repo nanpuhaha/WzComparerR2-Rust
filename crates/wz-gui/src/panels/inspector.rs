@@ -292,6 +292,57 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                     .circle_stroke(pos, 4.0, egui::Stroke::new(1.5, egui::Color32::YELLOW));
             }
         }
+
+        if state.map_minimap_icon_textures.is_none() {
+            if let Some(icons) = &state.map_minimap_icons {
+                let mut textures = crate::state::MinimapIconTextures::default();
+                let make = |raw: &Option<(u32, u32, Vec<u8>)>,
+                            slot: &mut Option<egui::TextureHandle>| {
+                    if let Some((w, h, rgba)) = raw {
+                        let image = egui::ColorImage::from_rgba_unmultiplied(
+                            [*w as usize, *h as usize],
+                            rgba,
+                        );
+                        *slot = Some(ui.ctx().load_texture(
+                            "minimap_icon",
+                            image,
+                            egui::TextureOptions::NEAREST,
+                        ));
+                    }
+                };
+                make(&icons.portal, &mut textures.portal);
+                make(&icons.npc, &mut textures.npc);
+                make(&icons.mob, &mut textures.mob);
+                make(&icons.hidden_portal, &mut textures.hidden_portal);
+                state.map_minimap_icon_textures = Some(textures);
+            }
+        }
+        if let (Some(textures), Some(m)) = (&state.map_minimap_icon_textures, &state.current_map) {
+            let rect = response.rect;
+            for portal in &m.portals {
+                let icon = match portal.p_type {
+                    2 | 7 | 10 => textures.portal.as_ref(),
+                    8 | 11 if portal.shown_at_minimap => textures.hidden_portal.as_ref(),
+                    _ => None,
+                };
+                if let Some(icon) = icon {
+                    draw_minimap_icon(ui, rect, icon, portal.x, portal.y, info);
+                }
+            }
+            for life in &state.map_lifes {
+                if life.hidden {
+                    continue;
+                }
+                let icon = if life.npc {
+                    textures.npc.as_ref()
+                } else {
+                    textures.mob.as_ref()
+                };
+                if let Some(icon) = icon {
+                    draw_minimap_icon(ui, rect, icon, life.x, life.y, info);
+                }
+            }
+        }
     }
 
     ui.separator();
@@ -331,4 +382,34 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.separator();
     ui.heading("아바타 (PoC 3.5)");
     crate::panels::avatar_panel::show(ui, state);
+}
+
+fn draw_minimap_icon(
+    ui: &mut egui::Ui,
+    rect: egui::Rect,
+    icon: &egui::TextureHandle,
+    world_x: i32,
+    world_y: i32,
+    info: &wz_db::MiniMapInfo,
+) {
+    if info.width <= 0 || info.height <= 0 {
+        return;
+    }
+    let x = (world_x as f32 + info.center_x as f32) / info.width as f32;
+    let y = (world_y as f32 + info.center_y as f32) / info.height as f32;
+    if !(0.0..=1.0).contains(&x) || !(0.0..=1.0).contains(&y) {
+        return;
+    }
+    let center = egui::pos2(
+        rect.min.x + x * rect.width(),
+        rect.min.y + y * rect.height(),
+    );
+    let size = icon.size_vec2();
+    let pos = egui::pos2(center.x - size.x * 0.5, center.y - size.y * 0.5);
+    ui.painter().image(
+        icon.id(),
+        egui::Rect::from_min_size(pos, size),
+        egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+        egui::Color32::WHITE,
+    );
 }

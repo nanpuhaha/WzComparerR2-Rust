@@ -15,6 +15,24 @@ use wz_render::camera::Camera2D;
 use wz_render::GpuKey;
 
 /// 맵 이미지 로딩 결과 (워커 스레드 → UI 스레드).
+/// 미니맵 아이콘 egui 텍스처.
+#[derive(Default)]
+pub struct MinimapIconTextures {
+    pub portal: Option<egui::TextureHandle>,
+    pub npc: Option<egui::TextureHandle>,
+    pub mob: Option<egui::TextureHandle>,
+    pub hidden_portal: Option<egui::TextureHandle>,
+}
+
+/// 미니맵 아이콘 원본 캔버스.
+#[derive(Debug, Clone, Default)]
+pub struct MinimapIcons {
+    pub portal: Option<(u32, u32, Vec<u8>)>,
+    pub npc: Option<(u32, u32, Vec<u8>)>,
+    pub mob: Option<(u32, u32, Vec<u8>)>,
+    pub hidden_portal: Option<(u32, u32, Vec<u8>)>,
+}
+
 pub struct MapImages {
     pub tiles: Vec<(i32, i32, u32, u32, Vec<u8>)>,
     pub objs: Vec<(i32, i32, u32, u32, Vec<u8>)>,
@@ -22,6 +40,7 @@ pub struct MapImages {
     pub backgrounds: Vec<crate::background::BackgroundLayer>,
     pub particles: Vec<crate::particles::MapParticleLayer>,
     pub lifes: Vec<crate::life::LifeView>,
+    pub portals: Vec<crate::portal::PortalView>,
 }
 
 // ── 로딩 메시지 ───────────────────────────────────────────────────────
@@ -108,6 +127,11 @@ pub struct AppState {
     pub map_lifes: Vec<crate::life::LifeView>,
     pub map_life_time: f64,
     pub map_life_last: f64,
+    pub map_portals: Vec<crate::portal::PortalView>,
+    pub map_portal_time: f64,
+    pub map_portal_last: f64,
+    pub map_minimap_icons: Option<MinimapIcons>,
+    pub map_minimap_icon_textures: Option<MinimapIconTextures>,
     pub map_particle_time: f64,
     pub map_particle_last: f64,
     pub sound_path: String,
@@ -246,6 +270,11 @@ impl Default for AppState {
             map_lifes: Vec::new(),
             map_life_time: 0.0,
             map_life_last: 0.0,
+            map_portals: Vec::new(),
+            map_portal_time: 0.0,
+            map_portal_last: 0.0,
+            map_minimap_icons: None,
+            map_minimap_icon_textures: None,
             map_particle_time: 0.0,
             map_particle_last: 0.0,
             sound_path: String::new(),

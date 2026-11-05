@@ -110,6 +110,13 @@ pub struct MapPortal {
     pub to_map: Option<i32>,
     pub to_name: Option<String>,
     pub script: Option<String>,
+    pub image: i32,
+    pub h_impact: i32,
+    pub v_impact: i32,
+    pub h_range: i32,
+    pub v_range: i32,
+    pub shown_at_minimap: bool,
+    pub enchant_portal: bool,
 }
 
 /// 라이프 (NPC / Mob) 종류.
@@ -667,6 +674,13 @@ fn parse_portals_arena(arena: &crate::Arena, p_root: crate::NodeId, map: &mut Ma
             to_map,
             to_name,
             script,
+            image: get_arena_int(arena, child_id, "image").unwrap_or(0),
+            h_impact: get_arena_int(arena, child_id, "horizontalImpact").unwrap_or(0),
+            v_impact: get_arena_int(arena, child_id, "verticalImpact").unwrap_or(0),
+            h_range: get_arena_int(arena, child_id, "hRange").unwrap_or(0),
+            v_range: get_arena_int(arena, child_id, "vRange").unwrap_or(0),
+            shown_at_minimap: get_arena_bool(arena, child_id, "shownAtMinimap"),
+            enchant_portal: get_arena_bool(arena, child_id, "enchantPortal"),
         });
     }
 }

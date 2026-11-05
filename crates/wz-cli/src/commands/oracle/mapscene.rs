@@ -117,6 +117,10 @@ pub fn cmd_oracle_mapscene(
                 "tm": p.to_map,
                 "tn": p.to_name,
                 "script": p.script,
+                "image": p.image,
+                "h_impact": p.h_impact,
+                "v_impact": p.v_impact,
+                "shown_at_minimap": p.shown_at_minimap,
             })
         })
         .collect();

@@ -13,6 +13,7 @@ mod background;
 mod life;
 mod panels;
 mod particles;
+mod portal;
 mod reactor;
 mod render_bridge;
 mod sound_player;
