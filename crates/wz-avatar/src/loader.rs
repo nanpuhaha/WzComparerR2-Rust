@@ -1458,7 +1458,7 @@ fn load_game_font_bytes(data_root: &std::path::Path) -> Option<Arc<fontdue::Font
 }
 
 /// `Etc/*.wz` 의 `Font.img/NotoSansMP-Medium` 을 data_root 별로 캐시한다.
-fn game_font(data_root: &std::path::Path) -> Option<Arc<fontdue::Font>> {
+pub fn load_game_font(data_root: &std::path::Path) -> Option<Arc<fontdue::Font>> {
     use std::collections::HashMap;
     use std::sync::{Mutex, OnceLock};
     static CACHE: OnceLock<Mutex<HashMap<std::path::PathBuf, Arc<fontdue::Font>>>> =
@@ -1476,7 +1476,7 @@ fn game_font(data_root: &std::path::Path) -> Option<Arc<fontdue::Font>> {
 }
 
 /// 게임 TTF 로 문자열을 RGBA 에 그린다.
-fn draw_game_text(font: &fontdue::Font, text: &str, px: f32) -> Option<(u32, u32, Vec<u8>)> {
+pub fn draw_game_text(font: &fontdue::Font, text: &str, px: f32) -> Option<(u32, u32, Vec<u8>)> {
     if text.is_empty() {
         return None;
     }
@@ -1519,6 +1519,94 @@ fn draw_game_text(font: &fontdue::Font, text: &str, px: f32) -> Option<(u32, u32
         cursor += m.advance_width;
     }
     Some((w, h, out))
+}
+
+/// 아이템 이름/스탯 라인/아이콘을 합쳐 간단한 비트맵 툴팁을 만든다.
+pub fn render_tooltip_bitmap(
+    data_root: &std::path::Path,
+    title: &str,
+    lines: &[String],
+    icon: Option<(u32, u32, Vec<u8>)>,
+) -> Option<(u32, u32, Vec<u8>)> {
+    let font = load_game_font(data_root)?;
+    let padding = 10u32;
+    let title_bitmap = draw_game_text(&font, title, 14.0);
+    let line_bitmaps: Vec<_> = lines
+        .iter()
+        .filter_map(|line| draw_game_text(&font, line, 12.0))
+        .collect();
+    let icon_w = icon.as_ref().map(|(w, _, _)| *w).unwrap_or(0);
+    let title_w = title_bitmap.as_ref().map(|(w, _, _)| *w).unwrap_or(0);
+    let text_w = line_bitmaps
+        .iter()
+        .map(|(w, _, _)| *w)
+        .max()
+        .unwrap_or(0)
+        .max(title_w);
+    let width = (padding * 3 + icon_w + text_w).max(160);
+    let height = (padding * 2
+        + title_bitmap.as_ref().map(|(_, h, _)| *h).unwrap_or(0)
+        + line_bitmaps.iter().map(|(_, h, _)| *h).sum::<u32>()
+        + line_bitmaps.len() as u32 * 4)
+        .max(60)
+        .max(icon.as_ref().map(|(_, h, _)| *h + padding * 2).unwrap_or(0));
+    let mut out = vec![0u8; (width * height * 4) as usize];
+    for y in 0..height {
+        for x in 0..width {
+            let border = x < 2 || y < 2 || x + 2 >= width || y + 2 >= height;
+            let color = if border {
+                [90, 110, 150, 255]
+            } else {
+                [24, 26, 36, 245]
+            };
+            let off = ((y * width + x) * 4) as usize;
+            out[off..off + 4].copy_from_slice(&color);
+        }
+    }
+    let mut draw = |bitmap: &(u32, u32, Vec<u8>), ox: u32, oy: u32| {
+        let (w, h, rgba) = bitmap;
+        for y in 0..*h {
+            for x in 0..*w {
+                let sx = ox + x;
+                let sy = oy + y;
+                if sx >= width || sy >= height {
+                    continue;
+                }
+                let src = ((y * *w + x) * 4) as usize;
+                let alpha = rgba[src + 3] as u32;
+                if alpha == 0 {
+                    continue;
+                }
+                let dst = ((sy * width + sx) * 4) as usize;
+                for c in 0..3 {
+                    out[dst + c] = ((rgba[src + c] as u32 * alpha
+                        + out[dst + c] as u32 * (255 - alpha))
+                        / 255) as u8;
+                }
+                out[dst + 3] = 255;
+            }
+        }
+    };
+    if let Some((iw, ih, irgba)) = &icon {
+        let mut icon_bitmap = (*iw, *ih, irgba.clone());
+        let max_h = height.saturating_sub(padding * 2).max(1);
+        if *ih > max_h {
+            icon_bitmap.1 = max_h;
+            icon_bitmap.2.truncate((*iw * max_h * 4) as usize);
+        }
+        draw(&icon_bitmap, padding, padding);
+    }
+    let text_x = padding * 2 + icon_w;
+    let mut y = padding;
+    if let Some(bitmap) = &title_bitmap {
+        draw(bitmap, text_x, y);
+        y += bitmap.1 + 6;
+    }
+    for bitmap in &line_bitmaps {
+        draw(bitmap, text_x, y);
+        y += bitmap.1 + 4;
+    }
+    Some((width, height, out))
 }
 
 fn font_text_chair_part(
@@ -4033,7 +4121,7 @@ pub fn load_avatar_with_equipment_and_mix(
                         if let (Some(bgm_info), Some(bgm), Some(font)) = (
                             custom.bgm_selection.as_ref(),
                             mix.chair.bgm.as_deref(),
-                            game_font(data_root).as_deref(),
+                            load_game_font(data_root).as_deref(),
                         ) {
                             if let Some((text_root, text_parts)) =
                                 font_text_chair_part(font, "bgm_text", bgm, bgm_info.button_lt, 1)
@@ -4115,7 +4203,7 @@ pub fn load_avatar_with_equipment_and_mix(
                                 }
                             }
                         }
-                        if let Some(font) = game_font(data_root) {
+                        if let Some(font) = load_game_font(data_root) {
                             if let Some(identity) = &custom.identity {
                                 for (slot, text, pos) in [
                                     (
@@ -5434,9 +5522,24 @@ mod chair_custom_type_tests {
     }
 
     #[test]
+    fn tooltip_bitmap_renders_title_and_lines() {
+        let Some(root) = data_root() else { return };
+        let Some((w, h, rgba)) = render_tooltip_bitmap(
+            &root,
+            "테스트 아이템",
+            &["incSTR: 10".to_string(), "incDEX: 5".to_string()],
+            None,
+        ) else {
+            return;
+        };
+        assert!(w > 100 && h > 30);
+        assert!(rgba.chunks(4).any(|p| p[3] != 0 && p[..3] != [24, 26, 36]));
+    }
+
+    #[test]
     fn game_font_renders_korean_text() {
         let Some(root) = data_root() else { return };
-        let Some(font) = game_font(&root) else {
+        let Some(font) = load_game_font(&root) else {
             return;
         };
         let (w, h, rgba) = draw_game_text(&font, "테스트", 12.0).expect("text bitmap");

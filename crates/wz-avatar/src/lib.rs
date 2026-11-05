@@ -23,8 +23,8 @@ pub use frame_layers::{
 pub use loader::{
     load_avatar_with_equipment, load_avatar_with_equipment_and_mix, load_body_action_frames,
     load_equipment_item, load_from_character_wz, load_from_character_wz_with_skin,
-    load_item_action_frames, AvatarPart, ChairInfo, ChairUserData, CustomChairInfo,
-    CustomChairType, EffectFrames, LoadedAvatar, MixOptions,
+    load_item_action_frames, render_tooltip_bitmap, AvatarPart, ChairInfo, ChairUserData,
+    CustomChairInfo, CustomChairType, EffectFrames, LoadedAvatar, MixOptions,
 };
 pub use mix::mix_rgba8;
 pub use prism::{apply_prism_rgba8, PrismData};

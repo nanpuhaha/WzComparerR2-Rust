@@ -57,6 +57,58 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                                     for (k, v) in &props {
                                         ui.label(format!("{}: {}", k, v));
                                     }
+                                    let sel_key = sel.clone();
+                                    let tooltip_id =
+                                        name.trim_end_matches(".img").parse::<i32>().ok();
+                                    if state.tooltip_for.as_deref() != Some(sel_key.as_str()) {
+                                        state.tooltip_for = Some(sel_key);
+                                        let title = state
+                                            .string_linker
+                                            .as_ref()
+                                            .and_then(|linker| {
+                                                tooltip_id.and_then(|id| linker.get_by_id(id))
+                                            })
+                                            .map(|sr| sr.name.clone())
+                                            .unwrap_or_else(|| name.to_string());
+                                        let lines: Vec<String> = props
+                                            .iter()
+                                            .map(|(k, v)| format!("{k}: {v}"))
+                                            .collect();
+                                        let icon = node.first_canvas().and_then(|png| {
+                                            wz_image::decode_png_ref_to_rgba(&png, arch.source())
+                                                .ok()
+                                        });
+                                        let data_root = state
+                                            .data_root
+                                            .clone()
+                                            .or_else(|| async_io::canvas::find_data_root(None));
+                                        state.tooltip_bitmap =
+                                            data_root.as_deref().and_then(|root| {
+                                                wz_avatar::render_tooltip_bitmap(
+                                                    root, &title, &lines, icon,
+                                                )
+                                            });
+                                        state.tooltip_texture = None;
+                                    }
+                                    if let Some((w, h, rgba)) = &state.tooltip_bitmap {
+                                        if state.tooltip_texture.is_none() {
+                                            let image = egui::ColorImage::from_rgba_unmultiplied(
+                                                [*w as usize, *h as usize],
+                                                rgba,
+                                            );
+                                            state.tooltip_texture = Some(ui.ctx().load_texture(
+                                                "item_tooltip",
+                                                image,
+                                                egui::TextureOptions::NEAREST,
+                                            ));
+                                        }
+                                    }
+                                    if let Some(texture) = &state.tooltip_texture {
+                                        ui.separator();
+                                        ui.label("비트맵 툴팁");
+                                        ui.image((texture.id(), texture.size_vec2()));
+                                    }
+
                                     // StringLinker 툴팁 자동 표시
                                     let id_str = name.trim_end_matches(".img");
                                     if let Ok(id) = id_str.parse::<i32>() {
