@@ -82,8 +82,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
    `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`,
    `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`,
    `wz db2-characters`, GUI Catalog). Character는 Coat(682), Cap(3166),
-   Shoes(1703), Accessory(2369) 네 카테고리를 실데이터 비교했고, 나머지 25개
-   전용 그리드와 전체 화면 이미지 뷰어 UI는 미구현.
+   Shoes(1703), Accessory(2369), Longcoat(2493) 다섯 카테고리를 실데이터
+   비교했고, 나머지 24개 전용 그리드와 전체 화면 이미지 뷰어 UI는 미구현.
 6. `WzComparerR2.Common/Controls` (2,138 LOC), `OpenAPI` (2,086 LOC) — 미구현.
 7. `LuaConsole` (1,451), `Network` (1,954), `PluginBase` (693) — 미구현.
 
@@ -131,6 +131,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   `wz db2-characters` 1703 rows (동일 컬럼 완전 일치).
 - DB2 Character/Accessory grid `Accessory_000.wz`: C# 2369 rows == Rust
   `wz db2-characters` 2369 rows (동일 컬럼 완전 일치).
+- DB2 Character/Longcoat grid `Longcoat_000.wz`: C# 2493 rows == Rust
+  `wz db2-characters` 2493 rows (동일 컬럼 완전 일치).
 - Skill summary `String/Skill.img`: C# `SummaryParser.GetSkillSummary` 20629
   rows == Rust `wz skill-summary` 20629 rows (desc + h/h1..hn 완전 일치).
 - ItemTooltip `02000012`: C# `GetItemAttributeString` + StringLinker output ==
