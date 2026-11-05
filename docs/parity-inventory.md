@@ -103,3 +103,40 @@ cargo run -q --manifest-path crates/wz-gui/Cargo.toml --no-default-features -- -
 
 WorldMap 실제 클라이언트 데이터는 QuestLimit/Fog 노드가 없어, 실제 WZ 파일 대신
 동일 노드 구조의 fixture로 파서/UI 출력을 C# 동작과 비교한다.
+
+## C# 실행 비교 (WzLib harness)
+
+`tools/csharp-worldmap`는 원본 `WzComparerR2.WzLib.dll`을 참조해 실제 C# 파서를
+실행한다.
+
+| 입력 | C# 실행 결과 | Rust 결과 |
+|---|---|---|
+| `worldmap_quest_fog.json` fixture | expected JSON과 MATCH | 동일 expected JSON 테스트 통과 |
+| `Data/Map/WorldMap/WorldMap_000.wz` | `{"images":85,"quest":0,"fog":0}` | `real_worldmap_has_no_quest_or_fog_nodes` 통과 (QuestLimit/Fog 0) |
+| `Map0_000.wz / 000010000.img` | 4721 nodes | oracle `node_count=4722` (가상/UOL wrapper 1개 차이) |
+
+실행 명령:
+
+```
+cd tools/csharp-worldmap
+dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- fixture ../../crates/wz-gui/tests/fixtures/worldmap_quest_fog.json
+dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- real ../../Data/Map/WorldMap/WorldMap_000.wz
+dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- mapnodes ../../Data/Map/Map/Map0/Map0_000.wz 000010000.img
+```
+
+## C# source anchors
+
+| C# 원본 | Rust 대응 |
+|---|---|
+| `MapRender/MapData.cs` LoadInfo/Back/Portal/Life/Reactor/Light/Particle/MapEvents/ToolTip/SkyWhale/IlluminantCluster | `wz-db/src/map.rs`, GUI loader |
+| `MapRender/LightRenderer.cs`, `MapLight.cs` | `wz-render/src/light.rs` |
+| `MapRender/Patches2/BackItem.cs`, `GetMeshBack` | `wz-gui/src/background.rs` |
+| `MapRender/Patches2/LifeItem.cs`, `BehaviorController.cs`, `LifeInfo.cs` | `wz-gui/src/life.rs` |
+| `MapRender/Patches2/ReactorItem.cs` | `wz-gui/src/reactor.rs` |
+| `MapRender/Patches2/ParticleItem.cs`, `ParticleSystem.cs`, `ResourceLoader.cs` | `wz-db/src/particle.rs`, `wz-gui/src/particles.rs` |
+| `MapRender/Patches2/PortalItem.cs` | `wz-gui/src/portal.rs` |
+| `MapRender/Patches2/TooltipItem.cs` | `wz-gui/src/state.rs` + `String/ToolTipHelp.img` |
+| `MapRender/UI/UIMiniMap.cs`, `UIWorldMap.cs` | `wz-gui/src/panels/inspector.rs`, `worldmap.rs` |
+| `MapRender/Effects/ShaderMaterials.cs`, `EffectResources.cs` | `wz-render/src/water.rs`, `device.rs`, `compose.rs` |
+| `Patcher/WzPatcher.cs`, `Builder/CheckSum.cs` | `wz-core/src/patch.rs` |
+| `WzLib/Wz_Sound.cs`, `Wz_Image.TryDecryptWaveFormatEx` | `wz-core/src/sound.rs` |

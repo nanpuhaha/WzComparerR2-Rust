@@ -409,3 +409,12 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   (`worldmap_quest_fog_fixture_matches_uiworldmap_behavior`).
 - The client's 85+ WorldMap images contain no QuestLimit/Fog nodes, fixed by
   `real_worldmap_has_no_quest_or_fog_nodes`.
+
+## C# WzLib execution comparison
+
+`tools/csharp-worldmap` runs the original C# WzLib parser. On the same input:
+- WorldMap fixture → C# JSON matches the Rust expected fixture exactly.
+- `WorldMap_000.wz` → C# `images=85, quest=0, fog=0`, matching Rust's
+  `real_worldmap_has_no_quest_or_fog_nodes`.
+- `Map0_000.wz/000010000.img` → C# 4721 nodes vs Rust 4722 (one virtual/UOL
+  wrapper difference).
