@@ -448,3 +448,16 @@ merge semantics (recursive directory merge, conflict errors).
   Catalog has a DB2 Map grid table.
 - Executed C# reference: `tools/csharp-worldmap maps ...` uses the original
   `StringLinker`. `Map0_000.wz` → C# 87 == Rust 87 rows, exact match.
+
+## DB2 Mob grid
+
+- `wz-db::db2_mobs` mirrors `DB2Form.LoadMob`: iterate `StringLinker.StringMob`,
+  keep IDs whose `<id>.img` exists in the given Mob WZ, and emit
+  `id/name/has_stand/has_fly/has_move/has_hit/has_die/has_thumbnail/link`.
+- Icon source follows the original `stand/0` → `fly/0` preference (flags expose
+  which source exists); full stat columns are empty because this client's split
+  `Mob/_Canvas` images mostly lack the `info` stat block.
+- `wz db2-mobs <mob.wz> --string <String_000.wz>` prints the grid; the GUI
+  Catalog has a DB2 Mob grid table.
+- Executed C# reference: `tools/csharp-worldmap mobs ...` uses the original
+  `StringLinker`. `_Canvas_011.wz` → C# 55 == Rust 55 rows, exact match.

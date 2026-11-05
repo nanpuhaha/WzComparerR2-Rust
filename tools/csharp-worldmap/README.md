@@ -27,6 +27,8 @@ Commands:
   (`id/name/desc/has_icon`) using the original `StringLinker`.
 - `maps <map.wz> <String_000.wz>` — emits the DB2 Map grid rows
   (`id/street_name/map_name/has_minimap/link`).
+- `mobs <mob.wz> <String_000.wz>` — emits the DB2 Mob grid rows
+  (`id/name/stand/fly/move/hit/die/thumbnail/link`) using `StringLinker.StringMob`.
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -82,3 +84,12 @@ dotnet run ... -- maps ../../Data/Map/Map/Map0/Map0_000.wz ../../Data/String/Str
 → 87 rows
 ```
 Rust `wz db2-maps ... --json` matches all 87 rows exactly.
+
+Verified DB2 Mob grid output:
+```
+dotnet run ... -- mobs ../../Data/Mob/_Canvas/_Canvas_011.wz ../../Data/String/String_000.wz
+→ 55 rows
+```
+Rust `wz db2-mobs ... --json` matches all 55 rows exactly.
+This client's split `Mob/_Canvas` files mostly contain animation canvases without
+the full `info` stat block, so the DB2 stat column is empty for this fixture.

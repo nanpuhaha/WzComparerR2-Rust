@@ -302,6 +302,54 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                     });
             });
     }
+    ui.horizontal(|ui| {
+        if ui.button("현재 WZ DB2 Mob 그리드").clicked() {
+            let Some(linker) = state.string_linker.as_ref() else {
+                state.db2_status = "StringLinker를 먼저 로드하세요".into();
+                return;
+            };
+            let Some(archive) = state.shared_archive.lock().unwrap().clone() else {
+                state.db2_status = "아카이브 없음".into();
+                return;
+            };
+            let Some(tree) = &state.tree else {
+                state.db2_status = "트리 없음".into();
+                return;
+            };
+            state.db2_mob_rows = wz_db::db2_mob_grid_rows(&archive, tree, linker);
+            state.db2_status = format!("mob rows {}", state.db2_mob_rows.len());
+        }
+    });
+    if !state.db2_mob_rows.is_empty() {
+        egui::ScrollArea::vertical()
+            .id_salt("db2_mob_grid_scroll")
+            .max_height(200.0)
+            .show(ui, |ui| {
+                egui::Grid::new("db2_mob_grid")
+                    .striped(true)
+                    .num_columns(8)
+                    .show(ui, |ui| {
+                        for label in ["id", "name", "stand", "fly", "move", "hit", "die", "link"] {
+                            ui.strong(label);
+                        }
+                        ui.end_row();
+                        for row in state.db2_mob_rows.iter().take(200) {
+                            let flag = |v: bool| if v { "Y" } else { "" };
+                            ui.label(&row.id);
+                            ui.label(&row.name);
+                            ui.label(flag(row.has_stand));
+                            ui.label(flag(row.has_fly));
+                            ui.label(flag(row.has_move));
+                            ui.label(flag(row.has_hit));
+                            ui.label(flag(row.has_die));
+                            ui.label(
+                                row.link.map(|v| v.to_string()).unwrap_or_default(),
+                            );
+                            ui.end_row();
+                        }
+                    });
+            });
+    }
     let filter = state.db2_filter.clone();
     let rows: Vec<&wz_db::Db2Row> = state
         .db2_rows
