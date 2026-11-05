@@ -21,6 +21,34 @@ use crate::{AvatarScene, Bone, SkinLayer, ZMap};
 
 use crate::zmap::{part_z_tag, STANDARD_ZMAP};
 
+/// C# `AvatarCanvas.EmotionTable`.
+const EMOTION_TABLE: &[&str] = &[
+    "default",
+    "hit",
+    "smile",
+    "troubled",
+    "cry",
+    "angry",
+    "bewildered",
+    "stunned",
+    "vomit",
+    "oops",
+    "cheers",
+    "chu",
+    "wink",
+    "pain",
+    "glitter",
+    "blaze",
+    "shine",
+    "love",
+    "despair",
+    "hum",
+    "bowing",
+    "hot",
+    "dam",
+    "qBlue",
+];
+
 /// MapleStory 표준 z-map 순서 (Base\zmap.img 에서 로드).
 /// 낮은 인덱스가 먼저 그려진다 (painter's algorithm).
 /// 로드된 아바타 파트.
@@ -743,6 +771,8 @@ pub struct TamingInfo {
     pub scale: i32,
     pub remove_body: bool,
     pub flip: bool,
+    pub character_actions: std::collections::BTreeMap<String, String>,
+    pub character_emotions: std::collections::BTreeMap<String, String>,
 }
 
 /// WZ 체어 데이터 기반 변환. C# 아바타 렌더러에는 없는 확장이다.
@@ -820,6 +850,16 @@ impl ChairInfo {
         }
         if self.taming.as_ref().is_some_and(|t| t.remove_body) {
             return ChairBodyAction::Hide;
+        }
+        if let Some(taming) = &self.taming {
+            for key in ["sit", "stand0"] {
+                if let Some(action) = taming.character_actions.get(key) {
+                    return ChairBodyAction::Action {
+                        name: action.clone(),
+                        frame,
+                    };
+                }
+            }
         }
         if self
             .custom_chair
@@ -1286,11 +1326,27 @@ fn find_taming_meta(data_root: &std::path::Path, item_id: i32) -> Option<ImageNo
 pub fn load_taming_info(data_root: &std::path::Path, item_id: i32) -> Option<TamingInfo> {
     let node = find_taming_meta(data_root, item_id)?;
     let info = child_node(&node, "info")?;
+    let mut character_actions = std::collections::BTreeMap::new();
+    let mut character_emotions = std::collections::BTreeMap::new();
+    for (name, map) in [
+        ("characterAction", &mut character_actions),
+        ("characterEmotion", &mut character_emotions),
+    ] {
+        if let Some(action_root) = child_node(&node, name) {
+            for action in action_root.object_children() {
+                if let Some(wz_core::image::ImageValue::Str(value)) = &action.value {
+                    map.insert(action.name.to_string(), value.to_string());
+                }
+            }
+        }
+    }
     Some(TamingInfo {
         id: item_id,
         scale: node_int(info, "scale").unwrap_or(100),
         remove_body: node_int(info, "removeBody").unwrap_or(0) != 0,
         flip: node_int(info, "flip").unwrap_or(0) != 0,
+        character_actions,
+        character_emotions,
     })
 }
 
@@ -2339,23 +2395,189 @@ fn load_chair_item(
     skin.width = w;
     skin.height = h;
 
+    let body_move = info.body_rel_move.unwrap_or(crate::Point::ZERO);
     let mut root = Bone::new("@chair");
-    root.position = info.body_rel_move.unwrap_or(crate::Point::ZERO);
+    root.position = body_move;
     root.append_bone(skin, "chair", crate::Point::ZERO);
     let part = AvatarPart {
         slot: "chair".into(),
         width: w,
         height: h,
         rgba,
-        position: crate::Point::new(
-            info.body_rel_move.unwrap_or(crate::Point::ZERO).x - origin.x,
-            info.body_rel_move.unwrap_or(crate::Point::ZERO).y - origin.y,
-        ),
+        position: crate::Point::new(body_move.x - origin.x, body_move.y - origin.y),
         origin,
         z_index,
         ..Default::default()
     };
-    Some((root, vec![part], None))
+    let mut parts = vec![part];
+
+    if let Some(effect2) = child_node(&item, "effect2") {
+        if let Some(frame) = effect2.object_children().first() {
+            if let Some(png) = frame.first_canvas() {
+                if let Ok((ew, eh, ergba)) =
+                    wz_image::decode_png_ref_to_rgba(&png, archive.source())
+                {
+                    let (eorigin, ez) = png_origin_z(&png);
+                    append_chair_effect_part(
+                        &mut root,
+                        &mut parts,
+                        ChairEffectFrame {
+                            slot: "chair_effect2",
+                            width: ew,
+                            height: eh,
+                            rgba: ergba,
+                            origin: eorigin,
+                            z_index: ez,
+                        },
+                        body_move,
+                    );
+                }
+            }
+        }
+    }
+
+    if item_id / 10000 == 301 {
+        for layer in ["0", "1"] {
+            if let Some((ew, eh, ergba, eorigin, ez)) =
+                load_item_eff_first(data_root, item_id, layer)
+            {
+                let slot = format!("chair_eff{layer}");
+                append_chair_effect_part(
+                    &mut root,
+                    &mut parts,
+                    ChairEffectFrame {
+                        slot: &slot,
+                        width: ew,
+                        height: eh,
+                        rgba: ergba,
+                        origin: eorigin,
+                        z_index: ez,
+                    },
+                    body_move,
+                );
+            }
+        }
+    }
+
+    Some((root, parts, None))
+}
+
+struct ChairEffectFrame<'a> {
+    slot: &'a str,
+    width: u32,
+    height: u32,
+    rgba: Vec<u8>,
+    origin: crate::Point,
+    z_index: i32,
+}
+
+fn append_chair_effect_part(
+    root: &mut Bone,
+    parts: &mut Vec<AvatarPart>,
+    frame: ChairEffectFrame<'_>,
+    body_move: crate::Point,
+) {
+    let local = crate::Point::new(-frame.origin.x, -frame.origin.y);
+    let mut skin = SkinLayer::new(frame.slot);
+    skin.z = "chair".into();
+    skin.z_index = frame.z_index;
+    skin.origin = crate::Point::ZERO;
+    skin.width = frame.width;
+    skin.height = frame.height;
+    root.append_bone(skin, frame.slot, local);
+    parts.push(AvatarPart {
+        slot: frame.slot.to_string(),
+        width: frame.width,
+        height: frame.height,
+        rgba: frame.rgba,
+        position: crate::Point::new(body_move.x + local.x, body_move.y + local.y),
+        origin: frame.origin,
+        z_index: frame.z_index,
+        custom_origin_map: Default::default(),
+    });
+}
+
+fn png_outlink(png: &wz_core::image::PngRef) -> Option<String> {
+    let sub = png.sub_property.as_ref()?;
+    sub.children
+        .iter()
+        .find_map(|child| match (&child.name, &child.value) {
+            (name, Some(wz_core::image::ImageValue::Str(value))) if name.as_ref() == "_outlink" => {
+                Some(value.to_string())
+            }
+            _ => None,
+        })
+}
+
+/// `Effect/ItemEff.img/<chairId>/0|1` 첫 프레임을 찾는다.
+fn load_item_eff_first(
+    data_root: &std::path::Path,
+    chair_id: i32,
+    layer: &str,
+) -> Option<(u32, u32, Vec<u8>, crate::Point, i32)> {
+    let base = data_root.join("Effect");
+    let canvas_dir = base.join("_Canvas");
+    let mut canvas_archives = Vec::new();
+    for entry in std::fs::read_dir(&canvas_dir).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) == Some("wz") {
+            if let Ok(archive) = WzArchive::open(&path) {
+                canvas_archives.push(archive);
+            }
+        }
+    }
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("ItemEff.img"))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let Some(chair) = child_node(&node, &chair_id.to_string()) else {
+            continue;
+        };
+        let Some(layer_node) = child_node(chair, layer) else {
+            continue;
+        };
+        // ItemEff: layer -> frame group -> Canvas(_outlink).
+        let frame_group = layer_node.object_children().first().unwrap_or(layer_node);
+        let canvas_node = frame_group.object_children().first().unwrap_or(frame_group);
+        let png = canvas_node.first_canvas()?;
+        let link = png_outlink(&png);
+        let (w, h, rgba) = if let Some(link) = link {
+            let mut resolved = None;
+            for canvas_archive in &canvas_archives {
+                if let Ok(value) = crate::frame_layers::resolve_outlink(canvas_archive, &link) {
+                    resolved = Some((value.w, value.h, value.rgba));
+                    break;
+                }
+            }
+            resolved?
+        } else {
+            wz_image::decode_png_ref_to_rgba(&png, archive.source()).ok()?
+        };
+        let (origin, z) = png_origin_z(&png);
+        return Some((w, h, rgba, origin, z));
+    }
+    None
 }
 
 /// RGBA8 버퍼를 최근접 이웃으로 `factor` 배 확대/축소한다.
@@ -2627,6 +2849,31 @@ fn transform_bone_op(bone: &mut Bone, op: TransformOp) {
     }
     for child in &mut bone.children {
         transform_bone_op(child, op);
+    }
+}
+
+fn is_avatar_body_slot(slot: &str) -> bool {
+    !(slot == "chair"
+        || slot == "effect"
+        || slot == "android_effect"
+        || slot == "score_effect"
+        || slot.starts_with("tamingmob")
+        || slot.starts_with("rolling_part")
+        || slot.starts_with("showcase")
+        || slot.starts_with("identity_digit")
+        || slot.starts_with("pet")
+        || slot.starts_with("pop_")
+        || slot.starts_with("vote_")
+        || slot.starts_with("time_"))
+}
+
+/// taming `info/flip` — 아바타 본체/장비 파트만 좌우 반전한다.
+fn apply_body_flip(parts: &mut [AvatarPart]) {
+    for part in parts
+        .iter_mut()
+        .filter(|part| is_avatar_body_slot(&part.slot))
+    {
+        transform_part_op(part, TransformOp::FlipX);
     }
 }
 
@@ -3195,6 +3442,19 @@ pub fn load_avatar_with_equipment_and_mix(
             .flatten()
     });
     let chair_action = chair_info.as_ref().map(|c| c.body_action());
+    let emotion = chair_info.as_ref().and_then(|info| {
+        if let Some(taming) = &info.taming {
+            for key in ["sit", "stand0"] {
+                if let Some(emotion) = taming.character_emotions.get(key) {
+                    return Some(emotion.clone());
+                }
+            }
+            None
+        } else {
+            info.sit_emotion
+                .and_then(|index| EMOTION_TABLE.get(index as usize).map(|s| s.to_string()))
+        }
+    });
     let body_image = format!("{:08}.img", body_skin);
     let (mut root, mut parts) = match &chair_action {
         Some(ChairBodyAction::Hide) => (Bone::new("@root"), Vec::new()),
@@ -3207,8 +3467,12 @@ pub fn load_avatar_with_equipment_and_mix(
 
     // C# `hideBody`: bodyAction 이 null 이면 LinkPlayerParts 가 body+head 를 모두 숨긴다.
     if !matches!(&chair_action, Some(ChairBodyAction::Hide)) {
+        let head_actions: Vec<&str> = match &emotion {
+            Some(emotion) => vec![emotion.as_str(), "front", "back"],
+            None => vec!["front", "back"],
+        };
         if let Some((head_root, head_parts)) =
-            load_frame_parts(&arch, "00012000.img", &["front", "back"])
+            load_frame_parts(&arch, "00012000.img", &head_actions)
         {
             root.skins.extend(head_root.skins);
             root.children.extend(head_root.children);
@@ -3459,13 +3723,18 @@ pub fn load_avatar_with_equipment_and_mix(
                 continue;
             };
             let image_name = format!("{:08}.img", item_id);
-            let actions: &[&str] = if dir == "TamingMob" {
-                &["sit", "stand1", "default"]
+            let actions: Vec<&str> = if dir == "TamingMob" {
+                vec!["sit", "stand1", "default"]
+            } else if dir == "Face" {
+                match &emotion {
+                    Some(emotion) => vec![emotion.as_str(), "default", "stand1"],
+                    None => vec!["default", "stand1"],
+                }
             } else {
-                &["default", "stand1"]
+                vec!["default", "stand1"]
             };
             if let Some((mut item_root, mut item_parts)) =
-                load_item_frame(&archive, Some(&image_name), actions, dir)
+                load_item_frame(&archive, Some(&image_name), &actions, dir)
             {
                 let mix_setting = match dir {
                     "Hair" => mix.hair,
@@ -3574,6 +3843,15 @@ pub fn load_avatar_with_equipment_and_mix(
                 parts.extend(taming_parts);
             }
         }
+    }
+
+    // taming `info/flip` — body/equipment only.
+    if chair_info
+        .as_ref()
+        .and_then(|c| c.taming.as_ref())
+        .is_some_and(|t| t.flip)
+    {
+        apply_body_flip(&mut parts);
     }
 
     // WZ 체어 변환(플립/회전) — C# 원본에는 없는 데이터 기반 확장.
@@ -4406,6 +4684,77 @@ mod chair_custom_type_tests {
     }
 
     #[test]
+    fn chair_effect2_and_item_effect_load() {
+        let Some(av) = load_chair(3010081) else {
+            return;
+        };
+        let effect2 = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "chair_effect2")
+            .expect("chair_effect2");
+        assert!(effect2.width > 1 && effect2.height > 1);
+
+        let Some(group) = load_chair(3016200) else {
+            return;
+        };
+        for slot in ["chair_eff0", "chair_eff1"] {
+            let part = group
+                .parts
+                .iter()
+                .find(|p| p.slot == slot)
+                .unwrap_or_else(|| panic!("{slot} missing"));
+            assert!(part.width > 1 && part.height > 1);
+        }
+    }
+
+    #[test]
+    fn sit_emotion_is_parsed_and_head_loads() {
+        let Some(av) = load_chair(3010675) else {
+            return;
+        };
+        let info = chair_info(&av);
+        assert_eq!(info.sit_emotion, Some(10));
+        assert_eq!(EMOTION_TABLE[10], "cheers");
+        assert!(has_slot(&av, "head"));
+    }
+
+    #[test]
+    fn taming_flip_and_character_actions_parse() {
+        let Some(root) = data_root() else { return };
+        let flip = load_taming_info(&root, 1983322).expect("flip taming");
+        assert!(flip.flip);
+        let actions = load_taming_info(&root, 1930001).expect("action taming");
+        assert!(!actions.character_actions.is_empty());
+        assert!(!actions.character_emotions.is_empty() || actions.character_actions.len() > 1);
+
+        let av = load_chair(3015791).expect("flip chair");
+        assert!(chair_info(&av).taming.as_ref().is_some_and(|t| t.flip));
+    }
+
+    #[test]
+    fn taming_character_action_overrides_body_action() {
+        let mut info = ChairInfo {
+            taming: Some(TamingInfo {
+                character_actions: std::collections::BTreeMap::from([(
+                    "sit".to_string(),
+                    "stand2".to_string(),
+                )]),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert_eq!(
+            info.body_action(),
+            ChairBodyAction::Action {
+                name: "stand2".into(),
+                frame: None
+            }
+        );
+        info.taming = None;
+    }
+
+    #[test]
     fn game_font_renders_korean_text() {
         let Some(root) = data_root() else { return };
         let Some(font) = game_font(&root) else {
@@ -4867,6 +5216,7 @@ mod chair_custom_type_tests {
             scale: 100,
             remove_body: true,
             flip: false,
+            ..Default::default()
         });
         assert_eq!(info.body_action(), ChairBodyAction::Hide);
 

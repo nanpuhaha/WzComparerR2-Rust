@@ -136,6 +136,13 @@ remaining CharaSim gaps.
   → `apply_custom_origin_map`. The GUI accepts `childName:x,y;...`.
 - Chair pose: when a `Chair` is in the equipment list, the body frame prefers `sit`
   over `stand1`/`stand`. Group taming members also use `sit`.
+- `info/sitEmotion` selects the head/face emotion action (C# `EmotionTable`);
+  taming `characterEmotion` overrides it.
+- taming `info/flip` mirrors body/equipment parts; taming `characterAction`/
+  `characterEmotion` override the body pose/emotion for the `sit`/`stand0` key.
+- chair `effect2` and `Effect/ItemEff.img/<chairId>/0|1` first frames are loaded
+  (metadata `_outlink` → `Effect/_Canvas`). Multi-frame chair effect animation is
+  not wired to the frame timer yet.
 - Current-client parity for the C#-implemented chair behavior: complete. The remaining
   gap is data-driven behavior for WZ-only custom chair types, which has no C# reference
   implementation.
