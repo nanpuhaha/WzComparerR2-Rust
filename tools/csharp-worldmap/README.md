@@ -40,6 +40,8 @@ Commands:
   byte length and duration.
 - `damageskins <consume.wz> <String_000.wz>` — emits DB2 DamageSkin rows
   (`id/name/desc/icon_image/has_sample`) using `StringLinker.StringItem`.
+- `morphs <consume.wz> <morph.wz> <String_000.wz>` — emits DB2 Morph rows
+  (`id/name/desc/morph_id/has_icon/has_morph`).
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -139,3 +141,10 @@ dotnet run ... -- damageskins ../../Data/Item/Consume/Consume_000.wz ../../Data/
 → 952 rows
 ```
 Rust `wz db2-damage-skins ... --json` matches all 952 rows exactly.
+
+Verified DB2 Morph grid output:
+```
+dotnet run ... -- morphs ../../Data/Item/Consume/Consume_000.wz ../../Data/Morph/Morph_000.wz ../../Data/String/String_000.wz
+→ 234 rows
+```
+Rust `wz db2-morphs ... --json` matches all 234 rows exactly.

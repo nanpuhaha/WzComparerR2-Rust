@@ -720,6 +720,54 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void MorphGrid(string consumeWzPath, string morphWzPath, string stringWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(consumeWzPath);
+        var morphSt = new Wz_Structure(); morphSt.Load(morphWzPath);
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        if (!linker.Load(str.wz_files[0], null, null))
+        {
+            Console.WriteLine("{\"error\":\"string linker load failed\"}");
+            return;
+        }
+        var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == "0221.img");
+        if (imgNode?.Value is not Wz_Image items || !items.TryExtract())
+        {
+            Console.WriteLine("[]");
+            return;
+        }
+        var morphImages = new Dictionary<string, Wz_Image>();
+        foreach (Wz_Node n in morphSt.WzNode.Nodes)
+        {
+            if (n.Value is Wz_Image m && n.Text.EndsWith(".img"))
+                morphImages[n.Text] = m;
+        }
+        var rows = new List<object>();
+        foreach (Wz_Node item in items.Node.Nodes)
+        {
+            int idNum;
+            if (!int.TryParse(item.Text, out idNum)) continue;
+            linker.StringItem.TryGetValue(idNum, out var sr);
+            var morphRaw = item.FindNodeByPath(@"spec\morph")?.Value;
+            var morphId = (morphRaw == null ? "" : Convert.ToString(morphRaw)).PadLeft(4, '0');
+            bool hasMorph = false;
+            if (morphImages.TryGetValue(morphId + ".img", out var morphImage) && morphImage.TryExtract())
+                hasMorph = morphImage.Node.FindNodeByPath(@"walk\0") != null;
+            rows.Add(new {
+                id = item.Text,
+                name = sr?.Name ?? "",
+                desc = sr?.Desc ?? "",
+                morph_id = morphId,
+                has_icon = item.FindNodeByPath(@"info\icon") != null,
+                has_morph = hasMorph,
+            });
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -736,6 +784,7 @@ class Program
         else if (args[0] == "reactors") ReactorGrid(args[1]);
         else if (args[0] == "music") MusicGrid(args[1]);
         else if (args[0] == "damageskins") DamageSkinGrid(args[1], args[2]);
+        else if (args[0] == "morphs") MorphGrid(args[1], args[2], args[3]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

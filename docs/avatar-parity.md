@@ -522,3 +522,15 @@ merge semantics (recursive directory merge, conflict errors).
 - Executed C# reference: `tools/csharp-worldmap damageskins ...` uses the
   original StringLinker. `Consume_000.wz` → C# 952 == Rust 952 rows, exact
   match.
+
+## DB2 Morph grid
+
+- `wz-db::db2_morphs` mirrors `DB2Form.LoadMorph`: each item in
+  `Item/Consume/0221.img` yields `id/name/desc/morph_id/has_icon/has_morph`,
+  with `spec/morph` left-padded to 4 digits and `Morph/<id>.img/walk/0`
+  checked for the morph preview.
+- `wz db2-morphs <consume.wz> --morph <morph.wz> --string <String_000.wz>`
+  prints the grid; the GUI Catalog has a DB2 Morph table (loads
+  `Data/Morph/Morph_000.wz`).
+- Executed C# reference: `tools/csharp-worldmap morphs ...`. `Consume_000.wz` +
+  `Morph_000.wz` → C# 234 == Rust 234 rows, exact match.

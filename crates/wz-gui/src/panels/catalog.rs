@@ -562,6 +562,67 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                     });
             });
     }
+    ui.horizontal(|ui| {
+        if ui.button("현재 WZ DB2 Morph 그리드").clicked() {
+            let Some(linker) = state.string_linker.as_ref() else {
+                state.db2_status = "StringLinker를 먼저 로드하세요".into();
+                return;
+            };
+            let Some(archive) = state.shared_archive.lock().unwrap().clone() else {
+                state.db2_status = "아카이브 없음".into();
+                return;
+            };
+            let Some(tree) = &state.tree else {
+                state.db2_status = "트리 없음".into();
+                return;
+            };
+            let Some(root) = state.data_root.clone() else {
+                state.db2_status = "Data 루트 없음".into();
+                return;
+            };
+            let Ok(morph_archive) = wz_core::WzArchive::open(root.join("Morph/Morph_000.wz"))
+            else {
+                state.db2_status = "Morph_000.wz 없음".into();
+                return;
+            };
+            let Ok(morph_tree) = morph_archive.read_tree() else {
+                state.db2_status = "Morph 트리 파싱 실패".into();
+                return;
+            };
+            state.db2_morph_rows = wz_db::db2_morph_grid_rows(
+                &archive,
+                tree,
+                &morph_archive,
+                &morph_tree,
+                linker,
+            );
+            state.db2_status = format!("morph rows {}", state.db2_morph_rows.len());
+        }
+    });
+    if !state.db2_morph_rows.is_empty() {
+        egui::ScrollArea::vertical()
+            .id_salt("db2_morph_grid_scroll")
+            .max_height(200.0)
+            .show(ui, |ui| {
+                egui::Grid::new("db2_morph_grid")
+                    .striped(true)
+                    .num_columns(5)
+                    .show(ui, |ui| {
+                        for label in ["id", "name", "morph", "icon", "walk"] {
+                            ui.strong(label);
+                        }
+                        ui.end_row();
+                        for row in state.db2_morph_rows.iter().take(200) {
+                            ui.label(&row.id);
+                            ui.label(&row.name);
+                            ui.label(&row.morph_id);
+                            ui.label(if row.has_icon { "Y" } else { "" });
+                            ui.label(if row.has_morph { "Y" } else { "" });
+                            ui.end_row();
+                        }
+                    });
+            });
+    }
     let filter = state.db2_filter.clone();
     let rows: Vec<&wz_db::Db2Row> = state
         .db2_rows

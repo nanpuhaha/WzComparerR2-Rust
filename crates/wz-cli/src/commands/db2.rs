@@ -715,3 +715,82 @@ mod damage_skin_tests {
         assert_eq!(rows.len(), 952);
     }
 }
+
+pub fn cmd_db2_morphs(
+    wz_path: &Path,
+    morph_wz: &Path,
+    string_wz: &Path,
+    json: bool,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let morph_archive = WzArchive::open(morph_wz)?;
+    let morph_tree = morph_archive.read_tree()?;
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let mut rows =
+        wz_db::db2_morph_grid_rows(&archive, &tree, &morph_archive, &morph_tree, &linker);
+    rows.truncate(limit);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        println!(
+            "{:<10} {:<24} {:>6} {:>6} morph",
+            "id", "name", "icon", "walk"
+        );
+        for row in rows {
+            println!(
+                "{:<10} {:<24} {:>6} {:>6} {}",
+                row.id, row.name, row.has_icon, row.has_morph, row.morph_id
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod morph_tests {
+    use super::*;
+    use wz_db::{Arena, StringLinker};
+
+    #[test]
+    fn db2_morphs_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let wz = root.join("Item/Consume/Consume_000.wz");
+        let morph_wz = root.join("Morph/Morph_000.wz");
+        let string_wz = root.join("String/String_000.wz");
+        if !wz.exists() || !morph_wz.exists() || !string_wz.exists() {
+            return;
+        }
+        let archive = WzArchive::open(&wz).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let morph_archive = WzArchive::open(&morph_wz).unwrap();
+        let morph_tree = morph_archive.read_tree().unwrap();
+        let string_archive = WzArchive::open(&string_wz).unwrap();
+        let (arena, root_id) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, root_id));
+        let rows =
+            wz_db::db2_morph_grid_rows(&archive, &tree, &morph_archive, &morph_tree, &linker);
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/db2_morphs_consume000.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(serde_json::to_value(&rows).unwrap(), expected);
+        assert_eq!(rows.len(), 234);
+    }
+}
