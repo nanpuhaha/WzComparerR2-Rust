@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Security.Cryptography;
 using WzComparerR2.WzLib;
+using WzComparerR2.Common;
 
 class Program
 {
@@ -405,6 +406,41 @@ class Program
         DumpIcons(img.Node, "", rows);
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void ItemGrid(string itemWzPath, string imageName, string stringWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(itemWzPath);
+        var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == imageName);
+        var img = imgNode?.Value as Wz_Image;
+        if (img == null) { Console.WriteLine("{\"error\":\"image not found\"}"); return; }
+        img.TryExtract();
+
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        if (!linker.Load(str.wz_files[0], null, null))
+        {
+            Console.WriteLine("{\"error\":\"string linker load failed\"}");
+            return;
+        }
+
+        var rows = new List<object>();
+        foreach (Wz_Node item in img.Node.Nodes)
+        {
+            int id;
+            if (!int.TryParse(item.Text, out id)) continue;
+            linker.StringItem.TryGetValue(id, out var sr);
+            Wz_Node icon = item.FindNodeByPath("info\\icon");
+            rows.Add(new {
+                id = item.Text,
+                name = string.IsNullOrEmpty(sr?.Name) ? "  " : sr.Name,
+                desc = string.IsNullOrEmpty(sr?.Desc) ? "  " : sr.Desc,
+                has_icon = icon != null,
+            });
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -413,6 +449,7 @@ class Program
         else if (args[0] == "gear") GearTooltip(args[1], args[2]);
         else if (args[0] == "db2") Db2(args[1], args[2]);
         else if (args[0] == "icons") Icons(args[1], args[2]);
+        else if (args[0] == "items") ItemGrid(args[1], args[2], args[3]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

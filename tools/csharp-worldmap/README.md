@@ -23,6 +23,8 @@ Commands:
   (`path/name/node_type/value/children`).
 - `icons <wz> <image.img>` — decodes ARGB4444/ARGB8888 canvases and emits
   `path/width/height/format/RGBA SHA-256`.
+- `items <item.wz> <image.img> <String_000.wz>` — emits the DB2 Item grid rows
+  (`id/name/desc/has_icon`) using the original `StringLinker`.
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -62,3 +64,12 @@ dotnet run ... -- icons ../../Data/Character/Weapon/_Canvas/_Canvas_000.wz 01302
 → 18 canvases
 ```
 Rust `wz db2-icons ... --json` matches all 18 RGBA SHA-256 values exactly.
+
+Verified DB2 Item grid output:
+```
+dotnet run ... -- items ../../Data/Item/Consume/Consume_000.wz 0200.img ../../Data/String/String_000.wz
+→ 530 rows
+```
+Rust `wz db2-items ... --json` matches all 530 rows exactly.
+Requires `-p:CommonPath=<WzComparerR2.Common.dll>` (built with
+`-p:DotnetEdition=core -p:SystemDrawingCommonVersion=8.0.0`).

@@ -216,6 +216,23 @@ enum Command {
         limit: usize,
     },
 
+    /// DB2 Item 그리드 (id/name/desc/icon)
+    Db2Items {
+        /// Item WZ 파일
+        wz: PathBuf,
+        /// 이미지 이름 (예: 0200.img)
+        image: String,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+        /// 최대 행
+        #[arg(long, default_value_t = 1000)]
+        limit: usize,
+    },
+
     /// DB2 아이콘/이미지 뷰어 (Canvas RGBA SHA-256)
     Db2Icons {
         /// WZ 파일
@@ -476,6 +493,13 @@ fn main() {
             json,
             limit,
         } => cmd_db2(&wz, &image, &filter, json, limit),
+        Command::Db2Items {
+            wz,
+            image,
+            string,
+            json,
+            limit,
+        } => cmd_db2_items(&wz, &image, &string, json, limit),
         Command::Db2Icons {
             wz,
             image,

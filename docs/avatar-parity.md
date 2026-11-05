@@ -426,3 +426,14 @@ counts, LOC and status. Remaining large unmapped areas are the WinForms main UI,
 CharaSimControl, DB2, Common Controls/OpenAPI, LuaConsole, Network and
 PluginBase. `wz-diff::virtual_node` implements the original `WzVirtualNode`
 merge semantics (recursive directory merge, conflict errors).
+
+## DB2 Item grid
+
+- `wz-db::db2_items` mirrors `DB2Form.LoadItem`: each numeric child of
+  `Item/<dir>/<img>.img` becomes `id/name/desc/has_icon`, with name/desc from
+  the original `StringLinker` (`String/<dir>.img`).
+- `wz db2-items <item.wz> <image> --string <String_000.wz>` prints the grid;
+  the GUI Catalog has a DB2 Item grid table.
+- Executed C# reference: `tools/csharp-worldmap items ...` loads
+  `WzComparerR2.Common.StringLinker` and prints the same rows.
+  `Consume_000.wz/0200.img` → C# 530 == Rust 530 rows, exact match.

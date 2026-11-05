@@ -151,3 +151,95 @@ mod tests {
         assert_eq!(serde_json::Value::Array(rows), expected);
     }
 }
+
+pub fn cmd_db2_items(
+    wz_path: &Path,
+    image: &str,
+    string_wz: &Path,
+    json: bool,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let clean = image.trim_end_matches(".img");
+    let image_name = format!("{clean}.img");
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+        .ok_or_else(|| format!("이미지를 찾을 수 없습니다: {image_name}"))?;
+    let mut node = archive.parse_image_at(entry.offset.ok_or("이미지 오프셋 없음")?)?;
+    node.name = std::sync::Arc::from(image_name.as_str());
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+
+    let mut rows = wz_db::db2_item_grid_rows(&node, &linker);
+    rows.truncate(limit);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        println!("{:<10} {:<24} desc", "id", "name");
+        for row in rows {
+            println!(
+                "{:<10} {:<24} {}",
+                row.id,
+                row.name,
+                row.desc.replace('\n', " ")
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod item_tests {
+    use super::*;
+    use wz_db::{Arena, StringLinker};
+
+    #[test]
+    fn db2_items_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let wz = root.join("Item/Consume/Consume_000.wz");
+        let string_wz = root.join("String/String_000.wz");
+        if !wz.exists() || !string_wz.exists() {
+            return;
+        }
+        let archive = WzArchive::open(&wz).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let entry = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("0200.img"))
+            .unwrap();
+        let mut node = archive.parse_image_at(entry.offset.unwrap()).unwrap();
+        node.name = std::sync::Arc::from("0200.img");
+
+        let string_archive = WzArchive::open(&string_wz).unwrap();
+        let (arena, root_id) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, root_id));
+        let rows = wz_db::db2_item_grid_rows(&node, &linker);
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/db2_items_0200.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(serde_json::to_value(&rows).unwrap(), expected);
+        assert_eq!(rows.len(), 530);
+    }
+}

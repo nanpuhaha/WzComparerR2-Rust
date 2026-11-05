@@ -188,6 +188,72 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             response.on_hover_text(path);
         }
     });
+    ui.horizontal(|ui| {
+        if ui.button("선택 이미지 DB2 Item 그리드").clicked() {
+            let Some(linker) = state.string_linker.as_ref() else {
+                state.db2_status = "StringLinker를 먼저 로드하세요".into();
+                return;
+            };
+            let Some(sel) = state.selected.clone() else {
+                state.db2_status = "선택된 노드 없음".into();
+                return;
+            };
+            let Some(archive) = state.shared_archive.lock().unwrap().clone() else {
+                state.db2_status = "아카이브 없음".into();
+                return;
+            };
+            let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
+            let image_name = if name.ends_with(".img") {
+                name.to_string()
+            } else {
+                format!("{name}.img")
+            };
+            let Some(tree) = &state.tree else {
+                state.db2_status = "트리 없음".into();
+                return;
+            };
+            let Some(entry) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+            else {
+                state.db2_status = format!("엔트리 없음: {image_name}");
+                return;
+            };
+            let Some(offset) = entry.offset else {
+                state.db2_status = "오프셋 없음".into();
+                return;
+            };
+            if let Ok(mut node) = archive.parse_image_at(offset) {
+                node.name = std::sync::Arc::from(image_name.as_str());
+                state.db2_item_rows = wz_db::db2_item_grid_rows(&node, linker);
+                state.db2_status = format!("item rows {}", state.db2_item_rows.len());
+            }
+        }
+    });
+    if !state.db2_item_rows.is_empty() {
+        egui::ScrollArea::vertical()
+            .id_salt("db2_item_grid_scroll")
+            .max_height(200.0)
+            .show(ui, |ui| {
+                egui::Grid::new("db2_item_grid")
+                    .striped(true)
+                    .num_columns(3)
+                    .show(ui, |ui| {
+                        ui.strong("id");
+                        ui.strong("name");
+                        ui.strong("desc");
+                        ui.end_row();
+                        for row in state.db2_item_rows.iter().take(200) {
+                            ui.label(&row.id);
+                            ui.label(&row.name);
+                            ui.label(row.desc.replace('\n', " "));
+                            ui.end_row();
+                        }
+                    });
+            });
+    }
     let filter = state.db2_filter.clone();
     let rows: Vec<&wz_db::Db2Row> = state
         .db2_rows
