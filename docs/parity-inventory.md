@@ -294,3 +294,25 @@ weather: 원본 C# 소스에 weather 구현 없음
 - WorldMap `QuestLimit`/`Fog` 노드가 없다.
 - Familiar(`Character/Familiar`, `Etc/FamiliarInfo.img`)와 `.BIN` 파일이 없다.
 - weather는 원본 `WzComparerR2`/`Common`/`WzLib` 소스에 등장하지 않는다.
+
+## Gear 스탯 문자열 (`ItemStringHelper.GetGearPropString`)
+
+`wz-avatar::gear_prop_line`을 원본 switch(signFlag=0) 그대로 옮기고,
+실제 Character WZ의 `info` 정수/문자열 스탯을 전수 비교했다. C#은
+`reqLevel`/`tuc`/`incACC`/`incEVA`/`incMDD`를 주석 처리해 null을 돌려주므로
+Rust도 동일하게 null이며, 툴팁 표시용은 `tooltip_stat_line`이 담당한다.
+
+| 카테고리 | 고유 (key,value) 쌍 | 결과 |
+|---|---:|---|
+| Coat | 228 | 완전 일치 |
+| Weapon | 1262 | 완전 일치 |
+| Cap | 965 | 완전 일치 |
+| Accessory | 1576 | 완전 일치 |
+| Face | 4 | 완전 일치 |
+| Ring | 978 | 완전 일치 |
+| TamingMob | 89 | 완전 일치 |
+| 합계 | **5102** | 7/7 완전 일치 |
+
+`wz gear-props <character.wz> --json`으로 출력하며, 회귀 테스트는
+`crates/wz-cli/tests/fixtures/gear_props.expected.json`의 쌍 수 + SHA-256으로
+고정한다 (`commands::db2::gear_props_tests::gear_props_match_csharp`).

@@ -35,53 +35,127 @@ fn int(node: &Node, key: &str) -> Option<i64> {
     })
 }
 
-fn signed(_key: &str, label: &str, value: i64, percent: bool) -> String {
+/// 원본 `ItemStringHelper.GetGearPropString`(signFlag=0) 그대로.
+///
+/// `reqLevel`/`tuc`/`incACC`/`incEVA`/`incMDD`는 원본에서 주석 처리되어
+/// `null`을 돌려준다. 툴팁 전용 라벨은 [`tooltip_stat_line`]이 담당한다.
+pub fn gear_prop_line(key: &str, value: i64) -> Option<String> {
     let sign = if value > 0 { "+" } else { "" };
-    let suffix = if percent { "%" } else { "" };
-    format!("{label} : {sign}{value}{suffix}")
-}
-
-/// 원본 `ItemStringHelper.GetGearPropString` 의 주요 라벨.
-fn prop_line(key: &str, value: i64) -> Option<String> {
+    let plain = |label: &str| Some(format!("{label} : {sign}{value}"));
+    let percent = |label: &str| Some(format!("{label} : {sign}{value}%"));
     Some(match key {
-        "incSTR" => signed(key, "STR", value, false),
-        "incDEX" => signed(key, "DEX", value, false),
-        "incINT" => signed(key, "INT", value, false),
-        "incLUK" => signed(key, "LUK", value, false),
-        "incAllStat" | "statR" => signed(key, "올스탯", value, false),
-        "incMHP" => signed(key, "최대 HP", value, false),
-        "incMMP" => signed(key, "최대 MP", value, false),
-        "incPAD" => signed(key, "공격력", value, false),
-        "incMAD" => signed(key, "마력", value, false),
-        "incPDD" => signed(key, "방어력", value, false),
-        "incMDD" => signed(key, "마법방어력", value, false),
-        "incACC" => signed(key, "명중치", value, false),
-        "incEVA" => signed(key, "회피치", value, false),
-        "incSpeed" => signed(key, "이동속도", value, false),
-        "incJump" => signed(key, "점프력", value, false),
-        "incCraft" => signed(key, "손재주", value, false),
-        "incDAMr" | "damR" => signed(key, "데미지", value, true),
-        "incCr" => signed(key, "크리티컬 확률", value, true),
-        "incCDr" => signed(key, "크리티컬 데미지", value, true),
+        "incSTR" => plain("STR")?,
+        "incSTRr" => percent("STR")?,
+        "incDEX" => plain("DEX")?,
+        "incDEXr" => percent("DEX")?,
+        "incINT" => plain("INT")?,
+        "incINTr" => percent("INT")?,
+        "incLUK" => plain("LUK")?,
+        "incLUKr" => percent("LUK")?,
+        "incAllStat" => plain("올스탯")?,
+        "statR" => percent("올스탯")?,
+        "incMHP" => plain("최대 HP")?,
+        "incMHPr" => percent("최대 HP")?,
+        "incMMP" => plain("최대 MP")?,
+        "incMMPr" => percent("최대 MP")?,
+        "incMDF" => plain("MaxDF")?,
+        "incPAD" | "incWAT" => plain("공격력")?,
+        "incPADr" => percent("공격력")?,
+        "incMAD" => plain("마력")?,
+        "incMADr" => percent("마력")?,
+        "incPDD" => plain("방어력")?,
+        "incPDDr" => percent("방어력")?,
+        "incSpeed" => plain("이동속도")?,
+        "incJump" => plain("점프력")?,
+        "incCraft" => plain("손재주")?,
+        "damR" | "incDAMr" => percent("데미지")?,
+        "incCr" | "incCRT" => percent("크리티컬 확률")?,
+        "incCDr" | "incCRD" => percent("크리티컬 데미지")?,
+        "knockback" => format!("직접 타격시 {value}%의 확률로 넉백"),
+        "incPVPDamage" => format!("대난투 시 추가 공격력 {sign} {value}"),
+        "incPQEXPr" => format!("파티퀘스트 경험치 {value}% 증가"),
+        "incEXPr" => percent("추가 경험치")?,
         "incBDR" | "bdR" => format!("보스 몬스터 공격 시 데미지 +{value}%"),
         "incIMDR" | "imdR" => format!("몬스터 방어율 무시 : +{value}%"),
-        "incEXPr" => signed(key, "추가 경험치", value, true),
-        "tuc" => format!("업그레이드 가능 횟수 : {value}"),
-        "reqLevel" => format!("착용 레벨 : {value}"),
-        "only" if value != 0 => "중복 소지 불가".into(),
-        "tradeBlock" if value != 0 => "교환 불가".into(),
-        "equipTradeBlock" if value != 0 => "장착 시 교환 불가".into(),
-        "accountSharable" if value != 0 => "월드 내 나의 캐릭터 간 이동만 가능".into(),
-        "onlyEquip" if value != 0 => "중복 장착 불가".into(),
-        "notExtend" if value != 0 => "유효기간 연장 불가".into(),
-        "noPotential" if value != 0 => "잠재능력 설정 불가".into(),
-        "fixedPotential" if value != 0 => "잠재능력 재설정 불가".into(),
-        "superiorEqp" if value != 0 => {
-            "아이템 강화 성공시 더욱 높은 효과를 받을 수 있습니다.".into()
+        "reduceReq" => format!("착용 레벨 감소 : - {value}"),
+        "nbdR" => format!("일반 몬스터 공격 시 데미지 : +{value}%"),
+        "only" => zero_none(value, "중복 소지 불가")?,
+        "tradeBlock" => zero_none(value, "교환 불가")?,
+        "equipTradeBlock" => zero_none(value, "장착 시 교환 불가")?,
+        "accountSharable" => zero_none(value, "월드 내 나의 캐릭터 간 이동만 가능")?,
+        "sharableOnce" => {
+            zero_none(value, "월드 내 나의 캐릭터 간 1회 이동 가능\n(이동 후 교환불가)")?
         }
-        "blockGoldHammer" if value != 0 => "황금망치 사용 불가".into(),
-        "cantRepair" if value != 0 => "수리 불가".into(),
+        "onlyEquip" => zero_none(value, "중복 장착 불가")?,
+        "notExtend" => zero_none(value, "유효기간 연장 불가")?,
+        "accountSharableAfterExchange" => zero_none(
+            value,
+            "1회 교환 가능\n(거래 후 월드 내 나의 캐릭터 간 이동만 가능)",
+        )?,
+        "noPrism" => zero_none(value, "염색하기 불가")?,
+        "mintable" => zero_none(value, "민팅 가능")?,
+        "tradeAvailable" => match value {
+            1 => "#c카르마의 가위 또는 실버 카르마의 가위를 사용하면 1회 교환이 가능하게 할 수 있습니다.#".into(),
+            2 => "#c플래티넘 카르마의 가위를 사용하면 1회 교환이 가능하게 할 수 있습니다.#".into(),
+            _ => return None,
+        },
+        "accountShareTag" if value == 1 => {
+            "#c쉐어 네임 텍을 사용하면 월드 내 나의 캐릭터 간 1회 이동할 수 있습니다.#".into()
+        }
+        "noPotential" => zero_none(value, "잠재능력 설정 불가")?,
+        "fixedPotential" => zero_none(value, "잠재능력 재설정 불가")?,
+        "superiorEqp" => {
+            zero_none(value, "아이템 강화 성공시 더욱 높은 효과를 받을 수 있습니다.")?
+        }
+        "nActivatedSocket" => zero_none(value, "#c可以镶嵌星岩#")?,
+        "jokerToSetItem" => zero_none(
+            value,
+            "#c3개 이상 착용하고 있는 모든 세트 아이템에 포함되는 럭키 아이템! (단, 2개 이상의 럭키 아이템 착용 시 1개만 효과 적용.)#",
+        )?,
+        "abilityTimeLimited" => zero_none(value, "기간 한정 능력치")?,
+        "blockGoldHammer" => zero_none(value, "황금망치 사용 불가")?,
+        "colorvar" => zero_none(value, "#c该装备可通过染色颜料来变更颜色.#")?,
+        "cantRepair" => zero_none(value, "수리 불가")?,
+        "noLookChange" => zero_none(value, "훈장 신비의 모루 사용 불가")?,
+        "reissueBan" => zero_none(value, "재발급 불가")?,
+        "incAllStat_incMHP25" => {
+            format!("올스탯: {sign}{value}, 최대 HP : {sign}{}", value * 25)
+        }
+        "incAllStat_incMHP50_incMMP50" => format!(
+            "올스탯: {sign}{value}, 최대 HP / 최대 MP : {sign}{}",
+            value * 50
+        ),
+        "incMHP_incMMP" => format!("최대 HP / 최대 MP : {sign}{value}"),
+        "incMHPr_incMMPr" => format!("최대 HP / 최대 MP : {sign}{value}%"),
+        "incPAD_incMAD" | "incAD" => format!("공격력 / 마력 : {sign}{value}"),
+        "incPDD_incMDD" => format!("방어력 : {sign}{value}"),
+        "incARC" => format!("ARC : {sign}{value}"),
+        "incAUT" => format!("AUT : {sign}{value}"),
+        "Etuc" => format!("익셉셔널 강화가 가능합니다. (최대 : {value}회)"),
+        "CuttableCount" => format!("가위 사용 가능 횟수：{value}회"),
         _ => return None,
+    })
+}
+
+fn zero_none(value: i64, text: &str) -> Option<String> {
+    if value == 0 {
+        None
+    } else {
+        Some(text.to_string())
+    }
+}
+
+/// 툴팁 표시용 확장 라벨. 원본 `GetGearPropString`이 주석 처리한 항목과
+/// 착용 레벨/업그레이드 횟수를 함께 보여준다.
+pub fn tooltip_stat_line(key: &str, value: i64) -> Option<String> {
+    let sign = if value > 0 { "+" } else { "" };
+    Some(match key {
+        "reqLevel" => format!("착용 레벨 : {value}"),
+        "tuc" => format!("업그레이드 가능 횟수 : {value}"),
+        "incACC" => format!("명중치 : {sign}{value}"),
+        "incEVA" => format!("회피치 : {sign}{value}"),
+        "incMDD" => format!("마법방어력 : {sign}{value}"),
+        _ => gear_prop_line(key, value)?,
     })
 }
 
@@ -261,7 +335,7 @@ fn set_tooltip(data_root: &std::path::Path, set_id: i32) -> Option<SetData> {
                     Some(ImageValue::Long(v)) => Some(*v),
                     _ => None,
                 }) {
-                    if let Some(line) = prop_line(key, value) {
+                    if let Some(line) = tooltip_stat_line(key, value) {
                         lines.push(line);
                     }
                 }
@@ -287,7 +361,7 @@ fn potential_lines(data_root: &std::path::Path, code: i32, level: i32) -> Vec<St
     let mut lines = Vec::new();
     for stat in level_node.object_children() {
         if let Some(value) = int(level_node, stat.name.as_ref()) {
-            if let Some(line) = prop_line(stat.name.as_ref(), value) {
+            if let Some(line) = tooltip_stat_line(stat.name.as_ref(), value) {
                 lines.push(line);
             }
         }
@@ -346,7 +420,7 @@ pub fn build_gear_tooltip_full(
     let mut lines = Vec::new();
     for key in PROP_ORDER {
         if let Some(value) = int(info, key) {
-            if let Some(line) = prop_line(key, value) {
+            if let Some(line) = tooltip_stat_line(key, value) {
                 lines.push(line);
             }
         }

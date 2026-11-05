@@ -22,7 +22,8 @@ pub use frame_layers::{
     resolve_outlink, split_outlink, FrameAssembly, FrameLayer, ResolvedCanvas,
 };
 pub use gear_tooltip::{
-    build_gear_tooltip, build_gear_tooltip_full, render_gear_tooltip, GearTooltip,
+    build_gear_tooltip, build_gear_tooltip_full, gear_prop_line, render_gear_tooltip,
+    tooltip_stat_line, GearTooltip,
 };
 pub use loader::{
     item_id_to_slot, load_avatar_with_equipment, load_avatar_with_equipment_and_mix,

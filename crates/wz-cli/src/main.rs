@@ -408,6 +408,15 @@ enum Command {
         json: bool,
     },
 
+    /// 장비 info 스탯 문자열 (`ItemStringHelper.GetGearPropString`)
+    GearProps {
+        /// Character WZ 파일
+        wz: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// 데이터 부재 항목 전수 스캔 (Skill common/level, WorldMap Fog, Familiar, BIN)
     ParityScan {
         /// Data 루트
@@ -761,6 +770,7 @@ fn main() {
             string,
             json,
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
+        Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::ParityScan { data_root } => commands::parity::cmd_parity_scan(&data_root),
         Command::Db2ItemTab {
             data_root,

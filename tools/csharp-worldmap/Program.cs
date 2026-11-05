@@ -1076,6 +1076,43 @@ class Program
             .ToList();
         Console.WriteLine(JsonSerializer.Serialize(deduped, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void GearProps(string characterWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(characterWzPath);
+        var seen = new HashSet<string>();
+        var rows = new List<object>();
+        foreach (Wz_Node n in st.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            if (!img.TryExtract()) continue;
+            var info = img.Node.Nodes["info"];
+            if (info == null) continue;
+            foreach (Wz_Node c in info.Nodes)
+            {
+                if (c.Value == null) continue;
+                long value;
+                try { value = Convert.ToInt64(c.Value); } catch { continue; }
+                GearPropType type;
+                var parsed = Enum.TryParse(c.Text, out type);
+                var text = parsed
+                    ? ItemStringHelper.GetGearPropString(type, value)
+                    : null;
+                var key = c.Text + "\t" + value;
+                if (!seen.Add(key)) continue;
+                rows.Add(new { key = c.Text, value, text });
+            }
+        }
+        rows.Sort((a, b) =>
+        {
+            var ka = (string)a.GetType().GetProperty("key").GetValue(a);
+            var kb = (string)b.GetType().GetProperty("key").GetValue(b);
+            var cmp = string.CompareOrdinal(ka, kb);
+            if (cmp != 0) return cmp;
+            return ((long)a.GetType().GetProperty("value").GetValue(a))
+                .CompareTo((long)b.GetType().GetProperty("value").GetValue(b));
+        });
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1098,6 +1135,7 @@ class Program
         else if (args[0] == "skillsummary") SkillSummary(args[1], int.Parse(args[2]));
         else if (args[0] == "itemtooltip") ItemTooltip(args[1], args[2], args[3], args[4]);
         else if (args[0] == "itemtab") ItemTab(args[1], args[2], args[3]);
+        else if (args[0] == "gearprops") GearProps(args[1]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

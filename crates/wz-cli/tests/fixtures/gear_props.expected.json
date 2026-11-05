@@ -1,0 +1,30 @@
+{
+  "Coat": {
+    "pairs": 228,
+    "sha256": "8e14abaf5dfb4b6d3b76a61f3c1c661e834e41898c7174c1505ca70e1de272e6"
+  },
+  "Weapon": {
+    "pairs": 1262,
+    "sha256": "988cdd32114aa3af52641fa69c897fe2e1e4a0570690ef8fe99448f4567a7e40"
+  },
+  "Cap": {
+    "pairs": 965,
+    "sha256": "c989455596225ad4d8246212a1257b86acee29bef5122ac9b266d27971cd1158"
+  },
+  "Accessory": {
+    "pairs": 1576,
+    "sha256": "96bfe6e2ae82b5f70cc77521d7e234af568d1bab62111f907d3aa54e28bb4893"
+  },
+  "Face": {
+    "pairs": 4,
+    "sha256": "cc712c2f6756cb498e72309bab79b4f7a0be5ab5b287a048883d2478f73d7d40"
+  },
+  "Ring": {
+    "pairs": 978,
+    "sha256": "d71ae94969745f61e834b62efb89a9e96a025e90a5593b72aa1cdded5d273e7f"
+  },
+  "TamingMob": {
+    "pairs": 89,
+    "sha256": "91d9257ecc8e1a157cff0aebbf9bea0c224a616acbc0db317c3ef9afe6256595"
+  }
+}

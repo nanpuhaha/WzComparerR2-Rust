@@ -692,3 +692,13 @@ merge semantics (recursive directory merge, conflict errors).
   Catalog에는 6개 탭 버튼(Cash/Consume/Etc/Install/Pet/Special)과 표가 있다.
 - C# `itemtab` 모드와 비교: 6탭 32,843행 완전 일치.
   `02439339 `(뒤 공백) 행도 원본과 동일하게 포함된다.
+
+## Gear 스탯 문자열 전수 비교
+
+- `gear_prop_line`은 `ItemStringHelper.GetGearPropString(GearPropType, value,
+  signFlag=0)` 전체 switch를 옮겼다. 원본에서 주석 처리된 `reqLevel`, `tuc`,
+  `incACC`, `incEVA`, `incMDD`는 null을 돌려주고, 툴팁 전용 라벨은
+  `tooltip_stat_line`이 처리한다.
+- C# `gearprops` 모드와 실제 데이터 비교: Coat/Weapon/Cap/Accessory/Face/Ring/
+  TamingMob 총 5,102개 (key,value) 쌍이 완전 일치.
+- 회귀 테스트: `gear_props_match_csharp` (쌍 수 + SHA-256 fixture).

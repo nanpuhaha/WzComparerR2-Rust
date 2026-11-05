@@ -1835,3 +1835,180 @@ mod item_tab_tests {
         }
     }
 }
+
+pub fn cmd_gear_props(wz_path: &Path, json: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let mut seen = std::collections::HashSet::new();
+    let mut rows = Vec::new();
+    for entry in &tree.root.entries {
+        if entry.node_type != 4 {
+            continue;
+        }
+        let Some(offset) = entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let Some(info) = node
+            .object_children()
+            .iter()
+            .find(|c| c.name.as_ref() == "info")
+        else {
+            continue;
+        };
+        for c in info.object_children() {
+            let value = match &c.value {
+                Some(wz_core::image::ImageValue::Int(v)) => i64::from(*v),
+                Some(wz_core::image::ImageValue::Short(v)) => i64::from(*v),
+                Some(wz_core::image::ImageValue::Long(v)) => *v,
+                Some(wz_core::image::ImageValue::Uint(v)) => i64::from(*v),
+                Some(wz_core::image::ImageValue::Str(text))
+                | Some(wz_core::image::ImageValue::Uol(text)) => match text.trim().parse() {
+                    Ok(v) => v,
+                    Err(_) => continue,
+                },
+                _ => continue,
+            };
+            let key = c.name.to_string();
+            if !seen.insert((key.clone(), value)) {
+                continue;
+            }
+            rows.push(serde_json::json!({
+                "key": key,
+                "value": value,
+                "text": wz_avatar::gear_prop_line(&key, value),
+            }));
+        }
+    }
+    rows.sort_by(|a, b| {
+        let ka = a["key"].as_str().unwrap_or("");
+        let kb = b["key"].as_str().unwrap_or("");
+        ka.cmp(kb).then(
+            a["value"]
+                .as_i64()
+                .unwrap_or(0)
+                .cmp(&b["value"].as_i64().unwrap_or(0)),
+        )
+    });
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!(
+                "{}\t{}\t{}",
+                row["key"].as_str().unwrap_or(""),
+                row["value"],
+                row["text"].as_str().unwrap_or("null")
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod gear_props_tests {
+    use super::*;
+
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    fn collect(path: &Path) -> Vec<(String, i64, Option<String>)> {
+        let archive = WzArchive::open(path).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let mut seen = std::collections::HashSet::new();
+        let mut rows = Vec::new();
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else {
+                continue;
+            };
+            let Ok(node) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            let Some(info) = node
+                .object_children()
+                .iter()
+                .find(|c| c.name.as_ref() == "info")
+            else {
+                continue;
+            };
+            for c in info.object_children() {
+                let value = match &c.value {
+                    Some(wz_core::image::ImageValue::Int(v)) => i64::from(*v),
+                    Some(wz_core::image::ImageValue::Short(v)) => i64::from(*v),
+                    Some(wz_core::image::ImageValue::Long(v)) => *v,
+                    Some(wz_core::image::ImageValue::Uint(v)) => i64::from(*v),
+                    Some(wz_core::image::ImageValue::Str(text))
+                    | Some(wz_core::image::ImageValue::Uol(text)) => match text.trim().parse() {
+                        Ok(v) => v,
+                        Err(_) => continue,
+                    },
+                    _ => continue,
+                };
+                let key = c.name.to_string();
+                if !seen.insert((key.clone(), value)) {
+                    continue;
+                }
+                rows.push((key.clone(), value, wz_avatar::gear_prop_line(&key, value)));
+            }
+        }
+        rows.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+        rows
+    }
+
+    #[test]
+    fn gear_props_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/gear_props.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        for cat in [
+            "Coat",
+            "Weapon",
+            "Cap",
+            "Accessory",
+            "Face",
+            "Ring",
+            "TamingMob",
+        ] {
+            let path = root
+                .join("Character")
+                .join(cat)
+                .join(format!("{cat}_000.wz"));
+            if !path.exists() {
+                continue;
+            }
+            let rows = collect(&path);
+            let canon = rows
+                .iter()
+                .map(|(k, v, t)| format!("{k}\t{v}\t{}", t.as_deref().unwrap_or("")))
+                .collect::<Vec<_>>()
+                .join("\n");
+            assert_eq!(
+                rows.len() as u64,
+                expected[cat]["pairs"].as_u64().unwrap(),
+                "{cat} pairs"
+            );
+            assert_eq!(
+                sha256_hex(canon.as_bytes()),
+                expected[cat]["sha256"].as_str().unwrap(),
+                "{cat} hash"
+            );
+        }
+    }
+}

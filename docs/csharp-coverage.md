@@ -28,7 +28,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | 디렉터리 | 파일 | LOC | 대응 | 상태 |
 |---|---:|---:|---|---|
 | (root) WinForms 메인/비교 창 | 48 | 26,281 | `wz-gui` 최소 PoC | ⬜/🟡 |
-| CharaSimControl | 40 | 21,299 | gear tooltip(base/set/potential/starforce), Skill `SummaryParser` 요약, ItemTooltip 속성 태그, bitmap | 🟡 |
+| CharaSimControl | 40 | 21,299 | gear tooltip(base/set/potential/starforce), `GetGearPropString` 전수 비교, Skill `SummaryParser` 요약, ItemTooltip 속성 태그, bitmap | 🟡 |
 | AvatarCommon | 12 | 4,086 | `wz-avatar` | ✅ |
 | Comparer | 6 | 3,080 | `wz-diff` + `virtual_node` | 🟡 |
 | Patcher | 16 | 2,547 | `wz-core::patch`, `wz patch` | ✅ core/CLI, UI ⬜ |
@@ -159,6 +159,11 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - 데이터 부재 재확인: `wz parity-scan Data` → Skill common 0, WorldMap
   QuestLimit/Fog 0, Familiar 파일 0, BIN 파일 0. weather는 원본 C# 소스에
   구현이 없다.
+- `ItemStringHelper.GetGearPropString` 전수 비교: Coat 228, Weapon 1262,
+  Cap 965, Accessory 1576, Face 4, Ring 978, TamingMob 89 — 총 5,102개
+  (key,value) 쌍의 문자열이 C#과 완전 일치. `reqLevel`/`tuc`/`incACC`/
+  `incEVA`/`incMDD`는 원본에서 null이므로 툴팁 전용 `tooltip_stat_line`으로
+  분리했다.
 - DB2 Character/Mechanic grid `Mechanic_000.wz`: C# 23 rows == Rust
   `wz db2-characters` 23 rows (동일 컬럼 완전 일치).
 - DB2 Character/Dragon grid `Dragon_000.wz`: C# 16 rows == Rust

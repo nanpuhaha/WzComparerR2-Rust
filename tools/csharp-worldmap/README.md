@@ -308,3 +308,11 @@ Cash 3539, Consume 18377, Etc 5238, Install 3851, Pet 614, Special 1224
 All 32,843 rows match Rust `wz db2-item-tab` exactly. The harness mirrors
 `DB2Form.LoadItem`: `IDString()` = `int.Parse(...).ToString()`, `"  "` only when
 the String node is missing, Special filtered by `Etc/CashPackage.img`.
+
+Verified `GetGearPropString` output (`gearprops <character.wz>`):
+```
+Coat 228, Weapon 1262, Cap 965, Accessory 1576, Face 4, Ring 978, TamingMob 89
+= 5102 distinct (key,value) pairs
+```
+All match Rust `wz gear-props` exactly, including nulls for `reqLevel`/`tuc`/
+`incACC`/`incEVA`/`incMDD`.
