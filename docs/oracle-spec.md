@@ -257,7 +257,7 @@ a   = eff + (da*(255-eff) + 127)/255
 <!-- WzComparerR2.Oracle.csproj — Release 빌드에서 매직으로 번들에서 제외 -->
 <PropertyGroup>
   <OutputType>Exe</OutputType>
-  <TargetFramework>net8.0</TargetFramework>
+  <TargetFramework>net8.0-windows</TargetFramework>
   <IsPublishable>false</IsPublishable>
 </PropertyGroup>
 <ItemGroup>
@@ -269,6 +269,41 @@ a   = eff + (da*(255-eff) + 127)/255
 
 출력은 `System.Text.Json` + `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`
 (한글/이모지 라운드트립에 필수 — 원본 `Utils.ToJson` 과 동일).
+
+### TFM 은 `net8.0-windows`
+
+`WzComparerR2.Common` 의 TFM 이 `net462;net6.0-windows;net8.0-windows` 이므로
+오라클 콘솔은 `net8.0` 이 아니라 **`net8.0-windows`** 여야 한다. 또한 핀 커밋에서
+`WzComparerR2.csproj` / `WzComparerR2.MapRender.csproj` 는 `CharaSimResource` 누락으로
+빌드되지 않아 `diff` / `mapscene` 의 C# 짝이 없다.
+
+## C# 참조 핀
+
+오라클은 **명시적 커밋에 고정**되어야 differential 이 재현 가능하다.
+C# 를 Rust 저장소에 벤더링하지 않고, 서브모듈로 붙이지도 않는다.
+
+| 항목 | 값 |
+|---|---|
+| 저장소 | <https://github.com/seotbeo/WzComparerR2> |
+| 핀 커밋 | `bb98c257f3a175a98bce84a38ef3bb65e8b93b75` |
+| 제목 | `StringLinker: fix StringLinker Update for GMS format` |
+| 날짜 | 2026-10-13 |
+| 오라클 브랜치 | `oracle-harness` (이 커밋에서 만든 하네스 작업 브랜치) |
+
+**업스트림이 움직였을 때 재핀하는 법**
+
+```bash
+git -C <C# 저장소> fetch origin
+git -C <C# 저장소> log --oneline bb98c25..HEAD   # 무엇이 바뀌었는지 먼저 본다
+git -C <C# 저장소> checkout -b oracle-harness-<새 sha> <새 sha>
+# 1) 이 표의 커밋/날짜 갱신
+# 2) docs/known-bugs.md 상단의 커밋 참조 갱신
+# 3) 오라클 하네스 저장소/ref 갱신
+# 4) cargo run -p wz-cli --bin wz -- oracle <op> … && dotnet run --project … 로 재대조
+```
+
+재핀할 때는 **StringLinker 를 먼저 본다.** `bb98c25` 자체가 StringLinker 대수정이고,
+#25에서 발견한 파리티 갭의 직접 원인이었다.
 
 ## 차이 비교 스크립트
 

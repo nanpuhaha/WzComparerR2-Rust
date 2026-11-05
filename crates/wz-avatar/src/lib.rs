@@ -122,6 +122,20 @@ impl Point {
     }
 }
 
+impl From<wz_core::image::Vec2> for Point {
+    #[inline]
+    fn from(v: wz_core::image::Vec2) -> Self {
+        Self { x: v.x, y: v.y }
+    }
+}
+
+impl From<Point> for wz_core::image::Vec2 {
+    #[inline]
+    fn from(p: Point) -> Self {
+        Self { x: p.x, y: p.y }
+    }
+}
+
 /// Bone group classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BoneGroup {

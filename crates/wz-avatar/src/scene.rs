@@ -67,9 +67,28 @@ impl AvatarBatch {
     }
 }
 
-/// High-level Avatar Scene managing assembly, anchor resolving, and GPU batching.
+/// High-level Avatar Scene facade managing assembly, anchor resolving, and GPU batching.
+///
+/// Implements [`std::ops::Deref`] and [`std::ops::DerefMut`] targeting [`AvatarCanvas`]
+/// so all canvas operations are directly accessible without middle-man forwarding.
 pub struct AvatarScene {
     pub canvas: AvatarCanvas,
+}
+
+impl std::ops::Deref for AvatarScene {
+    type Target = AvatarCanvas;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.canvas
+    }
+}
+
+impl std::ops::DerefMut for AvatarScene {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.canvas
+    }
 }
 
 impl AvatarScene {
