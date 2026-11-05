@@ -111,6 +111,7 @@ pub struct AppState {
     pub action_auto_play: bool,
     pub action_last_time: f64,
     pub body_frame_slots: Vec<String>,
+    pub chara_stats: Option<wz_avatar::CharacterStats>,
     /// 프리즘 (C# `PrismData`) — 호출자/UI 공급. WZ에는 저장되지 않는다.
     pub prism_enabled: bool,
     pub prism_color_type: i32,
@@ -222,6 +223,7 @@ impl Default for AppState {
             action_auto_play: false,
             action_last_time: 0.0,
             body_frame_slots: Vec::new(),
+            chara_stats: None,
             prism_enabled: false,
             prism_color_type: 0,
             prism_hue: 0,

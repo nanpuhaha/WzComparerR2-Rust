@@ -181,6 +181,7 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             state.chair_event_point = None;
             state.chair_custom_fields.clear();
             state.pet_animations.clear();
+            state.chara_stats = None;
             render_loaded_avatar(state);
         }
         None => {
@@ -271,6 +272,11 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
         },
     ) {
         Some(av) => {
+            state.chara_stats = Some(wz_avatar::compute_character_stats(
+                &data_root,
+                &equipment,
+                &wz_avatar::StatOptions::default(),
+            ));
             state.avatar_status = format!("장비 로드: {} 파트", av.parts.len());
             state.avatar_loaded_parts = av.parts.iter().map(part_data).collect();
             if let Some(first) = av.parts.first() {

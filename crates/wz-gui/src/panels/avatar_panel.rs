@@ -354,6 +354,28 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             ));
         }
     }
+    if let Some(stats) = &state.chara_stats {
+        egui::CollapsingHeader::new("CharaSim stats").show(ui, |ui| {
+            let summary = stats.summary();
+            if summary.is_empty() {
+                ui.label("스탯 없음");
+            } else {
+                ui.label(summary);
+            }
+            if !stats.sets.is_empty() {
+                ui.separator();
+                for set in &stats.sets {
+                    ui.label(format!("{}  {}/{}", set.name, set.count, set.complete));
+                }
+            }
+            if !stats.max_star.is_empty() {
+                ui.separator();
+                for (item, star) in &stats.max_star {
+                    ui.label(format!("{}: 최대 ★{}", item, star));
+                }
+            }
+        });
+    }
     if state.avatar_rendered.is_some() || state.avatar_image.is_some() {
         ui.label(format!("렌더링된 파트: {}", state.avatar_status));
     }

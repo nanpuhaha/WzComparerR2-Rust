@@ -12,6 +12,7 @@ pub mod loader;
 pub mod mix;
 pub mod prism;
 pub mod scene;
+pub mod stats;
 pub mod zmap;
 pub use compose::{bounding_box, compose, ComposeError, ComposedFrame, LayerSource};
 pub use frame::FrameTiming;
@@ -28,6 +29,7 @@ pub use loader::{
 pub use mix::mix_rgba8;
 pub use prism::{apply_prism_rgba8, PrismData};
 pub use scene::{AvatarBatch, AvatarScene, AvatarVertex};
+pub use stats::{compute_character_stats, CharacterStats, SetStatus, StatOptions};
 
 /// 29 predefined avatar equipment and component slots.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

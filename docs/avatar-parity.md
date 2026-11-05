@@ -141,8 +141,13 @@ remaining CharaSim gaps.
 - Equipment slots: `FaceAccessory`, `EyeAccessory`, `Earrings`, `Pendant`, `Belt`,
   `ShoulderPad`, `Pocket`, `Emblem` load from `Character/Accessory`; `Saddle` loads
   from `Character/TamingMob`; `CashWeapon` maps to `Weapon`. Icon-only images are
-  skipped. Ring items and Android items are icon-only in this client and are not
-  avatar sprites.
+  skipped. Ring effect frames load from `Effect/ItemEff.img/<ringId>/0|1`.
+  Android items resolve `info/android` and assemble `Etc/Android/<id>.img`
+  `basic`/`costume` into a full avatar.
+- `wz_avatar::compute_character_stats` aggregates equipment `info` props, set-item
+  thresholds (`Etc/SetItemInfo.img`), caller-supplied potential options
+  (`Item/ItemOption.img`), and max-star display (`C# GetMaxStar`). Star-force stat
+  enhancement values are not in WZ; C# also only displays the star count.
 - Body action: `MixOptions.body_action`/`body_frame` select a body pose
   (`walk1`, `jump`, `alert`, `prone`, `ladder`, `rope`, ...). GUI preloads all body
   frames for the selected action and exposes `Action frame` + `Body action 자동
