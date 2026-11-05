@@ -497,3 +497,15 @@ merge semantics (recursive directory merge, conflict errors).
   Reactor grid table.
 - Executed C# reference: `tools/csharp-worldmap reactors ...` uses the original
   WzLib. `_Canvas_000.wz` → C# 441 == Rust 441 rows, exact match.
+
+## DB2 Music grid
+
+- `wz-db::db2_music` mirrors `DB2Form.LoadMusic/AddMusicRows`: for
+  `Sound.wz` images starting with `Bgm`/`PL_3`/`PL_B`/`PL_C`/`PL_M`, recursively
+  collect every `Sound_DX8` node as `path/data_len/duration_ms`.
+- Paths use the original `GetPath()` `/` form, e.g.
+  `Sound_000.wz/Bgm00.img/DragonDream`.
+- `wz db2-music <sound.wz>` prints the grid; the GUI Catalog has a DB2 Music
+  table.
+- Executed C# reference: `tools/csharp-worldmap music ...` uses WzLib.
+  `Sound_000.wz` → C# 40 == Rust 40 rows, exact match.

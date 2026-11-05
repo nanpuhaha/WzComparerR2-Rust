@@ -587,3 +587,60 @@ mod reactor_tests {
         assert_eq!(rows.len(), 441);
     }
 }
+
+pub fn cmd_db2_music(
+    wz_path: &Path,
+    json: bool,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let root_name = wz_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("Sound.wz");
+    let mut rows = wz_db::db2_music_grid_rows(&archive, &tree, root_name);
+    rows.truncate(limit);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        println!("{:<70} {:>10} {:>8}", "path", "bytes", "ms");
+        for row in rows {
+            println!(
+                "{:<70} {:>10} {:>8}",
+                row.path, row.data_len, row.duration_ms
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod music_tests {
+    use super::*;
+
+    #[test]
+    fn db2_music_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let wz = root.join("Sound/Sound_000.wz");
+        if !wz.exists() {
+            return;
+        }
+        let archive = WzArchive::open(&wz).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let rows = wz_db::db2_music_grid_rows(&archive, &tree, "Sound_000.wz");
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/db2_music_sound000.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(serde_json::to_value(&rows).unwrap(), expected);
+        assert_eq!(rows.len(), 40);
+    }
+}

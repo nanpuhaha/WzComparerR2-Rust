@@ -14,7 +14,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | WzComparerR2.MapRender | 124 | 29,291 | `wz-db::map`, `wz-gui`, `wz-render` | 🟡 |
 | WzComparerR2.Avatar | 13 | 7,055 | `wz-avatar` | ✅ |
 | WzComparerR2 (main) | 150 | 61,035 | `wz-cli`, `wz-gui` | 🟡 |
-| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, GUI tables | 🟡 |
+| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`, GUI tables | 🟡 |
 | CharaSimResource | 2 | 7,490 | — (WinForms 리소스) | ⬜ |
 | WzComparerR2.Network | 28 | 1,954 | — | ⬜ |
 | WzComparerR2.LuaConsole | 10 | 1,451 | — | ⬜ |
@@ -77,10 +77,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 3. `WzComparerR2.Common/CharaSim` (10,121 LOC) — Gear/Set/Potential/MaxStar만.
 4. `MapRender/UI` (8,753 LOC) — Minimap/WorldMap 일부.
 5. `WzComparerR2.DB2` (6,292 LOC) — node table + icon/image viewer + Item/Map/
-   Mob/Skill/NPC/Reactor grid 구현 (`wz db2`, `wz db2-icons`, `wz db2-items`,
-   `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, `wz db2-npcs`,
-   `wz db2-reactors`, GUI Catalog). 나머지 33개 전용 그리드와 전체 화면 이미지
-   뷰어 UI는 미구현.
+   Mob/Skill/NPC/Reactor/Music grid 구현 (`wz db2`, `wz db2-icons`,
+   `wz db2-items`, `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, `wz db2-npcs`,
+   `wz db2-reactors`, `wz db2-music`, GUI Catalog). 나머지 32개 전용 그리드와
+   전체 화면 이미지 뷰어 UI는 미구현.
 6. `WzComparerR2.Common/Controls` (2,138 LOC), `OpenAPI` (2,086 LOC) — 미구현.
 7. `LuaConsole` (1,451), `Network` (1,954), `PluginBase` (693) — 미구현.
 
@@ -108,6 +108,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   `wz db2-npcs` 943 rows (id/name/stand/default/link 완전 일치).
 - DB2 Reactor grid `_Canvas_000.wz`: C# WzLib 441 rows == Rust
   `wz db2-reactors` 441 rows (id/icon/info/link 완전 일치).
+- DB2 Music grid `Sound_000.wz`: C# WzLib 40 rows == Rust `wz db2-music`
+  40 rows (path/data_len/duration 완전 일치).
 
 ## 남은 작업
 

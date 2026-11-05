@@ -305,6 +305,18 @@ enum Command {
         limit: usize,
     },
 
+    /// DB2 Music 그리드 (Bgm/PL_* Sound 경로)
+    Db2Music {
+        /// Sound WZ 파일
+        wz: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+        /// 최대 행
+        #[arg(long, default_value_t = 5000)]
+        limit: usize,
+    },
+
     /// DB2 아이콘/이미지 뷰어 (Canvas RGBA SHA-256)
     Db2Icons {
         /// WZ 파일
@@ -597,6 +609,7 @@ fn main() {
             limit,
         } => cmd_db2_npcs(&wz, &string, json, limit),
         Command::Db2Reactors { wz, json, limit } => cmd_db2_reactors(&wz, json, limit),
+        Command::Db2Music { wz, json, limit } => cmd_db2_music(&wz, json, limit),
         Command::Db2Icons {
             wz,
             image,

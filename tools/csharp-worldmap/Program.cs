@@ -635,6 +635,41 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void AddMusic(Wz_Node node, string prefix, List<object> rows)
+    {
+        foreach (Wz_Node child in node.Nodes)
+        {
+            var path = prefix + "/" + child.Text;
+            if (child.Value is Wz_Sound snd)
+            {
+                rows.Add(new { path, data_len = snd.DataLength, duration_ms = snd.Ms });
+            }
+            else if (child.Nodes.Count > 0)
+            {
+                AddMusic(child, path, rows);
+            }
+        }
+    }
+    static bool IsMusicImage(string name) =>
+        name.StartsWith("Bgm") || name.StartsWith("PL_3") || name.StartsWith("PL_B")
+        || name.StartsWith("PL_C") || name.StartsWith("PL_M");
+    static void MusicGrid(string soundWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(soundWzPath);
+        var root = st.WzNode.Text;
+        var rows = new List<object>();
+        foreach (Wz_Node n in st.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            if (!IsMusicImage(n.Text)) continue;
+            img.TryExtract();
+            AddMusic(img.Node, root + "/" + n.Text, rows);
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("path").GetValue(a),
+            (string)b.GetType().GetProperty("path").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -649,6 +684,7 @@ class Program
         else if (args[0] == "skills") SkillGrid(args[1], args[2]);
         else if (args[0] == "npcs") NpcGrid(args[1], args[2]);
         else if (args[0] == "reactors") ReactorGrid(args[1]);
+        else if (args[0] == "music") MusicGrid(args[1]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

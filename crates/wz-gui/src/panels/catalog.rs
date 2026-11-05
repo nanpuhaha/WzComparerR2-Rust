@@ -478,6 +478,49 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                     });
             });
     }
+    ui.horizontal(|ui| {
+        if ui.button("현재 WZ DB2 Music 그리드").clicked() {
+            let Some(archive) = state.shared_archive.lock().unwrap().clone() else {
+                state.db2_status = "아카이브 없음".into();
+                return;
+            };
+            let Some(tree) = &state.tree else {
+                state.db2_status = "트리 없음".into();
+                return;
+            };
+            let root_name = state
+                .archive_path
+                .as_ref()
+                .and_then(|p| p.file_name())
+                .and_then(|n| n.to_str())
+                .unwrap_or("Sound.wz")
+                .to_string();
+            state.db2_music_rows = wz_db::db2_music_grid_rows(&archive, tree, &root_name);
+            state.db2_status = format!("music rows {}", state.db2_music_rows.len());
+        }
+    });
+    if !state.db2_music_rows.is_empty() {
+        egui::ScrollArea::vertical()
+            .id_salt("db2_music_grid_scroll")
+            .max_height(200.0)
+            .show(ui, |ui| {
+                egui::Grid::new("db2_music_grid")
+                    .striped(true)
+                    .num_columns(3)
+                    .show(ui, |ui| {
+                        ui.strong("path");
+                        ui.strong("bytes");
+                        ui.strong("ms");
+                        ui.end_row();
+                        for row in state.db2_music_rows.iter().take(200) {
+                            ui.label(&row.path);
+                            ui.label(row.data_len.to_string());
+                            ui.label(row.duration_ms.to_string());
+                            ui.end_row();
+                        }
+                    });
+            });
+    }
     let filter = state.db2_filter.clone();
     let rows: Vec<&wz_db::Db2Row> = state
         .db2_rows

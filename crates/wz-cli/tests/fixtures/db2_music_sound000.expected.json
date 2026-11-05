@@ -1,0 +1,202 @@
+[
+  {
+    "path": "Sound_000.wz/Bgm00.img/DragonDream",
+    "data_len": 1261192,
+    "duration_ms": 126119
+  },
+  {
+    "path": "Sound_000.wz/Bgm00.img/FloralLife",
+    "data_len": 1376392,
+    "duration_ms": 137639
+  },
+  {
+    "path": "Sound_000.wz/Bgm00.img/GoPicnic",
+    "data_len": 728294,
+    "duration_ms": 72829
+  },
+  {
+    "path": "Sound_000.wz/Bgm00.img/Nightmare",
+    "data_len": 1907461,
+    "duration_ms": 190746
+  },
+  {
+    "path": "Sound_000.wz/Bgm00.img/RestNPeace",
+    "data_len": 1751510,
+    "duration_ms": 175151
+  },
+  {
+    "path": "Sound_000.wz/Bgm00.img/Silence",
+    "data_len": 100833,
+    "duration_ms": 10083
+  },
+  {
+    "path": "Sound_000.wz/Bgm00.img/SleepyWood",
+    "data_len": 1666351,
+    "duration_ms": 166635
+  },
+  {
+    "path": "Sound_000.wz/Bgm00.img/neneSound",
+    "data_len": 320575,
+    "duration_ms": 20035
+  },
+  {
+    "path": "Sound_000.wz/Bgm01.img/AncientMove",
+    "data_len": 2603364,
+    "duration_ms": 260336
+  },
+  {
+    "path": "Sound_000.wz/Bgm01.img/BadGuys",
+    "data_len": 2183053,
+    "duration_ms": 218305
+  },
+  {
+    "path": "Sound_000.wz/Bgm01.img/CavaBien",
+    "data_len": 1280000,
+    "duration_ms": 128000
+  },
+  {
+    "path": "Sound_000.wz/Bgm01.img/HighlandStar",
+    "data_len": 2371135,
+    "duration_ms": 237113
+  },
+  {
+    "path": "Sound_000.wz/Bgm01.img/MoonlightShadow",
+    "data_len": 1585110,
+    "duration_ms": 158511
+  },
+  {
+    "path": "Sound_000.wz/Bgm01.img/WhereTheBarlogFrom",
+    "data_len": 1880817,
+    "duration_ms": 188081
+  },
+  {
+    "path": "Sound_000.wz/Bgm02.img/AboveTheTreetops",
+    "data_len": 2713861,
+    "duration_ms": 271386
+  },
+  {
+    "path": "Sound_000.wz/Bgm02.img/EvilEyes",
+    "data_len": 3273927,
+    "duration_ms": 327392
+  },
+  {
+    "path": "Sound_000.wz/Bgm02.img/JungleBook",
+    "data_len": 2167119,
+    "duration_ms": 216711
+  },
+  {
+    "path": "Sound_000.wz/Bgm02.img/MissingYou",
+    "data_len": 1469388,
+    "duration_ms": 146938
+  },
+  {
+    "path": "Sound_000.wz/Bgm02.img/WhenTheMorningComes",
+    "data_len": 1877421,
+    "duration_ms": 187742
+  },
+  {
+    "path": "Sound_000.wz/Bgm03.img/Beachway",
+    "data_len": 1963886,
+    "duration_ms": 196388
+  },
+  {
+    "path": "Sound_000.wz/Bgm03.img/BlueSky",
+    "data_len": 1612539,
+    "duration_ms": 161253
+  },
+  {
+    "path": "Sound_000.wz/Bgm03.img/Elfwood",
+    "data_len": 876408,
+    "duration_ms": 87640
+  },
+  {
+    "path": "Sound_000.wz/Bgm03.img/SnowyVillage",
+    "data_len": 1550890,
+    "duration_ms": 155089
+  },
+  {
+    "path": "Sound_000.wz/Bgm03.img/Subway",
+    "data_len": 1989486,
+    "duration_ms": 198948
+  },
+  {
+    "path": "Sound_000.wz/Bgm04.img/ArabPirate",
+    "data_len": 2842123,
+    "duration_ms": 284212
+  },
+  {
+    "path": "Sound_000.wz/Bgm04.img/PlayWithMe",
+    "data_len": 1642057,
+    "duration_ms": 164205
+  },
+  {
+    "path": "Sound_000.wz/Bgm04.img/Shinin\u0027Harbor",
+    "data_len": 1157225,
+    "duration_ms": 115722
+  },
+  {
+    "path": "Sound_000.wz/Bgm04.img/UponTheSky",
+    "data_len": 1795919,
+    "duration_ms": 179591
+  },
+  {
+    "path": "Sound_000.wz/Bgm04.img/WarmRegard",
+    "data_len": 1681241,
+    "duration_ms": 168124
+  },
+  {
+    "path": "Sound_000.wz/Bgm04.img/WhiteChristmas",
+    "data_len": 1831184,
+    "duration_ms": 183118
+  },
+  {
+    "path": "Sound_000.wz/Bgm05.img/AbandonedMine",
+    "data_len": 1784164,
+    "duration_ms": 178416
+  },
+  {
+    "path": "Sound_000.wz/Bgm05.img/DownToTheCave",
+    "data_len": 2603364,
+    "duration_ms": 260336
+  },
+  {
+    "path": "Sound_000.wz/Bgm05.img/HellGate",
+    "data_len": 1494466,
+    "duration_ms": 149446
+  },
+  {
+    "path": "Sound_000.wz/Bgm05.img/MineQuest",
+    "data_len": 1855739,
+    "duration_ms": 185573
+  },
+  {
+    "path": "Sound_000.wz/Bgm05.img/WolfWood",
+    "data_len": 1647021,
+    "duration_ms": 164702
+  },
+  {
+    "path": "Sound_000.wz/Bgm06.img/ComeWithMe",
+    "data_len": 2005159,
+    "duration_ms": 200515
+  },
+  {
+    "path": "Sound_000.wz/Bgm06.img/FantasticThinking",
+    "data_len": 1482710,
+    "duration_ms": 148271
+  },
+  {
+    "path": "Sound_000.wz/Bgm06.img/FinalFight",
+    "data_len": 881110,
+    "duration_ms": 88111
+  },
+  {
+    "path": "Sound_000.wz/Bgm06.img/FlyingInABlueDream",
+    "data_len": 1698482,
+    "duration_ms": 169848
+  },
+  {
+    "path": "Sound_000.wz/Bgm06.img/WelcomeToTheHell",
+    "data_len": 1788866,
+    "duration_ms": 178886
+  }
+]

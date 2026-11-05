@@ -36,6 +36,8 @@ Commands:
   (`id/name/stand/default/link`) using `StringLinker.StringNpc`.
 - `reactors <reactor.wz>` — emits DB2 Reactor rows
   (`id/has_icon/has_info/has_link/link`).
+- `music <sound.wz>` — recursively lists `Bgm*`/`PL_*` `Sound_DX8` paths with
+  byte length and duration.
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -121,3 +123,10 @@ dotnet run ... -- reactors ../../Data/Reactor/_Canvas/_Canvas_000.wz
 → 441 rows
 ```
 Rust `wz db2-reactors ... --json` matches all 441 rows exactly.
+
+Verified DB2 Music grid output:
+```
+dotnet run ... -- music ../../Data/Sound/Sound_000.wz
+→ 40 rows
+```
+Rust `wz db2-music ... --json` matches all 40 rows exactly.
