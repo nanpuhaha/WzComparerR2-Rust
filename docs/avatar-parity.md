@@ -61,9 +61,11 @@ remaining CharaSim gaps.
 - Custom origin: the two-step C# semantics are implemented:
   `CustomOriginMap` (originValue → childName) + `CustomOrigin` (childName → Point)
   → `apply_custom_origin_map`. The GUI accepts `childName:x,y;...`.
-- Still out of scope: switching the avatar **body** to the chair's `sit` action
-  (group taming members already use `sit`), behavior for future `CustomChairType::Other`
-  types, and the GUI part renderer using per-frame effect origins (the scene API supports them).
+- Chair pose: when a `Chair` is in the equipment list, the body frame prefers `sit`
+  over `stand1`/`stand`. Group taming members also use `sit`.
+- Current-client parity: no known avatar gaps. Future clients may add new
+  `CustomChairType` variants (preserved as `Other`), and the GUI part renderer uses
+  RGBA only (the scene API supports per-frame effect origins).
 
 ## Verification
 

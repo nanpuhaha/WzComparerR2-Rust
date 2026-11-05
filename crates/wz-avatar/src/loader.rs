@@ -201,6 +201,14 @@ fn load_frame_parts(
     let action = action_names
         .iter()
         .find_map(|name| node.children.iter().find(|c| c.name.as_ref() == *name))
+        .or_else(|| {
+            action_names.iter().find_map(|name| {
+                let needle = name.to_ascii_lowercase();
+                node.children
+                    .iter()
+                    .find(|c| c.name.to_ascii_lowercase().contains(&needle))
+            })
+        })
         .or_else(|| node.children.first())?;
     let action_children: &[ImageNode] = match &action.value {
         Some(ImageValue::Property(p)) => &p.children,
@@ -914,7 +922,7 @@ pub fn load_from_character_wz_with_skin(
     let (mut root, mut parts) = load_frame_parts(
         &arch,
         &format!("{:08}.img", body_skin),
-        &["stand1", "alert"],
+        &["stand1", "stand", "alert"],
     )?;
 
     if let Some((head_root, head_parts)) =
@@ -1092,7 +1100,11 @@ pub fn load_avatar_with_equipment_and_mix(
     let (mut root, mut parts) = load_frame_parts(
         &arch,
         &format!("{:08}.img", body_skin),
-        &["stand1", "alert"],
+        if equipment.iter().any(|(slot, _)| slot == "Chair") {
+            &["sit", "stand1", "stand"]
+        } else {
+            &["stand1", "stand", "alert"]
+        },
     )?;
 
     if let Some((head_root, head_parts)) =
@@ -1735,5 +1747,39 @@ mod custom_chair_type_tests {
         assert_eq!(info.effective_scale(), 80);
         info.custom_chair_type = CustomChairType::Other("FutureChair".into());
         assert_eq!(info.effective_scale(), 110);
+    }
+}
+
+#[cfg(test)]
+mod chair_pose_tests {
+    use super::*;
+
+    fn data_root() -> Option<std::path::PathBuf> {
+        std::env::var_os("WZ_DATA_ROOT")
+            .map(std::path::PathBuf::from)
+            .filter(|p| p.exists())
+    }
+
+    #[test]
+    fn chair_switches_body_to_sit_pose() {
+        let Some(data_root) = data_root() else {
+            return;
+        };
+        let equipment = vec![("Chair".to_string(), 3016200)];
+        let with_chair = load_avatar_with_equipment(&data_root, 2000, &equipment);
+        let without_chair = load_avatar_with_equipment(&data_root, 2000, &[]);
+        let (Some(with_chair), Some(without_chair)) = (with_chair, without_chair) else {
+            return;
+        };
+        let (Some(sit), Some(stand)) = (
+            with_chair.parts.iter().find(|p| p.slot == "body"),
+            without_chair.parts.iter().find(|p| p.slot == "body"),
+        ) else {
+            return;
+        };
+        assert_ne!(
+            sit.rgba, stand.rgba,
+            "chair should switch the body to the sit action"
+        );
     }
 }

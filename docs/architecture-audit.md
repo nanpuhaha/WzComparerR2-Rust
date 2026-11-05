@@ -246,8 +246,7 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
 
 ### 남은 후보
 
-- **체어 착용 시 본체 sit 포즈** — 그룹 taming 멤버는 `sit` 액션을 쓰지만, 아바타 본체는 아직 `stand1`이다.
-- **미래의 customChair 타입 동작** — `CustomChairType::Other(String)`으로 보존하고 `info/scale`로 폴백. 타입별 동작은 후속.
+- **미래 클라이언트의 customChair 타입** — `CustomChairType::Other(String)`으로 보존하고 `info/scale`로 폴백. 타입별 동작은 신규 클라이언트에서 확인 후 추가.
 - **GUI 파트 렌더러의 프레임별 origin** — `LoadedAvatar::apply_effect_frame`으로 scene API는 지원. GUI 는 RGBA 파트만 그리므로 origin을 쓰지 않는다.
 - **오라클 하네스 CI** — 공개 C# 트리에 `WzComparerR2.Oracle` 프로젝트가 없어 수동 workflow 입력이 필요.
 
