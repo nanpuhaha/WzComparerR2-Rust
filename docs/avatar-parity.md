@@ -364,3 +364,14 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   output for both synthetic and real textures.
 - Weather: the client/MapData has no `weather` node or weather assets; original
   MapRender only has the three custom shaders (light/waterBack/waterFront).
+
+## Water ordering & parity inventory
+
+- `wz-gui::compose` fixes the layer order explicitly:
+  `waterBack → scene → waterFront` (alpha-over). Opaque scene pixels hide
+  waterBack; front water remains over the scene.
+- Pixel regression for real map `993258900` renders waterBack (no texture) and
+  waterFront (3 real textures) through the WGSL pipelines, composes them, and
+  asserts back/front ordering.
+- `docs/parity-inventory.md` is the explicit C#→Rust feature table with status
+  and verification evidence, including data-absent items.

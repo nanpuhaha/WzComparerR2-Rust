@@ -11,6 +11,7 @@ mod app;
 mod async_io;
 mod background;
 mod camera_input;
+mod compose;
 mod illuminant;
 mod life;
 mod panels;

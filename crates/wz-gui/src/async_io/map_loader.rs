@@ -1836,7 +1836,7 @@ mod tests {
                 resolution_time: [64.0, 64.0, 0.5, 0.02],
                 ..Default::default()
             };
-            let pixels = rc
+            let front_pixels = rc
                 .render_water_to_rgba(
                     64,
                     64,
@@ -1847,7 +1847,32 @@ mod tests {
                     &uniforms,
                 )
                 .expect("waterFront render");
-            assert!(pixels.chunks(4).any(|p| p[3] != 0));
+            assert!(front_pixels.chunks(4).any(|p| p[3] != 0));
+
+            let back_params = wz_render::WaterBackParams {
+                min_y: 0.0,
+                max_y: 64.0,
+                ..Default::default()
+            };
+            let back_pixels = rc
+                .render_water_to_rgba(
+                    64,
+                    64,
+                    wz_render::shader::MaplePixelShader::WaterBack,
+                    &back_params.to_bytes(),
+                    &[],
+                    [0.0, 0.0, 64.0, 64.0],
+                    &uniforms,
+                )
+                .expect("waterBack render");
+            assert!(back_pixels.chunks(4).any(|p| p[3] != 0));
+
+            // 993258900: waterBack은 scene 뒤, waterFront는 scene 앞.
+            let scene: Vec<u8> = (0..64 * 64).flat_map(|_| [40u8, 50, 60, 128]).collect();
+            let behind = crate::compose::compose(&scene, Some(&back_pixels), None);
+            let both = crate::compose::compose(&scene, Some(&back_pixels), Some(&front_pixels));
+            assert_ne!(behind, both, "waterFront must be in front of the scene");
+            assert_ne!(behind, scene, "waterBack must be behind the scene");
         }
     }
 

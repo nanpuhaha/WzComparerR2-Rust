@@ -290,6 +290,8 @@ fn apply_water_shaders(
     uniforms: &wz_render::SpriteUniformsGpu,
 ) {
     let center = [state.camera.center.x, state.camera.center.y];
+    let mut back: Option<Vec<u8>> = None;
+    let mut front: Option<Vec<u8>> = None;
     for (i, water) in state.map_waters.iter().enumerate() {
         let Some(frame) = water.frame_at(state.map_water_time) else {
             continue;
@@ -348,9 +350,20 @@ fn apply_water_shaders(
             [pos[0], pos[1], *w as f32, *h as f32],
             uniforms,
         ) {
-            blend_water(rgba, &water_pixels);
+            match water.kind {
+                crate::water::WaterKind::Back => match &mut back {
+                    Some(existing) => blend_water(existing, &water_pixels),
+                    None => back = Some(water_pixels),
+                },
+                crate::water::WaterKind::Front => match &mut front {
+                    Some(existing) => blend_water(existing, &water_pixels),
+                    None => front = Some(water_pixels),
+                },
+            }
         }
     }
+    let composed = crate::compose::compose(rgba, back.as_deref(), front.as_deref());
+    rgba.copy_from_slice(&composed);
 }
 
 pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
@@ -840,7 +853,12 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         batch.finish();
 
         let uniforms = state.camera.build_uniforms(0.0, 0.0);
-        if let Ok(mut rgba) = rc.render_to_rgba(w, h, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
+        let clear = if state.map_waters.is_empty() {
+            [0.08, 0.08, 0.12, 1.0]
+        } else {
+            [0.08, 0.08, 0.12, 0.0]
+        };
+        if let Ok(mut rgba) = rc.render_to_rgba(w, h, &batch, &uniforms, clear) {
             apply_water_shaders(&mut rc, &mut rgba, w, h, state, &uniforms);
             let ci = egui::ColorImage::from_rgba_unmultiplied([w as usize, h as usize], &rgba);
             state.viewport_texture = Some(ui.ctx().load_texture(
