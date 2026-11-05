@@ -354,19 +354,21 @@ mod tests {
         else {
             return;
         };
-        let mut state = AppState::default();
-        state.avatar_loaded_parts = av
-            .parts
-            .iter()
-            .map(|p| AvatarPartData {
-                slot: p.slot.clone(),
-                width: p.width,
-                height: p.height,
-                rgba: p.rgba.clone(),
-                position: (p.position.x, p.position.y),
-                z_index: p.z_index,
-            })
-            .collect();
+        let mut state = AppState {
+            avatar_loaded_parts: av
+                .parts
+                .iter()
+                .map(|p| AvatarPartData {
+                    slot: p.slot.clone(),
+                    width: p.width,
+                    height: p.height,
+                    rgba: p.rgba.clone(),
+                    position: (p.position.x, p.position.y),
+                    z_index: p.z_index,
+                })
+                .collect(),
+            ..Default::default()
+        };
         render_loaded_avatar(&mut state);
         if state.avatar_status.contains("RC 실패") {
             return; // GPU 가 없는 환경은 skip
