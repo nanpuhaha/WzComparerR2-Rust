@@ -332,3 +332,19 @@ body/head loading, equipment loading, zmap, and the prism unit test.
 - This client has no `water`/`weather` map nodes and no MsCustomSprite shader
   data in `Map0`; the waterBack/waterFront WGSL pipelines remain unused until a
   map carrying those custom sprites is available.
+
+## Water back/front sprites
+
+- Found the real fixture `Map/Back/Back_000.wz/2024BlueholeExploration.img`:
+  `back/14` uses `shader/waterBack`, `back/15` uses `shader/waterFront`;
+  map `993258900` (`Map9_001.wz`) places both (15 as front).
+- `wz-gui::water` loads the sprite texture groups (numeric frame → texture
+  index → `_outlink` canvas), keeps delays/background parallax/alpha, and
+  renders `waterBack`/`waterFront` with a time-based water tint
+  (`WaterKind::Back` static, `Front` animated).
+- Normal background loading skips shader/sprite backgrounds; the worker routes
+  them to `map_waters` instead.
+- Real test: `loads_real_water_back_front_layers` verifies both kinds, decoded
+  texture dimensions > 1, and front tint animation.
+- A synthetic `WorldMap` fixture test covers QuestLimit open/close maps,
+  quest/state/default, Fog quest/qState and MapList mapNo.

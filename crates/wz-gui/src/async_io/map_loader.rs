@@ -135,14 +135,23 @@ pub fn load_worldmap_view(
     let image_name = format!("{name}.img");
     let dir = root.join("Map").join("WorldMap");
     let (node, source) = find_image_in_dir(&dir, &image_name)?;
-    let display_name = helper_path(&node, &["info", "WorldMap"])
+    Some(parse_worldmap_node(root, name, &node, &source))
+}
+
+fn parse_worldmap_node(
+    root: &std::path::Path,
+    name: &str,
+    node: &wz_core::image::Node,
+    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+) -> crate::worldmap::WorldMapView {
+    let display_name = helper_path(node, &["info", "WorldMap"])
         .and_then(|n| match &n.value {
             Some(wz_core::image::ImageValue::Str(s)) => Some(s.to_string()),
             _ => None,
         })
         .unwrap_or_else(|| name.to_string());
-    let base_node = helper_path(&node, &["BaseImg", "0"]);
-    let base = base_node.and_then(|n| decode_canvas_node(root, n, &source));
+    let base_node = helper_path(node, &["BaseImg", "0"]);
+    let base = base_node.and_then(|n| decode_canvas_node(root, n, source));
     let base_origin = base_node
         .and_then(|n| node_vector(n, "origin"))
         .unwrap_or((0, 0));
@@ -151,7 +160,7 @@ pub fn load_worldmap_view(
         .unwrap_or((0, 0));
 
     let mut spots = Vec::new();
-    if let Some(list) = helper_path(&node, &["MapList"]) {
+    if let Some(list) = helper_path(node, &["MapList"]) {
         let mut children: Vec<&wz_core::image::Node> = list
             .object_children()
             .iter()
@@ -195,7 +204,7 @@ pub fn load_worldmap_view(
     }
 
     let mut quests = Vec::new();
-    if let Some(quest_root) = helper_path(&node, &["QuestLimit"]) {
+    if let Some(quest_root) = helper_path(node, &["QuestLimit"]) {
         let mut qnodes: Vec<&wz_core::image::Node> = Vec::new();
         if let Some(default) = quest_root
             .object_children()
@@ -233,7 +242,7 @@ pub fn load_worldmap_view(
                     .object_children()
                     .iter()
                     .find(|c| c.name.as_ref() == "0")
-                    .and_then(|n| decode_canvas_node(root, n, &source)),
+                    .and_then(|n| decode_canvas_node(root, n, source)),
                 open_maps: list("openMap"),
                 close_maps: list("closeMap"),
                 is_default: node_scalar_int(q, "default").unwrap_or(0) != 0,
@@ -243,7 +252,7 @@ pub fn load_worldmap_view(
         }
     }
     let mut fogs = Vec::new();
-    if let Some(fog_root) = helper_path(&node, &["Fog"]) {
+    if let Some(fog_root) = helper_path(node, &["Fog"]) {
         let mut fnodes: Vec<&wz_core::image::Node> = fog_root
             .object_children()
             .iter()
@@ -257,14 +266,14 @@ pub fn load_worldmap_view(
                     .object_children()
                     .iter()
                     .find(|c| c.name.as_ref() == "0")
-                    .and_then(|n| decode_canvas_node(root, n, &source)),
+                    .and_then(|n| decode_canvas_node(root, n, source)),
                 quest: node_scalar_int(f, "quest").unwrap_or(0),
                 state: node_scalar_int(f, "qState").unwrap_or(0),
             });
         }
     }
 
-    Some(crate::worldmap::WorldMapView {
+    crate::worldmap::WorldMapView {
         name: name.to_string(),
         display_name,
         base,
@@ -273,7 +282,7 @@ pub fn load_worldmap_view(
         spots,
         quests,
         fogs,
-    })
+    }
 }
 
 fn load_map_tooltips(
@@ -1174,13 +1183,160 @@ fn map_node_source(
     None
 }
 
+fn water_shader_kind(node: &wz_core::image::Node) -> Option<crate::water::WaterKind> {
+    let shader = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "shader")
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Str(s)) => Some(s.to_string()),
+            _ => None,
+        })?;
+    if shader.contains("waterBack") {
+        Some(crate::water::WaterKind::Back)
+    } else if shader.contains("waterFront") {
+        Some(crate::water::WaterKind::Front)
+    } else {
+        None
+    }
+}
+
+fn load_water_layer(
+    root: &std::path::Path,
+    background: &wz_db::BackItem,
+) -> Option<crate::water::WaterLayer> {
+    let image_name = format!("{}.img", background.b_s);
+    let no = background.no.trim_matches('/');
+    let dirs = [
+        root.join("Map").join("Back"),
+        root.join("Map").join("Back").join("_Canvas"),
+    ];
+    for base in dirs {
+        for entry in std::fs::read_dir(base).ok()?.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+                continue;
+            }
+            let Ok(archive) = wz_core::WzArchive::open(&path) else {
+                continue;
+            };
+            let Ok(tree) = archive.read_tree() else {
+                continue;
+            };
+            let Some(image_entry) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+            else {
+                continue;
+            };
+            let Some(offset) = image_entry.offset else {
+                continue;
+            };
+            let Ok(node) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            let Some(target) = walk_node(&node, &["back", no]) else {
+                continue;
+            };
+            let Some(kind) = water_shader_kind(target) else {
+                continue;
+            };
+            let source = archive.source().clone();
+            let mut frames = Vec::new();
+            let mut delays = Vec::new();
+            let mut frame_nodes: Vec<&wz_core::image::Node> = target
+                .object_children()
+                .iter()
+                .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+                .collect();
+            frame_nodes.sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+            if frame_nodes.is_empty() {
+                frame_nodes.push(target);
+            }
+            for frame in frame_nodes {
+                let mut textures = Vec::new();
+                let mut texture_nodes: Vec<&wz_core::image::Node> = frame
+                    .object_children()
+                    .iter()
+                    .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+                    .collect();
+                texture_nodes.sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+                if texture_nodes.is_empty() {
+                    if let Some(texture) = decode_canvas_node(root, frame, &source) {
+                        textures.push(texture);
+                    }
+                } else {
+                    for texture_group in texture_nodes {
+                        let mut texture_indices: Vec<&wz_core::image::Node> = texture_group
+                            .object_children()
+                            .iter()
+                            .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+                            .collect();
+                        texture_indices
+                            .sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+                        if texture_indices.is_empty() {
+                            if let Some(texture) = decode_canvas_node(root, texture_group, &source)
+                            {
+                                textures.push(texture);
+                            }
+                        } else {
+                            for index in texture_indices {
+                                if let Some(texture) = decode_canvas_node(root, index, &source) {
+                                    textures.push(texture);
+                                }
+                            }
+                        }
+                    }
+                }
+                if !textures.is_empty() {
+                    frames.push(crate::water::WaterFrame { textures });
+                    delays.push(node_scalar_int(frame, "delay").unwrap_or(100).max(20) as u32);
+                }
+            }
+            if frames.is_empty() {
+                return None;
+            }
+            let (w, h) = frames
+                .first()
+                .and_then(|f| f.textures.first())
+                .map(|(w, h, _)| (*w, *h))
+                .unwrap_or((1, 1));
+            return Some(crate::water::WaterLayer {
+                background: crate::background::BackgroundLayer {
+                    x: background.x,
+                    y: background.y,
+                    rx: background.rx,
+                    ry: background.ry,
+                    cx: background.cx,
+                    cy: background.cy,
+                    tile_mode: background.tile_mode,
+                    flip: background.flip,
+                    alpha: background.alpha.clamp(0, 255) as u8,
+                    front: background.front,
+                    frames: vec![(w, h, Vec::new())],
+                    delays: vec![100],
+                },
+                kind,
+                frames,
+                delays,
+            });
+        }
+    }
+    None
+}
+
 fn load_background_layer(
     root: &std::path::Path,
     background: &wz_db::BackItem,
 ) -> Option<crate::background::BackgroundLayer> {
-    let base = root.join("Map").join("Back").join("_Canvas");
     let image_name = format!("{}.img", background.b_s);
     let no = background.no.trim_matches('/');
+    let dirs = [
+        root.join("Map").join("Back"),
+        root.join("Map").join("Back").join("_Canvas"),
+    ];
     let mut candidates: Vec<Vec<&str>> = Vec::new();
     if background.ani == 1 {
         candidates.push(vec!["ani", no]);
@@ -1191,55 +1347,60 @@ fn load_background_layer(
         candidates.push(Vec::new());
     }
 
-    for entry in std::fs::read_dir(base).ok()?.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
-            continue;
-        }
-        let Ok(archive) = wz_core::WzArchive::open(&path) else {
-            continue;
-        };
-        let Ok(tree) = archive.read_tree() else {
-            continue;
-        };
-        let Some(image_entry) = tree
-            .root
-            .entries
-            .iter()
-            .find(|e| e.name.as_deref() == Some(image_name.as_str()))
-        else {
-            continue;
-        };
-        let Some(offset) = image_entry.offset else {
-            continue;
-        };
-        let Ok(node) = archive.parse_image_at(offset) else {
-            continue;
-        };
-        for segments in &candidates {
-            let Some(target) = walk_node(&node, segments) else {
-                continue;
-            };
-            let mut frames = Vec::new();
-            let mut delays = Vec::new();
-            collect_frames(target, &archive, &mut frames, &mut delays);
-            if frames.is_empty() {
+    for base in dirs {
+        for entry in std::fs::read_dir(base).ok()?.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) != Some("wz") {
                 continue;
             }
-            return Some(crate::background::BackgroundLayer {
-                x: background.x,
-                y: background.y,
-                rx: background.rx,
-                ry: background.ry,
-                cx: background.cx,
-                cy: background.cy,
-                tile_mode: background.tile_mode,
-                flip: background.flip,
-                alpha: background.alpha.clamp(0, 255) as u8,
-                front: background.front,
-                frames,
-                delays,
-            });
+            let Ok(archive) = wz_core::WzArchive::open(&path) else {
+                continue;
+            };
+            let Ok(tree) = archive.read_tree() else {
+                continue;
+            };
+            let Some(image_entry) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+            else {
+                continue;
+            };
+            let Some(offset) = image_entry.offset else {
+                continue;
+            };
+            let Ok(node) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            for segments in &candidates {
+                let Some(target) = walk_node(&node, segments) else {
+                    continue;
+                };
+                if water_shader_kind(target).is_some() {
+                    continue;
+                }
+                let mut frames = Vec::new();
+                let mut delays = Vec::new();
+                collect_frames(target, &archive, &mut frames, &mut delays);
+                if frames.is_empty() {
+                    continue;
+                }
+                return Some(crate::background::BackgroundLayer {
+                    x: background.x,
+                    y: background.y,
+                    rx: background.rx,
+                    ry: background.ry,
+                    cx: background.cx,
+                    cy: background.cy,
+                    tile_mode: background.tile_mode,
+                    flip: background.flip,
+                    alpha: background.alpha.clamp(0, 255) as u8,
+                    front: background.front,
+                    frames,
+                    delays,
+                });
+            }
         }
     }
     None
@@ -1338,8 +1499,11 @@ pub fn load_map_by_path(state: &mut AppState) {
                 }
             }
             let mut backgrounds = Vec::new();
+            let mut waters = Vec::new();
             for background in &backgrounds_clone {
-                if let Some(layer) = load_background_layer(&root, background) {
+                if let Some(water) = load_water_layer(&root, background) {
+                    waters.push(water);
+                } else if let Some(layer) = load_background_layer(&root, background) {
                     backgrounds.push(layer);
                 }
             }
@@ -1394,6 +1558,7 @@ pub fn load_map_by_path(state: &mut AppState) {
                 objs,
                 reactors,
                 backgrounds,
+                waters,
                 particles,
                 lifes,
                 portals,
@@ -1508,6 +1673,79 @@ mod tests {
     }
 
     #[test]
+    fn parses_synthetic_worldmap_quest_and_fog() {
+        let mut root = wz_core::image::Node::new("Synthetic.img");
+        let mut info = wz_core::image::Node::new("info");
+        let mut world_name = wz_core::image::Node::new("WorldMap");
+        world_name.value = Some(wz_core::image::ImageValue::Str("Synthetic".into()));
+        info.children.push(world_name);
+        root.children.push(info);
+
+        let mut qroot = wz_core::image::Node::new("QuestLimit");
+        let mut quest = wz_core::image::Node::new("default");
+        for (key, value) in [("quest", 123), ("state", 2), ("default", 1)] {
+            let mut n = wz_core::image::Node::new(key);
+            n.value = Some(wz_core::image::ImageValue::Int(value));
+            quest.children.push(n);
+        }
+        let mut open = wz_core::image::Node::new("openMap");
+        for value in [3, 5] {
+            let mut n = wz_core::image::Node::new(value.to_string());
+            n.value = Some(wz_core::image::ImageValue::Int(value));
+            open.children.push(n);
+        }
+        let mut close = wz_core::image::Node::new("closeMap");
+        let mut n = wz_core::image::Node::new("0");
+        n.value = Some(wz_core::image::ImageValue::Int(9));
+        close.children.push(n);
+        quest.children.push(open);
+        quest.children.push(close);
+        qroot.children.push(quest);
+        root.children.push(qroot);
+
+        let mut froot = wz_core::image::Node::new("Fog");
+        let mut fog = wz_core::image::Node::new("0");
+        for (key, value) in [("quest", 77), ("qState", 1)] {
+            let mut n = wz_core::image::Node::new(key);
+            n.value = Some(wz_core::image::ImageValue::Int(value));
+            fog.children.push(n);
+        }
+        froot.children.push(fog);
+        root.children.push(froot);
+
+        let mut mlist = wz_core::image::Node::new("MapList");
+        let mut spot = wz_core::image::Node::new("0");
+        let mut pos = wz_core::image::Node::new("spot");
+        pos.value = Some(wz_core::image::ImageValue::Vector(wz_core::image::Vec2 {
+            x: 11,
+            y: 22,
+        }));
+        spot.children.push(pos);
+        let mut map_no = wz_core::image::Node::new("mapNo");
+        let mut no = wz_core::image::Node::new("0");
+        no.value = Some(wz_core::image::ImageValue::Int(100000000));
+        map_no.children.push(no);
+        spot.children.push(map_no);
+        mlist.children.push(spot);
+        root.children.push(mlist);
+
+        let source: std::sync::Arc<dyn wz_pool::ByteSource> =
+            std::sync::Arc::new(wz_pool::MemorySource::new(vec![0u8; 4]));
+        let view = parse_worldmap_node(std::path::Path::new("."), "Synthetic", &root, &source);
+        assert_eq!(view.display_name, "Synthetic");
+        assert_eq!(view.quests.len(), 1);
+        assert_eq!(view.quests[0].open_maps, vec![3, 5]);
+        assert_eq!(view.quests[0].close_maps, vec![9]);
+        assert_eq!(view.quests[0].quest, 123);
+        assert!(view.quests[0].is_default);
+        assert_eq!(view.fogs.len(), 1);
+        assert_eq!(view.fogs[0].quest, 77);
+        assert_eq!(view.fogs[0].state, 1);
+        assert_eq!(view.spots.len(), 1);
+        assert_eq!(view.spots[0].map_nos, vec![100_000_000]);
+    }
+
+    #[test]
     fn loads_real_worldmap() {
         let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
             return;
@@ -1534,6 +1772,52 @@ mod tests {
             .frames
             .iter()
             .any(|f| f.rgba.chunks(4).any(|p| p[3] != 0)));
+    }
+
+    #[test]
+    fn loads_real_water_back_front_layers() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let path = root
+            .join("Map")
+            .join("Map")
+            .join("Map9")
+            .join("Map9_001.wz");
+        if !path.exists() {
+            return;
+        }
+        let archive = wz_core::WzArchive::open(&path).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let entry = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("993258900.img"))
+            .expect("993258900.img");
+        let node = archive.parse_image_at(entry.offset.unwrap()).unwrap();
+        let map = wz_db::MapData::parse_from_node(&node);
+        let back = map
+            .backgrounds
+            .iter()
+            .find(|b| b.b_s == "2024BlueholeExploration" && b.no == "14")
+            .expect("waterBack bg");
+        let front = map
+            .backgrounds
+            .iter()
+            .find(|b| b.b_s == "2024BlueholeExploration" && b.no == "15")
+            .expect("waterFront bg");
+
+        let back_layer = load_water_layer(&root, back).expect("waterBack layer");
+        assert_eq!(back_layer.kind, crate::water::WaterKind::Back);
+        assert!(!back_layer.frames.is_empty());
+        assert!(back_layer.frames[0].textures[0].0 > 1);
+
+        let front_layer = load_water_layer(&root, front).expect("waterFront layer");
+        assert_eq!(front_layer.kind, crate::water::WaterKind::Front);
+        assert!(!front_layer.frames.is_empty());
+        assert!(front_layer.frames[0].textures[0].0 > 1);
+        assert_ne!(front_layer.tint(0.0), front_layer.tint(700.0));
     }
 
     #[test]

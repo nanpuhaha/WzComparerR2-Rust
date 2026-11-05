@@ -189,6 +189,49 @@ fn draw_reactors(batch: &mut SpriteBatch, state: &AppState) {
     }
 }
 
+fn water_key(view: usize, frame: usize, texture: usize) -> GpuKey {
+    GpuKey(70_000 + view as u32 * 128 + frame as u32 * 16 + texture as u32)
+}
+
+fn draw_water_layers(batch: &mut SpriteBatch, state: &AppState, front: bool) {
+    let center = [state.camera.center.x, state.camera.center.y];
+    for (i, water) in state.map_waters.iter().enumerate() {
+        if water.background.front != front {
+            continue;
+        }
+        let Some(frame) = water.frame_at(state.map_water_time) else {
+            continue;
+        };
+        let Some((w, h, _)) = frame.textures.first() else {
+            continue;
+        };
+        let frame_index = if water.frames.len() > 1 {
+            water
+                .frames
+                .iter()
+                .position(|f| std::ptr::eq(f, frame))
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        let pos =
+            crate::background::background_position(&water.background, center, state.map_water_time);
+        let tint = water.tint(state.map_water_time);
+        let uv = if water.background.flip {
+            [1.0, 0.0, 0.0, 1.0]
+        } else {
+            [0.0, 0.0, 1.0, 1.0]
+        };
+        batch.push_quad(
+            water_key(i, frame_index, 0),
+            [pos[0], pos[1], *w as f32, *h as f32],
+            if front { 999.0 } else { -999.0 },
+            uv,
+            tint,
+        );
+    }
+}
+
 fn draw_background_layers(batch: &mut SpriteBatch, state: &AppState, front: bool) {
     let center = [state.camera.center.x, state.camera.center.y];
     let viewport = [state.viewport_size.0 as f32, state.viewport_size.1 as f32];
@@ -247,6 +290,19 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             state.viewport_dirty = true;
             ui.ctx().request_repaint();
         }
+    }
+    let water_animating = state
+        .map_waters
+        .iter()
+        .any(|w| w.frames.len() > 1 || w.kind == crate::water::WaterKind::Front);
+    if water_animating {
+        let now = ui.input(|i| i.time);
+        if state.map_water_last > 0.0 {
+            state.map_water_time += (now - state.map_water_last).clamp(0.0, 0.1);
+        }
+        state.map_water_last = now;
+        state.viewport_dirty = true;
+        ui.ctx().request_repaint();
     }
     let life_animating = state.map_lifes.iter().any(|l| {
         l.state != crate::life::LifeState::Alive
@@ -510,6 +566,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         if !state.viewport_cached_layers.is_empty()
             || state.viewport_cached_has_back
             || !state.map_background_images.is_empty()
+            || !state.map_waters.is_empty()
             || !state.map_reactor_images.is_empty()
             || !state.map_lifes.is_empty()
             || !state.map_portals.is_empty()
@@ -552,6 +609,13 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                 for (f, (fw, fh, fpx)) in layer.frames.iter().enumerate() {
                     let _ =
                         rc.create_texture(GpuKey(10_000 + i as u32 * 64 + f as u32), *fw, *fh, fpx);
+                }
+            }
+            for (i, water) in state.map_waters.iter().enumerate() {
+                for (f, frame) in water.frames.iter().enumerate() {
+                    for (t, (w, h, rgba)) in frame.textures.iter().enumerate() {
+                        let _ = rc.create_texture(water_key(i, f, t), *w, *h, rgba);
+                    }
                 }
             }
             for (i, life) in state.map_lifes.iter().enumerate() {
@@ -598,6 +662,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                 let (pw, ph, ppx) = &layer.texture;
                 let _ = rc.create_texture(GpuKey(600 + i as u32), *pw, *ph, ppx);
             }
+            draw_water_layers(&mut batch, state, false);
             draw_background_layers(&mut batch, state, false);
             // 캐시된 레이어를 z 순서로 정렬해 push
             let mut sorted: Vec<&(GpuKey, [f32; 4], f32)> =
@@ -623,6 +688,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             && state.map_obj_images.is_empty()
             && state.map_reactor_images.is_empty()
             && state.map_background_images.is_empty()
+            && state.map_waters.is_empty()
         {
             // 그리드 폴백
             for gx in -2..=2i32 {
@@ -645,6 +711,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                 }
             }
             draw_background_layers(&mut batch, state, true);
+            draw_water_layers(&mut batch, state, true);
         }
         draw_lifes(&mut batch, state);
         draw_portals(&mut batch, state);
