@@ -222,3 +222,33 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
 - `WzComparerR2.Avatar/` — UI 레이어
 
 이 소스를 Rust 포트에 통합하면 앵커/프리즘/zmap 정밀도를 구현할 수 있다.
+
+---
+
+## 11. 2026-11-05 후속 — 공개 전 심화 결과
+
+이번 패스에서 실제로 적용한 deepening 과 남은 후보를 기록한다.
+
+### 적용됨
+
+| 후보 | 변경 | 검증 |
+|---|---|---|
+| `StringLinker` 다섯 루트 | `StringRoot`/`StringRoots` + `load_roots` 한 진입점. tooltip 이 `--item-wz`/`--etc-wz` 로 Item/Etc 를 실제 로드 | `load_roots_loads_optional_quest_root_in_one_call`, 54 wz-db tests |
+| Quest/Reactor 루트 | `load_quest_wz` (QuestData/QuestInfo.img, name/0/demand.base), `load_reactor_wz` (info/viewName/name/info) | 합성 트리 테스트 2개 |
+| `expr` JSON 숫자 | `json_number` 로 2^63 경계를 배타적으로 처리, NaN/Infinity → null | 단위 테스트 5개 |
+| oracle replay | `.code` 누락을 exit 0 이 아니라 하네스 오류로 처리 | 회귀 테스트 1개 |
+| `WorldArchiveEntry` | 8-인자 data clump → struct 하나 | `cargo clippy -D warnings` |
+| `AvatarScene` | `Deref`/`DerefMut` 제거, `canvas` 필드 private, `canvas()`/`canvas_mut()` 단일 접근 경로 | workspace 테스트 |
+| `mapscene` 출력 | `ladders_ropes`/`backgrounds`/`objects`/`tiles` 및 `kind` 필드 추가. `LadderRopeKind`/`LifeKind` 가 실제 소비됨 | `cargo test --workspace` |
+
+### 남은 후보
+
+- **GUI 다중 루트 로딩** — GUI StringLinker 가 아직 String.wz 만 읽는다.
+- **아바타 앵커/프리즘/zmap 파리티** — C# `CharaSim`/`AvatarCommon` 포팅 필요.
+- **`get_by_id` 충돌** — ADR-0006 으로 “편의용”임을 고정했지만, 도메인별 조회 API와 충돌 회귀 테스트는 후속.
+- **공개 릴리스 체크리스트** — 브랜치 보호, Dependabot 정책, 저장소 공개 전환.
+
+### 산출물
+
+- `GLOSSARY.md` — WZ/문자열/아바타/맵/검증 도메인 용어.
+- `docs/adr/0001`~`0006` — 오라클 외부 핀, Gate/Advisory/Uncomparable, GUI 워크스페이스 제외, 게임 데이터 미번들, 결정론, 도메인별 문자열 조회.
