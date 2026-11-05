@@ -610,3 +610,9 @@ merge semantics (recursive directory merge, conflict errors).
 - The generic `wz db2-characters` path also covers the Longcoat tab.
   `Longcoat_000.wz` → C# `characters` 2493 == Rust 2493 rows, exact match
   (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
+
+### DB2 Character/Glove
+
+- The generic `wz db2-characters` path also covers the Glove tab.
+  `Glove_000.wz` → C# `characters` 661 == Rust 661 rows, exact match
+  (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
