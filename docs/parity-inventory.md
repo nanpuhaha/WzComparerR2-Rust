@@ -23,6 +23,7 @@
 | 비트맵 툴팁 | `render_tooltip_bitmap` | ✅ | `tooltip_bitmap_renders_title_and_lines` |
 | CharaSim gear tooltip | `wz-avatar/src/gear_tooltip.rs` | ✅ | C# `gear`/`set`/`potential` 출력과 라인 일치 + 비트맵 |
 | Skill description summary | `wz-db/src/skill_summary.rs` | ✅ | C# `SummaryParser.GetSkillSummary` 20629행과 완전 일치 |
+| ItemTooltip 속성 태그/이름/설명 | `wz-db/src/item_tooltip.rs` | ✅ | C# `GetItemAttributeString` + StringLinker `02000012` 완전 일치 |
 | Ring/Android 일부 UI 값 | GUI `avatar_panel` | 🟡 | 일부 입력/표시만 |
 
 ## 3. MapRender 데이터
@@ -132,6 +133,7 @@ WorldMap 실제 클라이언트 데이터는 QuestLimit/Fog 노드가 없어, �
 | `Character/Coat/Coat_000.wz` DB2 Character grid | 682 rows | Rust `wz db2-characters` 682행 id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat 완전 일치 |
 | `Character/Cap/Cap_000.wz` DB2 Character/Cap grid | 3166 rows | Rust `wz db2-characters` 3166행 동일 컬럼 완전 일치 |
 | `String/Skill.img` skill desc + h | 20629 rows | Rust `wz skill-summary` 20629행 SummaryParser 출력 완전 일치 |
+| `Consume_000.wz/0200.img/02000012` ItemTooltip | 1 item | Rust `wz item-tooltip` name/desc/auto_desc/attributes 완전 일치 |
 | `Etc_000.wz` set -1 | `{"name":"결속의 반지","complete":5,"effects":[...]}` | Rust set effects 동일 |
 | `Item_000.wz` potential 1/1 | `["STR : +1"]` | Rust potential lines 동일 |
 

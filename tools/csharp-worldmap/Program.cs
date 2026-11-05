@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Security.Cryptography;
 using WzComparerR2.WzLib;
 using WzComparerR2.Common;
+using WzComparerR2.CharaSim;
 
 class Program
 {
@@ -911,6 +912,71 @@ class Program
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void ItemTooltip(string itemWzPath, string imageName, string itemId, string stringWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(itemWzPath);
+        var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == imageName);
+        var img = imgNode?.Value as Wz_Image;
+        if (img == null) { Console.WriteLine("{\"error\":\"image not found\"}"); return; }
+        img.TryExtract();
+        var item = img.Node.Nodes[itemId];
+        if (item == null) { Console.WriteLine("{\"error\":\"item not found\"}"); return; }
+        var info = item.Nodes["info"];
+        var props = new Dictionary<ItemPropType, long>();
+        if (info != null)
+            foreach (Wz_Node c in info.Nodes)
+            {
+                if (c.Value == null || !Enum.TryParse(c.Text, out ItemPropType type)) continue;
+                try { props[type] = Convert.ToInt64(c.Value); } catch { }
+            }
+        var tags = new List<string>();
+        long v;
+        if (props.TryGetValue(ItemPropType.only, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.only, v));
+        if (props.TryGetValue(ItemPropType.quest, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.quest, v));
+        if (props.TryGetValue(ItemPropType.pquest, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.pquest, v));
+        if (props.TryGetValue(ItemPropType.tradeBlock, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.tradeBlock, v));
+        if (props.TryGetValue(ItemPropType.useTradeBlock, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.useTradeBlock, v));
+        else if (int.Parse(itemId) / 10000 == 501 || int.Parse(itemId) / 10000 == 502 || int.Parse(itemId) / 10000 == 516)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.tradeBlock, 1));
+        if (props.TryGetValue(ItemPropType.accountSharable, out v) && v != 0)
+        {
+            long v2;
+            if (props.TryGetValue(ItemPropType.exp_minLev, out v2) && v2 != 0)
+                tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.useTradeBlock, 1));
+            if (props.TryGetValue(ItemPropType.sharableOnce, out v2) && v2 != 0)
+                tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.sharableOnce, v2));
+            else
+                tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.accountSharable, v));
+        }
+        if (props.TryGetValue(ItemPropType.exchangeableOnce, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.exchangeableOnce, v));
+        if (props.TryGetValue(ItemPropType.multiPet, out v))
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.multiPet, v));
+        else if (int.Parse(itemId) / 10000 == 500)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.multiPet, 0));
+        if (props.TryGetValue(ItemPropType.accountSharableAfterExchange, out v) && v != 0)
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.accountSharableAfterExchange, v));
+        if (props.TryGetValue(ItemPropType.mintable, out v))
+            tags.Add(ItemStringHelper.GetItemPropString(ItemPropType.mintable, v));
+        tags = tags.Where(t => !string.IsNullOrEmpty(t)).ToList();
+
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        linker.Load(str.wz_files[0], null, null);
+        linker.StringItem.TryGetValue(int.Parse(itemId), out var sr);
+        Console.WriteLine(JsonSerializer.Serialize(new {
+            id = itemId,
+            name = sr?.Name ?? "",
+            desc = sr?.Desc ?? "",
+            auto_desc = sr?.AutoDesc ?? "",
+            attributes = tags,
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -931,6 +997,7 @@ class Program
         else if (args[0] == "tamingmobs") TamingMobGrid(args[1], args[2]);
         else if (args[0] == "characters") CharacterGrid(args[1], args[2]);
         else if (args[0] == "skillsummary") SkillSummary(args[1], int.Parse(args[2]));
+        else if (args[0] == "itemtooltip") ItemTooltip(args[1], args[2], args[3], args[4]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

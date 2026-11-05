@@ -1089,3 +1089,99 @@ mod skill_summary_tests {
         assert_eq!(serde_json::Value::Array(rows), expected);
     }
 }
+
+pub fn cmd_item_tooltip(
+    wz_path: &Path,
+    image: &str,
+    item_id: &str,
+    string_wz: &Path,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let image_name = if image.ends_with(".img") {
+        image.to_string()
+    } else {
+        format!("{image}.img")
+    };
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+        .ok_or_else(|| format!("이미지를 찾을 수 없습니다: {image_name}"))?;
+    let node = archive.parse_image_at(entry.offset.ok_or("이미지 오프셋 없음")?)?;
+    let item = node
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == item_id)
+        .ok_or_else(|| format!("아이템을 찾을 수 없습니다: {item_id}"))?;
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let result = wz_db::build_item_tooltip(item, item_id, &linker)
+        .ok_or_else(|| format!("아이템 ID 파싱 실패: {item_id}"))?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        println!("name: {}", result.name);
+        println!("desc: {}", result.desc);
+        for tag in &result.attributes {
+            println!("tag: {tag}");
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod item_tooltip_tests {
+    use super::*;
+    use wz_db::{Arena, StringLinker};
+
+    #[test]
+    fn item_tooltip_matches_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let wz = root.join("Item/Consume/Consume_000.wz");
+        let string_wz = root.join("String/String_000.wz");
+        if !wz.exists() || !string_wz.exists() {
+            return;
+        }
+        let archive = WzArchive::open(&wz).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let entry = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("0200.img"))
+            .unwrap();
+        let node = archive.parse_image_at(entry.offset.unwrap()).unwrap();
+        let item = node
+            .object_children()
+            .iter()
+            .find(|c| c.name.as_ref() == "02000012")
+            .unwrap();
+        let string_archive = WzArchive::open(&string_wz).unwrap();
+        let (arena, root_id) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, root_id));
+        let view = wz_db::build_item_tooltip(item, "02000012", &linker).unwrap();
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/item_tooltip_02000012.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(serde_json::to_value(&view).unwrap(), expected);
+    }
+}

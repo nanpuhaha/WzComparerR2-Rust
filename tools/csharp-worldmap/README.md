@@ -48,6 +48,8 @@ Commands:
   rows (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
 - `skillsummary <String_000.wz> <limit>` — runs the original
   `SummaryParser.GetSkillSummary` on every skill `desc` and `h/h1..hn`.
+- `itemtooltip <item.wz> <image.img> <id> <String_000.wz>` — runs
+  `ItemTooltipRender2.GetItemAttributeString` + StringLinker name/desc.
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -183,3 +185,10 @@ dotnet run ... -- skillsummary ../../Data/String/String_000.wz 100000
 ```
 Rust `wz skill-summary ... --limit 100000 --json` matches all 20629 rows exactly.
 The fixture test keeps the first 2000 rows (`skill_summary_2000.expected.json`).
+
+Verified ItemTooltip output:
+```
+dotnet run ... -- itemtooltip ../../Data/Item/Consume/Consume_000.wz 0200.img 02000012 ../../Data/String/String_000.wz
+→ {"name":"엘릭서","desc":"...","attributes":["교환 불가"]}
+```
+Rust `wz item-tooltip ... --json` matches exactly.

@@ -392,6 +392,22 @@ enum Command {
         json: bool,
     },
 
+    /// ItemTooltip 이름/설명/속성 태그 출력
+    ItemTooltip {
+        /// Item WZ 파일
+        wz: PathBuf,
+        /// 이미지 이름 (예: 0200.img)
+        image: String,
+        /// 아이템 ID (예: 02000012)
+        id: String,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// DB2 아이콘/이미지 뷰어 (Canvas RGBA SHA-256)
     Db2Icons {
         /// WZ 파일
@@ -715,6 +731,13 @@ fn main() {
             limit,
             json,
         } => cmd_skill_summary(&string, limit, json),
+        Command::ItemTooltip {
+            wz,
+            image,
+            id,
+            string,
+            json,
+        } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::Db2Icons {
             wz,
             image,

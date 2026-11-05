@@ -580,3 +580,15 @@ merge semantics (recursive directory merge, conflict errors).
 - Executed C# reference: `tools/csharp-worldmap skillsummary ...` on
   `String/Skill.img` → 20629 rows, exact match with Rust. A 2000-row fixture
   backs the test.
+
+## ItemTooltip attributes
+
+- `wz-db::item_tooltip` mirrors `ItemTooltipRender2.GetItemAttributeString`: the
+  fixed-order only/quest/pquest/tradeBlock/useTradeBlock/accountSharable/
+  exchangeableOnce/multiPet/accountSharableAfterExchange/mintable tags, plus
+  the 501/502/516 and pet special cases.
+- `wz item-tooltip <item.wz> <image> <id> --string <String_000.wz> [--json]`
+  prints name/desc/auto_desc/attributes.
+- Executed C# reference: `tools/csharp-worldmap itemtooltip ...` uses
+  `ItemStringHelper.GetItemPropString` and StringLinker. `02000012` → exact
+  match (`교환 불가`).
