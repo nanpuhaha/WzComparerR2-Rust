@@ -664,3 +664,8 @@ merge semantics (recursive directory merge, conflict errors).
 
 - The generic `wz db2-characters` path also covers the Mechanic tab.
   `Mechanic_000.wz` → C# `characters` 23 == Rust 23 rows, exact match.
+
+### DB2 Character/Dragon
+
+- The generic `wz db2-characters` path also covers the Dragon tab.
+  `Dragon_000.wz` → C# `characters` 16 == Rust 16 rows, exact match.
