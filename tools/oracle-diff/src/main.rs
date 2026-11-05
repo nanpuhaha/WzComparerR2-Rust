@@ -93,7 +93,11 @@ struct Cli {
     op: Option<String>,
 
     /// 양쪽 오라클에 그대로 넘길 인자.
-    #[arg(value_name = "ARGS", trailing_var_arg = true, allow_hyphen_values = true)]
+    #[arg(
+        value_name = "ARGS",
+        trailing_var_arg = true,
+        allow_hyphen_values = true
+    )]
     passthrough: Vec<String>,
 
     #[arg(long, value_name = "PATH")]
@@ -163,7 +167,9 @@ fn repo_root_from(exe: &Path) -> Option<PathBuf> {
     exe.parent()
         .and_then(Path::parent)
         .and_then(Path::parent)
-        .filter(|root| root.join("Cargo.toml").is_file() && root.join("crates/wz-cli/Cargo.toml").is_file())
+        .filter(|root| {
+            root.join("Cargo.toml").is_file() && root.join("crates/wz-cli/Cargo.toml").is_file()
+        })
         .map(Path::to_path_buf)
 }
 
@@ -223,7 +229,11 @@ fn locate_csharp_dll(repo: &Path) -> Option<PathBuf> {
 
 /// Rust 쪽 실행 명령.
 fn rust_command(wz_bin: &Path, op: &str, args: &[String]) -> Vec<String> {
-    let mut cmd = vec![wz_bin.display().to_string(), "oracle".into(), op.to_string()];
+    let mut cmd = vec![
+        wz_bin.display().to_string(),
+        "oracle".into(),
+        op.to_string(),
+    ];
     cmd.extend(args.iter().cloned());
     cmd
 }
@@ -262,9 +272,14 @@ fn capture(command: &[String]) -> SideResult {
 /// 저장된 산출물 한 벌을 읽는다. 산출물 디렉터리와 리플레이 디렉터리는 같은 형식이다.
 fn read_sides(dir: &Path) -> Result<(SideResult, SideResult), String> {
     let read = |stem: &str| -> Result<SideResult, String> {
-        let stdout = std::fs::read_to_string(dir.join(format!("{stem}.json")))
-            .map_err(|e| format!("{} 읽기 실패: {e}", dir.join(format!("{stem}.json")).display()))?;
-        let stderr = std::fs::read_to_string(dir.join(format!("{stem}.stderr"))).unwrap_or_default();
+        let stdout = std::fs::read_to_string(dir.join(format!("{stem}.json"))).map_err(|e| {
+            format!(
+                "{} 읽기 실패: {e}",
+                dir.join(format!("{stem}.json")).display()
+            )
+        })?;
+        let stderr =
+            std::fs::read_to_string(dir.join(format!("{stem}.stderr"))).unwrap_or_default();
         let code = std::fs::read_to_string(dir.join(format!("{stem}.code")))
             .ok()
             .and_then(|raw| raw.trim().parse::<i32>().ok())
@@ -300,7 +315,12 @@ struct SidePair<'a> {
     csharp: &'a SideResult,
 }
 
-fn write_artifacts(dir: &Path, sides: SidePair<'_>, verdict: &Verdict, report: &str) -> std::io::Result<()> {
+fn write_artifacts(
+    dir: &Path,
+    sides: SidePair<'_>,
+    verdict: &Verdict,
+    report: &str,
+) -> std::io::Result<()> {
     std::fs::create_dir_all(dir)?;
     for name in ARTIFACT_FILES {
         let body: Option<String> = match *name {
@@ -344,7 +364,13 @@ fn default_out_dir(repo_root: Option<&Path>, op: &str) -> PathBuf {
 fn csharp_head(repo: Option<&Path>) -> Option<String> {
     let repo = repo?;
     let out = Command::new("git")
-        .args(["-C", &repo.display().to_string(), "rev-parse", "--short", "HEAD"])
+        .args([
+            "-C",
+            &repo.display().to_string(),
+            "rev-parse",
+            "--short",
+            "HEAD",
+        ])
         .output()
         .ok()?;
     if !out.status.success() {
@@ -383,7 +409,9 @@ fn run(cli: &Cli) -> i32 {
         Ok(n) => n,
         Err(message) => {
             eprintln!("oracle-diff: {message}");
-            eprintln!("스펙이 요구하는 `jq -S .` 정규화를 건너뛰면 모든 비교가 틀린 이유로 실패한다.");
+            eprintln!(
+                "스펙이 요구하는 `jq -S .` 정규화를 건너뛰면 모든 비교가 틀린 이유로 실패한다."
+            );
             eprintln!("내장 정규화기로 진행하려면 `--normalizer builtin` 또는 `--normalizer auto` 를 쓰세요.");
             return exit_code(Outcome::HarnessError);
         }
@@ -553,7 +581,9 @@ fn resolve_oracles(cli: &Cli, repo_root: Option<&Path>) -> Result<Execution, Str
             explicit
         }
         None => {
-            let candidate = repo_root.map(rust_oracle_candidate).ok_or_else(missing_repo_hint)?;
+            let candidate = repo_root
+                .map(rust_oracle_candidate)
+                .ok_or_else(missing_repo_hint)?;
             if !candidate.is_file() {
                 eprintln!("oracle-diff: `wz` 를 빌드합니다 (cargo build -p wz-cli --bin wz) …");
                 let status = Command::new("cargo")
@@ -660,10 +690,8 @@ mod tests {
     /// 테스트 전용 임시 디렉터리. 어떤 크레이트도 dev-dependency 를 쓰지 않으므로
     /// `tempfile` 대신 표준 라이브러리만 쓴다.
     fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "oracle-diff-test-{name}-{}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("oracle-diff-test-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("임시 디렉터리 생성");
         dir
@@ -703,7 +731,10 @@ mod tests {
         write(&root.join("Cargo.toml"), "[workspace]\n");
         write(&root.join("crates/wz-cli/Cargo.toml"), "[package]\n");
         write(&root.join("target/debug/oracle-diff.exe"), "");
-        assert_eq!(repo_root_from(&root.join("target/debug/oracle-diff.exe")), Some(root));
+        assert_eq!(
+            repo_root_from(&root.join("target/debug/oracle-diff.exe")),
+            Some(root)
+        );
     }
 
     #[test]
@@ -714,13 +745,23 @@ mod tests {
     #[test]
     fn csharp_dll_lookup_prefers_debug_net8_windows() {
         let repo = scratch("dll-lookup");
-        write(&repo.join("WzComparerR2.Oracle/bin/Release/net8.0").join(CSHARP_ORACLE_DLL), "x");
         write(
-            &repo.join("WzComparerR2.Oracle/bin/Debug/net8.0-windows").join(CSHARP_ORACLE_DLL),
+            &repo
+                .join("WzComparerR2.Oracle/bin/Release/net8.0")
+                .join(CSHARP_ORACLE_DLL),
+            "x",
+        );
+        write(
+            &repo
+                .join("WzComparerR2.Oracle/bin/Debug/net8.0-windows")
+                .join(CSHARP_ORACLE_DLL),
             "x",
         );
         let found = locate_csharp_dll(&repo).expect("찾아야 한다");
-        assert!(found.to_string_lossy().contains("net8.0-windows"), "{found:?}");
+        assert!(
+            found.to_string_lossy().contains("net8.0-windows"),
+            "{found:?}"
+        );
         assert!(found.to_string_lossy().contains("Debug"), "{found:?}");
     }
 
@@ -733,7 +774,10 @@ mod tests {
     #[test]
     fn csharp_project_path_points_at_the_harness_project() {
         let project = csharp_project(Path::new("/csharp"));
-        assert!(project.ends_with("WzComparerR2.Oracle/WzComparerR2.Oracle.csproj"), "{project:?}");
+        assert!(
+            project.ends_with("WzComparerR2.Oracle/WzComparerR2.Oracle.csproj"),
+            "{project:?}"
+        );
     }
 
     // ── 명령 조립 ────────────────────────────────────────────────────
@@ -838,7 +882,10 @@ mod tests {
         write(&dir.join("rust.json"), "{}");
         write(&dir.join("rust.code"), "0");
         write(&dir.join("csharp.json"), "");
-        write(&dir.join("csharp.stderr"), "not-implemented: WzFileComparer unreachable");
+        write(
+            &dir.join("csharp.stderr"),
+            "not-implemented: WzFileComparer unreachable",
+        );
         write(&dir.join("csharp.code"), "3");
 
         let out = scratch("run-stub-out");
@@ -859,9 +906,15 @@ mod tests {
     #[test]
     fn run_on_replay_of_a_mismatch_returns_one_and_saves_both_sides() {
         let dir = scratch("run-mismatch");
-        write(&dir.join("rust.json"), r#"{"result":{"value":6.333333333333333}}"#);
+        write(
+            &dir.join("rust.json"),
+            r#"{"result":{"value":6.333333333333333}}"#,
+        );
         write(&dir.join("rust.code"), "0");
-        write(&dir.join("csharp.json"), r#"{"result":{"value":6.333333333333334}}"#);
+        write(
+            &dir.join("csharp.json"),
+            r#"{"result":{"value":6.333333333333334}}"#,
+        );
         write(&dir.join("csharp.code"), "0");
 
         let out = scratch("run-mismatch-out");
@@ -899,7 +952,10 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(run(&cli), 0, "키 순서만 다른 것은 정규화 후 일치");
-        assert!(!out.join("report.txt").exists(), "일치할 때는 산출물을 남기지 않는다");
+        assert!(
+            !out.join("report.txt").exists(),
+            "일치할 때는 산출물을 남기지 않는다"
+        );
     }
 
     #[test]

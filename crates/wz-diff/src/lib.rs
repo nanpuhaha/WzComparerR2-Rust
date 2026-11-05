@@ -163,7 +163,10 @@ impl DiffEngine {
         use wz_core::dirtree::node_type;
         use wz_db::NodeValue;
         for e in &block.entries {
-            let name = e.name.clone().unwrap_or_else(|| std::sync::Arc::from("<ref>"));
+            let name = e
+                .name
+                .clone()
+                .unwrap_or_else(|| std::sync::Arc::from("<ref>"));
             if e.node_type == node_type::DIRECTORY {
                 let dir_id = arena.add_node(parent, name, None);
                 if let Some(sub_block) = blocks.get(*block_cursor) {
@@ -478,10 +481,16 @@ mod tests {
         let diffs = DiffEngine::diff_dirtree(&old_tree, &new_tree, "Map.wz");
         assert_eq!(diffs.len(), 2);
 
-        let map0 = diffs.iter().find(|d| d.path == "Map.wz/Map/Map0.img").unwrap();
+        let map0 = diffs
+            .iter()
+            .find(|d| d.path == "Map.wz/Map/Map0.img")
+            .unwrap();
         assert_eq!(map0.diff_type, DiffType::Changed);
 
-        let map1 = diffs.iter().find(|d| d.path == "Map.wz/Map/Map1.img").unwrap();
+        let map1 = diffs
+            .iter()
+            .find(|d| d.path == "Map.wz/Map/Map1.img")
+            .unwrap();
         assert_eq!(map1.diff_type, DiffType::Append);
     }
 }

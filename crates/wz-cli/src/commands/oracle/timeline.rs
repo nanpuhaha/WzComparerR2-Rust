@@ -11,8 +11,9 @@ pub fn cmd_oracle_timeline(
     let archive = WzArchive::open(wz_path)?;
     let tree = archive.read_tree()?;
     let entry = match img_name {
-        Some(name) => find_image_entry_in_dirtree(&tree, name)
-            .ok_or(format!("디렉터리 트리에서 이미지를 찾을 수 없습니다: {name}"))?,
+        Some(name) => find_image_entry_in_dirtree(&tree, name).ok_or(format!(
+            "디렉터리 트리에서 이미지를 찾을 수 없습니다: {name}"
+        ))?,
         None => tree
             .root
             .entries
@@ -33,14 +34,20 @@ pub fn cmd_oracle_timeline(
         None => None,
     };
 
-    let timings: Vec<wz_avatar::FrameTiming> =
-        action_node.object_children().iter().map(frame_timing_from).collect();
+    let timings: Vec<wz_avatar::FrameTiming> = action_node
+        .object_children()
+        .iter()
+        .map(frame_timing_from)
+        .collect();
     let cycle_ms: u64 = timings.iter().map(|t| t.delay_ms as u64).sum();
 
     let mut frames = Vec::new();
     let mut samples = Vec::new();
-    for (idx, (frame_node, timing)) in
-        action_node.object_children().iter().zip(timings.iter()).enumerate()
+    for (idx, (frame_node, timing)) in action_node
+        .object_children()
+        .iter()
+        .zip(timings.iter())
+        .enumerate()
     {
         let (layers, _move) =
             wz_avatar::collect_frame_layers(frame_node, &archive, canvas_archive.as_ref())?;
@@ -102,7 +109,10 @@ pub fn cmd_oracle_timeline(
         "frame_count".into(),
         serde_json::Value::Number(action_node.object_children().len().into()),
     );
-    res.insert("cycle_ms".into(), serde_json::Value::Number(cycle_ms.into()));
+    res.insert(
+        "cycle_ms".into(),
+        serde_json::Value::Number(cycle_ms.into()),
+    );
     res.insert("frames".into(), serde_json::Value::Array(frames));
     if interpol_ms > 0 {
         res.insert("samples".into(), serde_json::Value::Array(samples));
@@ -131,4 +141,3 @@ pub fn frame_timing_from(frame_node: &wz_core::image::Node) -> wz_avatar::FrameT
     }
     wz_avatar::FrameTiming::from_raw(delay, a0, a1)
 }
-

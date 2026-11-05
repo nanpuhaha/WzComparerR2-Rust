@@ -30,7 +30,8 @@ impl CharaProp {
     /// `int origSum = (baseVal + gearAdd + buffAdd + eBuffAdd) * (100 + rate + aBuffRate + pBuffRate) / 100;`
     /// 정수 나눗셈 순서(`/ 100`)를 보존한다.
     pub fn get_sum(&self) -> i32 {
-        let raw_add = self.base_val
+        let raw_add = self
+            .base_val
             .saturating_add(self.gear_add)
             .saturating_add(self.buff_add)
             .saturating_add(self.e_buff_add);
@@ -39,17 +40,16 @@ impl CharaProp {
 
     /// 장비 착용 요구치 합산 (`CharaProp.GetGearReqSum()`).
     pub fn get_gear_req_sum(&self) -> i32 {
-        let raw_add = self.base_val
+        let raw_add = self
+            .base_val
             .saturating_add(self.gear_add)
             .saturating_add(self.buff_add);
         self.compute_sum(raw_add)
     }
 
     fn compute_sum(&self, raw_add: i32) -> i32 {
-        let total_rate = 100i64
-            + self.rate as i64
-            + self.a_buff_rate as i64
-            + self.p_buff_rate as i64;
+        let total_rate =
+            100i64 + self.rate as i64 + self.a_buff_rate as i64 + self.p_buff_rate as i64;
         let orig_sum = ((raw_add as i64 * total_rate) / 100) as i32;
         if self.total_max > 0 {
             orig_sum.min(self.total_max)

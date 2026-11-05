@@ -1,6 +1,3 @@
-
-
-
 pub fn cmd_image(
     path: &std::path::Path,
     offset: u64,
@@ -85,15 +82,22 @@ pub fn print_node(node: &wz_core::image::Node, depth: usize, max_depth: usize) {
 }
 pub fn dump_node_to_json(node: &wz_core::image::Node) -> serde_json::Value {
     let mut map = serde_json::Map::new();
-    map.insert("name".into(), serde_json::Value::String(node.name.to_string()));
+    map.insert(
+        "name".into(),
+        serde_json::Value::String(node.name.to_string()),
+    );
 
     if let Some(wz_core::image::ImageValue::Property(inner)) = &node.value {
         map.insert("type".into(), serde_json::Value::String("Property".into()));
-        let children: Vec<serde_json::Value> = inner.children.iter().map(dump_node_to_json).collect();
+        let children: Vec<serde_json::Value> =
+            inner.children.iter().map(dump_node_to_json).collect();
         map.insert("children".into(), serde_json::Value::Array(children));
     } else {
         if let Some(val) = &node.value {
-            map.insert("type".into(), serde_json::Value::String(val.type_name().into()));
+            map.insert(
+                "type".into(),
+                serde_json::Value::String(val.type_name().into()),
+            );
             match val {
                 wz_core::image::ImageValue::Str(s) => {
                     map.insert("value".into(), serde_json::Value::String(s.to_string()));
@@ -124,7 +128,10 @@ pub fn dump_node_to_json(node: &wz_core::image::Node) -> serde_json::Value {
                     p_map.insert("format".into(), serde_json::Value::Number(p.format.into()));
                     p_map.insert("scale".into(), serde_json::Value::Number(p.scale.into()));
                     p_map.insert("pages".into(), serde_json::Value::Number(p.pages.into()));
-                    p_map.insert("data_len".into(), serde_json::Value::Number(p.data_len.into()));
+                    p_map.insert(
+                        "data_len".into(),
+                        serde_json::Value::Number(p.data_len.into()),
+                    );
                     map.insert("png".into(), serde_json::Value::Object(p_map));
                 }
                 wz_core::image::ImageValue::Uol(s) => {
@@ -140,7 +147,8 @@ pub fn dump_node_to_json(node: &wz_core::image::Node) -> serde_json::Value {
             }
         }
         if !node.children.is_empty() {
-            let children: Vec<serde_json::Value> = node.children.iter().map(dump_node_to_json).collect();
+            let children: Vec<serde_json::Value> =
+                node.children.iter().map(dump_node_to_json).collect();
             map.insert("children".into(), serde_json::Value::Array(children));
         }
     }

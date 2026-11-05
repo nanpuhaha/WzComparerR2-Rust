@@ -13,9 +13,7 @@ pub fn cmd_oracle_tooltip(
     let mut linker = StringLinker::new();
     linker.load_string_wz(&arena, arena.root());
 
-    let text = linker
-        .format_tooltip(item_id)
-        .unwrap_or_default();
+    let text = linker.format_tooltip(item_id).unwrap_or_default();
 
     let mut doc = oracle_envelope("tooltip", detection);
     let mut res = serde_json::Map::new();
@@ -25,4 +23,3 @@ pub fn cmd_oracle_tooltip(
     println!("{}", serde_json::to_string_pretty(&doc)?);
     Ok(())
 }
-

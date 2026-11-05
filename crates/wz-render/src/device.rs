@@ -42,8 +42,9 @@ impl RenderContext {
         }))
         .map_err(|e| format!("wgpu 어댑터 요청 실패: {e:?}"))?;
 
-        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
-        .map_err(|e| format!("wgpu 디바이스 생성 실패: {e:?}"))?;
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
+                .map_err(|e| format!("wgpu 디바이스 생성 실패: {e:?}"))?;
 
         let device = Arc::new(device);
         let queue = Arc::new(queue);
@@ -179,8 +180,10 @@ impl RenderContext {
         };
 
         // 6. 렌더 파이프라인 (알파 블렌딩 / 가산 블렌딩 / 불투명)
-        let pipeline_alpha =
-            create_pipeline("sprite_pipeline_alpha", Some(wgpu::BlendState::ALPHA_BLENDING));
+        let pipeline_alpha = create_pipeline(
+            "sprite_pipeline_alpha",
+            Some(wgpu::BlendState::ALPHA_BLENDING),
+        );
         let additive_blend = wgpu::BlendState {
             color: wgpu::BlendComponent {
                 src_factor: wgpu::BlendFactor::SrcAlpha,
@@ -495,9 +498,7 @@ impl RenderContext {
             .map_err(|e| format!("Map buffer recv error: {e:?}"))?
             .map_err(|e| format!("Map buffer error: {e:?}"))?;
 
-        let mapped = slice
-            .get_mapped_range()
-            .map_err(|e| format!("{e:?}"))?;
+        let mapped = slice.get_mapped_range().map_err(|e| format!("{e:?}"))?;
         let mut pixels = Vec::with_capacity((width * height * 4) as usize);
 
         for row in 0..height {
@@ -567,7 +568,11 @@ mod tests {
                 assert_eq!(pixels.len(), (width * height * 4) as usize);
                 // 중앙 픽셀이 검은색(0)이 아닌 빨간색(~255, 0, 0, 255)으로 렌더링되었는지 확인
                 let center_idx = ((height / 2 * width + width / 2) * 4) as usize;
-                assert!(pixels[center_idx] >= 250, "R channel should be ~255, got {}", pixels[center_idx]);
+                assert!(
+                    pixels[center_idx] >= 250,
+                    "R channel should be ~255, got {}",
+                    pixels[center_idx]
+                );
                 assert_eq!(pixels[center_idx + 1], 0);
                 assert_eq!(pixels[center_idx + 2], 0);
                 assert!(pixels[center_idx + 3] >= 250);

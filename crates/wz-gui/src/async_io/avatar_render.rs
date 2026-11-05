@@ -4,8 +4,6 @@
 // 워커 스레드가 결과를 채널로 보내고, UI 스레드는 `poll_load_result` 로
 // 매 프레임 폴링한다.
 
-
-
 use crate::state::AppState;
 
 // ── 파일 열기 ─────────────────────────────────────────────────────────
@@ -15,22 +13,37 @@ pub fn render_avatar_body(state: &mut AppState) {
         state.avatar_status = "Body 이미지를 먼저 로드하세요".into();
         return;
     };
-    use wz_render::{atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D, device::RenderContext};
+    use wz_render::{
+        atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D, device::RenderContext,
+    };
 
     let mut rc = match RenderContext::new_headless() {
         Ok(r) => r,
-        Err(e) => { state.avatar_status = format!("RenderContext 실패: {e}"); return; }
+        Err(e) => {
+            state.avatar_status = format!("RenderContext 실패: {e}");
+            return;
+        }
     };
     let mut packer = AtlasShelfPacker::new(w.max(1), h.max(1));
     let slot = match packer.allocate_and_write(w, h, &rgba) {
         Some(s) => s,
-        None => { state.avatar_status = "아틀라스 할당 실패".into(); return; }
+        None => {
+            state.avatar_status = "아틀라스 할당 실패".into();
+            return;
+        }
     };
     for page in packer.pages() {
         let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
     }
     let mut batch = SpriteBatch::new();
-    batch.push_atlas_quad(slot.key, [0.0, 0.0, w as f32, h as f32], 0.0, &slot.rect, (w, h), [1.0, 1.0, 1.0, 1.0]);
+    batch.push_atlas_quad(
+        slot.key,
+        [0.0, 0.0, w as f32, h as f32],
+        0.0,
+        &slot.rect,
+        (w, h),
+        [1.0, 1.0, 1.0, 1.0],
+    );
     batch.finish();
 
     let cam = Camera2D::new(w as f32, h as f32);
@@ -40,7 +53,8 @@ pub fn render_avatar_body(state: &mut AppState) {
             state.avatar_status = format!("아바타 렌더 완료: {}x{}", w, h);
             state.avatar_rendered = Some((w, h, out));
         }
-        Err(e) => { state.avatar_status = format!("렌더 실패: {e}"); }
+        Err(e) => {
+            state.avatar_status = format!("렌더 실패: {e}");
+        }
     }
 }
-

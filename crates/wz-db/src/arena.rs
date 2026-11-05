@@ -14,9 +14,9 @@
 
 use std::sync::Arc;
 
-use wz_core::WzArchive;
 use wz_core::dirtree;
 use wz_core::image::{ImageValue, Node as WzNode};
+use wz_core::WzArchive;
 
 use crate::node::{NodeEntry, NodeId, NodeValue, RawDataRef};
 
@@ -65,7 +65,14 @@ impl Arena {
         let mut arena = Self::with_root("");
         let root = arena.root();
         let mut block_cursor = 0usize;
-        populate_arena_block(&mut arena, root, &tree.root, &tree.blocks, &mut block_cursor, archive);
+        populate_arena_block(
+            &mut arena,
+            root,
+            &tree.root,
+            &tree.blocks,
+            &mut block_cursor,
+            archive,
+        );
         (arena, root)
     }
 
@@ -331,7 +338,6 @@ fn convert_back(v: &NodeValue) -> ImageValue {
         NodeValue::Convex(c) => ImageValue::Convex(c.clone()),
     }
 }
-
 
 // ── 내부 헬퍼: DirTree → Arena 커서 순회 (CLI/GUI 에서 이동) ─────────
 

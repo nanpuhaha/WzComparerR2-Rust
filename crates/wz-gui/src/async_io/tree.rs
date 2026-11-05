@@ -6,18 +6,19 @@
 
 use crossbeam_channel;
 
-
-use crate::state::{AppState, LoadMsg, TreeRow};
-use wz_core::WzArchive;
-use wz_core::dirtree::{DirTree, RawEntry};
-use wz_core::dirtree::node_type as nt;
-use wz_core::image::{ImageValue, Node as ImageNode};
 use super::*;
+use crate::state::{AppState, LoadMsg, TreeRow};
+use wz_core::dirtree::node_type as nt;
+use wz_core::dirtree::{DirTree, RawEntry};
+use wz_core::image::{ImageValue, Node as ImageNode};
+use wz_core::WzArchive;
 
 // ── 파일 열기 ─────────────────────────────────────────────────────────
 
 pub fn poll_load_result(state: &mut AppState, ctx: &egui::Context) {
-    let Some(rx) = &state.load_rx else { return; };
+    let Some(rx) = &state.load_rx else {
+        return;
+    };
     match rx.try_recv() {
         Ok(LoadMsg::Loaded { tree }) => {
             state.status = format!("로드 완료: {} 엔트리(루트)", tree.root.entries.len());
@@ -33,7 +34,13 @@ pub fn poll_load_result(state: &mut AppState, ctx: &egui::Context) {
             state.loading = false;
             state.load_rx = None;
             // 자동 맵 로드 (이미지 엔트리가 있을 때)
-            if state.archive.is_some() && state.tree.as_ref().map(|t| t.root.entries.iter().any(|e| e.node_type == nt::IMAGE)).unwrap_or(false) {
+            if state.archive.is_some()
+                && state
+                    .tree
+                    .as_ref()
+                    .map(|t| t.root.entries.iter().any(|e| e.node_type == nt::IMAGE))
+                    .unwrap_or(false)
+            {
                 load_map_by_path(state);
             }
             ctx.request_repaint();
@@ -52,7 +59,9 @@ pub fn poll_load_result(state: &mut AppState, ctx: &egui::Context) {
 }
 
 pub fn poll_map_images(state: &mut AppState, ctx: &egui::Context) {
-    let Some(rx) = &state.map_images_rx else { return; };
+    let Some(rx) = &state.map_images_rx else {
+        return;
+    };
     match rx.try_recv() {
         Ok(imgs) => {
             // back 은 이미 동기적으로 로드되었으므로 덮어쓰지 않는다.
@@ -80,7 +89,10 @@ pub fn build_rows(
     parent_path: &str,
 ) {
     for e in &tree.root.entries {
-        let name = e.name.clone().unwrap_or_else(|| format!("<ref@{}>", e.file_pos).into());
+        let name = e
+            .name
+            .clone()
+            .unwrap_or_else(|| format!("<ref@{}>", e.file_pos).into());
         let path = if parent_path.is_empty() {
             format!("/{}", name)
         } else {
@@ -126,9 +138,15 @@ pub fn build_rows(
 }
 
 fn parse_image_children(archive: Option<&WzArchive>, e: &RawEntry) -> Vec<(String, String)> {
-    let Some(arch) = archive else { return vec![]; };
-    let Some(off) = e.offset else { return vec![]; };
-    let Ok(node) = arch.parse_image_at(off) else { return vec![]; };
+    let Some(arch) = archive else {
+        return vec![];
+    };
+    let Some(off) = e.offset else {
+        return vec![];
+    };
+    let Ok(node) = arch.parse_image_at(off) else {
+        return vec![];
+    };
     let mut out = Vec::new();
     if let Some(ImageValue::Property(p)) = &node.value {
         for c in &p.children {
@@ -145,8 +163,12 @@ pub fn value_kind(n: &ImageNode) -> String {
     match &n.value {
         Some(ImageValue::Png(_)) => "canvas".into(),
         Some(ImageValue::Property(_)) => "prop".into(),
-        Some(ImageValue::Int(_)) | Some(ImageValue::Short(_)) | Some(ImageValue::Long(_))
-        | Some(ImageValue::Uint(_)) | Some(ImageValue::Float(_)) | Some(ImageValue::Double(_))
+        Some(ImageValue::Int(_))
+        | Some(ImageValue::Short(_))
+        | Some(ImageValue::Long(_))
+        | Some(ImageValue::Uint(_))
+        | Some(ImageValue::Float(_))
+        | Some(ImageValue::Double(_))
         | Some(ImageValue::Bool(_)) => "val".into(),
         Some(ImageValue::Str(_)) => "str".into(),
         Some(ImageValue::Vector(_)) => "vec".into(),
@@ -154,7 +176,6 @@ pub fn value_kind(n: &ImageNode) -> String {
         _ => "node".into(),
     }
 }
-
 
 // 캔버스 탐색은 wz_core::image::Node::first_canvas() 를 사용한다 (단일 규칙).
 
@@ -191,11 +212,19 @@ fn load_image_view(state: &mut AppState, path: &str) {
         state.current_image_path = Some(path.to_string());
         return;
     }
-    let Some(tree) = &state.tree else { return; };
+    let Some(tree) = &state.tree else {
+        return;
+    };
     let archive = state.shared_archive.lock().unwrap().clone();
-    let Some(archive) = archive else { return; };
+    let Some(archive) = archive else {
+        return;
+    };
     let name = path.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
-    let entry = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name));
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some(name));
     let Some(e) = entry else {
         state.current_image_info = Some(format!("엔트리를 찾을 수 없음: {name}"));
         return;
@@ -223,4 +252,3 @@ fn load_image_view(state: &mut AppState, path: &str) {
 }
 
 // ── 아바타 렌더링 (PoC 3.6) ──────────────────────────────────────────
-

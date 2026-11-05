@@ -10,8 +10,8 @@ use std::thread;
 use rfd::FileDialog;
 
 use crate::state::{AppState, LoadMsg};
-use wz_core::WzArchive;
 use wz_core::dirtree::DirTree;
+use wz_core::WzArchive;
 
 // ── 파일 열기 ─────────────────────────────────────────────────────────
 
@@ -23,7 +23,9 @@ pub fn open_file_dialog(state: &mut AppState) {
         .add_filter("WZ files", &["wz"])
         .add_filter("All files", &["*"])
         .pick_file();
-    let Some(path) = picked else { return; };
+    let Some(path) = picked else {
+        return;
+    };
 
     state.loading = true;
     state.status = format!("로딩 중: {}", path.display());
@@ -60,7 +62,9 @@ pub fn open_file_dialog(state: &mut AppState) {
 }
 
 pub fn open_file_dialog_with_path(state: &mut AppState, path: std::path::PathBuf) {
-    if state.loading { return; }
+    if state.loading {
+        return;
+    }
     state.loading = true;
     state.status = format!("로딩 중: {}", path.display());
     state.tree = None;
@@ -95,4 +99,3 @@ pub fn open_file_dialog_with_path(state: &mut AppState, path: std::path::PathBuf
         let _ = tx.send(msg);
     });
 }
-

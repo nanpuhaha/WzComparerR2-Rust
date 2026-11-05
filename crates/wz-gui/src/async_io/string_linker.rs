@@ -4,8 +4,6 @@
 // 워커 스레드가 결과를 채널로 보내고, UI 스레드는 `poll_load_result` 로
 // 매 프레임 폴링한다.
 
-
-
 use crate::state::AppState;
 use wz_core::WzArchive;
 
@@ -37,7 +35,8 @@ pub fn load_string_linker(state: &mut AppState) {
         Ok(linker)
     })() {
         Ok(linker) => {
-            state.string_linker_status = format!("StringLinker 로드 완료 (eqp: {})", linker.string_eqp.len());
+            state.string_linker_status =
+                format!("StringLinker 로드 완료 (eqp: {})", linker.string_eqp.len());
             state.string_linker = Some(linker);
         }
         Err(e) => {
@@ -47,4 +46,3 @@ pub fn load_string_linker(state: &mut AppState) {
 }
 
 // ── 아바타 장비 로딩 ─────────────────────────────────────────────────
-

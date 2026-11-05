@@ -216,12 +216,8 @@ fn unpack_bc7_mode0_2(mode: usize, data_chunks: [u64; 2], pixels: &mut [[u8; 4];
     for s in 0..3 {
         for i in 0..weight_vals {
             for c in 0..3 {
-                block_colors[s * 8 + i][c] = bc7_interp(
-                    endpoints[s * 2][c],
-                    endpoints[s * 2 + 1][c],
-                    i,
-                    weight_bits,
-                );
+                block_colors[s * 8 + i][c] =
+                    bc7_interp(endpoints[s * 2][c], endpoints[s * 2 + 1][c], i, weight_bits);
             }
             block_colors[s * 8 + i][3] = 255;
         }
@@ -324,12 +320,8 @@ fn unpack_bc7_mode1_3_7(mode: usize, data_chunks: [u64; 2], pixels: &mut [[u8; 4
     for s in 0..2 {
         for i in 0..weight_vals {
             for c in 0..comps {
-                block_colors[s * 8 + i][c] = bc7_interp(
-                    endpoints[s * 2][c],
-                    endpoints[s * 2 + 1][c],
-                    i,
-                    weight_bits,
-                );
+                block_colors[s * 8 + i][c] =
+                    bc7_interp(endpoints[s * 2][c], endpoints[s * 2 + 1][c], i, weight_bits);
             }
             if comps == 3 {
                 block_colors[s * 8 + i][3] = 255;
@@ -420,7 +412,11 @@ fn unpack_bc7_mode4_5(mode: usize, data_chunks: [u64; 2], pixels: &mut [[u8; 4];
 
     for ep in &mut endpoints {
         for (c, val) in ep.iter_mut().enumerate() {
-            let bits = if c == 3 { a_endpoint_bits } else { endpoint_bits };
+            let bits = if c == 3 {
+                a_endpoint_bits
+            } else {
+                endpoint_bits
+            };
             *val = bc7_dequant(*val as u32, bits);
         }
     }

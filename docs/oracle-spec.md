@@ -148,7 +148,7 @@ C# 은 `IEnumerable<CompareDifference>` 스트림이고 Rust 도 스트림이어
 **차이 나는 이유는 항상 원인 파악 가능한 형태여야 한다.**
 `"0.1% off"` 같은 반올림 차이가 나면 어디서 틀렸는지 찾을 수 없다.
 
-### op: `avatar` / `timeline` (#26, #27 — 규약 문서 `.scratch/oracle-completion/avatar-timeline-wayfinding.md`)
+### op: `avatar` / `timeline` (#26, #27)
 
 ```bash
 wz oracle timeline --wz A.wz --node walk1 [--path 이미지명]

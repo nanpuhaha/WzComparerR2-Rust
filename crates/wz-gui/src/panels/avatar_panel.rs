@@ -3,43 +3,47 @@ use crate::state::AppState;
 
 pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.label("29개 슬롯 (드롭다운 선택)");
-    egui::ScrollArea::vertical().max_height(240.0).show(ui, |ui| {
-        for (i, slot) in AVATAR_SLOTS.iter().enumerate() {
-            ui.horizontal(|ui| {
-                ui.label(format!("{:>2}. {:<15}", i, slot));
-                if i < 29 {
-                    let mut sel = state.avatar_slot_selection[i];
-                    let preview = if sel == usize::MAX {
-                        "없음".to_string()
-                    } else if let Some((name, _, _, _)) = state.avatar_loaded_parts.get(sel) {
-                        format!("{} ({})", name, sel)
-                    } else {
-                        format!("Part {}", sel)
-                    };
-                    egui::ComboBox::from_id_salt(format!("slot_{}", i))
-                        .selected_text(preview)
-                        .show_ui(ui, |ui| {
-                            if ui.selectable_value(&mut sel, usize::MAX, "없음").changed() {
-                                state.avatar_slot_selection[i] = sel;
-                            }
-                            for j in 0..state.avatar_loaded_parts.len() {
-                                let label = if let Some((name, _, _, _)) = state.avatar_loaded_parts.get(j) {
-                                    format!("{} ({})", name, j)
-                                } else {
-                                    format!("Part {}", j)
-                                };
-                                if ui.selectable_value(&mut sel, j, label).changed() {
+    egui::ScrollArea::vertical()
+        .max_height(240.0)
+        .show(ui, |ui| {
+            for (i, slot) in AVATAR_SLOTS.iter().enumerate() {
+                ui.horizontal(|ui| {
+                    ui.label(format!("{:>2}. {:<15}", i, slot));
+                    if i < 29 {
+                        let mut sel = state.avatar_slot_selection[i];
+                        let preview = if sel == usize::MAX {
+                            "없음".to_string()
+                        } else if let Some((name, _, _, _)) = state.avatar_loaded_parts.get(sel) {
+                            format!("{} ({})", name, sel)
+                        } else {
+                            format!("Part {}", sel)
+                        };
+                        egui::ComboBox::from_id_salt(format!("slot_{}", i))
+                            .selected_text(preview)
+                            .show_ui(ui, |ui| {
+                                if ui.selectable_value(&mut sel, usize::MAX, "없음").changed() {
                                     state.avatar_slot_selection[i] = sel;
                                 }
-                            }
-                        });
-                    state.avatar_slot_selection[i] = sel;
-                } else {
-                    ui.label(egui::RichText::new("(empty)").weak());
-                }
-            });
-        }
-    });
+                                for j in 0..state.avatar_loaded_parts.len() {
+                                    let label = if let Some((name, _, _, _)) =
+                                        state.avatar_loaded_parts.get(j)
+                                    {
+                                        format!("{} ({})", name, j)
+                                    } else {
+                                        format!("Part {}", j)
+                                    };
+                                    if ui.selectable_value(&mut sel, j, label).changed() {
+                                        state.avatar_slot_selection[i] = sel;
+                                    }
+                                }
+                            });
+                        state.avatar_slot_selection[i] = sel;
+                    } else {
+                        ui.label(egui::RichText::new("(empty)").weak());
+                    }
+                });
+            }
+        });
     if ui.button("Body 이미지 로드 (Character.wz)").clicked() {
         async_io::load_avatar_body(state);
     }
@@ -56,7 +60,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.label("형식: Cap:1000000,Coat:1040000,Pants:1060000");
     if !state.avatar_loaded_parts.is_empty() {
         ui.separator();
-        ui.label(format!("로드된 파트 ({}):", state.avatar_loaded_parts.len()));
+        ui.label(format!(
+            "로드된 파트 ({}):",
+            state.avatar_loaded_parts.len()
+        ));
         for (i, (slot, w, h, _)) in state.avatar_loaded_parts.iter().enumerate() {
             ui.label(format!("  {}: {} ({}x{})", i, slot, w, h));
         }
@@ -77,21 +84,50 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.label(&state.avatar_status);
     if let Some((w, h, rgba)) = &state.avatar_image {
         let ci = egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
-        let tex = ui.ctx().load_texture("avatar_body", ci, egui::TextureOptions::LINEAR);
+        let tex = ui
+            .ctx()
+            .load_texture("avatar_body", ci, egui::TextureOptions::LINEAR);
         ui.add(egui::Image::new(&tex).max_width(120.0));
         ui.label(format!("Body: {}x{}", w, h));
     }
     if let Some((w, h, rgba)) = &state.avatar_rendered {
         let ci = egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
-        let tex = ui.ctx().load_texture("avatar_rendered", ci, egui::TextureOptions::LINEAR);
+        let tex = ui
+            .ctx()
+            .load_texture("avatar_rendered", ci, egui::TextureOptions::LINEAR);
         ui.add(egui::Image::new(&tex).max_width(200.0));
         ui.label(format!("Rendered: {}x{}", w, h));
     }
 }
 
 pub const AVATAR_SLOTS: [&str; 29] = [
-    "Body", "Head", "Face", "Hair", "Cap", "Coat", "Longcoat", "Pants", "Shoes",
-    "Glove", "SubWeapon", "Cape", "Weapon", "Earrings", "FaceAccessory",
-    "EyeAccessory", "Taming", "Saddle", "Chair", "Effect", "Pendant", "Belt",
-    "ShoulderPad", "Pocket", "Emblem", "Ring1", "Ring2", "Ring3", "Ring4",
+    "Body",
+    "Head",
+    "Face",
+    "Hair",
+    "Cap",
+    "Coat",
+    "Longcoat",
+    "Pants",
+    "Shoes",
+    "Glove",
+    "SubWeapon",
+    "Cape",
+    "Weapon",
+    "Earrings",
+    "FaceAccessory",
+    "EyeAccessory",
+    "Taming",
+    "Saddle",
+    "Chair",
+    "Effect",
+    "Pendant",
+    "Belt",
+    "ShoulderPad",
+    "Pocket",
+    "Emblem",
+    "Ring1",
+    "Ring2",
+    "Ring3",
+    "Ring4",
 ];

@@ -1,7 +1,5 @@
 use std::path::PathBuf;
 
-
-
 pub fn cmd_avatar(
     demo: bool,
     render: Option<PathBuf>,
@@ -172,7 +170,10 @@ pub fn cmd_avatar(
                         );
                     } else {
                         std::fs::write(&out_path, &pixels)?;
-                        println!("렌더링된 아바타 RGBA 원시 버퍼 저장 완료: {}", out_path.display());
+                        println!(
+                            "렌더링된 아바타 RGBA 원시 버퍼 저장 완료: {}",
+                            out_path.display()
+                        );
                     }
                 }
             }

@@ -22,7 +22,7 @@ impl eframe::App for PocApp {
                 }
                 1 => {
                     async_io::poll_load_result(&mut self.state, ui.ctx());
-        async_io::poll_map_images(&mut self.state, ui.ctx());
+                    async_io::poll_map_images(&mut self.state, ui.ctx());
                     self.smoke_wait_frames += 1;
                     if self.state.tree.is_some() {
                         self.smoke_phase = 2;

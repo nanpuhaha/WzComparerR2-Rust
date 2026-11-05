@@ -9,6 +9,12 @@ use wz_pool::ByteSource;
 const POLYNOMIAL: u32 = 0x04C11DB7;
 const TOP_BIT: u32 = 0x80000000;
 
+/// SFX 패처 안내문 길이의 상한 (1 MiB). 손상된 tail 로 거대한 할당을 막는다.
+const MAX_NOTICE_BYTES: u64 = 1024 * 1024;
+
+/// 패치 파트 목록 압축 해제 결과의 상한 (64 MiB). zlib 폭탄 방지.
+const MAX_PARTS_DECOMPRESSED_BYTES: usize = 64 * 1024 * 1024;
+
 /// BZIP2/CRC32 변종 체크섬 계산기 (원본 `CheckSum.cs:37-65, 184-186`).
 pub fn compute_patch_checksum(data: &[u8], initial_crc: u32) -> u32 {
     let mut sbox = [0u32; 256];
@@ -92,8 +98,32 @@ impl PatchHeader {
                 let magic = u32::from_le_bytes([tail[8], tail[9], tail[10], tail[11]]);
                 if magic == 0xF2F7FBF3 {
                     let block_len = u32::from_le_bytes([tail[0], tail[1], tail[2], tail[3]]) as u64;
-                    let notice_len = u32::from_le_bytes([tail[4], tail[5], tail[6], tail[7]]) as u64;
-                    let block_start = len - 12 - notice_len - block_len;
+                    let notice_len =
+                        u32::from_le_bytes([tail[4], tail[5], tail[6], tail[7]]) as u64;
+                    // 손상/조작된 tail 길이로 underflow 하거나 거대한 버퍼를
+                    // 할당하지 않도록 파일 크기와 상한을 먼저 검사한다.
+                    let overhead = 12u64
+                        .checked_add(notice_len)
+                        .and_then(|v| v.checked_add(block_len))
+                        .ok_or(WzFormatError::Malformed {
+                            what: "patch tail length overflow",
+                            offset: 0,
+                        })?;
+                    if overhead > len {
+                        return Err(WzFormatError::Malformed {
+                            what: "patch tail exceeds file size",
+                            offset: 0,
+                        }
+                        .into());
+                    }
+                    if notice_len > MAX_NOTICE_BYTES {
+                        return Err(WzFormatError::Malformed {
+                            what: "patch notice too large",
+                            offset: 0,
+                        }
+                        .into());
+                    }
+                    let block_start = len - overhead;
                     let mut notice_bytes = vec![0u8; notice_len as usize];
                     src.read_at(block_start + block_len, &mut notice_bytes)?;
                     let notice_str = String::from_utf8_lossy(&notice_bytes).to_string();
@@ -119,11 +149,21 @@ impl PatchHeader {
         let mut patch_head = [0u8; 16];
         src.read_at(patch_offset, &mut patch_head)?;
 
-        let version = i32::from_le_bytes([patch_head[8], patch_head[9], patch_head[10], patch_head[11]]);
-        let expected_checksum = u32::from_le_bytes([patch_head[12], patch_head[13], patch_head[14], patch_head[15]]);
+        let version =
+            i32::from_le_bytes([patch_head[8], patch_head[9], patch_head[10], patch_head[11]]);
+        let expected_checksum = u32::from_le_bytes([
+            patch_head[12],
+            patch_head[13],
+            patch_head[14],
+            patch_head[15],
+        ]);
 
         // T18: CRC는 압축 영역 [16, end)만 해시
-        let payload_len = (patch_len - 16) as usize;
+        let payload_len =
+            usize::try_from(patch_len - 16).map_err(|_| WzFormatError::Malformed {
+                what: "patch payload too large",
+                offset: patch_offset,
+            })?;
         let mut payload = vec![0u8; payload_len];
         src.read_at(patch_offset + 16, &mut payload)?;
         let computed_checksum = compute_patch_checksum(&payload, 0);
@@ -148,7 +188,15 @@ impl PatchHeader {
         use flate2::read::ZlibDecoder;
         use std::io::Read;
 
-        let mut raw = vec![0u8; self.compressed_len as usize];
+        let mut raw = vec![
+            0u8;
+            usize::try_from(self.compressed_len).map_err(|_| {
+                WzFormatError::Malformed {
+                    what: "patch payload too large",
+                    offset: self.data_start_offset,
+                }
+            })?
+        ];
         src.read_at(self.data_start_offset, &mut raw)?;
 
         if raw.len() < 2 {
@@ -156,14 +204,24 @@ impl PatchHeader {
         }
         let slice = &raw[..];
 
-        let mut decoder = ZlibDecoder::new(slice);
+        let limit = MAX_PARTS_DECOMPRESSED_BYTES as u64 + 1;
+        let mut decoder = ZlibDecoder::new(slice).take(limit);
         let mut decompressed = Vec::new();
-        if decoder.read_to_end(&mut decompressed).is_err() {
+        if decoder.read_to_end(&mut decompressed).is_err()
+            || decompressed.len() > MAX_PARTS_DECOMPRESSED_BYTES
+        {
             // raw deflate fallback
             use flate2::read::DeflateDecoder;
-            let mut def_decoder = DeflateDecoder::new(slice);
+            let mut def_decoder = DeflateDecoder::new(slice).take(limit);
             decompressed.clear();
             let _ = def_decoder.read_to_end(&mut decompressed);
+            if decompressed.len() > MAX_PARTS_DECOMPRESSED_BYTES {
+                return Err(WzFormatError::Malformed {
+                    what: "patch part list too large",
+                    offset: self.data_start_offset,
+                }
+                .into());
+            }
         }
 
         if decompressed.is_empty() {

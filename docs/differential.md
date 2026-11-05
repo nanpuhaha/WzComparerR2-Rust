@@ -62,8 +62,7 @@ scripts/differential.sh --csharp-repo /path/to/WzComparerR2 expr --expr "1/3 + 2
 ### 재핀 절차
 
 C# 를 새 커밋으로 옮길 때는 핀 표 네 곳만 고치면 된다 — 절차는
-`docs/oracle-spec.md` 의 `## C# 참조 핀` 절과
-`.scratch/oracle-completion/README.md` 의 `### 재핀 절차` 에 있다.
+`docs/oracle-spec.md` 의 `## C# 참조 핀` 절에 있다.
 재핀 후에는 **비교 불가 op 목록도 다시 확인**해야 한다. C# 가 `diff` 나
 `mapscene` 을 구현하면 `tools/oracle-diff/src/lib.rs` 의 `expectation()` 표에서
 `Uncomparable` 을 `Gate` 로 바꿔야 한다. 안 바꾸면 표가 exit 3 을 내므로
@@ -170,8 +169,7 @@ C# 에 **텍스트 툴팁이 없다.** `ItemTooltipRender.renderItem` 은 `Bitma
 ## 테스트
 
 판정 로직은 전부 Rust 에 있고 (`tools/oracle-diff`), 인라인 `#[cfg(test)]` 테스트가
-붙어 있다. 셸 테스트 프레임워크가 이 저장소에 없다는 전제다
-(`.scratch/oracle-completion/exploration/Q5-tests-and-build.md`).
+붙어 있다. 셸 테스트 프레임워크가 이 저장소에 없다는 전제다.
 
 ```bash
 cargo test --workspace

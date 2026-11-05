@@ -122,12 +122,7 @@ impl LightMap {
         }
 
         let mut verts = Vec::with_capacity((segments + 1) as usize);
-        verts.push(SpriteVertex::new(
-            light.pos,
-            z,
-            [0.5, 0.5],
-            light.color,
-        ));
+        verts.push(SpriteVertex::new(light.pos, z, [0.5, 0.5], light.color));
 
         let edge_color = [light.color[0], light.color[1], light.color[2], 0.0];
         let angle_step = std::f32::consts::TAU / segments as f32;
@@ -136,12 +131,7 @@ impl LightMap {
             let theta = i as f32 * angle_step;
             let px = light.pos[0] + light.outer_radius * theta.cos();
             let py = light.pos[1] + light.outer_radius * theta.sin();
-            verts.push(SpriteVertex::new(
-                [px, py],
-                z,
-                [0.5, 0.5],
-                edge_color,
-            ));
+            verts.push(SpriteVertex::new([px, py], z, [0.5, 0.5], edge_color));
         }
 
         let mut local_indices = Vec::with_capacity((segments * 3) as usize);

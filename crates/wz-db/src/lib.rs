@@ -23,8 +23,8 @@
 pub mod arena;
 pub mod calc;
 pub mod chara_prop;
-pub mod linker;
 pub mod gear_stats;
+pub mod linker;
 pub mod map;
 pub mod node;
 pub mod query;

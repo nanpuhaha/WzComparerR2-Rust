@@ -4,12 +4,10 @@
 // 워커 스레드가 결과를 채널로 보내고, UI 스레드는 `poll_load_result` 로
 // 매 프레임 폴링한다.
 
-
-
 use crate::state::AppState;
-use wz_core::WzArchive;
 use wz_core::dirtree::node_type as nt;
 use wz_core::image::ImageValue;
+use wz_core::WzArchive;
 
 // ── 파일 열기 ─────────────────────────────────────────────────────────
 
@@ -56,15 +54,27 @@ pub fn load_canvas_image(
     let img_name = format!("{}.img", canvas_name);
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) != Some("wz") { continue; }
-        let Ok(arch) = WzArchive::open(&path) else { continue; };
-        let Ok(tree) = arch.read_tree() else { continue; };
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(arch) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = arch.read_tree() else {
+            continue;
+        };
         let e = tree.root.entries.iter().find(|e| {
             e.name.as_deref() == Some(canvas_name) || e.name.as_deref() == Some(img_name.as_str())
         });
-        let Some(e) = e else { continue; };
-        let Some(off) = e.offset else { continue; };
-        let Ok(node) = arch.parse_image_at(off) else { continue; };
+        let Some(e) = e else {
+            continue;
+        };
+        let Some(off) = e.offset else {
+            continue;
+        };
+        let Ok(node) = arch.parse_image_at(off) else {
+            continue;
+        };
 
         let segs: Vec<&str> = inner_path.split('/').filter(|s| !s.is_empty()).collect();
         let target = if segs.is_empty() {
@@ -74,21 +84,30 @@ pub fn load_canvas_image(
             let mut ok = true;
             for seg in &segs {
                 let next = if let Some(ImageValue::Property(p)) = &cur.value {
-                    p.children.iter().find(|c| c.name.as_ref() == *seg)
+                    p.children
+                        .iter()
+                        .find(|c| c.name.as_ref() == *seg)
                         .or_else(|| cur.children.iter().find(|c| c.name.as_ref() == *seg))
                 } else {
                     cur.children.iter().find(|c| c.name.as_ref() == *seg)
                 };
                 match next {
                     Some(n) => cur = n,
-                    None => { ok = false; break; }
+                    None => {
+                        ok = false;
+                        break;
+                    }
                 }
             }
-            if !ok { continue; }
+            if !ok {
+                continue;
+            }
             cur
         };
 
-        let Some(pr) = target.first_canvas() else { continue; };
+        let Some(pr) = target.first_canvas() else {
+            continue;
+        };
         let file_src = wz_pool::FileSource::open(&path).ok()?;
         let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
         if let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(&pr, &src) {
@@ -101,8 +120,7 @@ pub fn load_canvas_image(
 pub fn load_avatar_body(state: &mut AppState) {
     // Character/_Canvas/_Canvas_000.wz 에서 첫 번째 이미지를 로드한다.
     let Some(data_root) = find_data_root(None) else {
-        state.avatar_status =
-            "WZ_DATA_ROOT 를 설정하세요 (MapleStory Data 디렉터리)".into();
+        state.avatar_status = "WZ_DATA_ROOT 를 설정하세요 (MapleStory Data 디렉터리)".into();
         return;
     };
     let cp = data_root
@@ -133,7 +151,13 @@ pub fn load_avatar_body(state: &mut AppState) {
         state.avatar_status = "캔버스 없음".into();
         return;
     };
-    let file_src = match wz_pool::FileSource::open(&cp) { Ok(f) => f, Err(_) => { state.avatar_status = "파일 열기 실패".into(); return; } };
+    let file_src = match wz_pool::FileSource::open(&cp) {
+        Ok(f) => f,
+        Err(_) => {
+            state.avatar_status = "파일 열기 실패".into();
+            return;
+        }
+    };
     let src: std::sync::Arc<dyn wz_pool::ByteSource> = std::sync::Arc::new(file_src);
     match wz_image::decode_png_ref_to_rgba(&pr, &src) {
         Ok((w, h, rgba)) => {
@@ -147,4 +171,3 @@ pub fn load_avatar_body(state: &mut AppState) {
     }
 }
 // ── 트리 행 렌더링 ────────────────────────────────────────────────────
-

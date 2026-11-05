@@ -299,11 +299,7 @@ fn query_engine_matches_numeric_string_and_vector_rules() {
     let item1 = a.add_node(a.root(), "01000000.img", None);
     let info1 = a.add_node(item1, "info", None);
     a.add_node(info1, "reqLevel", Some(NodeValue::Int(150)));
-    a.add_node(
-        info1,
-        "islot",
-        Some(NodeValue::Str(Arc::from("Cp"))),
-    );
+    a.add_node(info1, "islot", Some(NodeValue::Str(Arc::from("Cp"))));
     a.add_node(
         info1,
         "origin",
@@ -313,11 +309,7 @@ fn query_engine_matches_numeric_string_and_vector_rules() {
     let item2 = a.add_node(a.root(), "01000001.img", None);
     let info2 = a.add_node(item2, "info", None);
     a.add_node(info2, "reqLevel", Some(NodeValue::Int(50)));
-    a.add_node(
-        info2,
-        "islot",
-        Some(NodeValue::Str(Arc::from("Cp"))),
-    );
+    a.add_node(info2, "islot", Some(NodeValue::Str(Arc::from("Cp"))));
 
     let mut rule = QueryRule::target(StringComparisonMode::EndsWith, ".img");
     rule.values.push(ValueRule::new(
@@ -400,7 +392,6 @@ fn string_linker_indexes_consume_and_eqp_with_uol() {
     assert_eq!(linker.format_tooltip(1000000).as_deref(), Some("가죽 모자"));
 }
 
-
 #[test]
 fn string_linker_real_wz() {
     use crate::linker::StringLinker;
@@ -420,7 +411,10 @@ fn string_linker_real_wz() {
     assert!(linker.load_string_wz(&arena, root));
     // Should have parsed some eqp, skill, map, mob, npc strings
     assert!(!linker.string_eqp.is_empty(), "eqp should not be empty");
-    assert!(!linker.string_skill.is_empty() || !linker.string_skill_str.is_empty(), "skill should not be empty");
+    assert!(
+        !linker.string_skill.is_empty() || !linker.string_skill_str.is_empty(),
+        "skill should not be empty"
+    );
     assert!(!linker.string_map.is_empty(), "map should not be empty");
     assert!(!linker.string_mob.is_empty(), "mob should not be empty");
     assert!(!linker.string_npc.is_empty(), "npc should not be empty");
@@ -428,7 +422,6 @@ fn string_linker_real_wz() {
     let tooltip = linker.format_tooltip(1000000);
     assert!(tooltip.is_some(), "tooltip for 1000000 should exist");
 }
-
 
 #[test]
 fn string_linker_skill_info_real_wz() {
@@ -448,7 +441,10 @@ fn string_linker_skill_info_real_wz() {
     let mut linker = StringLinker::new();
     assert!(linker.load_string_wz(&arena, root));
     // Should have skill strings
-    assert!(!linker.string_skill.is_empty() || !linker.string_skill_str.is_empty(), "skill strings should not be empty");
+    assert!(
+        !linker.string_skill.is_empty() || !linker.string_skill_str.is_empty(),
+        "skill strings should not be empty"
+    );
     // Try to get a skill tooltip
     // Skill IDs are like 0000012 (12), 0000073 (73), etc.
     for (id, sr) in &linker.string_skill {

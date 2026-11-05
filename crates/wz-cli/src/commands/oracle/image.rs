@@ -49,7 +49,9 @@ pub fn cmd_oracle_image(
     let parts: Vec<&str> = normalized.split('/').filter(|s| !s.is_empty()).collect();
 
     // .img 확장자를 가진 세그먼트 위치 탐색
-    let img_idx = parts.iter().position(|p| p.to_lowercase().ends_with(".img"));
+    let img_idx = parts
+        .iter()
+        .position(|p| p.to_lowercase().ends_with(".img"));
 
     let (img_entry, sub_path_parts) = if let Some(idx) = img_idx {
         let img_name = parts[idx];
@@ -68,14 +70,17 @@ pub fn cmd_oracle_image(
         (found, &parts[..])
     };
 
-    let img_offset = img_entry.offset.ok_or("이미지 오프셋이 유효하지 않습니다")?;
+    let img_offset = img_entry
+        .offset
+        .ok_or("이미지 오프셋이 유효하지 않습니다")?;
     let img_root = archive.parse_image_at(img_offset)?;
 
     // 서브 노드 탐색
     let target_node = find_sub_node(&img_root, sub_path_parts)?;
 
     // 노드에서 PngRef 추출 (현재 노드 또는 첫 번째 Canvas 자식)
-    let png_ref = target_node.first_canvas()
+    let png_ref = target_node
+        .first_canvas()
         .ok_or_else(|| format!("경로에서 Canvas/Png 노드를 찾을 수 없습니다: {node_path}"))?;
 
     let hash_hex = if format_opt.eq_ignore_ascii_case("sha256") {
@@ -157,4 +162,3 @@ pub fn find_sub_node<'a>(
     }
     Ok(current)
 }
-

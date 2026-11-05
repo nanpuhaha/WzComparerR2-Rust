@@ -1,6 +1,4 @@
-pub fn cmd_oracle_patch(
-    patch_path: &std::path::Path,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn cmd_oracle_patch(patch_path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
     use std::sync::Arc;
     use wz_core::patch::{PatchHeader, PatchPartType};
 
@@ -12,7 +10,10 @@ pub fn cmd_oracle_patch(
     doc.insert("schema_version".into(), serde_json::Value::Number(1.into()));
     doc.insert("op".into(), serde_json::Value::String("patch".into()));
     let mut res = serde_json::Map::new();
-    res.insert("version".into(), serde_json::Value::Number(header.version.into()));
+    res.insert(
+        "version".into(),
+        serde_json::Value::Number(header.version.into()),
+    );
     res.insert(
         "expected_checksum".into(),
         serde_json::Value::Number(header.expected_checksum.into()),
@@ -53,4 +54,3 @@ pub fn cmd_oracle_patch(
     println!("{}", serde_json::to_string_pretty(&doc)?);
     Ok(())
 }
-

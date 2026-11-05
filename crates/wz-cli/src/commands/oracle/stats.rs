@@ -28,9 +28,15 @@ pub fn cmd_oracle_stats(
 
     let mut doc = oracle_envelope("stats", detection);
     if let Some(prop_key) = prop_filter {
-        let val = props.get(prop_key).cloned().unwrap_or(serde_json::Value::Null);
+        let val = props
+            .get(prop_key)
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
         let mut single_res = serde_json::Map::new();
-        single_res.insert("prop".into(), serde_json::Value::String(prop_key.to_string()));
+        single_res.insert(
+            "prop".into(),
+            serde_json::Value::String(prop_key.to_string()),
+        );
         single_res.insert("value".into(), val);
         doc.insert("result".into(), serde_json::Value::Object(single_res));
     } else {

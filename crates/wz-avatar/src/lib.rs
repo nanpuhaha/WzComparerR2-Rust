@@ -8,15 +8,21 @@ use std::sync::Arc;
 pub mod compose;
 pub mod frame;
 pub mod frame_layers;
-pub mod prism;
 pub mod loader;
+pub mod prism;
 pub mod scene;
 pub mod zmap;
 pub use compose::{bounding_box, compose, ComposeError, ComposedFrame, LayerSource};
 pub use frame::FrameTiming;
+pub use frame_layers::{
+    avatar_z_priority, collect_frame_layers, decode_canvas_pixels, resolve_outlink, split_outlink,
+    FrameLayer, ResolvedCanvas,
+};
+pub use loader::{
+    load_avatar_with_equipment, load_equipment_item, load_from_character_wz,
+    load_from_character_wz_with_skin, AvatarPart, LoadedAvatar,
+};
 pub use prism::{apply_prism_rgba8, PrismData};
-pub use loader::{load_from_character_wz, load_from_character_wz_with_skin, load_avatar_with_equipment, load_equipment_item, AvatarPart, LoadedAvatar};
-pub use frame_layers::{FrameLayer, ResolvedCanvas, collect_frame_layers, avatar_z_priority, decode_canvas_pixels, resolve_outlink, split_outlink};
 pub use scene::{AvatarBatch, AvatarScene, AvatarVertex};
 
 /// 29 predefined avatar equipment and component slots.
@@ -197,12 +203,7 @@ impl Bone {
     }
 
     /// Appends an anchor bone or joint bone to the tree based on MapleStory anchor logic.
-    pub fn append_bone(
-        &mut self,
-        skin: SkinLayer,
-        map_name: &str,
-        map_origin: Point,
-    ) {
+    pub fn append_bone(&mut self, skin: SkinLayer, map_name: &str, map_origin: Point) {
         if let Some(existing) = self.find_child_mut(map_name) {
             // Joint bone under existing bone
             let joint_name = format!("@{}_{}", existing.name, skin.name);
@@ -491,8 +492,8 @@ mod tests {
     fn test_prism_hsv_shift_and_16bit_quantization() {
         // 16비트 스프라이트(17의 배수): 순수 빨강(255, 0, 0, 255) -> Hue +120도 회전 -> 순수 초록(0, 255, 0, 255)
         let mut rgba = vec![
-            255, 0, 0, 255,     // 빨강 (변환 대상)
-            0, 0, 0, 255,       // 순수 검정 (convert_pure_black=false 이므로 보존)
+            255, 0, 0, 255, // 빨강 (변환 대상)
+            0, 0, 0, 255, // 순수 검정 (convert_pure_black=false 이므로 보존)
             255, 255, 255, 255, // 순수 흰색 (보존)
         ];
         let prism = PrismData::new(0, 120, 100, 100);
@@ -523,4 +524,3 @@ mod tests {
         assert_eq!(f_neg.alpha_at(200), 200);
     }
 }
-

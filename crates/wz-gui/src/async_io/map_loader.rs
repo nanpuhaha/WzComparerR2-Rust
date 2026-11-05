@@ -4,11 +4,9 @@
 // 워커 스레드가 결과를 채널로 보내고, UI 스레드는 `poll_load_result` 로
 // 매 프레임 폴링한다.
 
-
-
+use super::*;
 use crate::state::AppState;
 use wz_db::MapData;
-use super::*;
 
 // ── 파일 열기 ─────────────────────────────────────────────────────────
 
@@ -35,7 +33,8 @@ pub fn load_map_by_path(state: &mut AppState) {
     let data_root = find_data_root(state.archive_path.as_deref());
     state.data_root = data_root.clone();
 
-    let back_img = if let (Some(root), Some(first)) = (data_root.as_ref(), map.backgrounds.first()) {
+    let back_img = if let (Some(root), Some(first)) = (data_root.as_ref(), map.backgrounds.first())
+    {
         load_back_image(root, &first.b_s)
     } else {
         None
@@ -51,7 +50,9 @@ pub fn load_map_by_path(state: &mut AppState) {
         std::thread::spawn(move || {
             let mut tiles = Vec::new();
             for tile in tiles_clone.iter() {
-                if let Some((w, h, rgba)) = load_canvas_image(&root, "Tile", &tile.t_s, &format!("{}/{}", tile.u, tile.no)) {
+                if let Some((w, h, rgba)) =
+                    load_canvas_image(&root, "Tile", &tile.t_s, &format!("{}/{}", tile.u, tile.no))
+                {
                     tiles.push((tile.x, tile.y, w, h, rgba));
                 }
             }
@@ -62,10 +63,7 @@ pub fn load_map_by_path(state: &mut AppState) {
                     objs.push((obj.x, obj.y, w, h, rgba));
                 }
             }
-            let _ = tx.send(crate::state::MapImages {
-                tiles,
-                objs,
-            });
+            let _ = tx.send(crate::state::MapImages { tiles, objs });
         });
     }
 
@@ -82,11 +80,22 @@ pub fn load_map_by_path(state: &mut AppState) {
 }
 
 pub fn load_map_from_selection(state: &mut AppState) {
-    let Some(sel) = state.selected.clone() else { return; };
-    let Some(tree) = &state.tree else { return; };
-    let Some(archive) = state.shared_archive.lock().unwrap().clone() else { return; };
+    let Some(sel) = state.selected.clone() else {
+        return;
+    };
+    let Some(tree) = &state.tree else {
+        return;
+    };
+    let Some(archive) = state.shared_archive.lock().unwrap().clone() else {
+        return;
+    };
     let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
-    let Some(e) = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)) else {
+    let Some(e) = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some(name))
+    else {
         state.map_status = format!("엔트리 없음: {name}");
         return;
     };
@@ -101,8 +110,12 @@ pub fn load_map_from_selection(state: &mut AppState) {
     let map = MapData::parse_from_node(&node);
     state.map_status = format!(
         "map_id={:?} bgm={:?} town={} fh={} portals={} life={}",
-        map.info.map_id, map.info.bgm, map.info.town,
-        map.footholds.len(), map.portals.len(), map.life.len()
+        map.info.map_id,
+        map.info.bgm,
+        map.info.town,
+        map.footholds.len(),
+        map.portals.len(),
+        map.life.len()
     );
     // map_path 를 갱신하고 load_map_by_path 로 이미지 로딩을 위임한다.
     state.map_path = name.to_string();
@@ -111,4 +124,3 @@ pub fn load_map_from_selection(state: &mut AppState) {
     // (map_path 가 설정되어 있으므로 그대로 호출)
     load_map_by_path(state);
 }
-

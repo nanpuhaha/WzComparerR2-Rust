@@ -10,7 +10,9 @@ use wz_error::{Result as WzResult, WzError, WzFormatError};
 use wz_pool::{open_file_arc, ByteSource, ReadCtx};
 
 use crate::detect_version::{detect_version, Detection, Options};
-use crate::dirtree::{DirTree, DirTreeContext, DirTreeParser, EntryNamePosition, Pkg2NameKeyMaterial};
+use crate::dirtree::{
+    DirTree, DirTreeContext, DirTreeParser, EntryNamePosition, Pkg2NameKeyMaterial,
+};
 use crate::image::{ImageParser, Node};
 use crate::offset::OffsetCalc;
 use crate::profile::WzFileFormat;
@@ -30,7 +32,10 @@ impl std::fmt::Debug for WzArchive {
             .field("source", &self.src.describe())
             .field("wz_version", &self.detection.profile.wz_version)
             .field("reason", &self.detection.reason)
-            .field("hash_version", &format_args!("{:#018x}", self.detection.hash_version))
+            .field(
+                "hash_version",
+                &format_args!("{:#018x}", self.detection.hash_version),
+            )
             .field("dir_start", &self.dir_start)
             .finish()
     }
@@ -165,13 +170,14 @@ impl WzArchive {
     pub fn find_entry_offset(&self, path: &str) -> Option<u64> {
         let tree = self.read_tree().ok()?;
         let segs: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
-        if segs.is_empty() { return None; }
+        if segs.is_empty() {
+            return None;
+        }
         let mut cursor = 0usize;
         let mut block = &tree.root;
         for (i, seg) in segs.iter().enumerate() {
             let idx = block.entries.iter().position(|e| {
-                e.name.as_deref() == Some(seg)
-                    || e.name.as_deref() == Some(&format!("{}.img", seg))
+                e.name.as_deref() == Some(seg) || e.name.as_deref() == Some(&format!("{}.img", seg))
             })?;
             for e in &block.entries[..idx] {
                 if e.node_type == crate::dirtree::node_type::DIRECTORY {

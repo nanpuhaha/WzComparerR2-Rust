@@ -73,14 +73,14 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Rust 툴체인 (stable)
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           components: rustfmt, clippy
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: differential-ci-windows-gates
 
@@ -104,12 +104,22 @@ jobs:
       # CI 에서 GUI 렌더 경로를 검증하려면 xvfb-run (Linux) + 캐시된 WZ fixture 가 필요하다.
 
       - name: cargo-deny 설치
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
         with:
           tool: cargo-deny
 
       - name: cargo deny check
         run: cargo deny check
+
+      - name: cargo-audit 설치
+        uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
+        with:
+          tool: cargo-audit
+
+      - name: cargo audit (워크스페이스 + GUI)
+        run: |
+          cargo audit
+          cargo audit --file crates/wz-gui/Cargo.lock
 
       # 결정성(§4.1 원칙 6): 같은 커밋에서 두 번 돌린 산출물이 바이트 단위로
       # 같아야 한다. 하드코딩한 체크섬을 두지 않는 이유는 코퍼스에 파일을
@@ -181,7 +191,7 @@ jobs:
           cargo run -q -p wz-cli --example map_render_smoke -- "$FIXTURE"
 
       - name: 합성 코퍼스 아티팩트
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: corpus
           path: target/corpus
@@ -196,12 +206,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Rust 툴체인 (stable)
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: gui-smoke-linux
 
@@ -236,17 +246,17 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Rust 툴체인 (stable)
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           key: differential-ci-windows-diff
 
       - name: .NET SDK (.NET 8.0 Windows 데스크톱)
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: ${{ inputs.dotnet_version }}
 
@@ -256,7 +266,7 @@ jobs:
           cargo build -p oracle-diff
 
       - name: 합성 코퍼스 내려받기
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: corpus
           path: target/corpus
@@ -398,7 +408,7 @@ jobs:
 
       - name: 차분 리포트 아티팩트
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: oracle-diff-${{ github.run_id }}
           path: |

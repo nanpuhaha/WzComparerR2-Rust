@@ -78,7 +78,9 @@ impl<'a> Parser<'a> {
     }
 
     fn skip_whitespace(&mut self) {
-        while self.pos < self.chars.len() && (self.chars[self.pos].is_whitespace() || self.chars[self.pos] == '%') {
+        while self.pos < self.chars.len()
+            && (self.chars[self.pos].is_whitespace() || self.chars[self.pos] == '%')
+        {
             self.pos += 1;
         }
     }
@@ -173,9 +175,7 @@ impl<'a> Parser<'a> {
                 }
             }
             let s: String = self.chars[start..self.pos].iter().collect();
-            return s
-                .parse::<f64>()
-                .map_err(|_| CalcError::InvalidToken(s));
+            return s.parse::<f64>().map_err(|_| CalcError::InvalidToken(s));
         }
 
         // 식별자 또는 함수 호출

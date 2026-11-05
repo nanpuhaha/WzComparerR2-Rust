@@ -191,12 +191,13 @@ impl ValueRule {
     }
 
     /// 벡터 조건 규칙 생성 (`equal`: true면 ==, false면 !=)
-    pub fn with_vector(
-        path: impl Into<String>,
-        equal: bool,
-        pattern: impl Into<String>,
-    ) -> Self {
-        Self::new(path, QueryValueType::Vector, if equal { 0 } else { 1 }, pattern)
+    pub fn with_vector(path: impl Into<String>, equal: bool, pattern: impl Into<String>) -> Self {
+        Self::new(
+            path,
+            QueryValueType::Vector,
+            if equal { 0 } else { 1 },
+            pattern,
+        )
     }
 
     fn resolve_target(&self, arena: &Arena, node: NodeId) -> Option<NodeId> {

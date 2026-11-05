@@ -5,23 +5,14 @@
 
 ## WzComparerR2 (C# 원본)
 
-- 저장소: https://github.com/Kagamia/WzComparerR2
+- 원본 저장소: https://github.com/Kagamia/WzComparerR2
+- 참조 포크: https://github.com/seotbeo/WzComparerR2
 - 라이선스: MIT
 - Copyright (c) 2015 Kagamia Studio
 
 이 Rust 워크스페이스는 WzComparerR2 의 WZ 포맷 해석, 아바타 합성, 렌더링
 동작을 Rust 로 재구현한 것입니다. `docs/` 의 여러 문서가 원본 C# 구현의
 파일/라인을 참조합니다.
-
-## mattpocock/skills
-
-- 저장소: https://github.com/mattpocock/skills
-- 라이선스: MIT
-- Copyright (c) Matt Pocock
-
-`.agents/skills/` 아래의 에이전트 스킬 문서는 위 저장소에서 가져온 것입니다.
-`pr` 스킬의 `CREDITS.md` 는 Dex Horthy 의 `show-me` 스킬 출처를 별도로
-명시합니다.
 
 ## Rust 크레이트
 

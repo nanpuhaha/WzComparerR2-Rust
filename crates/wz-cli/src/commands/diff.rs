@@ -1,7 +1,5 @@
 use super::image::{dump_node_to_json, print_node};
 
-
-
 pub fn print_diffs(title: &str, diffs: &[wz_diff::DiffItem]) {
     use wz_diff::DiffType;
     println!("{title} (총 {} 건)", diffs.len());

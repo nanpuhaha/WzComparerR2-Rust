@@ -40,7 +40,13 @@ pub fn cmd_oracle(action: OracleAction) -> Result<(), Box<dyn std::error::Error>
             node,
             canvas_wz,
             interpol_ms,
-        } => cmd_oracle_timeline(&wz, path.as_deref(), &node, canvas_wz.as_deref(), interpol_ms),
+        } => cmd_oracle_timeline(
+            &wz,
+            path.as_deref(),
+            &node,
+            canvas_wz.as_deref(),
+            interpol_ms,
+        ),
         OracleAction::Avatar {
             body_wz,
             body,

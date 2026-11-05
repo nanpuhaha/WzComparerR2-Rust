@@ -73,7 +73,11 @@ fn walk_node(node: &wz_core::image::Node, src: &Arc<dyn wz_pool::ByteSource>, st
     }
 }
 
-fn canvas_check(png_ref: &wz_core::image::PngRef, src: &Arc<dyn wz_pool::ByteSource>, stats: &mut Stats) {
+fn canvas_check(
+    png_ref: &wz_core::image::PngRef,
+    src: &Arc<dyn wz_pool::ByteSource>,
+    stats: &mut Stats,
+) {
     use wz_image::{decode_raw_page_to_rgba8, decompress_zlib, TextureFormat};
 
     if png_ref.width == 0 || png_ref.height == 0 || png_ref.data_len <= 1 {
@@ -133,9 +137,10 @@ fn scan_file(path: &Path) -> Result<Stats, Box<dyn std::error::Error>> {
             continue;
         }
         let Some(off) = e.offset else {
-            stats
-                .failures
-                .push(format!("entry-offset-unresolved: {}", e.name.as_deref().unwrap_or("?")));
+            stats.failures.push(format!(
+                "entry-offset-unresolved: {}",
+                e.name.as_deref().unwrap_or("?")
+            ));
             continue;
         };
         let img_root = match archive.parse_image_at(off) {
@@ -156,7 +161,9 @@ fn scan_file(path: &Path) -> Result<Stats, Box<dyn std::error::Error>> {
 }
 
 fn collect_wz(root: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(rd) = std::fs::read_dir(root) else { return };
+    let Ok(rd) = std::fs::read_dir(root) else {
+        return;
+    };
     for entry in rd.flatten() {
         let p = entry.path();
         if p.is_dir() {
@@ -168,9 +175,7 @@ fn collect_wz(root: &Path, out: &mut Vec<PathBuf>) {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let root = std::env::args()
-        .nth(1)
-        .expect("usage: bulk_scan <root>");
+    let root = std::env::args().nth(1).expect("usage: bulk_scan <root>");
 
     let mut files = Vec::new();
     collect_wz(Path::new(&root), &mut files);
@@ -207,7 +212,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 totals.lock().unwrap().merge(std::mem::take(&mut stats));
             }
             Err(e) => {
-                failures.lock().unwrap().push(format!("{disp}: archive: {e}"));
+                failures
+                    .lock()
+                    .unwrap()
+                    .push(format!("{disp}: archive: {e}"));
             }
         }
         let n = done.fetch_add(1, Ordering::SeqCst) + 1;

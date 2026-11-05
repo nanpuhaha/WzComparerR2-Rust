@@ -314,10 +314,7 @@ fn add_all_values(arena: &Arena, sr: &mut StringResult, node: NodeId) {
 }
 
 /// 장비(Gear) 이미지의 `info` 노드에서 스탯 프로퍼티 맵을 자연 정렬하여 추출한다.
-pub fn extract_gear_stats(
-    arena: &Arena,
-    gear_root: NodeId,
-) -> Vec<(String, String)> {
+pub fn extract_gear_stats(arena: &Arena, gear_root: NodeId) -> Vec<(String, String)> {
     use wz_core::text::sort_natural;
 
     let target_node = arena

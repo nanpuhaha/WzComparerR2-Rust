@@ -33,7 +33,8 @@ pub fn cmd_oracle_avatar(params: &AvatarParams) -> Result<(), Box<dyn std::error
         .ok_or(format!("zmap WZ 에서 이미지를 찾지 못했다: {zname}"))?;
     let zoff = zentry.offset.ok_or("zmap 이미지 오프셋 미해결")?;
     let zmap_root = zmap_archive.parse_image_at(zoff)?;
-    let zmap_order: Vec<String> = zmap_root.object_children()
+    let zmap_order: Vec<String> = zmap_root
+        .object_children()
         .iter()
         .map(|c| match &c.value {
             Some(wz_core::image::ImageValue::Str(s)) => s.to_string(),
@@ -65,12 +66,10 @@ pub fn cmd_oracle_avatar(params: &AvatarParams) -> Result<(), Box<dyn std::error
     if action_frames.is_empty() {
         return Err(format!("액션 노드에 프레임이 없다: {action}").into());
     }
-    let frame_node = action_frames
-        .get(frame_idx as usize)
-        .ok_or(format!(
-            "프레임 {frame_idx} 없다 (전체 {})",
-            action_frames.len()
-        ))?;
+    let frame_node = action_frames.get(frame_idx as usize).ok_or(format!(
+        "프레임 {frame_idx} 없다 (전체 {})",
+        action_frames.len()
+    ))?;
 
     let timing = frame_timing_from(frame_node);
     let alpha = timing.alpha_at(elapsed.min(timing.delay_ms));
@@ -140,10 +139,7 @@ pub fn cmd_oracle_avatar(params: &AvatarParams) -> Result<(), Box<dyn std::error
     Ok(())
 }
 
-pub fn scalar_value_json(
-    name: &str,
-    value: &wz_core::image::ImageValue,
-) -> serde_json::Value {
+pub fn scalar_value_json(name: &str, value: &wz_core::image::ImageValue) -> serde_json::Value {
     use wz_core::image::ImageValue as V;
 
     let mut m = serde_json::Map::new();
@@ -157,9 +153,10 @@ pub fn scalar_value_json(
         V::Short(v) => m.insert("value".into(), serde_json::Value::Number((*v).into())),
         V::Int(v) => m.insert("value".into(), serde_json::Value::Number((*v).into())),
         V::Long(v) => m.insert("value".into(), serde_json::Value::Number((*v).into())),
-        V::Uint(v) => {
-            m.insert("value".into(), serde_json::Value::Number((*v as u64).into()))
-        }
+        V::Uint(v) => m.insert(
+            "value".into(),
+            serde_json::Value::Number((*v as u64).into()),
+        ),
         V::Float(v) => m.insert(
             "value".into(),
             serde_json::Number::from_f64(*v as f64)
@@ -185,4 +182,3 @@ pub fn scalar_value_json(
     };
     serde_json::Value::Object(m)
 }
-

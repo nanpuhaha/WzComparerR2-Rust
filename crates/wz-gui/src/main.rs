@@ -7,11 +7,11 @@
 //   async_io.rs     : 파일 열기/로딩/맵 로딩
 //   render_bridge.rs: wz-render ↔ egui 브릿지
 
+mod app;
 mod async_io;
 mod panels;
 mod render_bridge;
 mod state;
-mod app;
 
 use app::PocApp;
 

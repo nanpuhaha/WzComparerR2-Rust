@@ -317,10 +317,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             b.into_vec()
         };
 
-        let bodies: [(&str, &[u8]); 2] = [
-            ("canvas.img", &canvas_body),
-            ("01000000.img", &gear_body),
-        ];
+        let bodies: [(&str, &[u8]); 2] =
+            [("canvas.img", &canvas_body), ("01000000.img", &gear_body)];
         let entries: Vec<corpus_builder::DirEntrySpec> = bodies
             .iter()
             .map(|(name, body)| corpus_builder::DirEntrySpec::image(name, body.len() as i32))
@@ -362,11 +360,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         fs::write(out.join("props_pkg1.wz"), &file)?;
-        manifest.push((
-            "props_pkg1.wz".into(),
-            file.len(),
-            "props/pkg1".into(),
-        ));
+        manifest.push(("props_pkg1.wz".into(), file.len(), "props/pkg1".into()));
     }
 
     // 컨테이너 헤더 (감지 계층 테스트용 — 전체 writer 는 Phase 1.3)

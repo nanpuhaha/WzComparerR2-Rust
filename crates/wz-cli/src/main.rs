@@ -342,7 +342,6 @@ enum OracleAction {
     },
 }
 
-
 mod commands;
 
 use commands::*;

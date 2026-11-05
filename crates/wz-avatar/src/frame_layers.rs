@@ -1,4 +1,3 @@
-
 #[derive(Clone)]
 pub struct ResolvedCanvas {
     pub w: u32,
@@ -7,7 +6,6 @@ pub struct ResolvedCanvas {
     /// avatar 합성용 RGBA8 — timeline 은 해시만 쓴다.
     pub rgba: Vec<u8>,
 }
-
 
 #[derive(Clone)]
 pub struct FrameLayer {
@@ -19,7 +17,6 @@ pub struct FrameLayer {
     pub z_int: Option<i32>,
     pub outlink: Option<String>,
 }
-
 
 pub fn split_outlink(raw: &str) -> Option<(&str, Vec<&str>)> {
     let segs: Vec<&str> = raw.split('/').filter(|s| !s.is_empty()).collect();
@@ -46,16 +43,18 @@ pub fn decode_canvas_pixels(
                 Err(_) => vec![0u8; (png.width.max(1) * png.height.max(1) * 4) as usize],
             }
         }
-        _ => wz_image::decode_raw_page_to_rgba8(
-            fmt,
-            png.width as u32,
-            png.height as u32,
-            png.scale as u32,
-            png.pages as u32,
-            0,
-            &raw_payload,
-        )?
-        .2,
+        _ => {
+            wz_image::decode_raw_page_to_rgba8(
+                fmt,
+                png.width as u32,
+                png.height as u32,
+                png.scale as u32,
+                png.pages as u32,
+                0,
+                &raw_payload,
+            )?
+            .2
+        }
     };
     use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
@@ -68,20 +67,20 @@ pub fn decode_canvas_pixels(
     })
 }
 
-
 pub fn resolve_outlink(
     canvas_archive: &wz_core::WzArchive,
     outlink: &str,
 ) -> Result<ResolvedCanvas, Box<dyn std::error::Error>> {
-    let (img_name, sub) = split_outlink(outlink)
-        .ok_or(format!("outlink 안에 .img 세그먼트가 없다: {outlink}"))?;
+    let (img_name, sub) =
+        split_outlink(outlink).ok_or(format!("outlink 안에 .img 세그먼트가 없다: {outlink}"))?;
     let tree = canvas_archive.read_tree()?;
     let entry = find_image_entry_in_dirtree(&tree, img_name)
         .ok_or(format!("_Canvas WZ 에 이미지가 없다: {outlink}"))?;
     let off = entry.offset.ok_or("outlink 이미지 오프셋 미해결")?;
     let root = canvas_archive.parse_image_at(off)?;
     let target = find_sub_node(&root, &sub)?;
-    let png = target.first_canvas()
+    let png = target
+        .first_canvas()
         .ok_or(format!("outlink 경로가 Canvas 가 아니다: {outlink}"))?;
     decode_canvas_pixels(&png, canvas_archive.source())
 }
@@ -120,9 +119,7 @@ pub fn collect_frame_layers(
                     ("origin", Some(wz_core::image::ImageValue::Vector(v))) => {
                         origin = crate::Point::new(v.x, v.y)
                     }
-                    ("z", Some(wz_core::image::ImageValue::Str(s))) => {
-                        z = Some(s.to_string())
-                    }
+                    ("z", Some(wz_core::image::ImageValue::Str(s))) => z = Some(s.to_string()),
                     ("z", Some(wz_core::image::ImageValue::Int(i))) => z_int = Some(*i),
                     ("map", Some(wz_core::image::ImageValue::Property(p))) => {
                         for m in &p.children {
@@ -137,8 +134,9 @@ pub fn collect_frame_layers(
         }
         let outlink = sub.and_then(|s| {
             s.children.iter().find_map(|c| match &c.value {
-                Some(wz_core::image::ImageValue::Str(v))
-                    if c.name.as_ref() == "_outlink" => Some(v.to_string()),
+                Some(wz_core::image::ImageValue::Str(v)) if c.name.as_ref() == "_outlink" => {
+                    Some(v.to_string())
+                }
                 _ => None,
             })
         });
@@ -219,34 +217,37 @@ pub fn collect_frame_layers(
                     parent_idx = Some(idx);
                 }
             } else {
-                let bone_idx = if let Some(existing) = nodes.iter().position(|b| b.name == *map_name) {
-                    existing
-                } else {
-                    let i = nodes.len();
-                    nodes.push(BoneNode {
-                        name: map_name.clone(),
-                        parent: parent_idx,
-                        position: *map_origin,
-                        skins: Vec::new(),
-                        skin_offsets: Vec::new(),
-                        skin_origins: Vec::new(),
-                    });
-                    i
-                };
+                let bone_idx =
+                    if let Some(existing) = nodes.iter().position(|b| b.name == *map_name) {
+                        existing
+                    } else {
+                        let i = nodes.len();
+                        nodes.push(BoneNode {
+                            name: map_name.clone(),
+                            parent: parent_idx,
+                            position: *map_origin,
+                            skins: Vec::new(),
+                            skin_offsets: Vec::new(),
+                            skin_origins: Vec::new(),
+                        });
+                        i
+                    };
                 nodes[bone_idx].parent = parent_idx;
                 nodes[bone_idx].position = *map_origin;
             }
         }
     }
 
-    let move_vec = frame_node.object_children().iter().find_map(|ch| {
-        match (ch.name.as_ref(), &ch.value) {
-            ("move", Some(wz_core::image::ImageValue::Vector(v))) => {
-                Some(crate::Point::new(v.x, v.y))
-            }
-            _ => None,
-        }
-    });
+    let move_vec =
+        frame_node
+            .object_children()
+            .iter()
+            .find_map(|ch| match (ch.name.as_ref(), &ch.value) {
+                ("move", Some(wz_core::image::ImageValue::Vector(v))) => {
+                    Some(crate::Point::new(v.x, v.y))
+                }
+                _ => None,
+            });
 
     let mut layer_pos: Vec<crate::Point> = vec![crate::Point::ZERO; parts.len()];
 
@@ -262,10 +263,7 @@ pub fn collect_frame_layers(
         for (i, &li) in node.skins.iter().enumerate() {
             let off = node.skin_offsets[i];
             let origin = node.skin_origins[i];
-            let mut pos = crate::Point::new(
-                cur.x + off.x - origin.x,
-                cur.y + off.y - origin.y,
-            );
+            let mut pos = crate::Point::new(cur.x + off.x - origin.x, cur.y + off.y - origin.y);
             if let Some(mv) = move_vec {
                 pos.x += mv.x;
                 pos.y += mv.y;
@@ -299,7 +297,9 @@ pub fn collect_frame_layers(
 pub fn avatar_z_priority(zmap_len: usize, zmap: &crate::ZMap, layer: &FrameLayer) -> i32 {
     let count = zmap_len as i32;
     if let Some(z) = &layer.z {
-        zmap.index_of(z).map(|i| i.min(i32::MAX as usize) as i32).unwrap_or(count)
+        zmap.index_of(z)
+            .map(|i| i.min(i32::MAX as usize) as i32)
+            .unwrap_or(count)
     } else if let Some(zi) = layer.z_int {
         if zi < 0 {
             count - zi

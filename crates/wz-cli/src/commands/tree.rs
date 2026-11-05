@@ -1,6 +1,3 @@
-
-
-
 pub fn cmd_tree(
     path: &std::path::Path,
     hash_version: u64,

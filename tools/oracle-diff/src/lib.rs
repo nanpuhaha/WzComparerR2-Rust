@@ -232,10 +232,7 @@ pub const JQ_INSTALL_HINT: &str = "jq 가 설치되어 있지 않습니다.\n\
 /// 정규화기를 고른다.
 ///
 /// * [`NormalizerMode::Jq`] 는 `jq` 가 없으면 설치 지침과 함께 실패한다.
-pub fn resolve_normalizer(
-    mode: NormalizerMode,
-    jq_available: bool,
-) -> Result<Normalizer, String> {
+pub fn resolve_normalizer(mode: NormalizerMode, jq_available: bool) -> Result<Normalizer, String> {
     match mode {
         NormalizerMode::Jq => {
             if jq_available {
@@ -288,7 +285,11 @@ pub struct ValueDifference {
 
 impl fmt::Display for ValueDifference {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: rust={} csharp={}", self.pointer, self.rust, self.csharp)
+        write!(
+            f,
+            "{}: rust={} csharp={}",
+            self.pointer, self.rust, self.csharp
+        )
     }
 }
 
@@ -496,9 +497,7 @@ where
         Some(s) => s,
         None => {
             return Verdict {
-                comparison: Comparison::UnknownOp {
-                    op: op.to_string(),
-                },
+                comparison: Comparison::UnknownOp { op: op.to_string() },
                 rust_normalized: None,
                 csharp_normalized: None,
             }
@@ -585,9 +584,7 @@ where
             },
         }
     } else {
-        Comparison::Mismatch {
-            op: op.to_string(),
-        }
+        Comparison::Mismatch { op: op.to_string() }
     };
 
     Verdict {
@@ -631,8 +628,7 @@ fn line_diff_ops(left: &[&str], right: &[&str]) -> Vec<(char, String)> {
     }
 
     if n.max(m) > MAX_DIFF_LINES {
-        let mut ops: Vec<(char, String)> =
-            left.iter().map(|l| ('-', (*l).to_string())).collect();
+        let mut ops: Vec<(char, String)> = left.iter().map(|l| ('-', (*l).to_string())).collect();
         ops.extend(right.iter().map(|l| ('+', (*l).to_string())));
         return ops;
     }
@@ -833,8 +829,14 @@ pub fn render_report(verdict: &Verdict, ctx: &ReportContext<'_>) -> String {
     out.push('\n');
     out.push_str(&format!("op              : {}\n", ctx.op));
     out.push_str(&format!("args            : {}\n", ctx.argv.join(" ")));
-    out.push_str(&format!("rust            : {}\n", ctx.rust_command.join(" ")));
-    out.push_str(&format!("csharp          : {}\n", ctx.csharp_command.join(" ")));
+    out.push_str(&format!(
+        "rust            : {}\n",
+        ctx.rust_command.join(" ")
+    ));
+    out.push_str(&format!(
+        "csharp          : {}\n",
+        ctx.csharp_command.join(" ")
+    ));
     if let Some(head) = &ctx.csharp_head {
         out.push_str(&format!("csharp HEAD     : {head}\n"));
     }
@@ -904,7 +906,11 @@ mod tests {
     fn tooltip_is_advisory_and_never_a_gate() {
         let e = expectation("tooltip").expect("tooltip 은 표에 있다");
         assert_eq!(e.expectation, Expectation::Advisory);
-        assert!(e.reason.contains("Bitmap"), "근거가 있어야 한다: {}", e.reason);
+        assert!(
+            e.reason.contains("Bitmap"),
+            "근거가 있어야 한다: {}",
+            e.reason
+        );
     }
 
     #[test]
@@ -933,11 +939,11 @@ mod tests {
     #[test]
     fn jq_mode_without_jq_fails_with_an_install_command() {
         let err = resolve_normalizer(NormalizerMode::Jq, false).unwrap_err();
-        assert!(err.contains("winget install"), "설치 방법이 있어야 한다: {err}");
         assert!(
-            err.contains("jq 가 설치되어 있지 않습니다"),
-            "{err}"
+            err.contains("winget install"),
+            "설치 방법이 있어야 한다: {err}"
         );
+        assert!(err.contains("jq 가 설치되어 있지 않습니다"), "{err}");
     }
 
     #[test]
@@ -1070,12 +1076,7 @@ mod tests {
             SideResult::ok(r#"{"op":"expr","schema_version":1,"result":{"value":1}}"#),
             SideResult::ok(r#"{"op":"expr","schema_version":1,"result":{"value":1}}"#),
         );
-        assert_eq!(
-            v.comparison,
-            Comparison::Match {
-                op: "expr".into()
-            }
-        );
+        assert_eq!(v.comparison, Comparison::Match { op: "expr".into() });
         assert_eq!(v.comparison.outcome(), Outcome::Match);
         assert_eq!(exit_code(v.comparison.outcome()), 0);
     }
@@ -1095,12 +1096,7 @@ mod tests {
             SideResult::ok(r#"{"result":{"value":6.333333333333333}}"#),
             SideResult::ok(r#"{"result":{"value":6.333333333333334}}"#),
         );
-        assert_eq!(
-            v.comparison,
-            Comparison::Mismatch {
-                op: "expr".into()
-            }
-        );
+        assert_eq!(v.comparison, Comparison::Mismatch { op: "expr".into() });
         assert_eq!(exit_code(v.comparison.outcome()), 1);
     }
 
@@ -1186,12 +1182,7 @@ mod tests {
     #[test]
     fn unknown_op_is_a_tool_usage_error() {
         let v = verdict("bogus", SideResult::ok("{}"), SideResult::ok("{}"));
-        assert_eq!(
-            v.comparison,
-            Comparison::UnknownOp {
-                op: "bogus".into()
-            }
-        );
+        assert_eq!(v.comparison, Comparison::UnknownOp { op: "bogus".into() });
         assert_eq!(exit_code(v.comparison.outcome()), 2);
     }
 
@@ -1199,7 +1190,11 @@ mod tests {
     fn tooltip_match_is_reported_as_advisory_and_never_as_a_gate() {
         let v = verdict("tooltip", SideResult::ok("{}"), SideResult::ok("{}"));
         assert_eq!(v.comparison.outcome(), Outcome::NotComparable);
-        assert_ne!(exit_code(v.comparison.outcome()), 0, "통과로 보이면 안 된다");
+        assert_ne!(
+            exit_code(v.comparison.outcome()),
+            0,
+            "통과로 보이면 안 된다"
+        );
         assert!(v.comparison.headline().contains("ADVISORY"));
     }
 
@@ -1342,10 +1337,13 @@ mod tests {
             SideResult::ok("{}"),
             SideResult::failed(3, "not-implemented: nope"),
         );
-        let report = render_report(&v, &ReportContext {
-            op: "diff",
-            ..Default::default()
-        });
+        let report = render_report(
+            &v,
+            &ReportContext {
+                op: "diff",
+                ..Default::default()
+            },
+        );
         assert!(report.contains("NOT COMPARABLE"), "{report}");
         assert!(report.contains("아직 통과도 실패도 아니다"), "{report}");
         assert!(report.contains("exit code       : 3"), "{report}");
@@ -1369,10 +1367,13 @@ mod tests {
     #[test]
     fn report_for_tooltip_says_advisory_and_not_a_gate() {
         let v = verdict("tooltip", SideResult::ok("{}"), SideResult::ok("{}"));
-        let report = render_report(&v, &ReportContext {
-            op: "tooltip",
-            ..Default::default()
-        });
+        let report = render_report(
+            &v,
+            &ReportContext {
+                op: "tooltip",
+                ..Default::default()
+            },
+        );
         assert!(report.contains("ADVISORY MATCH"), "{report}");
         assert!(report.contains("Bitmap"), "근거가 붙어야 한다:\n{report}");
         assert!(report.contains("exit code       : 3"), "{report}");
@@ -1381,10 +1382,13 @@ mod tests {
     #[test]
     fn report_lists_known_ops_when_the_op_is_unknown() {
         let v = verdict("bogus", SideResult::ok("{}"), SideResult::ok("{}"));
-        let report = render_report(&v, &ReportContext {
-            op: "bogus",
-            ..Default::default()
-        });
+        let report = render_report(
+            &v,
+            &ReportContext {
+                op: "bogus",
+                ..Default::default()
+            },
+        );
         assert!(report.contains("known ops"), "{report}");
         assert!(report.contains("mapscene"), "{report}");
     }

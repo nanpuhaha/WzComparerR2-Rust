@@ -7,7 +7,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label(format!("선택: {sel}"));
         if let Some(tree) = &state.tree {
             let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
-            if let Some(e) = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)) {
+            if let Some(e) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(name))
+            {
                 ui.label(format!("타입: {}", e.node_type));
                 ui.label(format!("data_len: {}", e.data_len));
                 ui.label(format!("cs32: {}", e.cs32));
@@ -34,7 +39,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     if let Some(sel) = state.selected.clone() {
         if let Some(tree) = &state.tree {
             let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
-            if let Some(e) = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)) {
+            if let Some(e) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(name))
+            {
                 if e.node_type == 4 {
                     // 이미지 엔트리 — parse + gear props
                     if let Some(arch) = state.shared_archive.lock().unwrap().clone() {
@@ -73,7 +83,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     if let Some(sel) = state.selected.clone() {
         if let Some(tree) = &state.tree {
             let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
-            if let Some(e) = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)) {
+            if let Some(e) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(name))
+            {
                 if e.node_type == 4 {
                     let id_str = name.trim_end_matches(".img");
                     // 숫자 ID 시도
@@ -139,13 +154,22 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.label(&state.map_status);
     if let Some(m) = &state.current_map {
         ui.label(format!("bgm: {:?}", m.info.bgm));
-        ui.label(format!("town/swim/fly: {} / {} / {}", m.info.town, m.info.swim, m.info.fly));
+        ui.label(format!(
+            "town/swim/fly: {} / {} / {}",
+            m.info.town, m.info.swim, m.info.fly
+        ));
         if let Some(vr) = m.info.vrect {
             ui.label(format!("vrect: {:?}", vr));
         }
-        ui.label(format!("footholds: {}, portals: {}, life: {}, bg: {}, obj: {}, tile: {}",
-            m.footholds.len(), m.portals.len(), m.life.len(),
-            m.backgrounds.len(), m.objects.len(), m.tiles.len()));
+        ui.label(format!(
+            "footholds: {}, portals: {}, life: {}, bg: {}, obj: {}, tile: {}",
+            m.footholds.len(),
+            m.portals.len(),
+            m.life.len(),
+            m.backgrounds.len(),
+            m.objects.len(),
+            m.tiles.len()
+        ));
         ui.label(format!("ladders/ropes: {}", m.ladders_ropes.len()));
     }
 
@@ -159,7 +183,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     if let Some(sel) = state.selected.clone() {
         if let Some(tree) = &state.tree {
             let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
-            if let Some(e) = tree.root.entries.iter().find(|e| e.name.as_deref() == Some(name)) {
+            if let Some(e) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(name))
+            {
                 if e.node_type == 4 {
                     let id_str = name.trim_end_matches(".img");
                     if let Ok(id) = id_str.parse::<i32>() {
@@ -182,4 +211,3 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     ui.heading("아바타 (PoC 3.5)");
     crate::panels::avatar_panel::show(ui, state);
 }
-

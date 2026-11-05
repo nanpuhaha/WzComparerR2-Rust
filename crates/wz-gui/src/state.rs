@@ -8,8 +8,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use egui::TextureHandle;
-use wz_core::WzArchive;
 use wz_core::dirtree::DirTree;
+use wz_core::WzArchive;
 use wz_db::MapData;
 use wz_render::camera::Camera2D;
 use wz_render::GpuKey;
@@ -37,7 +37,7 @@ pub struct TreeRow {
     pub path: String,
     pub expandable: bool,
     pub expanded: bool,
-    }
+}
 
 // ── 앱 상태 ───────────────────────────────────────────────────────────
 

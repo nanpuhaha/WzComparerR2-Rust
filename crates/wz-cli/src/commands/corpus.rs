@@ -1,6 +1,3 @@
-
-
-
 pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
     println!("wz {}", env!("CARGO_PKG_VERSION"));
     println!("profile phase: 1 (포맷/암호 기반)");

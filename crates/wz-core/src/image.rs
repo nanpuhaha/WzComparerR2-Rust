@@ -85,16 +85,20 @@ impl PngRef {
     /// 바이트 소스로부터 Png 페이로드의 원시 바이트 블록을 추출한다.
     ///
     /// 페이로드의 첫 바이트는 플래그이므로 1바이트를 건너뛴 실제 데이터 영역을 반환한다.
-    pub fn extract_raw_bytes(&self, src: &Arc<dyn wz_pool::ByteSource>) -> wz_error::Result<Vec<u8>> {
+    pub fn extract_raw_bytes(
+        &self,
+        src: &Arc<dyn wz_pool::ByteSource>,
+    ) -> wz_error::Result<Vec<u8>> {
         if self.data_len <= 1 {
             return Ok(Vec::new());
         }
-        let payload_offset = self.offset.checked_add(1).ok_or(
-            wz_error::WzFormatError::Malformed {
-                what: "canvas offset overflow",
-                offset: self.offset,
-            },
-        )?;
+        let payload_offset =
+            self.offset
+                .checked_add(1)
+                .ok_or(wz_error::WzFormatError::Malformed {
+                    what: "canvas offset overflow",
+                    offset: self.offset,
+                })?;
         let payload_len = (self.data_len - 1) as usize;
         let mut buf = vec![0u8; payload_len];
         src.read_at(payload_offset, &mut buf)?;

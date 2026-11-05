@@ -214,9 +214,9 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
   `SkinLayer` (width/height) + `Bone` + `ZMap` + `AvatarScene` 을 조립하고 렌더한다.
   앵커/프리즘/zmap 정밀도는 C# 참조 확보 후 별도 티켓.
 
-### 사용 가능한 C# 참조 (클론됨)
+### 사용 가능한 C# 참조 (공개)
 
-`/tmp/csharp_ref/` (seotbeo/WzComparerR2, branch seotbeo_main):
+[`seotbeo/WzComparerR2`](https://github.com/seotbeo/WzComparerR2) (`seotbeo_main` 브랜치):
 - `WzComparerR2/AvatarCommon/` — Bone, Skin, AvatarCanvas, AvatarCanvasManager, Action, ActionFrame, Prism, PrismData
 - `WzComparerR2/CharaSim/` — CharaProp, CharaSim 등
 - `WzComparerR2.Avatar/` — UI 레이어

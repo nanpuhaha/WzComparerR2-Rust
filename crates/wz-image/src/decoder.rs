@@ -2,21 +2,35 @@
 //!
 //! 원본 `WzComparerR2.WzLib/Wz_Png.cs` 및 `Utilities/ImageCodec.cs` 기반의 픽셀 언패킹 구현.
 
-use std::io::{Read, Write};
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
-use wz_error::{Result, WzImageError};
+use std::io::{Read, Write};
 use wz_core::image::PngRef;
+use wz_error::{Result, WzImageError};
 
 use crate::bc7::unpack_bc7;
 use crate::format::{
     actual_scale, bc7_data_size, uncompressed_data_size, TextureFormat, TextureLayout,
 };
 
+/// 압축 해제 결과의 절대 상한 (512 MiB). 악의적인 zlib 폭탄으로부터 보호한다.
+pub const MAX_DECOMPRESSED_BYTES: usize = 512 * 1024 * 1024;
+
 /// ZLIB 스트림을 압축 해제한다.
+///
+/// 기본 상한([`MAX_DECOMPRESSED_BYTES`])을 적용한다. 더 작은 한도가 필요한
+/// 호출자는 [`decompress_zlib_with_limit`] 을 쓴다.
 pub fn decompress_zlib(compressed: &[u8]) -> Result<Vec<u8>> {
-    let mut decoder = ZlibDecoder::new(compressed);
+    decompress_zlib_with_limit(compressed, MAX_DECOMPRESSED_BYTES)
+}
+
+/// ZLIB 스트림을 `limit` 바이트까지만 압축 해제한다.
+///
+/// 출력이 `limit` 을 넘으면 [`WzImageError::Inflate`] 로 실패한다. 상한을
+/// 넘는지 확인하기 위해 `limit + 1` 바이트까지만 읽는다.
+pub fn decompress_zlib_with_limit(compressed: &[u8], limit: usize) -> Result<Vec<u8>> {
+    let mut decoder = ZlibDecoder::new(compressed).take(limit.saturating_add(1) as u64);
     let mut decompressed = Vec::new();
     decoder
         .read_to_end(&mut decompressed)
@@ -24,6 +38,15 @@ pub fn decompress_zlib(compressed: &[u8]) -> Result<Vec<u8>> {
             offset: 0,
             source: e,
         })?;
+    if decompressed.len() > limit {
+        return Err(WzImageError::Inflate {
+            offset: 0,
+            source: std::io::Error::other(format!(
+                "압축 해제 결과가 상한({limit} bytes)을 초과했습니다"
+            )),
+        }
+        .into());
+    }
     Ok(decompressed)
 }
 
@@ -48,7 +71,21 @@ pub fn decompress_zlib(compressed: &[u8]) -> Result<Vec<u8>> {
 /// `78 9C` 가 아닌 스트림은 원본이 청크 암호화 경로로 보내므로 여기서 오류로
 /// 마무리한다 (EncKeys 유도가 아직 `wz_image` 에는 없다).
 pub fn decompress_zlib_compat(compressed: &[u8], expected: usize) -> Result<Vec<u8>> {
-    if let Ok(v) = decompress_zlib(compressed) {
+    if expected > MAX_DECOMPRESSED_BYTES {
+        return Err(WzImageError::Inflate {
+            offset: 0,
+            source: std::io::Error::other(format!(
+                "요청 크기({expected} bytes)가 상한({MAX_DECOMPRESSED_BYTES} bytes)을 초과했습니다"
+            )),
+        }
+        .into());
+    }
+    // 엄격 경로는 기대 크기에 약간의 여유만 준다. 초과분은 아래 tolerant
+    // 경로가 `expected` 에서 잘라내므로 폭탄이 되어도 메모리를 묶을 수 있다.
+    let limit = expected
+        .saturating_add(1024 * 1024)
+        .min(MAX_DECOMPRESSED_BYTES);
+    if let Ok(v) = decompress_zlib_with_limit(compressed, limit) {
         if v.len() >= expected {
             return Ok(v);
         }
@@ -94,7 +131,8 @@ fn raw_inflate_tolerant(input: &[u8], expected: usize) -> Result<Vec<u8>> {
 
         if status == Status::StreamEnd
             || in_pos >= input.len()   // 입력 소진: .NET 처럼 여기까지의 바이트를 쓴다
-            || produced == 0           // 진행 없는 BufError → 데이터 오류
+            || produced == 0
+        // 진행 없는 BufError → 데이터 오류
         {
             break;
         }
@@ -169,14 +207,13 @@ pub fn decode_page_to_rgba8(
         0
     };
 
-    let layout = TextureLayout::for_png(format, scale, width, height).ok_or(
-        WzImageError::SizeOverflow {
+    let layout =
+        TextureLayout::for_png(format, scale, width, height).ok_or(WzImageError::SizeOverflow {
             w: width,
             h: height,
             format: format as u32,
             scale,
-        },
-    )?;
+        })?;
 
     let bytes_per_page = if format == TextureFormat::Bc7 {
         bc7_data_size(width, height).ok_or(WzImageError::SizeOverflow {
@@ -240,14 +277,13 @@ pub fn decode_raw_page_to_rgba8(
     raw_compressed: &[u8],
 ) -> Result<(u32, u32, Vec<u8>)> {
     // 요청 페이지 범위만큼 필요한 압축 해제 후 바이트 수.
-    let layout = TextureLayout::for_png(format, scale, width, height).ok_or(
-        WzImageError::SizeOverflow {
+    let layout =
+        TextureLayout::for_png(format, scale, width, height).ok_or(WzImageError::SizeOverflow {
             w: width,
             h: height,
             format: format as u32,
             scale,
-        },
-    )?;
+        })?;
     let bytes_per_page = if format == TextureFormat::Bc7 {
         bc7_data_size(width, height).ok_or(WzImageError::SizeOverflow {
             w: width,
@@ -258,19 +294,25 @@ pub fn decode_raw_page_to_rgba8(
     } else {
         layout.bytes_per_page
     };
-    let total_pages = if pages > 0 {
-        pages as usize
-    } else {
-        1
-    };
-    let total_pages_usize = bytes_per_page
-        .checked_mul(total_pages)
-        .ok_or(WzImageError::SizeOverflow {
+    let total_pages = if pages > 0 { pages as usize } else { 1 };
+    let total_pages_usize =
+        bytes_per_page
+            .checked_mul(total_pages)
+            .ok_or(WzImageError::SizeOverflow {
+                w: width,
+                h: height,
+                format: format as u32,
+                scale,
+            })?;
+    if total_pages_usize > MAX_DECOMPRESSED_BYTES {
+        return Err(WzImageError::SizeOverflow {
             w: width,
             h: height,
             format: format as u32,
             scale,
-        })?;
+        }
+        .into());
+    }
 
     let decompressed = match decompress_zlib_compat(raw_compressed, total_pages_usize) {
         Ok(v) => v,
@@ -404,13 +446,12 @@ pub fn decode_to_rgba8(
     if format == TextureFormat::Bc7 {
         let out_w = (width & !3) as usize;
         let out_h = (height & !3) as usize;
-        let expected_raw =
-            bc7_data_size(width, height).ok_or(WzImageError::SizeOverflow {
-                w: width,
-                h: height,
-                format: format as u32,
-                scale: 1,
-            })?;
+        let expected_raw = bc7_data_size(width, height).ok_or(WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale: 1,
+        })?;
         if raw.len() < expected_raw {
             return Err(WzImageError::SizeOverflow {
                 w: width,
@@ -420,10 +461,35 @@ pub fn decode_to_rgba8(
             }
             .into());
         }
-        let mut output = vec![0u8; out_w * out_h * 4];
+        let output_len = out_w
+            .checked_mul(out_h)
+            .and_then(|n| n.checked_mul(4))
+            .ok_or(WzImageError::SizeOverflow {
+                w: width,
+                h: height,
+                format: format as u32,
+                scale: 1,
+            })?;
+        if output_len > MAX_DECOMPRESSED_BYTES {
+            return Err(WzImageError::SizeOverflow {
+                w: width,
+                h: height,
+                format: format as u32,
+                scale: 1,
+            }
+            .into());
+        }
+        let mut output = vec![0u8; output_len];
         // C# ImageCodec.BC7ToRGBA32 (ImageCodec.cs:192-211) 대응:
         // BC7 압축 블록 행 스트라이드는 `this.Width * 4` 바이트(4개 픽셀 행 당 width * 4 바이트 raw 블록).
-        let src_stride = (width as usize) * 4;
+        let src_stride = (width as usize)
+            .checked_mul(4)
+            .ok_or(WzImageError::SizeOverflow {
+                w: width,
+                h: height,
+                format: format as u32,
+                scale: 1,
+            })?;
         let dst_stride = out_w * 4;
         for (by, y) in (0..out_h).step_by(4).enumerate() {
             let row_start = by * src_stride;
@@ -444,14 +510,15 @@ pub fn decode_to_rgba8(
         return Ok(output);
     }
 
-    let pixel_count = (width as usize)
-        .checked_mul(height as usize)
-        .ok_or(WzImageError::SizeOverflow {
-            w: width,
-            h: height,
-            format: format as u32,
-            scale: 1,
-        })?;
+    let pixel_count =
+        (width as usize)
+            .checked_mul(height as usize)
+            .ok_or(WzImageError::SizeOverflow {
+                w: width,
+                h: height,
+                format: format as u32,
+                scale: 1,
+            })?;
     let expected_raw = uncompressed_data_size(format, width, height).ok_or(
         WzImageError::UnsupportedFormat(format.name().to_string(), format as u32),
     )?;
@@ -465,7 +532,24 @@ pub fn decode_to_rgba8(
         .into());
     }
 
-    let mut output = vec![0u8; pixel_count * 4];
+    let output_len = pixel_count
+        .checked_mul(4)
+        .ok_or(WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale: 1,
+        })?;
+    if output_len > MAX_DECOMPRESSED_BYTES {
+        return Err(WzImageError::SizeOverflow {
+            w: width,
+            h: height,
+            format: format as u32,
+            scale: 1,
+        }
+        .into());
+    }
+    let mut output = vec![0u8; output_len];
 
     match format {
         TextureFormat::Argb8888 => {
@@ -666,15 +750,13 @@ pub fn decode_to_rgba8(
                     alpha_table[1] = a1;
                     if a0 > a1 {
                         for (i, slot) in alpha_table.iter_mut().enumerate().skip(2) {
-                            *slot =
-                                (((8 - i as u16) * a0 as u16 + (i as u16 - 1) * a1 as u16 + 3) / 7)
-                                    as u8;
+                            *slot = (((8 - i as u16) * a0 as u16 + (i as u16 - 1) * a1 as u16 + 3)
+                                / 7) as u8;
                         }
                     } else {
                         for (i, slot) in alpha_table.iter_mut().enumerate().take(6).skip(2) {
-                            *slot =
-                                (((6 - i as u16) * a0 as u16 + (i as u16 - 1) * a1 as u16 + 2) / 5)
-                                    as u8;
+                            *slot = (((6 - i as u16) * a0 as u16 + (i as u16 - 1) * a1 as u16 + 2)
+                                / 5) as u8;
                         }
                         alpha_table[6] = 0;
                         alpha_table[7] = 255;
@@ -716,11 +798,9 @@ pub fn decode_to_rgba8(
             }
         }
         _ => {
-            return Err(WzImageError::UnsupportedFormat(
-                format.name().to_string(),
-                format as u32,
-            )
-            .into());
+            return Err(
+                WzImageError::UnsupportedFormat(format.name().to_string(), format as u32).into(),
+            );
         }
     }
 
@@ -788,6 +868,29 @@ mod tests {
         let raw = vec![128];
         let rgba = decode_to_rgba8(TextureFormat::A8, 1, 1, &raw).expect("decode");
         assert_eq!(rgba, vec![255, 255, 255, 128]);
+    }
+
+    #[test]
+    fn decompress_zlib_respects_limit() {
+        let payload = vec![0u8; 4096];
+        let mut enc = ZlibEncoder::new(Vec::new(), Compression::default());
+        enc.write_all(&payload).unwrap();
+        let compressed = enc.finish().unwrap();
+
+        assert!(
+            decompress_zlib_with_limit(&compressed, 1024).is_err(),
+            "상한을 넘는 출력은 거부해야 한다"
+        );
+        assert_eq!(
+            decompress_zlib_with_limit(&compressed, 4096).unwrap().len(),
+            4096
+        );
+    }
+
+    #[test]
+    fn decode_rejects_absurd_dimensions() {
+        let raw = vec![0u8; 16];
+        assert!(decode_to_rgba8(TextureFormat::Argb8888, 100_000, 100_000, &raw).is_err());
     }
 
     #[test]

@@ -84,11 +84,7 @@ impl AtlasPage {
         }
 
         // 2. 새 선반 생성 시도
-        let current_y = self
-            .shelves
-            .last()
-            .map(|s| s.y + s.height)
-            .unwrap_or(0);
+        let current_y = self.shelves.last().map(|s| s.y + s.height).unwrap_or(0);
 
         if current_y + h <= self.height {
             let rect = AtlasRect {
@@ -110,11 +106,7 @@ impl AtlasPage {
 
     /// 사용된 총 선반 높이 비율
     pub fn occupancy(&self) -> f32 {
-        let used_y = self
-            .shelves
-            .last()
-            .map(|s| s.y + s.height)
-            .unwrap_or(0);
+        let used_y = self.shelves.last().map(|s| s.y + s.height).unwrap_or(0);
         used_y as f32 / self.height as f32
     }
 }

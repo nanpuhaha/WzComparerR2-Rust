@@ -133,10 +133,7 @@ impl Camera2D {
         let norm_x = (ndc.x / w + 1.0) * 0.5;
         let norm_y = (1.0 - ndc.y / w) * 0.5;
 
-        Vec2::new(
-            norm_x * self.viewport_size.x,
-            norm_y * self.viewport_size.y,
-        )
+        Vec2::new(norm_x * self.viewport_size.x, norm_y * self.viewport_size.y)
     }
 
     /// GPU 바인딩용 유니폼 빌드.

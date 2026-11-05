@@ -17,8 +17,12 @@ pub fn cmd_oracle_tree(
     };
 
     let mut node_count = 0usize;
-    let root_val =
-        build_oracle_dirtree_with_archive(&tree, Some(&archive), filter_re.as_ref(), &mut node_count);
+    let root_val = build_oracle_dirtree_with_archive(
+        &tree,
+        Some(&archive),
+        filter_re.as_ref(),
+        &mut node_count,
+    );
 
     let mut doc = oracle_envelope("tree", detection);
     let mut res_map = serde_json::Map::new();
@@ -108,14 +112,8 @@ pub fn build_dir_block_children(
             // 오라클이 키 자체를 비운다 (#28 리포트 ②). 한쪽만 낼 수 있는 필드를
             // 비교 대상에 두면 `tree` 게이트가 영원히 빨간불이 된다.
             // 사람이 보는 `wz tree` 는 별도 경로(`@<offset>`)라 영향이 없다.
-            img_info.insert(
-                "len".into(),
-                serde_json::Value::Number(e.data_len.into()),
-            );
-            img_info.insert(
-                "cs32".into(),
-                serde_json::Value::Number(e.cs32.into()),
-            );
+            img_info.insert("len".into(), serde_json::Value::Number(e.data_len.into()));
+            img_info.insert("cs32".into(), serde_json::Value::Number(e.cs32.into()));
             entry_obj.insert("image".into(), serde_json::Value::Object(img_info));
 
             if let (Some(arch), Some(off)) = (archive, e.offset) {
@@ -132,9 +130,7 @@ pub fn build_dir_block_children(
 
     // natural_cmp 정렬 적용
     sort_natural(&mut entries, |item| {
-        item.get("name")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
+        item.get("name").and_then(|v| v.as_str()).unwrap_or("")
     });
 
     entries.into_iter().map(serde_json::Value::Object).collect()
@@ -164,9 +160,7 @@ pub fn build_oracle_image_children(
     }
 
     sort_natural(&mut items, |item| {
-        item.get("name")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
+        item.get("name").and_then(|v| v.as_str()).unwrap_or("")
     });
 
     items.into_iter().map(serde_json::Value::Object).collect()
@@ -291,4 +285,3 @@ pub fn build_oracle_image_node(
 
     map
 }
-

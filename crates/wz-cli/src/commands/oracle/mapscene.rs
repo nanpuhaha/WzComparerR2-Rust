@@ -99,12 +99,12 @@ pub fn cmd_oracle_mapscene(
 
     // portals (포탈 이름 natural_cmp 및 ID 오름차순)
     let mut sorted_portals = map_data.portals.clone();
-    sorted_portals.sort_by(|a, b| {
-        match wz_core::text::natural_cmp(&a.p_name, &b.p_name) {
+    sorted_portals.sort_by(
+        |a, b| match wz_core::text::natural_cmp(&a.p_name, &b.p_name) {
             std::cmp::Ordering::Equal => a.id.cmp(&b.id),
             other => other,
-        }
-    });
+        },
+    );
     let portal_items: Vec<serde_json::Value> = sorted_portals
         .iter()
         .map(|p| {
@@ -147,4 +147,3 @@ pub fn cmd_oracle_mapscene(
     println!("{}", serde_json::to_string_pretty(&doc)?);
     Ok(())
 }
-

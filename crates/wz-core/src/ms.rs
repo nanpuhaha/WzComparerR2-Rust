@@ -392,7 +392,9 @@ pub fn read_entries(
     s.transform(&mut buf);
 
     let mut c = ReadCtx::from_bytes(std::mem::take(&mut buf));
-    let mut out = Vec::with_capacity(count as usize);
+    // `count` 는 상위에서 0..=500_000 으로 검증되지만, 손상된 파일이 상한까지
+    // 채워도 한 번에 거대한 Vec 을 예약하지 않도록 작은 값으로 시작한다.
+    let mut out = Vec::with_capacity((count as usize).min(4096));
     for _ in 0..count {
         let name_len = c.read_i32_le().map_err(|e| MsError::Snow(e.to_string()))?;
         if !(0..=0x10000).contains(&name_len) {
@@ -889,7 +891,9 @@ pub fn read_v2(src: &Arc<dyn ByteSource>, path: &str) -> Result<MsV2File, MsErro
     st.apply_keystream(&mut buf);
 
     let mut c = ReadCtx::from_bytes(std::mem::take(&mut buf));
-    let mut out = Vec::with_capacity(count as usize);
+    // `count` 는 상위에서 0..=500_000 으로 검증되지만, 손상된 파일이 상한까지
+    // 채워도 한 번에 거대한 Vec 을 예약하지 않도록 작은 값으로 시작한다.
+    let mut out = Vec::with_capacity((count as usize).min(4096));
     for _ in 0..count {
         let name_len = c.read_i32_le().map_err(|e| MsError::Snow(e.to_string()))?;
         if !(0..=0x10000).contains(&name_len) {

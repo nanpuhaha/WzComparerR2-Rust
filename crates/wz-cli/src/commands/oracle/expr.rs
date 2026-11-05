@@ -1,7 +1,4 @@
-pub fn cmd_oracle_expr(
-    expr: &str,
-    args_str: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn cmd_oracle_expr(expr: &str, args_str: &str) -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<f64> = if args_str.trim().is_empty() {
         Vec::new()
     } else {

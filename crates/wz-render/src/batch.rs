@@ -7,8 +7,8 @@
 //! - `texcoord`: `[f32; 2]` ( 8 바이트, offset 32)
 //! - 총 `array_stride = 40` 바이트.
 
-use bytemuck::{Pod, Zeroable};
 use crate::{AtlasRect, GpuKey};
+use bytemuck::{Pod, Zeroable};
 
 /// WGSL `VsIn` 과 바이너리 호환되는 스프라이트 정점.
 #[repr(C)]
@@ -164,10 +164,14 @@ impl SpriteBatch {
         let v1 = uv[3];
 
         // 4개 정점 (TL, TR, BR, BL)
-        self.vertices.push(SpriteVertex::new([x0, y0], z, [u0, v0], color));
-        self.vertices.push(SpriteVertex::new([x1, y0], z, [u1, v0], color));
-        self.vertices.push(SpriteVertex::new([x1, y1], z, [u1, v1], color));
-        self.vertices.push(SpriteVertex::new([x0, y1], z, [u0, v1], color));
+        self.vertices
+            .push(SpriteVertex::new([x0, y0], z, [u0, v0], color));
+        self.vertices
+            .push(SpriteVertex::new([x1, y0], z, [u1, v0], color));
+        self.vertices
+            .push(SpriteVertex::new([x1, y1], z, [u1, v1], color));
+        self.vertices
+            .push(SpriteVertex::new([x0, y1], z, [u0, v1], color));
 
         // 6개 인덱스 (0, 1, 2) + (0, 2, 3)
         self.indices.extend_from_slice(&[
@@ -190,7 +194,13 @@ impl SpriteBatch {
         atlas_size: (u32, u32),
         color: [f32; 4],
     ) {
-        self.push_quad(texture_key, pos, z, rect.uv(atlas_size.0, atlas_size.1), color);
+        self.push_quad(
+            texture_key,
+            pos,
+            z,
+            rect.uv(atlas_size.0, atlas_size.1),
+            color,
+        );
     }
 
     /// 배치 수집 완료 및 최종 커맨드 마감.
@@ -228,11 +238,29 @@ mod tests {
         let mut batch = SpriteBatch::new();
 
         // 텍스처 0 에 쿼드 2개
-        batch.push_quad(GpuKey(0), [0.0, 0.0, 10.0, 10.0], 0.0, [0.0, 0.0, 1.0, 1.0], [1.0; 4]);
-        batch.push_quad(GpuKey(0), [10.0, 0.0, 10.0, 10.0], 0.0, [0.0, 0.0, 1.0, 1.0], [1.0; 4]);
+        batch.push_quad(
+            GpuKey(0),
+            [0.0, 0.0, 10.0, 10.0],
+            0.0,
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0; 4],
+        );
+        batch.push_quad(
+            GpuKey(0),
+            [10.0, 0.0, 10.0, 10.0],
+            0.0,
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0; 4],
+        );
 
         // 텍스처 1 로 변경 -> 쿼드 1개
-        batch.push_quad(GpuKey(1), [20.0, 0.0, 10.0, 10.0], 0.0, [0.0, 0.0, 1.0, 1.0], [1.0; 4]);
+        batch.push_quad(
+            GpuKey(1),
+            [20.0, 0.0, 10.0, 10.0],
+            0.0,
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0; 4],
+        );
 
         batch.finish();
 

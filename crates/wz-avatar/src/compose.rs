@@ -235,11 +235,9 @@ mod tests {
             pos: Point::new(0, 0),
             alpha: 255,
         }];
-        assert!(
-            matches!(
-                compose(&layers).unwrap_err(),
-                ComposeError::PixelTooShort { .. }
-            )
-        );
+        assert!(matches!(
+            compose(&layers).unwrap_err(),
+            ComposeError::PixelTooShort { .. }
+        ));
     }
 }

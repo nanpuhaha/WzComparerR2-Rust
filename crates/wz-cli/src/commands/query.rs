@@ -1,6 +1,3 @@
-
-
-
 pub fn infer_value_type(pat: &str) -> wz_db::QueryValueType {
     if pat.parse::<f64>().is_ok() {
         wz_db::QueryValueType::Number
@@ -36,9 +33,11 @@ pub fn parse_prop_filter(spec: &str) -> Option<wz_db::ValueRule> {
                     };
                     Some(ValueRule::with_string(path, str_cmp, pat))
                 }
-                QueryValueType::Vector => {
-                    Some(ValueRule::with_vector(path, num_cmp == NumericComparisonMode::Equal, pat))
-                }
+                QueryValueType::Vector => Some(ValueRule::with_vector(
+                    path,
+                    num_cmp == NumericComparisonMode::Equal,
+                    pat,
+                )),
             };
         }
     }
@@ -47,12 +46,16 @@ pub fn parse_prop_filter(spec: &str) -> Option<wz_db::ValueRule> {
         let path = path.trim();
         let value_type = infer_value_type(pat);
         return match value_type {
-            QueryValueType::Number => {
-                Some(ValueRule::with_numeric(path, NumericComparisonMode::Equal, pat))
-            }
-            QueryValueType::String => {
-                Some(ValueRule::with_string(path, StringComparisonMode::Equals, pat))
-            }
+            QueryValueType::Number => Some(ValueRule::with_numeric(
+                path,
+                NumericComparisonMode::Equal,
+                pat,
+            )),
+            QueryValueType::String => Some(ValueRule::with_string(
+                path,
+                StringComparisonMode::Equals,
+                pat,
+            )),
             QueryValueType::Vector => Some(ValueRule::with_vector(path, true, pat)),
         };
     }

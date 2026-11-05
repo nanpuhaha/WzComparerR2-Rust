@@ -3,7 +3,7 @@
 리포트 §12 R12. **원본 버그를 그대로 재현하지 않는다.** 고치되, 각 항목을
 Rust 테스트로 고정한다.
 
-원본 코드 위치는 `WzComparerR2-seotbeo` 기준 (커밋 `03c18a8`).
+원본 코드 위치는 공개 저장소 [`seotbeo/WzComparerR2`](https://github.com/seotbeo/WzComparerR2) 기준 (커밋 `03c18a8`).
 
 | # | 위치 | 버그 | Rust 대응 | 상태 |
 |---|---|---|---|---|
