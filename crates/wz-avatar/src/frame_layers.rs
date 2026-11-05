@@ -319,7 +319,10 @@ pub fn collect_frame_assembly(
             let layer = &layers[layer_idx];
             let mut skin = crate::SkinLayer::new(layer.name.clone());
             skin.offset = node.skin_offsets[i];
-            skin.z = layer.z.clone().unwrap_or_default();
+            skin.z = layer
+                .z
+                .clone()
+                .unwrap_or_else(|| crate::zmap::part_z_tag(&layer.name));
             skin.z_index = layer.z_int.unwrap_or(-2);
             skin.origin = node.skin_origins[i];
             skin.width = layer.canvas.w;

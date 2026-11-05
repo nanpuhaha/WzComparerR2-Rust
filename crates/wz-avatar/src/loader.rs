@@ -17,9 +17,9 @@ use wz_core::image::Node as ImageNode;
 use wz_core::WzArchive;
 use wz_image::decode_png_ref_to_rgba;
 
-use crate::{AvatarScene, Bone, SkinLayer, ZMap};
+use crate::{AvatarScene, Bone, ZMap};
 
-use crate::zmap::STANDARD_ZMAP;
+use crate::zmap::{part_z_tag, STANDARD_ZMAP};
 
 /// MapleStory 표준 z-map 순서 (Base\zmap.img 에서 로드).
 /// 낮은 인덱스가 먼저 그려진다 (painter's algorithm).
@@ -51,91 +51,6 @@ pub struct LoadedAvatar {
     pub root_bone: Bone,
     pub zmap: Arc<ZMap>,
     pub scene: AvatarScene,
-}
-
-/// 파트 이름 → z-tag 추론.
-fn part_z_tag(part_name: &str) -> String {
-    let lower = part_name.to_ascii_lowercase();
-    if lower.contains("body") {
-        "body".into()
-    } else if lower.contains("head") {
-        "head".into()
-    } else if lower.contains("hair") {
-        "hair".into()
-    } else if lower.contains("arm") || lower.contains("hand") {
-        "arm".into()
-    } else if lower.contains("cap") {
-        "cap".into()
-    } else if lower.contains("face") {
-        "face".into()
-    } else if lower.contains("weapon") {
-        "weapon".into()
-    } else if lower.contains("cape") {
-        "cape".into()
-    } else if lower.contains("coat") {
-        "coat".into()
-    } else if lower.contains("pants") {
-        "pants".into()
-    } else if lower.contains("shoe") {
-        "shoes".into()
-    } else if lower.contains("glove") {
-        "glove".into()
-    } else {
-        part_name.to_string()
-    }
-}
-
-/// 파트 이름 → 앵커 이름 추론 (fallback).
-fn part_anchor(_part_name: &str) -> &'static str {
-    "navel"
-}
-
-/// `Canvas` 의 mini property 에서 `origin` 과 `map` 을 읽는다.
-///
-/// `map` 은 `{ "navel": Vector, "neck": Vector, ... }` 형태다. 첫 엔트리
-/// (`muzzle` 제외)를 앵커로 쓴다. 전체 체인은 `frame_layers::collect_frame_layers`
-/// 가 처리하지만, 이 로더는 파트 단위 PoC 이므로 첫 엔트리만 쓴다.
-fn png_map_meta(png: &wz_core::image::PngRef) -> (Option<String>, crate::Point, crate::Point) {
-    use wz_core::image::ImageValue;
-
-    let mut origin = crate::Point::ZERO;
-    let mut map_name = None;
-    let mut map_origin = crate::Point::ZERO;
-
-    if let Some(sub) = &png.sub_property {
-        for ch in &sub.children {
-            match (ch.name.as_ref(), &ch.value) {
-                ("origin", Some(ImageValue::Vector(v))) => {
-                    origin = crate::Point::new(v.x, v.y);
-                }
-                ("map", Some(ImageValue::Property(p))) => {
-                    for m in &p.children {
-                        if m.name.as_ref() == "muzzle" {
-                            continue;
-                        }
-                        if let Some(ImageValue::Vector(v)) = &m.value {
-                            map_name = Some(m.name.to_string());
-                            map_origin = crate::Point::new(v.x, v.y);
-                            break;
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-
-    (map_name, origin, map_origin)
-}
-
-/// `origin` 을 채우고 `map` 이 있으면 그 이름/좌표로, 없으면 `navel` 로 붙인다.
-fn append_loaded_part(root: &mut Bone, png: &wz_core::image::PngRef, mut skin: SkinLayer) {
-    let (map_name, origin, map_origin) = png_map_meta(png);
-    skin.origin = origin;
-    let anchor = map_name
-        .as_deref()
-        .unwrap_or_else(|| part_anchor(&skin.name));
-    root.append_bone(skin, anchor, map_origin);
 }
 
 /// `Base/zmap.img` 에서 z-order 를 읽는다. 없으면 `None` (호출부가 표준 순서로 폴백).
@@ -219,6 +134,112 @@ fn load_frame_parts(
     Some((assembly.root_bone, parts))
 }
 
+/// 두 bone 트리를 합친다. 같은 이름의 bone 은 스킨을 합치고, 없으면 자식으로 붙인다.
+fn merge_bone_tree(dst: &mut Bone, src: Bone) {
+    dst.skins.extend(src.skins);
+    for child in src.children {
+        if let Some(existing) = dst.find_child_mut(&child.name) {
+            merge_bone_tree(existing, child);
+        } else {
+            dst.children.push(child);
+        }
+    }
+}
+
+/// `_Canvas` 아이템 이미지 하나를 `collect_frame_assembly` 로 조립한다.
+///
+/// `image_name` 이 `None` 이면 아카이브의 첫 이미지를 쓴다. 장비/무기 이미지는
+/// `default`/`stand1`/`walk1` 액션을 가지며, 액션 자체가 프레임인 경우와
+/// `0` 같은 자식이 프레임인 경우를 모두 처리한다.
+fn load_item_frame(
+    archive: &WzArchive,
+    image_name: Option<&str>,
+    action_names: &[&str],
+    slot: &str,
+) -> Option<(Bone, Vec<AvatarPart>)> {
+    use wz_core::image::ImageValue;
+
+    let tree = archive.read_tree().ok()?;
+    let entry = match image_name {
+        Some(name) => tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.node_type == 4 && e.name.as_deref() == Some(name)),
+        None => tree.root.entries.iter().find(|e| e.node_type == 4),
+    }?;
+    let node = archive.parse_image_at(entry.offset?).ok()?;
+    let action = action_names
+        .iter()
+        .find_map(|name| node.children.iter().find(|c| c.name.as_ref() == *name))
+        .or_else(|| node.children.iter().find(|c| c.name.as_ref() == "default"))
+        .or_else(|| node.children.first())
+        .unwrap_or(&node);
+    let action_children: &[ImageNode] = match &action.value {
+        Some(ImageValue::Property(p)) => &p.children,
+        _ => &action.children,
+    };
+    let frame = if action_children
+        .iter()
+        .any(|c| matches!(c.value, Some(ImageValue::Png(_))))
+    {
+        action
+    } else {
+        action_children.first().unwrap_or(action)
+    };
+
+    let assembly = crate::collect_frame_assembly(frame, archive, Some(archive)).ok()?;
+    let base_slot = slot.to_lowercase();
+    let parts = assembly
+        .layers
+        .iter()
+        .enumerate()
+        .map(|(i, layer)| {
+            let name = if i == 0 {
+                base_slot.clone()
+            } else {
+                format!("{base_slot}_{}", layer.name)
+            };
+            AvatarPart {
+                slot: name,
+                width: layer.canvas.w,
+                height: layer.canvas.h,
+                rgba: layer.canvas.rgba.clone(),
+            }
+        })
+        .collect();
+    Some((assembly.root_bone, parts))
+}
+
+/// `Character/<dir>/_Canvas/_Canvas_000.wz` 를 열어 아이템 이미지를 조립한다.
+fn load_item_canvas(
+    char_root: &std::path::Path,
+    dir: &str,
+    image_name: &str,
+    action_names: &[&str],
+) -> Option<(Bone, Vec<AvatarPart>)> {
+    let path = char_root.join(dir).join("_Canvas").join("_Canvas_000.wz");
+    if !path.exists() {
+        return None;
+    }
+    let archive = WzArchive::open(&path).ok()?;
+    load_item_frame(&archive, Some(image_name), action_names, dir)
+}
+
+/// `_Canvas` 아카이브의 첫 이미지를 조립한다 (PoC 장비/무기 슬롯).
+fn load_first_item_canvas(
+    char_root: &std::path::Path,
+    dir: &str,
+    action_names: &[&str],
+) -> Option<(Bone, Vec<AvatarPart>)> {
+    let path = char_root.join(dir).join("_Canvas").join("_Canvas_000.wz");
+    if !path.exists() {
+        return None;
+    }
+    let archive = WzArchive::open(&path).ok()?;
+    load_item_frame(&archive, None, action_names, dir)
+}
+
 pub fn load_from_character_wz(char_wz_path: &std::path::Path) -> Option<LoadedAvatar> {
     load_from_character_wz_with_skin(char_wz_path, 2000)
 }
@@ -251,189 +272,31 @@ pub fn load_from_character_wz_with_skin(
         parts.extend(head_parts);
     }
 
-    // 3. 장비 아이템 로딩 (PoC: Cap 1000000)
+    // 3. 장비 아이템 로딩 (Cap 1000000)
     let char_root = char_wz_path.parent().unwrap_or(char_wz_path);
-    let cap_canvas_path = char_root.join("Cap").join("_Canvas").join("_Canvas_000.wz");
-    if cap_canvas_path.exists() {
-        if let Ok(cap_arch) = WzArchive::open(&cap_canvas_path) {
-            if let Ok(cap_tree) = cap_arch.read_tree() {
-                // 아이템 ID 1000000 → 파일명 01000000.img
-                let item_name = "01000000.img";
-                if let Some(entry) = cap_tree
-                    .root
-                    .entries
-                    .iter()
-                    .find(|e| e.node_type == 4 && e.name.as_deref() == Some(item_name))
-                {
-                    if let Some(off) = entry.offset {
-                        if let Ok(item_node) = cap_arch.parse_image_at(off) {
-                            if let Some(png) = item_node.first_canvas() {
-                                let file_src = wz_pool::FileSource::open(&cap_canvas_path).ok();
-                                if let Some(fs) = file_src {
-                                    let src: std::sync::Arc<dyn wz_pool::ByteSource> =
-                                        std::sync::Arc::new(fs);
-                                    if let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&png, &src) {
-                                        let slot_name = "cap".to_string();
-                                        let z_tag = part_z_tag(&slot_name);
-                                        let mut skin = SkinLayer::new(slot_name.clone());
-                                        skin.z = z_tag;
-                                        skin.width = w;
-                                        skin.height = h;
-                                        append_loaded_part(&mut root, &png, skin);
-                                        parts.push(AvatarPart {
-                                            slot: slot_name,
-                                            width: w,
-                                            height: h,
-                                            rgba,
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+    if let Some((item_root, item_parts)) =
+        load_item_canvas(char_root, "Cap", "01000000.img", &["default", "stand1"])
+    {
+        merge_bone_tree(&mut root, item_root);
+        parts.extend(item_parts);
+    }
+
+    // 4. 추가 장비 슬롯 로딩 (각 슬롯의 첫 번째 아이템)
+    for slot_name in ["Coat", "Pants", "Shoes", "Glove", "Cape"] {
+        if let Some((item_root, item_parts)) =
+            load_first_item_canvas(char_root, slot_name, &["default", "stand1"])
+        {
+            merge_bone_tree(&mut root, item_root);
+            parts.extend(item_parts);
         }
     }
 
-    // 4. 추가 장비 슬롯 로딩 (PoC: 각 슬롯의 첫 번째 아이템)
-    let char_root = char_wz_path.parent().unwrap_or(char_wz_path);
-    let slots = ["Coat", "Pants", "Shoes", "Glove", "Cape"];
-    for slot_name in &slots {
-        let canvas_path = char_root
-            .join(slot_name)
-            .join("_Canvas")
-            .join("_Canvas_000.wz");
-        if !canvas_path.exists() {
-            continue;
-        }
-        if let Ok(arch) = WzArchive::open(&canvas_path) {
-            if let Ok(tree) = arch.read_tree() {
-                if let Some(entry) = tree.root.entries.first() {
-                    if let Some(off) = entry.offset {
-                        if let Ok(node) = arch.parse_image_at(off) {
-                            if let Some(png) = node.first_canvas() {
-                                if let Ok(fs) = wz_pool::FileSource::open(&canvas_path) {
-                                    let src: std::sync::Arc<dyn wz_pool::ByteSource> =
-                                        std::sync::Arc::new(fs);
-                                    if let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&png, &src) {
-                                        let z_tag = part_z_tag(slot_name);
-                                        let mut skin = SkinLayer::new(slot_name.to_lowercase());
-                                        skin.z = z_tag;
-                                        skin.width = w;
-                                        skin.height = h;
-                                        append_loaded_part(&mut root, &png, skin);
-                                        parts.push(AvatarPart {
-                                            slot: slot_name.to_lowercase(),
-                                            width: w,
-                                            height: h,
-                                            rgba,
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 5. Weapon 슬롯 로딩 (PoC: _Canvas_000.wz 첫 아이템)
-    let weapon_canvas_path = char_root
-        .join("Weapon")
-        .join("_Canvas")
-        .join("_Canvas_000.wz");
-    if weapon_canvas_path.exists() {
-        if let Ok(arch) = WzArchive::open(&weapon_canvas_path) {
-            if let Ok(tree) = arch.read_tree() {
-                if let Some(entry) = tree.root.entries.first() {
-                    if let Some(off) = entry.offset {
-                        if let Ok(node) = arch.parse_image_at(off) {
-                            // stand1 액션의 첫 프레임에서 canvas 추출
-                            let mut weapon_png = None;
-                            let stand1 = node.children.iter().find(|c| c.name.as_ref() == "stand1");
-                            if let Some(s1) = stand1 {
-                                if let Some(frame) = s1.children.first() {
-                                    weapon_png = frame.first_canvas();
-                                }
-                            }
-                            if weapon_png.is_none() {
-                                weapon_png = node.first_canvas();
-                            }
-                            if let Some(png) = weapon_png {
-                                if let Ok(fs) = wz_pool::FileSource::open(&weapon_canvas_path) {
-                                    let src: std::sync::Arc<dyn wz_pool::ByteSource> =
-                                        std::sync::Arc::new(fs);
-                                    if let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&png, &src) {
-                                        let mut skin = SkinLayer::new("weapon".to_string());
-                                        skin.z = "weapon".to_string();
-                                        skin.width = w;
-                                        skin.height = h;
-                                        append_loaded_part(&mut root, &png, skin);
-                                        parts.push(AvatarPart {
-                                            slot: "weapon".to_string(),
-                                            width: w,
-                                            height: h,
-                                            rgba,
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 6. 나머지 슬롯 로딩 (PoC: 각 슬롯의 첫 번째 아이템)
-    let remaining_slots = [
-        ("Accessory", "accessory"),
-        ("Face", "face"),
-        ("Hair", "hair"),
-        ("Ring", "ring"),
-        ("PetEquip", "petequip"),
-        ("TamingMob", "tamingmob"),
-    ];
-    for (dir_name, slot_name) in &remaining_slots {
-        let canvas_path = char_root
-            .join(dir_name)
-            .join("_Canvas")
-            .join("_Canvas_000.wz");
-        if !canvas_path.exists() {
-            continue;
-        }
-        if let Ok(arch) = WzArchive::open(&canvas_path) {
-            if let Ok(tree) = arch.read_tree() {
-                if let Some(entry) = tree.root.entries.first() {
-                    if let Some(off) = entry.offset {
-                        if let Ok(node) = arch.parse_image_at(off) {
-                            if let Some(png) = node.first_canvas() {
-                                if let Ok(fs) = wz_pool::FileSource::open(&canvas_path) {
-                                    let src: std::sync::Arc<dyn wz_pool::ByteSource> =
-                                        std::sync::Arc::new(fs);
-                                    if let Ok((w, h, rgba)) = decode_png_ref_to_rgba(&png, &src) {
-                                        let z_tag = part_z_tag(slot_name);
-                                        let mut skin = SkinLayer::new(slot_name.to_string());
-                                        skin.z = z_tag;
-                                        skin.width = w;
-                                        skin.height = h;
-                                        append_loaded_part(&mut root, &png, skin);
-                                        parts.push(AvatarPart {
-                                            slot: slot_name.to_string(),
-                                            width: w,
-                                            height: h,
-                                            rgba,
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    // 5. Weapon 슬롯 로딩 (첫 아이템)
+    if let Some((weapon_root, weapon_parts)) =
+        load_first_item_canvas(char_root, "Weapon", &["stand1", "walk1", "default"])
+    {
+        merge_bone_tree(&mut root, weapon_root);
+        parts.extend(weapon_parts);
     }
 
     if parts.is_empty() {
@@ -556,28 +419,15 @@ pub fn load_avatar_with_equipment(
     }
 
     // Equipment 로드
+    let char_root = data_root.join("Character");
     for (slot, item_id) in equipment {
         if let Some(dir) = slot_dir_name(slot) {
-            let equip_canvas_path = data_root
-                .join("Character")
-                .join(dir)
-                .join("_Canvas")
-                .join("_Canvas_000.wz");
-            if equip_canvas_path.exists() {
-                if let Some((_, w, h, rgba)) = load_equipment_item(&equip_canvas_path, *item_id) {
-                    let z_tag = part_z_tag(slot);
-                    let mut skin = SkinLayer::new(slot.to_lowercase());
-                    skin.z = z_tag;
-                    skin.width = w;
-                    skin.height = h;
-                    root.append_bone(skin, "navel", crate::Point::new(0, 0));
-                    parts.push(AvatarPart {
-                        slot: slot.to_lowercase(),
-                        width: w,
-                        height: h,
-                        rgba,
-                    });
-                }
+            let image_name = format!("{:08}.img", item_id);
+            if let Some((item_root, item_parts)) =
+                load_item_canvas(&char_root, dir, &image_name, &["default", "stand1"])
+            {
+                merge_bone_tree(&mut root, item_root);
+                parts.extend(item_parts);
             }
         }
     }
@@ -639,10 +489,9 @@ mod tests {
         assert!(batch.vertex_count() > 0);
 
         // z-tag 검증: body/head/hair/arm 중 하나 이상 있어야 한다
-        let z_tags: Vec<&str> = av
-            .root_bone
-            .children
-            .iter()
+        // (map 이 없는 스킨은 root bone 에 직접 붙을 수 있으므로 root 도 포함한다.)
+        let z_tags: Vec<&str> = std::iter::once(&av.root_bone)
+            .chain(av.root_bone.children.iter())
             .flat_map(|b| b.skins.iter().map(|s| s.z.as_str()))
             .collect();
         assert!(!z_tags.is_empty(), "at least one z-tag assigned");
@@ -703,6 +552,8 @@ mod tests {
             );
             let batch = av.scene.build_batch(&av.root_bone);
             assert!(batch.layer_count > 0);
+            assert!(av.parts.iter().any(|p| p.slot == "cap"), "cap missing");
+            assert!(av.parts.iter().any(|p| p.slot == "coat"), "coat missing");
         }
     }
 

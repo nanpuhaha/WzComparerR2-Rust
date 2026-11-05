@@ -1,7 +1,8 @@
 # Avatar anchor / prism / zmap parity
 
-Status: research resolved 2026-11-05; body/head unification implemented. This note
-records the C# sources, the Rust implementation, and the remaining equipment work.
+Status: resolved 2026-11-05; body/head/equipment/weapon frame assembly and GUI prism
+controls implemented. This note records the C# sources, the Rust implementation, and
+the remaining CharaSim gaps.
 
 ## C# sources (pinned `bb98c25…`)
 
@@ -29,13 +30,18 @@ records the C# sources, the Rust implementation, and the remaining equipment wor
   for both the body frame (`0000{skin}00.img`, `stand1`/`alert`) and the head frame
   (`00012000.img`, `front`/`back`). The loader no longer re-implements
   `origin`/`map`/bone-chain logic.
+- `load_item_frame` / `load_item_canvas` assemble equipment and weapon item images
+  (`default`/`stand1`/`walk1`) through the same `collect_frame_assembly` path.
+  `merge_bone_tree` merges the resulting bone tree into the avatar root.
 - `AvatarPart::apply_prism(&PrismData)` exposes the C# `Prism.Apply` path. Prism
   settings are caller-supplied, matching the C# UI; WZ does not store them.
+- The GUI avatar panel exposes prism controls (enabled, color type, hue, saturation,
+  brightness, convert pure black) and re-renders the selected parts with the prism
+  applied; the original loaded RGBA is preserved.
 - `zmap` order is read from `Base/Base_000.wz::zmap.img` and falls back to
   `STANDARD_ZMAP`.
-- Equipment/weapon paths still decode the item canvas directly and use
-  `origin`/`map` when present (`append_loaded_part`); full equipment frame assembly
-  is a post-v0.1 task.
+- Still out of scope: C# `CharaSim` mix color / custom origin maps, and the full
+  effect/taming/chair layer set.
 
 ## Verification
 

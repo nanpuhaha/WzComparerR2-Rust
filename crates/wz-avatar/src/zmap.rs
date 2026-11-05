@@ -186,3 +186,35 @@ pub const STANDARD_ZMAP: &[&str] = &[
     "weaponWristOverGloveEffectOver",
     "weaponWristOverGloveEffectUnder",
 ];
+
+/// 파트 이름 → 표준 z 태그 추론 (WZ에 `z`가 없을 때 fallback).
+pub fn part_z_tag(part_name: &str) -> String {
+    let lower = part_name.to_ascii_lowercase();
+    if lower.contains("body") {
+        "body".into()
+    } else if lower.contains("head") {
+        "head".into()
+    } else if lower.contains("hair") {
+        "hair".into()
+    } else if lower.contains("arm") || lower.contains("hand") {
+        "arm".into()
+    } else if lower.contains("cap") {
+        "cap".into()
+    } else if lower.contains("face") {
+        "face".into()
+    } else if lower.contains("weapon") {
+        "weapon".into()
+    } else if lower.contains("cape") {
+        "cape".into()
+    } else if lower.contains("coat") {
+        "coat".into()
+    } else if lower.contains("pants") {
+        "pants".into()
+    } else if lower.contains("shoe") {
+        "shoes".into()
+    } else if lower.contains("glove") {
+        "glove".into()
+    } else {
+        part_name.to_string()
+    }
+}

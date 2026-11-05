@@ -25,63 +25,7 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
             }
-            // 아틀라스 패킹 + 다중 파트 렌더
-            use wz_render::{
-                atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D,
-                device::RenderContext,
-            };
-            let mut packer = AtlasShelfPacker::new(512, 512);
-            // 선택된 슬롯만 렌더한다 (PoC 3.9: 29슬롯 선택)
-            let selected: Vec<usize> = if state.avatar_selected_slots.is_empty() {
-                (0..av.parts.len()).collect()
-            } else {
-                state.avatar_selected_slots.iter().copied().collect()
-            };
-            let mut slots = Vec::new();
-            for &i in &selected {
-                if let Some(part) = av.parts.get(i) {
-                    if let Some(slot) =
-                        packer.allocate_and_write(part.width, part.height, &part.rgba)
-                    {
-                        slots.push((part, slot));
-                    }
-                }
-            }
-            let mut rc = match RenderContext::new_headless() {
-                Ok(r) => r,
-                Err(e) => {
-                    state.avatar_status = format!("RC 실패: {e}");
-                    return;
-                }
-            };
-            for page in packer.pages() {
-                let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
-            }
-            let mut batch = SpriteBatch::new();
-            for (part, slot) in &slots {
-                batch.push_atlas_quad(
-                    slot.key,
-                    [0.0, 0.0, part.width as f32, part.height as f32],
-                    0.0,
-                    &slot.rect,
-                    (512, 512),
-                    [1.0, 1.0, 1.0, 1.0],
-                );
-            }
-            batch.finish();
-            let (rw, rh) = (256u32, 256u32);
-            let cam = Camera2D::new(rw as f32, rh as f32);
-            let uniforms = cam.build_uniforms(0.0, 0.0);
-            match rc.render_to_rgba(rw, rh, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
-                Ok(out) => {
-                    state.avatar_status =
-                        format!("렌더 완료: {} 파트, {}x{}", av.parts.len(), rw, rh);
-                    state.avatar_rendered = Some((rw, rh, out));
-                }
-                Err(e) => {
-                    state.avatar_status = format!("렌더 실패: {e}");
-                }
-            }
+            render_loaded_avatar(state);
         }
         None => {
             state.avatar_status = "아바타 로드 실패".into();
@@ -136,53 +80,7 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
             if let Some(first) = av.parts.first() {
                 state.avatar_image = Some((first.width, first.height, first.rgba.clone()));
             }
-            // 아틀라스 패킹 + 렌더
-            use wz_render::{
-                atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D,
-                device::RenderContext,
-            };
-            let mut packer = AtlasShelfPacker::new(512, 512);
-            let mut slots = Vec::new();
-            for part in &av.parts {
-                if let Some(slot) = packer.allocate_and_write(part.width, part.height, &part.rgba) {
-                    slots.push((part, slot));
-                }
-            }
-            let mut rc = match RenderContext::new_headless() {
-                Ok(r) => r,
-                Err(e) => {
-                    state.avatar_status = format!("RC 실패: {e}");
-                    return;
-                }
-            };
-            for page in packer.pages() {
-                let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
-            }
-            let mut batch = SpriteBatch::new();
-            for (part, slot) in &slots {
-                batch.push_atlas_quad(
-                    slot.key,
-                    [0.0, 0.0, part.width as f32, part.height as f32],
-                    0.0,
-                    &slot.rect,
-                    (512, 512),
-                    [1.0, 1.0, 1.0, 1.0],
-                );
-            }
-            batch.finish();
-            let (rw, rh) = (256u32, 256u32);
-            let cam = Camera2D::new(rw as f32, rh as f32);
-            let uniforms = cam.build_uniforms(0.0, 0.0);
-            match rc.render_to_rgba(rw, rh, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
-                Ok(out) => {
-                    state.avatar_status =
-                        format!("렌더 완료: {} 파트, {}x{}", av.parts.len(), rw, rh);
-                    state.avatar_rendered = Some((rw, rh, out));
-                }
-                Err(e) => {
-                    state.avatar_status = format!("렌더 실패: {e}");
-                }
-            }
+            render_loaded_avatar(state);
         }
         None => {
             state.avatar_status = "장비 로드 실패".into();
@@ -195,18 +93,42 @@ pub fn render_loaded_avatar(state: &mut AppState) {
         state.avatar_status = "로드된 파트가 없습니다".into();
         return;
     }
+    // 프리즘은 WZ 가 아니라 UI 가 공급한다 (C# `AvatarPart.PrismData` 와 동일).
+    // 원본 파트는 보존하고, 렌더용 사본에만 색 변환을 적용한다.
+    let prism = wz_avatar::PrismData {
+        color_type: state.prism_color_type,
+        hue: state.prism_hue,
+        saturation: state.prism_saturation,
+        brightness: state.prism_brightness,
+        convert_pure_black: state.prism_convert_pure_black,
+    };
+    let apply_prism = state.prism_enabled && prism.is_valid();
+    let parts: Vec<(String, u32, u32, Vec<u8>)> = state
+        .avatar_loaded_parts
+        .iter()
+        .map(|(slot, w, h, rgba)| {
+            let mut rgba = rgba.clone();
+            if apply_prism {
+                wz_avatar::apply_prism_rgba8(&mut rgba, &prism, false);
+            }
+            (slot.clone(), *w, *h, rgba)
+        })
+        .collect();
+    if let Some((_, w, h, rgba)) = parts.first() {
+        state.avatar_image = Some((*w, *h, rgba.clone()));
+    }
     use wz_render::{
         atlas::AtlasShelfPacker, batch::SpriteBatch, camera::Camera2D, device::RenderContext,
     };
     let mut packer = AtlasShelfPacker::new(512, 512);
     let selected: Vec<usize> = if state.avatar_selected_slots.is_empty() {
-        (0..state.avatar_loaded_parts.len()).collect()
+        (0..parts.len()).collect()
     } else {
         state.avatar_selected_slots.iter().copied().collect()
     };
     let mut slots = Vec::new();
     for &i in &selected {
-        if let Some((_slot, w, h, rgba)) = state.avatar_loaded_parts.get(i) {
+        if let Some((_slot, w, h, rgba)) = parts.get(i) {
             if let Some(s) = packer.allocate_and_write(*w, *h, rgba) {
                 slots.push((*w, *h, s));
             }
@@ -239,7 +161,13 @@ pub fn render_loaded_avatar(state: &mut AppState) {
     let uniforms = cam.build_uniforms(0.0, 0.0);
     match rc.render_to_rgba(rw, rh, &batch, &uniforms, [0.08, 0.08, 0.12, 1.0]) {
         Ok(out) => {
-            state.avatar_status = format!("렌더 완료: {} 파트, {}x{}", slots.len(), rw, rh);
+            state.avatar_status = format!(
+                "렌더 완료: {} 파트, {}x{}{}",
+                slots.len(),
+                rw,
+                rh,
+                if apply_prism { " (prism)" } else { "" }
+            );
             state.avatar_rendered = Some((rw, rh, out));
         }
         Err(e) => {

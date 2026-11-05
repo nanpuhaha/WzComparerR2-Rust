@@ -242,11 +242,12 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
 | `mapscene` 출력 | `ladders_ropes`/`backgrounds`/`objects`/`tiles` 및 `kind` 필드 추가. `LadderRopeKind`/`LifeKind` 가 실제 소비됨 | `cargo test --workspace` |
 | `StringDomain` | 도메인별 `get`/`format_tooltip_in` + `tooltip --domain`, 충돌 회귀 테스트 | 56 wz-db tests |
 | GUI 다중 루트 | GUI StringLinker 가 String/Item/Etc/Quest/Reactor 를 `WZ_DATA_ROOT` 에서 로드 | GUI build/clippy |
-| 아바타 body/head 프레임 | `load_frame_parts` → `collect_frame_assembly` 로 origin/map/bone 체인 일원화, `AvatarPart::apply_prism` 추가 | 실데이터 `WZ_DATA_ROOT` 포함 18 tests |
+| 장비/무기 프레임 | `load_item_frame`/`load_item_canvas` 로 장비·무기 이미지를 `collect_frame_assembly` 에 연결, `merge_bone_tree` 로 병합. GUI 프리즘 컨트롤 추가 | 실데이터 `WZ_DATA_ROOT` 포함 19 tests, GUI build |
 
 ### 남은 후보
 
-- **장비/무기 프레임** — equipment/weapon 경로는 아직 아이템 캔버스를 직접 디코딩한다. 전체 장비 프레임 조립과 프리즘 UI 연결은 post-v0.1 (`docs/avatar-parity.md`).
+- **C# CharaSim 믹스 컬러/커스텀 오리진** — `AvatarPart.MixColor`/`CustomOrigin`에 해당하는 에셋 변형은 아직 없다 (`docs/avatar-parity.md`).
+- **effect/taming/chair 레이어** — 29슬롯 중 일부 특수 레이어는 post-v0.1.
 - **오라클 하네스 CI** — 공개 C# 트리에 `WzComparerR2.Oracle` 프로젝트가 없어 수동 workflow 입력이 필요.
 
 ### 산출물

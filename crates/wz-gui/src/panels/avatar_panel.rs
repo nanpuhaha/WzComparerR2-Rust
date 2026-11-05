@@ -58,6 +58,55 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         }
     });
     ui.label("형식: Cap:1000000,Coat:1040000,Pants:1060000");
+
+    ui.separator();
+    ui.label("프리즘 (Prism)");
+    let mut prism_changed = ui
+        .checkbox(&mut state.prism_enabled, "프리즘 적용")
+        .changed();
+    ui.add_enabled_ui(state.prism_enabled, |ui| {
+        egui::ComboBox::from_id_salt("prism_color_type")
+            .selected_text(PRISM_COLORS[state.prism_color_type.clamp(0, 6) as usize])
+            .show_ui(ui, |ui| {
+                for (i, name) in PRISM_COLORS.iter().enumerate() {
+                    prism_changed |= ui
+                        .selectable_value(&mut state.prism_color_type, i as i32, *name)
+                        .changed();
+                }
+            });
+        prism_changed |= ui
+            .add(egui::Slider::new(&mut state.prism_hue, 0..=359).text("Hue"))
+            .changed();
+        prism_changed |= ui
+            .add(egui::Slider::new(&mut state.prism_saturation, 1..=199).text("Saturation"))
+            .changed();
+        prism_changed |= ui
+            .add(egui::Slider::new(&mut state.prism_brightness, 1..=199).text("Brightness"))
+            .changed();
+        prism_changed |= ui
+            .checkbox(&mut state.prism_convert_pure_black, "순수 검정 변환")
+            .changed();
+    });
+    if state.prism_enabled {
+        let prism = wz_avatar::PrismData {
+            color_type: state.prism_color_type,
+            hue: state.prism_hue,
+            saturation: state.prism_saturation,
+            brightness: state.prism_brightness,
+            convert_pure_black: state.prism_convert_pure_black,
+        };
+        if !prism.is_valid() {
+            ui.label(
+                egui::RichText::new(
+                    "Hue/Saturation/Brightness 중 하나를 기본값에서 바꿔야 적용됩니다",
+                )
+                .weak(),
+            );
+        }
+    }
+    if prism_changed && !state.avatar_loaded_parts.is_empty() {
+        async_io::render_loaded_avatar(state);
+    }
     if !state.avatar_loaded_parts.is_empty() {
         ui.separator();
         ui.label(format!(
@@ -99,6 +148,16 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label(format!("Rendered: {}x{}", w, h));
     }
 }
+
+pub const PRISM_COLORS: [&str; 7] = [
+    "전체 색상",
+    "빨간색",
+    "노란색",
+    "초록색",
+    "청록색",
+    "파란색",
+    "자주색",
+];
 
 pub const AVATAR_SLOTS: [&str; 29] = [
     "Body",
