@@ -396,6 +396,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                 state.worldmap_view =
                     async_io::map_loader::load_worldmap_view(&root, &state.worldmap_selected);
                 state.worldmap_texture = None;
+                state.worldmap_quest_texture = None;
+                state.worldmap_fog_texture = None;
+                state.worldmap_quest_selected = -1;
+                state.worldmap_fog_selected = -1;
             }
         }
     });
@@ -412,6 +416,109 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             }
         }
     }
+    if let Some(view) = &state.worldmap_view {
+        ui.horizontal(|ui| {
+            ui.label("Quest:");
+            let current = if state.worldmap_quest_selected < 0 {
+                "없음".to_string()
+            } else {
+                view.quests
+                    .get(state.worldmap_quest_selected as usize)
+                    .map(|q| {
+                        format!(
+                            "{} (open {}, close {}, q{}/s{}, default {})",
+                            q.name,
+                            q.open_maps.len(),
+                            q.close_maps.len(),
+                            q.quest,
+                            q.state,
+                            q.is_default
+                        )
+                    })
+                    .unwrap_or_else(|| "없음".into())
+            };
+            egui::ComboBox::from_id_salt("worldmap_quest")
+                .selected_text(current)
+                .show_ui(ui, |ui| {
+                    if ui
+                        .selectable_value(&mut state.worldmap_quest_selected, -1, "없음")
+                        .clicked()
+                    {
+                        state.worldmap_quest_texture = None;
+                    }
+                    for (i, quest) in view.quests.iter().enumerate() {
+                        if ui
+                            .selectable_value(
+                                &mut state.worldmap_quest_selected,
+                                i as i32,
+                                &quest.name,
+                            )
+                            .clicked()
+                        {
+                            state.worldmap_quest_texture = None;
+                        }
+                    }
+                });
+            ui.label("Fog:");
+            let fog_current = if state.worldmap_fog_selected < 0 {
+                "없음".to_string()
+            } else {
+                view.fogs
+                    .get(state.worldmap_fog_selected as usize)
+                    .map(|f| format!("{} (q{}/s{})", f.name, f.quest, f.state))
+                    .unwrap_or_else(|| "없음".into())
+            };
+            egui::ComboBox::from_id_salt("worldmap_fog")
+                .selected_text(fog_current)
+                .show_ui(ui, |ui| {
+                    if ui
+                        .selectable_value(&mut state.worldmap_fog_selected, -1, "없음")
+                        .clicked()
+                    {
+                        state.worldmap_fog_texture = None;
+                    }
+                    for (i, fog) in view.fogs.iter().enumerate() {
+                        if ui
+                            .selectable_value(&mut state.worldmap_fog_selected, i as i32, &fog.name)
+                            .clicked()
+                        {
+                            state.worldmap_fog_texture = None;
+                        }
+                    }
+                });
+        });
+        if state.worldmap_quest_texture.is_none() && state.worldmap_quest_selected >= 0 {
+            if let Some((w, h, rgba)) = view
+                .quests
+                .get(state.worldmap_quest_selected as usize)
+                .and_then(|q| q.base.as_ref())
+            {
+                let image =
+                    egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
+                state.worldmap_quest_texture = Some(ui.ctx().load_texture(
+                    "worldmap_quest",
+                    image,
+                    egui::TextureOptions::LINEAR,
+                ));
+            }
+        }
+        if state.worldmap_fog_texture.is_none() && state.worldmap_fog_selected >= 0 {
+            if let Some((w, h, rgba)) = view
+                .fogs
+                .get(state.worldmap_fog_selected as usize)
+                .and_then(|f| f.image.as_ref())
+            {
+                let image =
+                    egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
+                state.worldmap_fog_texture = Some(ui.ctx().load_texture(
+                    "worldmap_fog",
+                    image,
+                    egui::TextureOptions::LINEAR,
+                ));
+            }
+        }
+    }
+
     if let (Some(texture), Some(view)) = (&state.worldmap_texture, &state.worldmap_view) {
         ui.label(format!("{} ({})", view.display_name, view.name));
         let max_w = 360.0f32;

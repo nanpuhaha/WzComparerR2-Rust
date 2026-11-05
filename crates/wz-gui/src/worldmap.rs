@@ -13,6 +13,25 @@ pub struct WorldMapSpot {
 }
 
 #[derive(Debug, Clone, Default)]
+pub struct WorldMapQuest {
+    pub name: String,
+    pub base: Option<(u32, u32, Vec<u8>)>,
+    pub open_maps: Vec<i32>,
+    pub close_maps: Vec<i32>,
+    pub is_default: bool,
+    pub quest: i32,
+    pub state: i32,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct WorldMapFog {
+    pub name: String,
+    pub image: Option<(u32, u32, Vec<u8>)>,
+    pub quest: i32,
+    pub state: i32,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct WorldMapView {
     pub name: String,
     pub display_name: String,
@@ -22,6 +41,8 @@ pub struct WorldMapView {
     pub base_origin: (i32, i32),
     pub base_spot: (i32, i32),
     pub spots: Vec<WorldMapSpot>,
+    pub quests: Vec<WorldMapQuest>,
+    pub fogs: Vec<WorldMapFog>,
 }
 
 /// `WorldMap` 디렉터리의 이미지 이름 목록.

@@ -274,6 +274,42 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         state.viewport_dirty = true;
         ui.ctx().request_repaint();
     }
+    // 원본 키보드 카메라 이동 (방향키/WASD, Ctrl 부스트, 관성 감쇠).
+    {
+        let (left, right, up, down, boost) = ui.input(|i| {
+            (
+                i.key_down(egui::Key::ArrowLeft) || i.key_down(egui::Key::A),
+                i.key_down(egui::Key::ArrowRight) || i.key_down(egui::Key::D),
+                i.key_down(egui::Key::ArrowUp) || i.key_down(egui::Key::W),
+                i.key_down(egui::Key::ArrowDown) || i.key_down(egui::Key::S),
+                i.modifiers.ctrl,
+            )
+        });
+        let mut dir = glam::Vec2::ZERO;
+        if left {
+            dir.x -= 1.0;
+        }
+        if right {
+            dir.x += 1.0;
+        }
+        if up {
+            dir.y -= 1.0;
+        }
+        if down {
+            dir.y += 1.0;
+        }
+        crate::camera_input::step(
+            &mut state.camera_key_velocity,
+            &mut state.camera.center,
+            dir,
+            boost,
+            state.camera.zoom,
+        );
+        if dir != glam::Vec2::ZERO || state.camera_key_velocity != glam::Vec2::ZERO {
+            state.viewport_dirty = true;
+            ui.ctx().request_repaint();
+        }
+    }
     let resp = ui.allocate_response(
         egui::vec2(state.viewport_size.0 as f32, state.viewport_size.1 as f32),
         egui::Sense::click_and_drag(),

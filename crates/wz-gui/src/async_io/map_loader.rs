@@ -194,6 +194,76 @@ pub fn load_worldmap_view(
         }
     }
 
+    let mut quests = Vec::new();
+    if let Some(quest_root) = helper_path(&node, &["QuestLimit"]) {
+        let mut qnodes: Vec<&wz_core::image::Node> = Vec::new();
+        if let Some(default) = quest_root
+            .object_children()
+            .iter()
+            .find(|c| c.name.as_ref() == "default")
+        {
+            qnodes.push(default);
+        }
+        let mut numeric: Vec<&wz_core::image::Node> = quest_root
+            .object_children()
+            .iter()
+            .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+            .collect();
+        numeric.sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+        qnodes.extend(numeric);
+        for q in qnodes {
+            let list = |key: &str| {
+                q.object_children()
+                    .iter()
+                    .find(|c| c.name.as_ref() == key)
+                    .map(|n| {
+                        n.object_children()
+                            .iter()
+                            .filter_map(|c| match &c.value {
+                                Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
+                                _ => None,
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default()
+            };
+            quests.push(crate::worldmap::WorldMapQuest {
+                name: q.name.to_string(),
+                base: q
+                    .object_children()
+                    .iter()
+                    .find(|c| c.name.as_ref() == "0")
+                    .and_then(|n| decode_canvas_node(root, n, &source)),
+                open_maps: list("openMap"),
+                close_maps: list("closeMap"),
+                is_default: node_scalar_int(q, "default").unwrap_or(0) != 0,
+                quest: node_scalar_int(q, "quest").unwrap_or(0),
+                state: node_scalar_int(q, "state").unwrap_or(0),
+            });
+        }
+    }
+    let mut fogs = Vec::new();
+    if let Some(fog_root) = helper_path(&node, &["Fog"]) {
+        let mut fnodes: Vec<&wz_core::image::Node> = fog_root
+            .object_children()
+            .iter()
+            .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+            .collect();
+        fnodes.sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+        for f in fnodes {
+            fogs.push(crate::worldmap::WorldMapFog {
+                name: f.name.to_string(),
+                image: f
+                    .object_children()
+                    .iter()
+                    .find(|c| c.name.as_ref() == "0")
+                    .and_then(|n| decode_canvas_node(root, n, &source)),
+                quest: node_scalar_int(f, "quest").unwrap_or(0),
+                state: node_scalar_int(f, "qState").unwrap_or(0),
+            });
+        }
+    }
+
     Some(crate::worldmap::WorldMapView {
         name: name.to_string(),
         display_name,
@@ -201,6 +271,8 @@ pub fn load_worldmap_view(
         base_origin,
         base_spot,
         spots,
+        quests,
+        fogs,
     })
 }
 

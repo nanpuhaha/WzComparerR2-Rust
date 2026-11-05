@@ -305,3 +305,17 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   endpoints/labels (matching the original fly-layer editor visualization).
 - Real tests: map `000050000` tooltip rect + String title; `WorldMap000` base
   image + 7 spots + map numbers; synthetic sky whale/illuminant parse test.
+
+## World-map quest/fog & camera movement
+
+- `WorldMapView` parses `QuestLimit/default` + numeric stages (`0` base image,
+  `openMap`, `closeMap`, `quest`, `state`, `default`) and `Fog/<n>`
+  (`0` image, `quest`, `qState`).
+- The world-map panel has Quest/Fog selectors, draws the selected quest base
+  image over the default base, and overlays the selected fog image with alpha.
+- Map camera now supports the original keyboard movement model: arrow keys or
+  WASD accumulate velocity, `Ctrl` applies 3x boost, and velocity decays by
+  0.92 per frame (`camera_input::step`, tested).
+- This client's `WorldMap_000.wz` contains no `QuestLimit`/`Fog` nodes (checked
+  across all 85 images), so those selectors are data-driven and covered by the
+  parser/UI path; base-image + 7 spots are verified against real data.
