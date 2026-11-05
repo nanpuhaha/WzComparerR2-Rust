@@ -376,7 +376,7 @@ enum Command {
         #[arg(long)]
         json: bool,
         /// 최대 행
-        #[arg(long, default_value_t = 4000)]
+        #[arg(long, default_value_t = 10000)]
         limit: usize,
     },
 

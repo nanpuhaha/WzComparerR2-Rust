@@ -640,3 +640,10 @@ merge semantics (recursive directory merge, conflict errors).
 - The generic `wz db2-characters` path also covers the PetEquip tab.
   `PetEquip_000.wz` → C# `characters` 511 == Rust 511 rows, exact match
   (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
+
+### DB2 Character/Weapon
+
+- The generic `wz db2-characters` path also covers the Weapon tab.
+  `Weapon_000.wz` → C# `characters` 5655 == Rust 5655 rows, exact match
+  (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
+- The CLI `--limit` default is raised to 10000 so the full Weapon list is shown.
