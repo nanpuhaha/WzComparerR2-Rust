@@ -592,3 +592,9 @@ merge semantics (recursive directory merge, conflict errors).
 - Executed C# reference: `tools/csharp-worldmap itemtooltip ...` uses
   `ItemStringHelper.GetItemPropString` and StringLinker. `02000012` → exact
   match (`교환 불가`).
+
+### DB2 Character/Shoes
+
+- The generic `wz db2-characters` path also covers the Shoes tab.
+  `Shoes_000.wz` → C# `characters` 1703 == Rust 1703 rows, exact match
+  (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).

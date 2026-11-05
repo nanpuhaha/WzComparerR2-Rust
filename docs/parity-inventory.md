@@ -132,6 +132,7 @@ WorldMap 실제 클라이언트 데이터는 QuestLimit/Fog 노드가 없어, �
 | `Character/TamingMob/TamingMob_000.wz` DB2 TamingMob grid | 1265 rows | Rust `wz db2-taming-mobs` 1265행 id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/tamingMob 완전 일치 |
 | `Character/Coat/Coat_000.wz` DB2 Character grid | 682 rows | Rust `wz db2-characters` 682행 id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat 완전 일치 |
 | `Character/Cap/Cap_000.wz` DB2 Character/Cap grid | 3166 rows | Rust `wz db2-characters` 3166행 동일 컬럼 완전 일치 |
+| `Character/Shoes/Shoes_000.wz` DB2 Character/Shoes grid | 1703 rows | Rust `wz db2-characters` 1703행 동일 컬럼 완전 일치 |
 | `String/Skill.img` skill desc + h | 20629 rows | Rust `wz skill-summary` 20629행 SummaryParser 출력 완전 일치 |
 | `Consume_000.wz/0200.img/02000012` ItemTooltip | 1 item | Rust `wz item-tooltip` name/desc/auto_desc/attributes 완전 일치 |
 | `Etc_000.wz` set -1 | `{"name":"결속의 반지","complete":5,"effects":[...]}` | Rust set effects 동일 |
@@ -215,7 +216,8 @@ dotnet run -c Release -p:WzLibPath=<WzComparerR2.WzLib.dll> -- mapnodes ../../Da
   `tamingmobs` mode matches 1265/1265 rows.
 - `wz db2-characters <character.wz> --string <String_000.wz>` builds the
   general Character equipment slice (Eqp names + info fields); C# `characters`
-  mode matches 682/682 rows for `Coat_000.wz` and 3166/3166 for `Cap_000.wz`.
+  mode matches 682/682 rows for `Coat_000.wz`, 3166/3166 for `Cap_000.wz`,
+  and 1703/1703 for `Shoes_000.wz`.
 - GUI `Catalog` panel loads the selected image into a filterable DB2 grid.
 - C# WzLib harness `db2` mode prints the same rows. Real test:
   `Weapon_000.wz/01302000.img` → C# 270 == Rust 270 rows, exact match.

@@ -192,3 +192,10 @@ dotnet run ... -- itemtooltip ../../Data/Item/Consume/Consume_000.wz 0200.img 02
 → {"name":"엘릭서","desc":"...","attributes":["교환 불가"]}
 ```
 Rust `wz item-tooltip ... --json` matches exactly.
+
+Verified DB2 Character grid output (Shoes):
+```
+dotnet run ... -- characters ../../Data/Character/Shoes/Shoes_000.wz ../../Data/String/String_000.wz
+→ 1703 rows
+```
+Rust `wz db2-characters ... --json` matches all 1703 rows exactly.
