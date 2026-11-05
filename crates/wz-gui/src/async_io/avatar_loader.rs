@@ -504,9 +504,14 @@ pub fn apply_chair_frame(state: &mut AppState) {
         return;
     }
     let idx = state.chair_frame % state.chair_frames.len();
-    state
-        .avatar_loaded_parts
-        .retain(|p| !p.slot.starts_with("rolling_part") && p.slot != "android_effect");
+    state.avatar_loaded_parts.retain(|p| {
+        !p.slot.starts_with("rolling_part")
+            && p.slot != "android_effect"
+            && p.slot != "score_effect"
+            && p.slot != "chair_effect2"
+            && p.slot != "chair_eff0"
+            && p.slot != "chair_eff1"
+    });
     state
         .avatar_loaded_parts
         .extend(state.chair_frames[idx].iter().cloned());
@@ -743,14 +748,25 @@ mod tests {
             position: (0, 0),
             z_index: 0,
         };
+        let effect = |n: u8| AvatarPartData {
+            slot: "chair_effect2".into(),
+            width: 1,
+            height: 1,
+            rgba: vec![n, n, n, 255],
+            position: (0, 0),
+            z_index: 0,
+        };
         let mut state = AppState {
-            avatar_loaded_parts: vec![body.clone(), rolling(1), android(1)],
-            chair_frames: vec![vec![rolling(1), android(1)], vec![rolling(2), android(2)]],
+            avatar_loaded_parts: vec![body.clone(), rolling(1), android(1), effect(1)],
+            chair_frames: vec![
+                vec![rolling(1), android(1), effect(1)],
+                vec![rolling(2), android(2), effect(2)],
+            ],
             chair_frame: 1,
             ..Default::default()
         };
         apply_chair_frame(&mut state);
-        assert_eq!(state.avatar_loaded_parts.len(), 3);
+        assert_eq!(state.avatar_loaded_parts.len(), 4);
         assert!(state.avatar_loaded_parts.iter().any(|p| p.slot == "body"));
         let part = state
             .avatar_loaded_parts
@@ -764,6 +780,12 @@ mod tests {
             .find(|p| p.slot == "android_effect")
             .expect("android part");
         assert_eq!(android_part.rgba, vec![2, 2, 2, 255]);
+        let effect_part = state
+            .avatar_loaded_parts
+            .iter()
+            .find(|p| p.slot == "chair_effect2")
+            .expect("chair effect part");
+        assert_eq!(effect_part.rgba, vec![2, 2, 2, 255]);
     }
 
     #[test]

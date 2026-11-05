@@ -140,9 +140,9 @@ remaining CharaSim gaps.
   taming `characterEmotion` overrides it.
 - taming `info/flip` mirrors body/equipment parts; taming `characterAction`/
   `characterEmotion` override the body pose/emotion for the `sit`/`stand0` key.
-- chair `effect2` and `Effect/ItemEff.img/<chairId>/0|1` first frames are loaded
-  (metadata `_outlink` → `Effect/_Canvas`). Multi-frame chair effect animation is
-  not wired to the frame timer yet.
+- chair `effect2` and `Effect/ItemEff.img/<chairId>/0|1` all frames are loaded
+  (metadata `_outlink` → `Effect/_Canvas`) and played through the chair frame
+  slider/auto-play. The static chair base stays; effect layers are replaced per frame.
 - Current-client parity for the C#-implemented chair behavior: complete. The remaining
   gap is data-driven behavior for WZ-only custom chair types, which has no C# reference
   implementation.

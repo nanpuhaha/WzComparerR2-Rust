@@ -2411,90 +2411,24 @@ fn load_chair_item(
     };
     let mut parts = vec![part];
 
-    if let Some(effect2) = child_node(&item, "effect2") {
-        if let Some(frame) = effect2.object_children().first() {
-            if let Some(png) = frame.first_canvas() {
-                if let Ok((ew, eh, ergba)) =
-                    wz_image::decode_png_ref_to_rgba(&png, archive.source())
-                {
-                    let (eorigin, ez) = png_origin_z(&png);
-                    append_chair_effect_part(
-                        &mut root,
-                        &mut parts,
-                        ChairEffectFrame {
-                            slot: "chair_effect2",
-                            width: ew,
-                            height: eh,
-                            rgba: ergba,
-                            origin: eorigin,
-                            z_index: ez,
-                        },
-                        body_move,
-                    );
-                }
+    let chair_frames = load_chair_effect_frames(data_root, item_id, &archive, &item, body_move);
+    if let Some(frames) = &chair_frames {
+        if let Some(first) = frames.frames.first() {
+            for part in first {
+                let local =
+                    crate::Point::new(part.position.x - body_move.x, part.position.y - body_move.y);
+                let mut skin = SkinLayer::new(&part.slot);
+                skin.z = "chair".into();
+                skin.z_index = part.z_index;
+                skin.origin = crate::Point::ZERO;
+                skin.width = part.width;
+                skin.height = part.height;
+                root.append_bone(skin, &part.slot, local);
             }
+            parts.extend(first.iter().cloned());
         }
     }
-
-    if item_id / 10000 == 301 {
-        for layer in ["0", "1"] {
-            if let Some((ew, eh, ergba, eorigin, ez)) =
-                load_item_eff_first(data_root, item_id, layer)
-            {
-                let slot = format!("chair_eff{layer}");
-                append_chair_effect_part(
-                    &mut root,
-                    &mut parts,
-                    ChairEffectFrame {
-                        slot: &slot,
-                        width: ew,
-                        height: eh,
-                        rgba: ergba,
-                        origin: eorigin,
-                        z_index: ez,
-                    },
-                    body_move,
-                );
-            }
-        }
-    }
-
-    Some((root, parts, None))
-}
-
-struct ChairEffectFrame<'a> {
-    slot: &'a str,
-    width: u32,
-    height: u32,
-    rgba: Vec<u8>,
-    origin: crate::Point,
-    z_index: i32,
-}
-
-fn append_chair_effect_part(
-    root: &mut Bone,
-    parts: &mut Vec<AvatarPart>,
-    frame: ChairEffectFrame<'_>,
-    body_move: crate::Point,
-) {
-    let local = crate::Point::new(-frame.origin.x, -frame.origin.y);
-    let mut skin = SkinLayer::new(frame.slot);
-    skin.z = "chair".into();
-    skin.z_index = frame.z_index;
-    skin.origin = crate::Point::ZERO;
-    skin.width = frame.width;
-    skin.height = frame.height;
-    root.append_bone(skin, frame.slot, local);
-    parts.push(AvatarPart {
-        slot: frame.slot.to_string(),
-        width: frame.width,
-        height: frame.height,
-        rgba: frame.rgba,
-        position: crate::Point::new(body_move.x + local.x, body_move.y + local.y),
-        origin: frame.origin,
-        z_index: frame.z_index,
-        custom_origin_map: Default::default(),
-    });
+    Some((root, parts, chair_frames))
 }
 
 fn png_outlink(png: &wz_core::image::PngRef) -> Option<String> {
@@ -2509,24 +2443,26 @@ fn png_outlink(png: &wz_core::image::PngRef) -> Option<String> {
         })
 }
 
-/// `Effect/ItemEff.img/<chairId>/0|1` 첫 프레임을 찾는다.
-fn load_item_eff_first(
+/// `Effect/ItemEff.img/<chairId>/0|1` 의 모든 프레임을 찾는다.
+fn load_item_eff_frames(
     data_root: &std::path::Path,
     chair_id: i32,
     layer: &str,
-) -> Option<(u32, u32, Vec<u8>, crate::Point, i32)> {
+) -> Vec<(u32, u32, Vec<u8>, crate::Point, i32)> {
     let base = data_root.join("Effect");
     let canvas_dir = base.join("_Canvas");
     let mut canvas_archives = Vec::new();
-    for entry in std::fs::read_dir(&canvas_dir).ok()?.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) == Some("wz") {
-            if let Ok(archive) = WzArchive::open(&path) {
-                canvas_archives.push(archive);
+    if let Ok(entries) = std::fs::read_dir(&canvas_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("wz") {
+                if let Ok(archive) = WzArchive::open(&path) {
+                    canvas_archives.push(archive);
+                }
             }
         }
     }
-    for entry in std::fs::read_dir(base).ok()?.flatten() {
+    for entry in std::fs::read_dir(base).ok().into_iter().flatten().flatten() {
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) != Some("wz") {
             continue;
@@ -2558,26 +2494,131 @@ fn load_item_eff_first(
             continue;
         };
         // ItemEff: layer -> frame group -> Canvas(_outlink).
-        let frame_group = layer_node.object_children().first().unwrap_or(layer_node);
-        let canvas_node = frame_group.object_children().first().unwrap_or(frame_group);
-        let png = canvas_node.first_canvas()?;
-        let link = png_outlink(&png);
-        let (w, h, rgba) = if let Some(link) = link {
-            let mut resolved = None;
-            for canvas_archive in &canvas_archives {
-                if let Ok(value) = crate::frame_layers::resolve_outlink(canvas_archive, &link) {
-                    resolved = Some((value.w, value.h, value.rgba));
-                    break;
-                }
-            }
-            resolved?
-        } else {
-            wz_image::decode_png_ref_to_rgba(&png, archive.source()).ok()?
+        let Some(frame_group) = layer_node.object_children().first() else {
+            continue;
         };
-        let (origin, z) = png_origin_z(&png);
-        return Some((w, h, rgba, origin, z));
+        let mut frames = Vec::new();
+        for canvas_node in frame_group.object_children() {
+            let Some(png) = canvas_node.first_canvas() else {
+                continue;
+            };
+            let (w, h, rgba) = if let Some(link) = png_outlink(&png) {
+                let mut resolved = None;
+                for canvas_archive in &canvas_archives {
+                    if let Ok(value) = crate::frame_layers::resolve_outlink(canvas_archive, &link) {
+                        resolved = Some((value.w, value.h, value.rgba));
+                        break;
+                    }
+                }
+                let Some(value) = resolved else {
+                    continue;
+                };
+                value
+            } else {
+                let Ok(value) = wz_image::decode_png_ref_to_rgba(&png, archive.source()) else {
+                    continue;
+                };
+                value
+            };
+            let (origin, z) = png_origin_z(&png);
+            frames.push((w, h, rgba, origin, z));
+        }
+        if !frames.is_empty() {
+            return frames;
+        }
     }
-    None
+    Vec::new()
+}
+
+fn chair_effect_part(
+    slot: &str,
+    width: u32,
+    height: u32,
+    rgba: Vec<u8>,
+    origin: crate::Point,
+    z_index: i32,
+    body_move: crate::Point,
+) -> AvatarPart {
+    AvatarPart {
+        slot: slot.to_string(),
+        width,
+        height,
+        rgba,
+        position: crate::Point::new(body_move.x - origin.x, body_move.y - origin.y),
+        origin,
+        z_index,
+        custom_origin_map: Default::default(),
+    }
+}
+
+/// 체어 `effect2` / `ItemEff` 모든 프레임을 하나의 ChairFrames 로 묶는다.
+fn load_chair_effect_frames(
+    data_root: &std::path::Path,
+    item_id: i32,
+    archive: &WzArchive,
+    item: &ImageNode,
+    body_move: crate::Point,
+) -> Option<ChairFrames> {
+    let mut effect2 = Vec::new();
+    if let Some(node) = child_node(item, "effect2") {
+        for frame in node.object_children() {
+            let Some(png) = frame.first_canvas() else {
+                continue;
+            };
+            let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(&png, archive.source()) else {
+                continue;
+            };
+            let (origin, z) = png_origin_z(&png);
+            effect2.push(vec![chair_effect_part(
+                "chair_effect2",
+                w,
+                h,
+                rgba,
+                origin,
+                z,
+                body_move,
+            )]);
+        }
+    }
+
+    let mut eff0 = Vec::new();
+    let mut eff1 = Vec::new();
+    if item_id / 10000 == 301 {
+        for (layer, out) in [("0", &mut eff0), ("1", &mut eff1)] {
+            for (w, h, rgba, origin, z) in load_item_eff_frames(data_root, item_id, layer) {
+                out.push(vec![chair_effect_part(
+                    &format!("chair_eff{layer}"),
+                    w,
+                    h,
+                    rgba,
+                    origin,
+                    z,
+                    body_move,
+                )]);
+            }
+        }
+    }
+
+    let count = effect2.len().max(eff0.len()).max(eff1.len());
+    if count == 0 {
+        return None;
+    }
+    let mut frames = Vec::with_capacity(count);
+    for i in 0..count {
+        let mut parts = Vec::new();
+        if !effect2.is_empty() {
+            parts.extend(effect2[i % effect2.len()].clone());
+        }
+        if !eff0.is_empty() {
+            parts.extend(eff0[i % eff0.len()].clone());
+        }
+        if !eff1.is_empty() {
+            parts.extend(eff1[i % eff1.len()].clone());
+        }
+        frames.push(parts);
+    }
+    let delays = vec![120; frames.len()];
+    Some(ChairFrames { frames, delays })
 }
 
 /// RGBA8 버퍼를 최근접 이웃으로 `factor` 배 확대/축소한다.
@@ -4694,6 +4735,7 @@ mod chair_custom_type_tests {
             .find(|p| p.slot == "chair_effect2")
             .expect("chair_effect2");
         assert!(effect2.width > 1 && effect2.height > 1);
+        assert!(av.chair_frames.len() > 1);
 
         let Some(group) = load_chair(3016200) else {
             return;
@@ -4706,6 +4748,7 @@ mod chair_custom_type_tests {
                 .unwrap_or_else(|| panic!("{slot} missing"));
             assert!(part.width > 1 && part.height > 1);
         }
+        assert!(group.chair_frames.len() > 1);
     }
 
     #[test]
