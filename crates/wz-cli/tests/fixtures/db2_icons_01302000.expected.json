@@ -1,0 +1,128 @@
+[
+  {
+    "path": "01302000.img/info/icon",
+    "width": 31,
+    "height": 30,
+    "format": 1,
+    "sha256": "d4565137522cd19ccaeb162e843314fbd793dd0ebff34b21da934be42d03df0a"
+  },
+  {
+    "path": "01302000.img/info/iconRaw",
+    "width": 31,
+    "height": 29,
+    "format": 1,
+    "sha256": "319c743060d2c6fd9336d4c74fcc1be39f1288f60a14e20026b4688a3c14eb3f"
+  },
+  {
+    "path": "01302000.img/walk1/0/weapon",
+    "width": 43,
+    "height": 8,
+    "format": 1,
+    "sha256": "2783416bf165530201f57fde78aecee9d52e9b9424a1f179019fbf3db50ffe9d"
+  },
+  {
+    "path": "01302000.img/walk1/1/weapon",
+    "width": 41,
+    "height": 14,
+    "format": 1,
+    "sha256": "9bf91ca3cec695cdaad5434ae2e10ca846d2e6d18cd9b6af8ac433fcee14adfc"
+  },
+  {
+    "path": "01302000.img/walk1/3/weapon",
+    "width": 41,
+    "height": 13,
+    "format": 1,
+    "sha256": "0ae8cab7d8d77aa969fccd71ae6e7993e75e294568772510238faeb88b59f4aa"
+  },
+  {
+    "path": "01302000.img/swingO1/0/weapon",
+    "width": 40,
+    "height": 8,
+    "format": 1,
+    "sha256": "d4be32d8342069a2d8fa984592d12e88c69762595c22f4f3b48d919ac429c7fd"
+  },
+  {
+    "path": "01302000.img/swingO1/1/weapon",
+    "width": 41,
+    "height": 13,
+    "format": 1,
+    "sha256": "cc698a6c801589c76fa81e09eb5c84b63c9f4e0fef690594a615346813ec5dff"
+  },
+  {
+    "path": "01302000.img/swingO1/2/weapon",
+    "width": 32,
+    "height": 33,
+    "format": 1,
+    "sha256": "53048bc07ebbe220086404c9934cf5708a4444d1239b62fbb4a1846c226044ae"
+  },
+  {
+    "path": "01302000.img/swingO2/0/weapon",
+    "width": 32,
+    "height": 30,
+    "format": 1,
+    "sha256": "ec3cb3aab94f3d7c93448c9efbe866915ef3e0371f4d4fc0ab05e52d12d7d7fe"
+  },
+  {
+    "path": "01302000.img/swingO2/1/weapon",
+    "width": 24,
+    "height": 37,
+    "format": 1,
+    "sha256": "feac730269d48a0394f12ab120ebf97760b4d589991fa2c90a0ae8b1a83293bc"
+  },
+  {
+    "path": "01302000.img/swingO2/2/weapon",
+    "width": 30,
+    "height": 32,
+    "format": 1,
+    "sha256": "34c89fb3dee0dfcc33db40694ef823897920b8f021e45394d209c4c1a19d077c"
+  },
+  {
+    "path": "01302000.img/swingO3/1/weapon",
+    "width": 40,
+    "height": 8,
+    "format": 1,
+    "sha256": "58c1d533c3c3b03b4f7e3644a9ab7438592509a2256a6ce8371d72150c874472"
+  },
+  {
+    "path": "01302000.img/swingO3/2/weapon",
+    "width": 38,
+    "height": 8,
+    "format": 1,
+    "sha256": "cf74e825dd372478b474f75bbaa8a9e849ca4372ba8616ac90f50f7e18f6ffad"
+  },
+  {
+    "path": "01302000.img/swingOF/0/weapon",
+    "width": 8,
+    "height": 43,
+    "format": 1,
+    "sha256": "62a5ddf13a8dbdc9995788c3b6fe3d3bae4baa399fa87260005f3c0dff17a174"
+  },
+  {
+    "path": "01302000.img/swingOF/1/weapon",
+    "width": 42,
+    "height": 13,
+    "format": 1,
+    "sha256": "b2a203edf47e8c1477d5d8b4b8381c75faa6f371c42e24572f3824dae153916e"
+  },
+  {
+    "path": "01302000.img/swingOF/2/weapon",
+    "width": 32,
+    "height": 30,
+    "format": 1,
+    "sha256": "5a023ad1eaebf74d9da29e70a10e25c43fc879c536cc262b1fbade2ad34a2255"
+  },
+  {
+    "path": "01302000.img/swingOF/3/weapon",
+    "width": 41,
+    "height": 13,
+    "format": 1,
+    "sha256": "753d0211181e47d156501ffff10d2315db26d68683de12187172424985fadbfe"
+  },
+  {
+    "path": "01302000.img/stabO1/1/weapon",
+    "width": 42,
+    "height": 8,
+    "format": 1,
+    "sha256": "de3ed88ac49b2a82629d789384dc03786c9de9336e7be28e05540824fb07c16b"
+  }
+]

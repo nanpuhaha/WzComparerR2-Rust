@@ -40,3 +40,114 @@ pub fn cmd_db2(
     }
     Ok(())
 }
+
+fn collect_icons(
+    node: &wz_core::image::Node,
+    parent: &str,
+    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+    out: &mut Vec<serde_json::Value>,
+) {
+    use sha2::{Digest, Sha256};
+    let path = if parent.is_empty() {
+        node.name.to_string()
+    } else {
+        format!("{parent}/{}", node.name)
+    };
+    if let Some(wz_core::image::ImageValue::Png(png)) = &node.value {
+        if let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(png, source) {
+            let mut hasher = Sha256::new();
+            hasher.update(&rgba);
+            out.push(serde_json::json!({
+                "path": path,
+                "width": w,
+                "height": h,
+                "format": png.format,
+                "sha256": format!("{:x}", hasher.finalize()),
+            }));
+        }
+    }
+    for child in node.object_children() {
+        collect_icons(child, &path, source, out);
+    }
+}
+
+pub fn cmd_db2_icons(
+    wz_path: &Path,
+    image: &str,
+    filter: &str,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let clean = image.trim_end_matches(".img");
+    let image_name = format!("{clean}.img");
+    let entry = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+        .ok_or_else(|| format!("이미지를 찾을 수 없습니다: {image_name}"))?;
+    let mut node = archive.parse_image_at(entry.offset.ok_or("이미지 오프셋 없음")?)?;
+    node.name = std::sync::Arc::from(image_name.as_str());
+    let mut rows = Vec::new();
+    collect_icons(&node, "", archive.source(), &mut rows);
+    rows.retain(|r| {
+        filter.is_empty()
+            || r.get("path")
+                .and_then(|v| v.as_str())
+                .map(|p| p.contains(filter))
+                .unwrap_or(false)
+    });
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!(
+                "{} {}x{} format={} {}",
+                row["path"].as_str().unwrap_or(""),
+                row["width"],
+                row["height"],
+                row["format"],
+                row["sha256"].as_str().unwrap_or("")
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn icons_match_csharp_rgba_sha() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let path = root.join("Character/Weapon/_Canvas/_Canvas_000.wz");
+        if !path.exists() {
+            return;
+        }
+        let archive = WzArchive::open(&path).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let entry = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("01302000.img"))
+            .unwrap();
+        let mut node = archive.parse_image_at(entry.offset.unwrap()).unwrap();
+        node.name = std::sync::Arc::from("01302000.img");
+        let mut rows = Vec::new();
+        collect_icons(&node, "", archive.source(), &mut rows);
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/db2_icons_01302000.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(serde_json::Value::Array(rows), expected);
+    }
+}

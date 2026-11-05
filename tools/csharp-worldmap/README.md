@@ -21,6 +21,8 @@ Commands:
 - `potential <item.wz> <code> <level>` — emits ItemOption lines.
 - `db2 <wz> <image.img>` — emits the DB2 node table rows
   (`path/name/node_type/value/children`).
+- `icons <wz> <image.img>` — decodes ARGB4444/ARGB8888 canvases and emits
+  `path/width/height/format/RGBA SHA-256`.
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -53,3 +55,10 @@ dotnet run ... -- db2 ../../Data/Character/Weapon/Weapon_000.wz 01302000.img
 → 270 rows
 ```
 Rust `wz db2 ... --json --limit 1000` produces exactly the same 270 rows.
+
+Verified icon output:
+```
+dotnet run ... -- icons ../../Data/Character/Weapon/_Canvas/_Canvas_000.wz 01302000.img
+→ 18 canvases
+```
+Rust `wz db2-icons ... --json` matches all 18 RGBA SHA-256 values exactly.

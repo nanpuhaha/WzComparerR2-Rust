@@ -216,6 +216,20 @@ enum Command {
         limit: usize,
     },
 
+    /// DB2 아이콘/이미지 뷰어 (Canvas RGBA SHA-256)
+    Db2Icons {
+        /// WZ 파일
+        wz: PathBuf,
+        /// 이미지 이름
+        image: String,
+        /// path 부분 문자열 필터
+        #[arg(long, default_value = "")]
+        filter: String,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// MapleStory `.patch` 레코드 확인/적용
     Patch {
         /// .patch 파일 경로
@@ -462,6 +476,12 @@ fn main() {
             json,
             limit,
         } => cmd_db2(&wz, &image, &filter, json, limit),
+        Command::Db2Icons {
+            wz,
+            image,
+            filter,
+            json,
+        } => cmd_db2_icons(&wz, &image, &filter, json),
         Command::Patch {
             patch,
             old,

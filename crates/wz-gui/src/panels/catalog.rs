@@ -96,7 +96,98 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             }
         }
     });
+    ui.horizontal(|ui| {
+        if ui.button("선택 이미지 아이콘 보기").clicked() {
+            let Some(sel) = state.selected.clone() else {
+                state.db2_status = "선택된 노드 없음".into();
+                return;
+            };
+            let Some(archive) = state.shared_archive.lock().unwrap().clone() else {
+                state.db2_status = "아카이브 없음".into();
+                return;
+            };
+            let name = sel.split('/').rfind(|s| !s.is_empty()).unwrap_or("");
+            let image_name = if name.ends_with(".img") {
+                name.to_string()
+            } else {
+                format!("{name}.img")
+            };
+            let Some(tree) = &state.tree else {
+                state.db2_status = "트리 없음".into();
+                return;
+            };
+            let Some(entry) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+            else {
+                state.db2_status = format!("엔트리 없음: {image_name}");
+                return;
+            };
+            let Some(offset) = entry.offset else {
+                state.db2_status = "오프셋 없음".into();
+                return;
+            };
+            if let Ok(mut node) = archive.parse_image_at(offset) {
+                node.name = std::sync::Arc::from(image_name.as_str());
+                let mut icons = Vec::new();
+                fn walk(
+                    node: &wz_core::image::Node,
+                    parent: &str,
+                    source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+                    icons: &mut Vec<(String, u32, u32, Vec<u8>)>,
+                ) {
+                    use wz_core::image::ImageValue;
+                    let path = if parent.is_empty() {
+                        node.name.to_string()
+                    } else {
+                        format!("{parent}/{}", node.name)
+                    };
+                    if let Some(ImageValue::Png(png)) = &node.value {
+                        if let Ok((w, h, rgba)) =
+                            wz_image::decode_png_ref_to_rgba(png, source)
+                        {
+                            icons.push((path.clone(), w, h, rgba));
+                        }
+                    }
+                    for child in node.object_children() {
+                        walk(child, &path, source, icons);
+                    }
+                }
+                walk(&node, "", archive.source(), &mut icons);
+                state.db2_icons = icons
+                    .into_iter()
+                    .map(|(path, w, h, rgba)| {
+                        let image = egui::ColorImage::from_rgba_unmultiplied(
+                            [w as usize, h as usize],
+                            &rgba,
+                        );
+                        (
+                            path,
+                            ui.ctx().load_texture(
+                                "db2_icon",
+                                image,
+                                egui::TextureOptions::NEAREST,
+                            ),
+                        )
+                    })
+                    .collect();
+                state.db2_status = format!("{} icons", state.db2_icons.len());
+            }
+        }
+    });
     ui.label(&state.db2_status);
+    ui.horizontal_wrapped(|ui| {
+        for (path, texture) in &state.db2_icons {
+            let response = ui.add(
+                egui::Image::new(texture)
+                    .max_size(egui::vec2(64.0, 64.0))
+                    .sense(egui::Sense::hover()),
+            );
+            response.on_hover_text(path);
+        }
+    });
     let filter = state.db2_filter.clone();
     let rows: Vec<&wz_db::Db2Row> = state
         .db2_rows

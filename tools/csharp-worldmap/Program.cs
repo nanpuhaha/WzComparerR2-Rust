@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Security.Cryptography;
 using WzComparerR2.WzLib;
 
 class Program
@@ -350,6 +351,60 @@ class Program
         DumpDb2(img.Node, "", rows);
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static byte[] PngRgba(Wz_Png p, out int width, out int height)
+    {
+        width = p.Width; height = p.Height;
+        var raw = p.GetRawData();
+        if (p.Format == Wz_TextureFormat.ARGB8888)
+        {
+            var rgba = new byte[width * height * 4];
+            for (int i = 0; i < width * height; i++)
+            {
+                rgba[i*4+0] = raw[i*4+2];
+                rgba[i*4+1] = raw[i*4+1];
+                rgba[i*4+2] = raw[i*4+0];
+                rgba[i*4+3] = raw[i*4+3];
+            }
+            return rgba;
+        }
+        // ARGB4444: little-endian ushort, low=ggggbbbb, high=aaaarrrr.
+        var out4444 = new byte[width * height * 4];
+        for (int i = 0; i < width * height; i++)
+        {
+            int v = raw[i*2] | (raw[i*2+1] << 8);
+            int b = (v & 0xF) * 17;
+            int g = ((v >> 4) & 0xF) * 17;
+            int r = ((v >> 8) & 0xF) * 17;
+            int a = ((v >> 12) & 0xF) * 17;
+            out4444[i*4+0] = (byte)r;
+            out4444[i*4+1] = (byte)g;
+            out4444[i*4+2] = (byte)b;
+            out4444[i*4+3] = (byte)a;
+        }
+        return out4444;
+    }
+    static void DumpIcons(Wz_Node n, string parent, List<object> rows)
+    {
+        var path = parent == "" ? n.Text : parent + "/" + n.Text;
+        if (n.Value is Wz_Png p && p.ActualScale == 1 && (p.Format == Wz_TextureFormat.ARGB4444 || p.Format == Wz_TextureFormat.ARGB8888))
+        {
+            var rgba = PngRgba(p, out var w, out var h);
+            using var sha = SHA256.Create();
+            rows.Add(new { path, width = w, height = h, format = (int)p.Format, sha256 = Convert.ToHexString(sha.ComputeHash(rgba)).ToLowerInvariant() });
+        }
+        foreach (Wz_Node c in n.Nodes) DumpIcons(c, path, rows);
+    }
+    static void Icons(string path, string imageName)
+    {
+        var st = new Wz_Structure(); st.Load(path);
+        var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == imageName);
+        var img = imgNode?.Value as Wz_Image;
+        if (img == null) { Console.WriteLine("{\"error\":\"image not found\"}"); return; }
+        img.TryExtract();
+        var rows = new List<object>();
+        DumpIcons(img.Node, "", rows);
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -357,6 +412,7 @@ class Program
         else if (args[0] == "nodepaths") NodePaths(args[1], args[2]);
         else if (args[0] == "gear") GearTooltip(args[1], args[2]);
         else if (args[0] == "db2") Db2(args[1], args[2]);
+        else if (args[0] == "icons") Icons(args[1], args[2]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);
