@@ -559,3 +559,9 @@ merge semantics (recursive directory merge, conflict errors).
   the GUI Catalog has a DB2 Character table.
 - Executed C# reference: `tools/csharp-worldmap characters ...`.
   `Coat_000.wz` → C# 682 == Rust 682 rows, exact match.
+
+### DB2 Character/Cap
+
+- The generic `wz db2-characters` path also covers the Cap tab. `Cap_000.wz`
+  → C# `characters` 3166 == Rust 3166 rows, exact match
+  (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).

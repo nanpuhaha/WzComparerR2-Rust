@@ -81,8 +81,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
    (`wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-maps`, `wz db2-mobs`,
    `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`,
    `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`,
-   `wz db2-characters`, GUI Catalog). 나머지 28개 전용 그리드와 전체 화면
-   이미지 뷰어 UI는 미구현.
+   `wz db2-characters`, GUI Catalog). Character는 Coat(682)와 Cap(3166) 두
+   카테고리를 실데이터 비교했고, 나머지 27개 전용 그리드와 전체 화면 이미지
+   뷰어 UI는 미구현.
 6. `WzComparerR2.Common/Controls` (2,138 LOC), `OpenAPI` (2,086 LOC) — 미구현.
 7. `LuaConsole` (1,451), `Network` (1,954), `PluginBase` (693) — 미구현.
 
@@ -124,6 +125,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - DB2 Character grid `Coat_000.wz`: C# `StringLinker.StringEqp` 682 rows ==
   Rust `wz db2-characters` 682 rows
   (id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat 완전 일치).
+- DB2 Character/Cap grid `Cap_000.wz`: C# 3166 rows == Rust
+  `wz db2-characters` 3166 rows (동일 컬럼 완전 일치).
 
 ## 남은 작업
 
