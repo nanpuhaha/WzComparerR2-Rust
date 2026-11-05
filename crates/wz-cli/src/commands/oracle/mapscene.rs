@@ -34,7 +34,10 @@ pub fn cmd_oracle_mapscene(
 
     let off = entry.offset.ok_or("맵 이미지 오프셋이 없습니다")?;
     let img_root = archive.parse_image_at(off)?;
-    let map_data = MapData::parse_from_node(&img_root);
+    let mut map_data = MapData::parse_from_node(&img_root);
+    if map_data.info.map_id.is_none() {
+        map_data.info.map_id = clean.parse::<i32>().ok();
+    }
 
     let mut doc = oracle_envelope("mapscene", detection);
 
@@ -166,6 +169,59 @@ pub fn cmd_oracle_mapscene(
             }),
         );
     }
+
+    // tooltips
+    let tooltip_items: Vec<serde_json::Value> = map_data
+        .tooltips
+        .iter()
+        .map(|t| {
+            serde_json::json!({
+                "index": t.index,
+                "x1": t.x1,
+                "y1": t.y1,
+                "x2": t.x2,
+                "y2": t.y2,
+                "char_rect": t.char_rect,
+            })
+        })
+        .collect();
+    res.insert("tooltips".into(), serde_json::Value::Array(tooltip_items));
+
+    // sky whale / illuminant cluster
+    let sky_items: Vec<serde_json::Value> = map_data
+        .sky_whales
+        .iter()
+        .map(|s| {
+            serde_json::json!({
+                "name": s.name,
+                "start": [s.start.0, s.start.1],
+                "end": [s.end.0, s.end.1],
+                "width": s.width,
+                "speed": s.speed,
+                "vrate": s.vrate,
+            })
+        })
+        .collect();
+    res.insert("sky_whales".into(), serde_json::Value::Array(sky_items));
+    let cluster_items: Vec<serde_json::Value> = map_data
+        .illuminant_clusters
+        .iter()
+        .map(|c| {
+            serde_json::json!({
+                "name": c.name,
+                "start": [c.start.0, c.start.1],
+                "end": [c.end.0, c.end.1],
+                "size": c.size,
+                "speed": c.speed,
+                "start_point": c.start_point,
+                "end_point": c.end_point,
+            })
+        })
+        .collect();
+    res.insert(
+        "illuminant_clusters".into(),
+        serde_json::Value::Array(cluster_items),
+    );
 
     // reactors
     let reactor_items: Vec<serde_json::Value> = map_data

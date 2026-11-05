@@ -619,6 +619,45 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         let _ = tex;
     }
 
+    // 맵 오브젝트 툴팁 (ToolTip/<n> + String/ToolTipHelp.img)
+    if resp.hovered() {
+        if let Some(pointer) = resp.hover_pos() {
+            let local = glam::Vec2::new(pointer.x - resp.rect.min.x, pointer.y - resp.rect.min.y);
+            let world = state.camera.screen_to_world(local);
+            for tip in &state.map_tooltips {
+                if world.x >= tip.x1 as f32
+                    && world.x <= tip.x2 as f32
+                    && world.y >= tip.y1 as f32
+                    && world.y <= tip.y2 as f32
+                {
+                    if let Some(title) = &tip.title {
+                        let text = match &tip.desc {
+                            Some(desc) if !desc.is_empty() => format!("{title}\n{desc}"),
+                            _ => title.clone(),
+                        };
+                        let painter = ui.painter();
+                        painter.rect_filled(
+                            egui::Rect::from_min_size(
+                                pointer + egui::vec2(12.0, 12.0),
+                                egui::vec2(240.0, 34.0),
+                            ),
+                            4.0,
+                            egui::Color32::from_black_alpha(220),
+                        );
+                        painter.text(
+                            pointer + egui::vec2(18.0, 16.0),
+                            egui::Align2::LEFT_TOP,
+                            text,
+                            egui::FontId::proportional(12.0),
+                            egui::Color32::WHITE,
+                        );
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
     // 발판 선분
     if let Some(m) = &state.current_map {
         let painter = ui.painter();
@@ -644,6 +683,44 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             state.map_particle_layers.len(),
             m.light.as_ref().map(|l| l.lights.len()).unwrap_or(0)
         ));
+    }
+
+    // 스카이웨일/조명 클러스터 경로 (원본 편집 오버레이)
+    if let Some(m) = &state.current_map {
+        let painter = ui.painter();
+        let rect = resp.rect;
+        let to_screen = |x: f32, y: f32| {
+            let s = state.camera.world_to_screen(glam::Vec2::new(x, y));
+            egui::pos2(rect.min.x + s.x, rect.min.y + s.y)
+        };
+        for whale in &m.sky_whales {
+            for dx in [0, -whale.width / 2, whale.width / 2] {
+                let a = to_screen((whale.start.0 + dx) as f32, whale.start.1 as f32);
+                let b = to_screen((whale.end.0 + dx) as f32, whale.end.1 as f32);
+                painter.line_segment([a, b], egui::Stroke::new(1.0, egui::Color32::CYAN));
+                painter.text(
+                    b,
+                    egui::Align2::LEFT_BOTTOM,
+                    &whale.name,
+                    egui::FontId::proportional(9.0),
+                    egui::Color32::CYAN,
+                );
+            }
+        }
+        for cluster in &m.illuminant_clusters {
+            for dx in [0, -cluster.size / 2, cluster.size / 2] {
+                let a = to_screen((cluster.start.0 + dx) as f32, cluster.start.1 as f32);
+                let b = to_screen((cluster.end.0 + dx) as f32, cluster.end.1 as f32);
+                painter.line_segment(
+                    [a, b],
+                    egui::Stroke::new(1.0, egui::Color32::from_rgb(255, 220, 120)),
+                );
+            }
+            let a = to_screen(cluster.start.0 as f32, cluster.start.1 as f32);
+            let b = to_screen(cluster.end.0 as f32, cluster.end.1 as f32);
+            painter.circle_filled(a, 3.0, egui::Color32::YELLOW);
+            painter.circle_filled(b, 3.0, egui::Color32::YELLOW);
+        }
     }
 
     ui.label(format!(

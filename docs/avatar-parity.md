@@ -288,3 +288,20 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   minimap panel shows region and map name from String.wz.
 - Real tests: mob `100100` has stand/move/hit/die frames; `000020000` foothold
   patrol; `map_display_names` finds named maps in `String_000.wz`.
+
+## World map, map tooltips, sky whale / illuminant cluster
+
+- `MapData` parses `ToolTip/<n>` (+ `<n>char`), `skyWhale/<n>`
+  (start/end/width/speed/vrate/applyTerm) and `illuminantCluster/<n>`
+  (start/end/size/speed/particle/startPoint/endPoint).
+- Map ID now falls back to the image name in the GUI/oracle paths, which the
+  `ToolTipHelp.img/Mapobject/<mapId>/<n>` lookup needs.
+- `ToolTipHelp.img` `Title`/`Desc` are loaded for map tooltips; hovering a
+  tooltip rectangle paints the title/desc at the pointer.
+- `wz-gui::worldmap` lists `Map/WorldMap/*.wz` images, loads
+  `info/WorldMap`, `BaseImg/0` (+origin/spot) and `MapList` spots; the inspector
+  world-map panel shows the base image, spots, titles and map numbers.
+- Sky whale and illuminant cluster paths are drawn as world-space overlays with
+  endpoints/labels (matching the original fly-layer editor visualization).
+- Real tests: map `000050000` tooltip rect + String title; `WorldMap000` base
+  image + 7 spots + map numbers; synthetic sky whale/illuminant parse test.

@@ -290,6 +290,43 @@ impl FootholdTree {
     }
 }
 
+/// 맵 툴팁 영역 (`TooltipItem.cs`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MapTooltip {
+    pub index: i32,
+    pub x1: i32,
+    pub y1: i32,
+    pub x2: i32,
+    pub y2: i32,
+    pub char_rect: Option<(i32, i32, i32, i32)>,
+}
+
+/// 스카이웨일 경로 (`SkyWhaleItem.cs`).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct SkyWhale {
+    pub name: String,
+    pub start: (i32, i32),
+    pub end: (i32, i32),
+    pub width: i32,
+    pub speed: f64,
+    pub fix_speed_shoe: f64,
+    pub vrate: f64,
+    pub apply_term: i32,
+}
+
+/// 조명 클러스터 (`IlluminantClusterItem.cs`).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct IlluminantCluster {
+    pub name: String,
+    pub start: (i32, i32),
+    pub end: (i32, i32),
+    pub size: i32,
+    pub speed: f64,
+    pub particle: i32,
+    pub start_point: i32,
+    pub end_point: i32,
+}
+
 /// 맵 조명 (`MapLight.cs`).
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct MapLight {
@@ -363,6 +400,9 @@ pub struct MapData {
     pub reactors: Vec<MapReactor>,
     pub light: Option<MapLight>,
     pub mini_map: Option<MiniMapInfo>,
+    pub tooltips: Vec<MapTooltip>,
+    pub sky_whales: Vec<SkyWhale>,
+    pub illuminant_clusters: Vec<IlluminantCluster>,
     pub particles: Vec<MapParticle>,
     pub map_events: Vec<MapEvent>,
 }
@@ -375,6 +415,11 @@ impl MapData {
         if let Some(info_id) = arena.find_child(root, "info") {
             data.info = parse_map_info_arena(arena, info_id);
         }
+        if data.info.map_id.is_none() {
+            data.info.map_id = arena
+                .name(root)
+                .and_then(|name| name.trim_end_matches(".img").parse::<i32>().ok());
+        }
 
         if let Some(mini_id) = arena.find_child(root, "miniMap") {
             data.mini_map = Some(MiniMapInfo {
@@ -384,6 +429,109 @@ impl MapData {
                 center_y: get_arena_int(arena, mini_id, "centerY").unwrap_or(0),
                 mag: get_arena_int(arena, mini_id, "mag").unwrap_or(0),
             });
+        }
+
+        if let Some(tooltip_id) = arena.find_child(root, "ToolTip") {
+            for &node in arena.children(tooltip_id) {
+                let name = arena.name(node).unwrap_or("");
+                let Some(index) = name.parse::<i32>().ok() else {
+                    continue;
+                };
+                let rect = |key: &str| -> (i32, i32) {
+                    (
+                        get_arena_int(arena, node, &format!("{}1", key)).unwrap_or(0),
+                        get_arena_int(arena, node, &format!("{}2", key)).unwrap_or(0),
+                    )
+                };
+                let (x1, x2) = rect("x");
+                let (y1, y2) = rect("y");
+                let char_rect =
+                    arena
+                        .find_child(tooltip_id, &format!("{}char", index))
+                        .map(|char_id| {
+                            (
+                                get_arena_int(arena, char_id, "x1").unwrap_or(0),
+                                get_arena_int(arena, char_id, "y1").unwrap_or(0),
+                                get_arena_int(arena, char_id, "x2").unwrap_or(0),
+                                get_arena_int(arena, char_id, "y2").unwrap_or(0),
+                            )
+                        });
+                data.tooltips.push(MapTooltip {
+                    index,
+                    x1,
+                    x2,
+                    y1,
+                    y2,
+                    char_rect,
+                });
+            }
+            data.tooltips.sort_by_key(|t| t.index);
+        }
+
+        if let Some(sky_id) = arena.find_child(root, "skyWhale") {
+            for &node in arena.children(sky_id) {
+                let start = arena
+                    .find_child(node, "start")
+                    .and_then(|id| arena.value(id))
+                    .and_then(|v| match v {
+                        crate::NodeValue::Vector(v) => Some((v.x, v.y)),
+                        _ => None,
+                    })
+                    .unwrap_or((0, 0));
+                let end = arena
+                    .find_child(node, "end")
+                    .and_then(|id| arena.value(id))
+                    .and_then(|v| match v {
+                        crate::NodeValue::Vector(v) => Some((v.x, v.y)),
+                        _ => None,
+                    })
+                    .unwrap_or((0, 0));
+                data.sky_whales.push(SkyWhale {
+                    name: arena.name(node).unwrap_or("").to_string(),
+                    start,
+                    end,
+                    width: get_arena_int(arena, node, "width").unwrap_or(0),
+                    speed: get_arena_float(arena, node, "speed").unwrap_or(0.0) as f64,
+                    fix_speed_shoe: get_arena_float(arena, node, "fixSpeedShoe").unwrap_or(0.0)
+                        as f64,
+                    vrate: get_arena_float(arena, node, "vrate").unwrap_or(0.0) as f64,
+                    apply_term: get_arena_int(arena, node, "applyTerm").unwrap_or(0),
+                });
+            }
+        }
+
+        if let Some(cluster_id) = arena.find_child(root, "illuminantCluster") {
+            for &node in arena.children(cluster_id) {
+                if arena.children(node).is_empty() {
+                    continue;
+                }
+                let start = arena
+                    .find_child(node, "start")
+                    .and_then(|id| arena.value(id))
+                    .and_then(|v| match v {
+                        crate::NodeValue::Vector(v) => Some((v.x, v.y)),
+                        _ => None,
+                    })
+                    .unwrap_or((0, 0));
+                let end = arena
+                    .find_child(node, "end")
+                    .and_then(|id| arena.value(id))
+                    .and_then(|v| match v {
+                        crate::NodeValue::Vector(v) => Some((v.x, v.y)),
+                        _ => None,
+                    })
+                    .unwrap_or((0, 0));
+                data.illuminant_clusters.push(IlluminantCluster {
+                    name: arena.name(node).unwrap_or("").to_string(),
+                    start,
+                    end,
+                    size: get_arena_int(arena, node, "size").unwrap_or(0),
+                    speed: get_arena_float(arena, node, "speed").unwrap_or(0.0) as f64,
+                    particle: get_arena_int(arena, node, "particle").unwrap_or(0),
+                    start_point: get_arena_int(arena, node, "startPoint").unwrap_or(0),
+                    end_point: get_arena_int(arena, node, "endPoint").unwrap_or(0),
+                });
+            }
         }
 
         if let Some(fh_id) = arena.find_child(root, "foothold") {
@@ -516,8 +664,20 @@ impl MapData {
 
     /// WZ 맵 노드 트리(`Map/Map/MapX/XXXXXXXXX.img` 루트)에서 맵 데이터를 파싱한다.
     pub fn parse_from_node(root: &Node) -> Self {
+        let base = root
+            .name
+            .as_ref()
+            .rsplit('/')
+            .next()
+            .unwrap_or("")
+            .trim_end_matches(".img");
+        let name_id = base.parse::<i32>().ok();
         let (arena, arena_root) = crate::Arena::from_wz_node(root);
-        Self::parse_from_arena(&arena, arena_root)
+        let mut data = Self::parse_from_arena(&arena, arena_root);
+        if data.info.map_id.is_none() {
+            data.info.map_id = name_id;
+        }
+        data
     }
 }
 
@@ -967,6 +1127,67 @@ mod tests {
         effect_root.children.push(effect0);
         root.children.push(effect_root);
 
+        // ToolTip/0 + 0char
+        let mut tooltip_root = Node::new("ToolTip");
+        let mut tip = Node::new("0");
+        for (key, value) in [
+            ("x1", ImageValue::Int(10)),
+            ("x2", ImageValue::Int(20)),
+            ("y1", ImageValue::Int(30)),
+            ("y2", ImageValue::Int(40)),
+        ] {
+            let mut child = Node::new(key);
+            child.value = Some(value);
+            tip.children.push(child);
+        }
+        tooltip_root.children.push(tip);
+        let mut char_tip = Node::new("0char");
+        for (key, value) in [
+            ("x1", ImageValue::Int(11)),
+            ("x2", ImageValue::Int(19)),
+            ("y1", ImageValue::Int(31)),
+            ("y2", ImageValue::Int(39)),
+        ] {
+            let mut child = Node::new(key);
+            child.value = Some(value);
+            char_tip.children.push(child);
+        }
+        tooltip_root.children.push(char_tip);
+        root.children.push(tooltip_root);
+
+        // skyWhale/0
+        let mut sky_root = Node::new("skyWhale");
+        let mut whale = Node::new("0");
+        let mut start = Node::new("start");
+        start.value = Some(ImageValue::Vector(wz_core::image::Vec2 { x: 1, y: 2 }));
+        let mut end = Node::new("end");
+        end.value = Some(ImageValue::Vector(wz_core::image::Vec2 { x: 30, y: 40 }));
+        let mut width = Node::new("width");
+        width.value = Some(ImageValue::Int(60));
+        whale.children.push(start);
+        whale.children.push(end);
+        whale.children.push(width);
+        sky_root.children.push(whale);
+        root.children.push(sky_root);
+
+        // illuminantCluster/0
+        let mut cluster_root = Node::new("illuminantCluster");
+        let mut cluster = Node::new("0");
+        let mut cstart = Node::new("start");
+        cstart.value = Some(ImageValue::Vector(wz_core::image::Vec2 { x: -5, y: -6 }));
+        let mut cend = Node::new("end");
+        cend.value = Some(ImageValue::Vector(wz_core::image::Vec2 { x: 7, y: 8 }));
+        let mut size = Node::new("size");
+        size.value = Some(ImageValue::Int(24));
+        let mut start_point = Node::new("startPoint");
+        start_point.value = Some(ImageValue::Int(11));
+        cluster.children.push(cstart);
+        cluster.children.push(cend);
+        cluster.children.push(size);
+        cluster.children.push(start_point);
+        cluster_root.children.push(cluster);
+        root.children.push(cluster_root);
+
         let map_data = MapData::parse_from_node(&root);
         assert_eq!(map_data.info.bgm.as_deref(), Some("Bgm00/Sleepywood"));
         assert!(map_data.info.vrect.is_some());
@@ -1001,6 +1222,15 @@ mod tests {
             Some("SetAnimationOnceAndReturn")
         );
         assert_eq!(map_data.map_events[0].tags.as_deref(), Some("Hband1"));
+
+        assert_eq!(map_data.tooltips.len(), 1);
+        assert_eq!(map_data.tooltips[0].char_rect, Some((11, 31, 19, 39)));
+        assert_eq!(map_data.sky_whales.len(), 1);
+        assert_eq!(map_data.sky_whales[0].start, (1, 2));
+        assert_eq!(map_data.sky_whales[0].width, 60);
+        assert_eq!(map_data.illuminant_clusters.len(), 1);
+        assert_eq!(map_data.illuminant_clusters[0].size, 24);
+        assert_eq!(map_data.illuminant_clusters[0].start_point, 11);
 
         // FootholdTree 검증
         let tree = FootholdTree::build(&map_data.footholds);

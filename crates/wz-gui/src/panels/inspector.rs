@@ -372,6 +372,84 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     }
 
     ui.separator();
+    ui.heading("월드맵");
+    ui.horizontal(|ui| {
+        if ui.button("목록 새로고침").clicked() {
+            if let Some(root) = state.data_root.clone() {
+                state.worldmap_list = crate::worldmap::list_worldmaps(&root);
+                if state.worldmap_selected.is_empty() {
+                    state.worldmap_selected =
+                        state.worldmap_list.first().cloned().unwrap_or_default();
+                }
+            }
+        }
+        egui::ComboBox::from_id_salt("worldmap_select")
+            .selected_text(&state.worldmap_selected)
+            .show_ui(ui, |ui| {
+                let list = state.worldmap_list.clone();
+                for name in list {
+                    ui.selectable_value(&mut state.worldmap_selected, name.clone(), name);
+                }
+            });
+        if ui.button("불러오기").clicked() {
+            if let Some(root) = state.data_root.clone() {
+                state.worldmap_view =
+                    async_io::map_loader::load_worldmap_view(&root, &state.worldmap_selected);
+                state.worldmap_texture = None;
+            }
+        }
+    });
+    if state.worldmap_texture.is_none() {
+        if let Some(view) = &state.worldmap_view {
+            if let Some((w, h, rgba)) = &view.base {
+                let image =
+                    egui::ColorImage::from_rgba_unmultiplied([*w as usize, *h as usize], rgba);
+                state.worldmap_texture = Some(ui.ctx().load_texture(
+                    "worldmap",
+                    image,
+                    egui::TextureOptions::LINEAR,
+                ));
+            }
+        }
+    }
+    if let (Some(texture), Some(view)) = (&state.worldmap_texture, &state.worldmap_view) {
+        ui.label(format!("{} ({})", view.display_name, view.name));
+        let max_w = 360.0f32;
+        let tw = texture.size_vec2().x.max(1.0);
+        let th = texture.size_vec2().y.max(1.0);
+        let scale = (max_w / tw).min(1.0);
+        let response =
+            ui.add(egui::Image::new(texture).fit_to_exact_size(egui::vec2(tw * scale, th * scale)));
+        let rect = response.rect;
+        let painter = ui.painter();
+        for spot in &view.spots {
+            let sx = rect.width() * 0.5 + (spot.x - view.base_spot.0 as f32) * scale;
+            let sy = rect.height() * 0.5 + (spot.y - view.base_spot.1 as f32) * scale;
+            let pos = egui::pos2(rect.min.x + sx, rect.min.y + sy);
+            let color = if spot.spot_type == 0 {
+                egui::Color32::from_rgb(255, 80, 80)
+            } else {
+                egui::Color32::from_rgb(255, 190, 80)
+            };
+            painter.circle_filled(pos, 3.0, color);
+            let title = spot
+                .title
+                .clone()
+                .or_else(|| spot.desc.clone())
+                .or_else(|| spot.map_nos.first().map(|id| id.to_string()));
+            if let Some(title) = &title {
+                painter.text(
+                    pos + egui::vec2(5.0, -5.0),
+                    egui::Align2::LEFT_BOTTOM,
+                    title,
+                    egui::FontId::proportional(10.0),
+                    egui::Color32::WHITE,
+                );
+            }
+        }
+    }
+
+    ui.separator();
     ui.heading("스킬 미리보기");
     ui.horizontal(|ui| {
         ui.label("Skill ID:");

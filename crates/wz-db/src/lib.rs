@@ -42,9 +42,9 @@ pub use linker::{
     extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,
 };
 pub use map::{
-    BackItem, Foothold, FootholdTree, LadderRope, LadderRopeKind, LifeKind, MapData, MapEvent,
-    MapInfo, MapLife, MapLight, MapLight2D, MapParticle, MapPortal, MapReactor, MapVirtualRect,
-    MiniMapInfo, ObjItem, TileItem,
+    BackItem, Foothold, FootholdTree, IlluminantCluster, LadderRope, LadderRopeKind, LifeKind,
+    MapData, MapEvent, MapInfo, MapLife, MapLight, MapLight2D, MapParticle, MapPortal, MapReactor,
+    MapTooltip, MapVirtualRect, MiniMapInfo, ObjItem, SkyWhale, TileItem,
 };
 pub use node::{NodeId, NodeValue, RawDataRef};
 pub use particle::{parse_particle_desc, ParticleDesc, ParticleTexture};

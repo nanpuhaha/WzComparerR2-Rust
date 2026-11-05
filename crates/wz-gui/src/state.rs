@@ -15,6 +15,17 @@ use wz_render::camera::Camera2D;
 use wz_render::GpuKey;
 
 /// 맵 이미지 로딩 결과 (워커 스레드 → UI 스레드).
+/// 맵 툴팁 영역 + String/ToolTipHelp 설명.
+#[derive(Debug, Clone, Default)]
+pub struct MapTooltipView {
+    pub x1: i32,
+    pub y1: i32,
+    pub x2: i32,
+    pub y2: i32,
+    pub title: Option<String>,
+    pub desc: Option<String>,
+}
+
 /// 미니맵 아이콘 egui 텍스처.
 #[derive(Default)]
 pub struct MinimapIconTextures {
@@ -131,6 +142,11 @@ pub struct AppState {
     pub map_portal_time: f64,
     pub map_portal_last: f64,
     pub map_minimap_icons: Option<MinimapIcons>,
+    pub map_tooltips: Vec<MapTooltipView>,
+    pub worldmap_list: Vec<String>,
+    pub worldmap_selected: String,
+    pub worldmap_view: Option<crate::worldmap::WorldMapView>,
+    pub worldmap_texture: Option<egui::TextureHandle>,
     pub map_minimap_icon_textures: Option<MinimapIconTextures>,
     pub skill_view: Option<crate::skill::SkillView>,
     pub skill_time: f64,
@@ -282,6 +298,11 @@ impl Default for AppState {
             map_portal_time: 0.0,
             map_portal_last: 0.0,
             map_minimap_icons: None,
+            map_tooltips: Vec::new(),
+            worldmap_list: Vec::new(),
+            worldmap_selected: String::new(),
+            worldmap_view: None,
+            worldmap_texture: None,
             map_minimap_icon_textures: None,
             skill_view: None,
             skill_time: 0.0,

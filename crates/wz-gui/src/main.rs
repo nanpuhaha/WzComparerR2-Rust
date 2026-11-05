@@ -19,6 +19,7 @@ mod render_bridge;
 mod skill;
 mod sound_player;
 mod state;
+mod worldmap;
 
 use app::PocApp;
 

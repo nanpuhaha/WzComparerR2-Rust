@@ -3,7 +3,7 @@ pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
     println!("지원: PKG1/PKG2/MS 컨테이너, AES/SNOW2/ChaCha20");
     println!("      이미지 트리/Canvas/UOL, WZ/DXBC/BC7 디코딩");
     println!("      StringLinker(5 roots), 아바타/맵 데이터, C# 오라클 차분 하네스");
-    println!("미구현: 월드맵/맵 툴팁/스카이웨일");
+    println!("미구현: 월드맵 퀘스트/안개, 플레이어 이동");
     Ok(())
 }
 pub fn cmd_fmt(n: usize) -> Result<(), Box<dyn std::error::Error>> {

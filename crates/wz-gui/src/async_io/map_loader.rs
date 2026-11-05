@@ -108,6 +108,160 @@ pub fn load_skill_view(
     None
 }
 
+fn node_vector(node: &wz_core::image::Node, key: &str) -> Option<(i32, i32)> {
+    node.object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == key)
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Vector(v)) => Some((v.x, v.y)),
+            _ => None,
+        })
+}
+
+fn node_text(node: &wz_core::image::Node, key: &str) -> Option<String> {
+    node.object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == key)
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Str(s)) => Some(s.to_string()),
+            _ => None,
+        })
+}
+
+pub fn load_worldmap_view(
+    root: &std::path::Path,
+    name: &str,
+) -> Option<crate::worldmap::WorldMapView> {
+    let image_name = format!("{name}.img");
+    let dir = root.join("Map").join("WorldMap");
+    let (node, source) = find_image_in_dir(&dir, &image_name)?;
+    let display_name = helper_path(&node, &["info", "WorldMap"])
+        .and_then(|n| match &n.value {
+            Some(wz_core::image::ImageValue::Str(s)) => Some(s.to_string()),
+            _ => None,
+        })
+        .unwrap_or_else(|| name.to_string());
+    let base_node = helper_path(&node, &["BaseImg", "0"]);
+    let base = base_node.and_then(|n| decode_canvas_node(root, n, &source));
+    let base_origin = base_node
+        .and_then(|n| node_vector(n, "origin"))
+        .unwrap_or((0, 0));
+    let base_spot = base_node
+        .and_then(|n| node_vector(n, "spot"))
+        .unwrap_or((0, 0));
+
+    let mut spots = Vec::new();
+    if let Some(list) = helper_path(&node, &["MapList"]) {
+        let mut children: Vec<&wz_core::image::Node> = list
+            .object_children()
+            .iter()
+            .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+            .collect();
+        children.sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+        for spot_node in children {
+            let spot = node_vector(spot_node, "spot")
+                .or_else(|| {
+                    Some((
+                        node_scalar_int(spot_node, "x").unwrap_or(0),
+                        node_scalar_int(spot_node, "y").unwrap_or(0),
+                    ))
+                })
+                .unwrap_or((0, 0));
+            let mut map_nos = Vec::new();
+            if let Some(map_no) = spot_node
+                .object_children()
+                .iter()
+                .find(|c| c.name.as_ref() == "mapNo")
+            {
+                for child in map_no.object_children() {
+                    if let Some(value) = match &child.value {
+                        Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
+                        Some(wz_core::image::ImageValue::Short(v)) => Some(i32::from(*v)),
+                        _ => None,
+                    } {
+                        map_nos.push(value);
+                    }
+                }
+            }
+            spots.push(crate::worldmap::WorldMapSpot {
+                x: spot.0 as f32,
+                y: spot.1 as f32,
+                spot_type: node_scalar_int(spot_node, "type").unwrap_or(0),
+                title: node_text(spot_node, "title"),
+                desc: node_text(spot_node, "desc"),
+                map_nos,
+            });
+        }
+    }
+
+    Some(crate::worldmap::WorldMapView {
+        name: name.to_string(),
+        display_name,
+        base,
+        base_origin,
+        base_spot,
+        spots,
+    })
+}
+
+fn load_map_tooltips(
+    root: &std::path::Path,
+    map_id: Option<i32>,
+    rects: &[wz_db::MapTooltip],
+) -> Vec<crate::state::MapTooltipView> {
+    let mut out: Vec<crate::state::MapTooltipView> = rects
+        .iter()
+        .map(|t| crate::state::MapTooltipView {
+            x1: t.x1,
+            y1: t.y1,
+            x2: t.x2,
+            y2: t.y2,
+            title: None,
+            desc: None,
+        })
+        .collect();
+    let Some(map_id) = map_id else {
+        return out;
+    };
+    let Some((help, _)) = find_image_in_dir(&root.join("String"), "ToolTipHelp.img") else {
+        return out;
+    };
+    for view in &mut out {
+        let index = view_index(rects, view);
+        let Some(index) = index else {
+            continue;
+        };
+        let id = map_id.to_string();
+        let idx = index.to_string();
+        if let Some(node) = helper_path(&help, &["Mapobject", &id, &idx]) {
+            view.title = node
+                .object_children()
+                .iter()
+                .find(|c| c.name.as_ref() == "Title")
+                .and_then(|c| match &c.value {
+                    Some(wz_core::image::ImageValue::Str(s)) => Some(s.to_string()),
+                    _ => None,
+                });
+            view.desc = node
+                .object_children()
+                .iter()
+                .find(|c| c.name.as_ref() == "Desc")
+                .and_then(|c| match &c.value {
+                    Some(wz_core::image::ImageValue::Str(s)) => Some(s.to_string()),
+                    _ => None,
+                });
+        }
+    }
+    out
+}
+
+fn view_index(rects: &[wz_db::MapTooltip], view: &crate::state::MapTooltipView) -> Option<i32> {
+    rects
+        .iter()
+        .find(|r| r.x1 == view.x1 && r.y1 == view.y1 && r.x2 == view.x2 && r.y2 == view.y2)
+        .map(|r| r.index)
+}
+
 fn find_map_helper(
     root: &std::path::Path,
 ) -> Option<(
@@ -941,6 +1095,15 @@ fn load_background_layer(
     None
 }
 
+fn map_id_from_path(path: &str) -> Option<i32> {
+    path.rsplit('/')
+        .next()
+        .unwrap_or(path)
+        .trim_end_matches(".img")
+        .parse::<i32>()
+        .ok()
+}
+
 pub fn load_map_by_path(state: &mut AppState) {
     if state.tree.is_none() {
         state.map_status = "WZ 파일을 먼저 열어 주세요".into();
@@ -959,7 +1122,10 @@ pub fn load_map_by_path(state: &mut AppState) {
         state.map_status = "이미지 파싱 실패".into();
         return;
     };
-    let map = MapData::parse_from_node(&node);
+    let mut map = MapData::parse_from_node(&node);
+    if map.info.map_id.is_none() {
+        map.info.map_id = map_id_from_path(&state.map_path);
+    }
 
     let data_root = find_data_root(state.archive_path.as_deref());
     state.data_root = data_root.clone();
@@ -968,6 +1134,10 @@ pub fn load_map_by_path(state: &mut AppState) {
         .as_deref()
         .and_then(|root| load_minimap_canvas(root, &node))
         .and_then(|(w, h, rgba)| map.mini_map.clone().map(|info| (w, h, rgba, info)));
+    state.map_tooltips = data_root
+        .as_deref()
+        .map(|root| load_map_tooltips(root, map.info.map_id, &map.tooltips))
+        .unwrap_or_default();
     state.map_minimap_texture = None;
     state.map_minimap_icons = data_root.as_deref().and_then(|root| {
         let (helper, source) = find_map_helper(root)?;
@@ -1116,7 +1286,10 @@ pub fn load_map_from_selection(state: &mut AppState) {
         state.map_status = "이미지 파싱 실패".into();
         return;
     };
-    let map = MapData::parse_from_node(&node);
+    let mut map = MapData::parse_from_node(&node);
+    if map.info.map_id.is_none() {
+        map.info.map_id = name.trim_end_matches(".img").parse::<i32>().ok();
+    }
     state.map_status = format!(
         "map_id={:?} bgm={:?} town={} fh={} portals={} life={}",
         map.info.map_id,
@@ -1137,6 +1310,54 @@ pub fn load_map_from_selection(state: &mut AppState) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn loads_real_map_tooltips() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let path = root
+            .join("Map")
+            .join("Map")
+            .join("Map0")
+            .join("Map0_000.wz");
+        if !path.exists() {
+            return;
+        }
+        let archive = wz_core::WzArchive::open(&path).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let entry = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("000050000.img"))
+            .expect("000050000.img");
+        let node = archive.parse_image_at(entry.offset.unwrap()).unwrap();
+        let map = wz_db::MapData::parse_from_node(&node);
+        assert_eq!(map.tooltips.len(), 1);
+        let views = load_map_tooltips(&root, Some(50000), &map.tooltips);
+        assert_eq!(views.len(), 1);
+        assert!(
+            views
+                .iter()
+                .any(|v| v.title.as_deref().is_some_and(|t| !t.is_empty())),
+            "{views:?}"
+        );
+    }
+
+    #[test]
+    fn loads_real_worldmap() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let names = crate::worldmap::list_worldmaps(&root);
+        assert!(names.iter().any(|n| n == "WorldMap000"), "{names:?}");
+        let view = load_worldmap_view(&root, "WorldMap000").expect("worldmap view");
+        assert_eq!(view.display_name, "WorldMap000");
+        assert!(view.base.is_some());
+        assert_eq!(view.spots.len(), 7);
+        assert!(!view.spots[0].map_nos.is_empty());
+    }
 
     #[test]
     fn loads_real_skill_animation() {
