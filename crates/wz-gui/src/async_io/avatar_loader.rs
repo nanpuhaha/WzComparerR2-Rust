@@ -27,6 +27,8 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             }
             state.effect_frames.clear();
             state.effect_delays.clear();
+            state.effect_origins.clear();
+            state.effect_origin = (0, 0);
             state.effect_last_time = 0.0;
             render_loaded_avatar(state);
         }
@@ -103,6 +105,12 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
                 .map(|p| (p.width, p.height, p.rgba.clone()))
                 .collect();
             state.effect_delays = av.effect_delays.clone();
+            state.effect_origins = av.effect_origins.iter().map(|p| (p.x, p.y)).collect();
+            state.effect_origin = state
+                .effect_origins
+                .get(state.effect_frame)
+                .copied()
+                .unwrap_or((0, 0));
             state.effect_last_time = 0.0;
             render_loaded_avatar(state);
         }
@@ -152,9 +160,19 @@ pub fn render_loaded_avatar(state: &mut AppState) {
     };
     let mut slots = Vec::new();
     for &i in &selected {
-        if let Some((_slot, w, h, rgba)) = parts.get(i) {
+        if let Some((slot, w, h, rgba)) = parts.get(i) {
             if let Some(s) = packer.allocate_and_write(*w, *h, rgba) {
-                slots.push((*w, *h, s));
+                // effect 프레임은 origin 픽셀이 아바타 기준점(0,0)에 오도록 배치한다.
+                // 나머지 파트는 기존처럼 좌상단 기준을 유지한다.
+                let pos = if slot == "effect" {
+                    [
+                        -(state.effect_origin.0 as f32),
+                        -(state.effect_origin.1 as f32),
+                    ]
+                } else {
+                    [0.0, 0.0]
+                };
+                slots.push((*w, *h, s, pos));
             }
         }
     }
@@ -169,10 +187,10 @@ pub fn render_loaded_avatar(state: &mut AppState) {
         let _ = rc.create_texture(page.key, page.width, page.height, &page.pixels);
     }
     let mut batch = SpriteBatch::new();
-    for (w, h, slot) in &slots {
+    for (w, h, slot, pos) in &slots {
         batch.push_atlas_quad(
             slot.key,
-            [0.0, 0.0, *w as f32, *h as f32],
+            [pos[0], pos[1], *w as f32, *h as f32],
             0.0,
             &slot.rect,
             (512, 512),
@@ -240,7 +258,26 @@ pub fn tick_effect(state: &mut AppState, now: f64) -> bool {
     }
     state.effect_last_time = now;
     state.effect_frame = (frame + 1) % state.effect_frames.len();
-    let (w, h, rgba) = state.effect_frames[state.effect_frame].clone();
+    apply_effect_frame(state);
+    true
+}
+
+/// 현재 `effect_frame` 의 RGBA/origin 을 파트 목록에 반영한다.
+///
+/// 자동 재생 틱과 수동 프레임 슬라이더가 같은 경로를 쓴다.
+pub fn apply_effect_frame(state: &mut AppState) {
+    let Some((w, h, rgba)) = state
+        .effect_frames
+        .get(state.effect_frame % state.effect_frames.len().max(1))
+        .cloned()
+    else {
+        return;
+    };
+    state.effect_origin = state
+        .effect_origins
+        .get(state.effect_frame % state.effect_origins.len().max(1))
+        .copied()
+        .unwrap_or((0, 0));
     if let Some(part) = state
         .avatar_loaded_parts
         .iter_mut()
@@ -254,5 +291,30 @@ pub fn tick_effect(state: &mut AppState, now: f64) -> bool {
             .avatar_loaded_parts
             .push(("effect".into(), w, h, rgba));
     }
-    true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apply_effect_frame_updates_origin_and_part() {
+        let mut state = AppState {
+            effect_frames: vec![(2, 2, vec![1; 16]), (3, 3, vec![2; 36])],
+            effect_origins: vec![(5, 6), (-7, 8)],
+            effect_frame: 1,
+            ..Default::default()
+        };
+
+        apply_effect_frame(&mut state);
+
+        assert_eq!(state.effect_origin, (-7, 8));
+        let part = state
+            .avatar_loaded_parts
+            .iter()
+            .find(|p| p.0 == "effect")
+            .expect("effect part");
+        assert_eq!((part.1, part.2), (3, 3));
+        assert_eq!(part.3.len(), 36);
+    }
 }

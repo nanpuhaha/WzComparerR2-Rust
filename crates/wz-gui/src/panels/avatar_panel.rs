@@ -154,7 +154,21 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     });
     ui.separator();
     ui.label("Effect / Custom Origin");
-    ui.add(egui::Slider::new(&mut state.effect_frame, 0..=30).text("Effect frame"));
+    if state.effect_frames.is_empty() {
+        ui.add(egui::Slider::new(&mut state.effect_frame, 0..=30).text("Effect frame"));
+    } else {
+        let max_frame = state.effect_frames.len() - 1;
+        if state.effect_frame > max_frame {
+            state.effect_frame = max_frame;
+        }
+        if ui
+            .add(egui::Slider::new(&mut state.effect_frame, 0..=max_frame).text("Effect frame"))
+            .changed()
+        {
+            async_io::apply_effect_frame(state);
+            async_io::render_loaded_avatar(state);
+        }
+    }
     ui.checkbox(&mut state.effect_auto_play, "Effect 자동 재생");
     ui.horizontal(|ui| {
         ui.label("Custom origin:");

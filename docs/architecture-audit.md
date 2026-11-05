@@ -246,8 +246,7 @@ z-index, prism 을 **별도로 계산**하거나 `Base/zmap.img` 에서 가져�
 
 ### 남은 후보
 
-- **미래 클라이언트의 customChair 타입** — `CustomChairType::Other(String)`으로 보존하고 `info/scale`로 폴백. 타입별 동작은 신규 클라이언트에서 확인 후 추가.
-- **GUI 파트 렌더러의 프레임별 origin** — `LoadedAvatar::apply_effect_frame`으로 scene API는 지원. GUI 는 RGBA 파트만 그리므로 origin을 쓰지 않는다.
+- **미래 클라이언트의 customChair 타입** — `CustomChairType::Other(String)`으로 보존하고, 알 수 없는 필드는 `CustomChairInfo::extra`에 남긴다. `info/scale`로 폴백하며 타입별 동작은 신규 클라이언트에서 확인 후 추가.
 - **오라클 하네스 CI** — 공개 C# 트리에 `WzComparerR2.Oracle` 프로젝트가 없어 수동 workflow 입력이 필요.
 
 ### 산출물

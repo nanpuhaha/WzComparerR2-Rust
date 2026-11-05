@@ -50,13 +50,15 @@ remaining CharaSim gaps.
 - Taming: the `Taming` slot loads `Character/TamingMob` through `load_item_frame`.
 - Effect: the `Effect` slot loads all frames, delays, **origins and z indices** of
   `ItemEff.img/<id>/effect/default/<n>`. `LoadedAvatar::apply_effect_frame(index)`
-  updates the effect bone skin for scene renderers; the GUI can step frames manually
-  or auto-play with `tick_effect` using the WZ delays.
+  updates the effect bone skin for scene renderers, and the GUI applies the current
+  frame's origin to the effect quad (`state.effect_origin`) while stepping frames
+  manually or auto-playing with `tick_effect` using the WZ delays.
 - Chair: `ChairInfo` captures `info/scale`, `customChair`, group taming IDs/`bodyRelMove`.
   Group taming members are loaded from `Character/TamingMob` (via their `sit` action)
   and merged with their `bodyRelMove` offsets. Real sample: chair `03016200`
   (`03016.img`) with taming mobs `01983279`..`01983282`. `CustomChairType` is an enum
-  (`Unsupported`, `ScaleAvatarChair`, `Other(String)`); `effective_scale()` handles
+  (`Unsupported`, `ScaleAvatarChair`, `Other(String)`); `CustomChairInfo` keeps known
+  fields plus unknown `customChair` fields in `extra`. `effective_scale()` handles
   `ScaleAvatarChair` and falls back to `info/scale` for other/unknown types.
 - Custom origin: the two-step C# semantics are implemented:
   `CustomOriginMap` (originValue → childName) + `CustomOrigin` (childName → Point)
@@ -64,8 +66,8 @@ remaining CharaSim gaps.
 - Chair pose: when a `Chair` is in the equipment list, the body frame prefers `sit`
   over `stand1`/`stand`. Group taming members also use `sit`.
 - Current-client parity: no known avatar gaps. Future clients may add new
-  `CustomChairType` variants (preserved as `Other`), and the GUI part renderer uses
-  RGBA only (the scene API supports per-frame effect origins).
+  `CustomChairType` variants (preserved as `Other`, with unknown fields in
+  `CustomChairInfo::extra`).
 
 ## Verification
 

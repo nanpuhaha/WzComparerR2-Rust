@@ -84,12 +84,53 @@ impl CustomChairType {
     }
 }
 
+/// `customChair` 의 알려진 필드 + 미래 필드 보존.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CustomChairInfo {
+    pub chair_type: CustomChairType,
+    pub scale_avatar: Option<i32>,
+    /// 알 수 없는 스칼라/벡터 필드를 문자열로 보존한다.
+    pub extra: std::collections::BTreeMap<String, String>,
+}
+
+/// `customChair` 노드를 파싱한다. 미래 타입도 `Other` + `extra` 로 남긴다.
+fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
+    use wz_core::image::ImageValue;
+
+    let chair_type = node_str(node, "type")
+        .map(|t| CustomChairType::parse(&t))
+        .unwrap_or_default();
+    let scale_avatar = node_int(node, "scaleAvatar/scale");
+    let mut extra = std::collections::BTreeMap::new();
+    for child in node.object_children() {
+        let name = child.name.to_string();
+        if name == "type" || name == "scaleAvatar" {
+            continue;
+        }
+        let value = match &child.value {
+            Some(ImageValue::Int(v)) => Some(v.to_string()),
+            Some(ImageValue::Short(v)) => Some(v.to_string()),
+            Some(ImageValue::Str(v)) => Some(v.to_string()),
+            Some(ImageValue::Vector(v)) => Some(format!("{},{}", v.x, v.y)),
+            Some(ImageValue::Bool(v)) => Some(v.to_string()),
+            _ => None,
+        };
+        if let Some(value) = value {
+            extra.insert(name, value);
+        }
+    }
+    CustomChairInfo {
+        chair_type,
+        scale_avatar,
+        extra,
+    }
+}
+
 /// C# `ChairPart` 의 메타데이터 중 정적 로더가 해석하는 부분.
 #[derive(Debug, Clone, Default)]
 pub struct ChairInfo {
     pub scale: i32,
-    pub custom_chair_type: CustomChairType,
-    pub custom_scale: Option<i32>,
+    pub custom_chair: Option<CustomChairInfo>,
     pub group_count: usize,
     pub group_taming_ids: Vec<i32>,
     pub group_body_rel_move: Vec<crate::Point>,
@@ -109,10 +150,12 @@ pub struct EffectFrames {
 impl ChairInfo {
     /// `ScaleAvatarChair` 이면 `scaleAvatar.scale`, 아니면 `info.scale`.
     pub fn effective_scale(&self) -> i32 {
-        match self.custom_chair_type {
-            CustomChairType::ScaleAvatarChair => self.custom_scale.unwrap_or(100),
-            _ => self.scale,
+        if let Some(custom) = &self.custom_chair {
+            if custom.chair_type == CustomChairType::ScaleAvatarChair {
+                return custom.scale_avatar.unwrap_or(100);
+            }
         }
+        self.scale
     }
 }
 
@@ -133,8 +176,8 @@ fn set_effect_skin(bone: &mut Bone, origin: crate::Point, z_index: i32) -> bool 
 impl LoadedAvatar {
     /// effect 프레임의 origin/z 를 bone 에 반영한다 (scene 렌더러용).
     ///
-    /// GUI 의 파트 기반 렌더러는 RGBA 만 쓰므로 origin 이 필요 없지만,
-    /// `AvatarScene` 을 쓰는 렌더러는 이 메서드로 프레임별 origin 을 맞춘다.
+    /// GUI 파트 렌더러는 `LoadedAvatar` 대신 자체 `effect_origin` 상태로 같은
+    /// origin 을 적용하지만, `AvatarScene` 을 쓰는 렌더러는 이 메서드로 맞춘다.
     pub fn apply_effect_frame(&mut self, index: usize) {
         if self.effect_frames.is_empty() {
             return;
@@ -444,12 +487,9 @@ fn load_chair_item(
         .and_then(|node| child_node(node, "info"))
         .or_else(|| child_node(&item, "info"));
     let scale = info.and_then(|i| node_int(i, "scale")).unwrap_or(100);
-    let custom = info.and_then(|i| child_node(i, "customChair"));
-    let custom_chair_type = custom
-        .and_then(|c| node_str(c, "type"))
-        .map(|t| CustomChairType::parse(&t))
-        .unwrap_or_default();
-    let custom_scale = custom.and_then(|c| node_int(c, "scaleAvatar/scale"));
+    let custom_chair = info
+        .and_then(|i| child_node(i, "customChair"))
+        .map(parse_custom_chair);
     let mut group_count = 0;
     let mut group_taming_ids = Vec::new();
     let mut group_body_rel_move = Vec::new();
@@ -500,8 +540,7 @@ fn load_chair_item(
     };
     let chair_info = ChairInfo {
         scale,
-        custom_chair_type,
-        custom_scale,
+        custom_chair,
         group_count,
         group_taming_ids,
         group_body_rel_move,
@@ -1740,13 +1779,59 @@ mod custom_chair_type_tests {
     fn effective_scale_only_uses_scale_avatar_for_scale_type() {
         let mut info = ChairInfo {
             scale: 110,
-            custom_scale: Some(80),
-            custom_chair_type: CustomChairType::ScaleAvatarChair,
+            custom_chair: Some(CustomChairInfo {
+                chair_type: CustomChairType::ScaleAvatarChair,
+                scale_avatar: Some(80),
+                extra: std::collections::BTreeMap::new(),
+            }),
             ..Default::default()
         };
         assert_eq!(info.effective_scale(), 80);
-        info.custom_chair_type = CustomChairType::Other("FutureChair".into());
+        info.custom_chair = Some(CustomChairInfo {
+            chair_type: CustomChairType::Other("FutureChair".into()),
+            scale_avatar: Some(80),
+            extra: std::collections::BTreeMap::new(),
+        });
         assert_eq!(info.effective_scale(), 110);
+    }
+
+    #[test]
+    fn parse_custom_chair_preserves_unknown_fields() {
+        use wz_core::image::{ImageValue, Node};
+
+        let node = Node {
+            name: "customChair".into(),
+            value: None,
+            children: vec![
+                Node {
+                    name: "type".into(),
+                    value: Some(ImageValue::Str("FutureChair".into())),
+                    children: vec![],
+                },
+                Node {
+                    name: "scaleAvatar".into(),
+                    value: None,
+                    children: vec![Node {
+                        name: "scale".into(),
+                        value: Some(ImageValue::Int(130)),
+                        children: vec![],
+                    }],
+                },
+                Node {
+                    name: "newFlag".into(),
+                    value: Some(ImageValue::Int(7)),
+                    children: vec![],
+                },
+            ],
+        };
+
+        let info = parse_custom_chair(&node);
+        assert_eq!(
+            info.chair_type,
+            CustomChairType::Other("FutureChair".into())
+        );
+        assert_eq!(info.scale_avatar, Some(130));
+        assert_eq!(info.extra.get("newFlag").map(String::as_str), Some("7"));
     }
 }
 

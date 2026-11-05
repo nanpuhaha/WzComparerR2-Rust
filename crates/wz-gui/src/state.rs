@@ -91,6 +91,10 @@ pub struct AppState {
     /// Effect 전체 프레임과 delay (자동 재생).
     pub effect_frames: Vec<(u32, u32, Vec<u8>)>,
     pub effect_delays: Vec<u32>,
+    /// 프레임별 origin (`effect_frames` 와 같은 순서).
+    pub effect_origins: Vec<(i32, i32)>,
+    /// 현재 프레임의 origin — 렌더 시 effect 쿼드 위치에 반영한다.
+    pub effect_origin: (i32, i32),
     pub effect_auto_play: bool,
     pub effect_last_time: f64,
     pub camera: Camera2D,
@@ -157,6 +161,8 @@ impl Default for AppState {
             custom_origin_input: String::new(),
             effect_frames: Vec::new(),
             effect_delays: Vec::new(),
+            effect_origins: Vec::new(),
+            effect_origin: (0, 0),
             effect_auto_play: false,
             effect_last_time: 0.0,
             camera: Camera2D::new(512.0, 512.0),
