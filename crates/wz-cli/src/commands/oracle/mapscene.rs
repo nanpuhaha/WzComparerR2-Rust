@@ -146,6 +146,8 @@ pub fn cmd_oracle_mapscene(
                 "fh": l.fh,
                 "flip": l.flip,
                 "hide": l.hide,
+                "rx0": l.rx0,
+                "rx1": l.rx1,
             })
         })
         .collect();

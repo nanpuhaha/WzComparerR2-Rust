@@ -260,3 +260,18 @@ body/head loading, equipment loading, zmap, and the prism unit test.
   visible NPC/mob markers over the minimap canvas.
 - Real test: map `000010000` portal type 2 (`pv`) loads its frames; all four
   minimap icons decode to non-empty RGBA.
+
+## Life AI & skill preview
+
+- `MapData.life` now parses `rx0`/`rx1`/`mobTime`. Mob `LifeView`s patrol
+  `rx0..rx1` at a simplified 60 px/s, flip on direction change, and interpolate
+  Y on their `fh` foothold (`BehaviorController` movement subset).
+- `stand` and `move` animations are both loaded; `move`/`walk1` is used while
+  moving and falls back to `stand`.
+- The viewport ticks life AI every frame and minimap NPC/mob markers follow the
+  moved positions.
+- `wz-gui::skill` mirrors `SummonSkill` path rules
+  (`Skill/<id/10000 or id/100>.img/skill/<id>/<ani>`); the inspector has a
+  skill preview (ID, ani, x/y, flip) that renders the animation in the viewport.
+- Real tests: mob `100100` move frames + real `000020000` foothold patrol,
+  skill `1001005/effect` (11 frames, first 144x128).

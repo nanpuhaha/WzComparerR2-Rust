@@ -24,6 +24,90 @@ fn reactor_origin(png: &wz_core::image::PngRef) -> (i32, i32) {
     (0, 0)
 }
 
+pub fn load_skill_view(
+    root: &std::path::Path,
+    id: i32,
+    ani_path: &str,
+) -> Option<crate::skill::SkillView> {
+    let image_name = format!("{}.img", crate::skill::skill_image_name(id));
+    let base = root.join("Skill").join("_Canvas");
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = wz_core::WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image_name.as_str()))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let skill_id = format!("{id:07}");
+        let Some(target) = helper_path(&node, &["skill", &skill_id, ani_path]) else {
+            continue;
+        };
+        let source = archive.source().clone();
+        let mut frames = Vec::new();
+        let mut delays = Vec::new();
+        let mut children: Vec<&wz_core::image::Node> = target
+            .object_children()
+            .iter()
+            .filter(|c| c.name.as_ref().parse::<i32>().is_ok())
+            .collect();
+        children.sort_by_key(|c| c.name.as_ref().parse::<i32>().unwrap_or(0));
+        if children.is_empty() {
+            if let Some((w, h, rgba)) = decode_canvas_node(root, target, &source) {
+                frames.push(crate::skill::SkillFrame {
+                    width: w,
+                    height: h,
+                    rgba,
+                    origin: node_origin(target),
+                });
+                delays.push(node_scalar_int(target, "delay").unwrap_or(100).max(20) as u32);
+            }
+        } else {
+            for child in children {
+                let Some((w, h, rgba)) = decode_canvas_node(root, child, &source) else {
+                    continue;
+                };
+                frames.push(crate::skill::SkillFrame {
+                    width: w,
+                    height: h,
+                    rgba,
+                    origin: node_origin(child),
+                });
+                delays.push(node_scalar_int(child, "delay").unwrap_or(100).max(20) as u32);
+            }
+        }
+        if frames.is_empty() {
+            return None;
+        }
+        return Some(crate::skill::SkillView {
+            id,
+            x: 0,
+            y: 0,
+            flip: false,
+            frames,
+            delays,
+        });
+    }
+    None
+}
+
 fn find_map_helper(
     root: &std::path::Path,
 ) -> Option<(
@@ -216,23 +300,14 @@ fn collect_life_animation(
     root: &std::path::Path,
     node: &wz_core::image::Node,
     source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+    preferred: &[&str],
 ) -> crate::life::LifeAnimation {
     let mut animation = crate::life::LifeAnimation::default();
-    let Some(target) = node
-        .object_children()
-        .iter()
-        .find(|c| c.name.as_ref() == "stand")
-        .or_else(|| {
-            node.object_children()
-                .iter()
-                .find(|c| c.name.as_ref() == "default")
-        })
-        .or_else(|| {
-            node.object_children()
-                .iter()
-                .find(|c| c.name.as_ref() == "move")
-        })
-    else {
+    let Some(target) = preferred.iter().find_map(|name| {
+        node.object_children()
+            .iter()
+            .find(|c| c.name.as_ref() == *name)
+    }) else {
         return animation;
     };
     let mut children: Vec<&wz_core::image::Node> = target
@@ -301,7 +376,8 @@ fn load_life_view(root: &std::path::Path, life: &wz_db::MapLife) -> Option<crate
         node = linked;
         source = linked_source;
     }
-    let animation = collect_life_animation(root, &node, &source);
+    let animation = collect_life_animation(root, &node, &source, &["stand", "default"]);
+    let walk = collect_life_animation(root, &node, &source, &["move", "walk1"]);
     if animation.frames.is_empty() {
         return None;
     }
@@ -330,6 +406,14 @@ fn load_life_view(root: &std::path::Path, life: &wz_db::MapLife) -> Option<crate
         name: None,
         hide_name,
         animation,
+        walk,
+        rx0: life.rx0.unwrap_or(life.x),
+        rx1: life.rx1.unwrap_or(life.x),
+        fh: life.fh,
+        position_x: life.x as f32,
+        position_y: life.y as f32,
+        direction: if life.flip { -1.0 } else { 1.0 },
+        moving: false,
     })
 }
 
@@ -1048,6 +1132,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn loads_real_skill_animation() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let view = load_skill_view(&root, 1_001_005, "effect").expect("skill effect");
+        assert_eq!(view.id, 1_001_005);
+        assert!(!view.frames.is_empty());
+        assert!(view.frames[0].width > 1);
+        assert!(view
+            .frames
+            .iter()
+            .any(|f| f.rgba.chunks(4).any(|p| p[3] != 0)));
+    }
+
+    #[test]
     fn loads_real_portal_and_minimap_icons() {
         let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
             return;
@@ -1123,6 +1222,53 @@ mod tests {
         if let Some(view) = load_life_view(&root, &mob) {
             assert!(!view.npc);
             assert!(!view.animation.frames.is_empty());
+            assert!(!view.walk.frames.is_empty(), "mob move frames");
+        }
+
+        // 실제 맵 발판 + 실제 몹 프레임으로 AI 이동 검증.
+        let map_path = root
+            .join("Map")
+            .join("Map")
+            .join("Map0")
+            .join("Map0_000.wz");
+        if map_path.exists() {
+            let archive = wz_core::WzArchive::open(&map_path).unwrap();
+            let tree = archive.read_tree().unwrap();
+            if let Some(entry) = tree
+                .root
+                .entries
+                .iter()
+                .find(|e| e.name.as_deref() == Some("000020000.img"))
+            {
+                let node = archive.parse_image_at(entry.offset.unwrap()).unwrap();
+                let map = wz_db::MapData::parse_from_node(&node);
+                let real = map
+                    .life
+                    .iter()
+                    .find(|l| l.life_type == "m")
+                    .expect("mob life");
+                let mut patrol = wz_db::MapLife {
+                    id: "100100".into(),
+                    life_type: "m".into(),
+                    x: real.x,
+                    y: real.y,
+                    fh: real.fh,
+                    rx0: Some(real.x - 50),
+                    rx1: Some(real.x + 50),
+                    ..Default::default()
+                };
+                let mut view = load_life_view(&root, &patrol).expect("mob view");
+                let before = view.position_x;
+                view.tick(1.0, 0.0, &map.footholds_by_id);
+                assert!((view.position_x - before).abs() > 1.0);
+                assert!(view.moving);
+                // 발판이 있으면 y가 발판 위로 보정된다.
+                if map.footholds_by_id.contains_key(&patrol.fh) {
+                    assert!((view.position_y - real.y as f32).abs() < 200.0);
+                }
+                patrol.rx0 = None;
+                patrol.rx1 = None;
+            }
         }
     }
 

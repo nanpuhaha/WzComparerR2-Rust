@@ -15,6 +15,34 @@ fn argb_components(packed: u32) -> [f32; 4] {
     [r, g, b, a]
 }
 
+fn draw_skill(batch: &mut SpriteBatch, state: &AppState) {
+    let Some(skill) = &state.skill_view else {
+        return;
+    };
+    let Some(frame) = skill.frame_at(state.skill_time) else {
+        return;
+    };
+    let index = skill
+        .frames
+        .iter()
+        .position(|f| std::ptr::eq(f, frame))
+        .unwrap_or(0);
+    let x = (skill.x - frame.origin.0) as f32;
+    let y = (skill.y - frame.origin.1) as f32;
+    let uv = if skill.flip {
+        [1.0, 0.0, 0.0, 1.0]
+    } else {
+        [0.0, 0.0, 1.0, 1.0]
+    };
+    batch.push_quad(
+        GpuKey(50_000 + index as u32),
+        [x, y, frame.width as f32, frame.height as f32],
+        200.0 + skill.id as f32 * 0.000001,
+        uv,
+        [1.0, 1.0, 1.0, 1.0],
+    );
+}
+
 fn portal_key(view: usize, frame: usize) -> GpuKey {
     GpuKey(40_000 + view as u32 * 64 + frame as u32)
 }
@@ -49,17 +77,16 @@ fn draw_lifes(batch: &mut SpriteBatch, state: &AppState) {
         if life.hidden {
             continue;
         }
-        let Some(frame_index) = life
-            .animation
-            .frames
-            .get(life.animation.frame_at(state.map_life_time))
-            .map(|_| life.animation.frame_at(state.map_life_time))
-        else {
+        let Some(frame) = life.draw_frame(state.map_life_time) else {
             continue;
         };
-        let frame = &life.animation.frames[frame_index];
-        let x = (life.x - frame.origin.0) as f32;
-        let y = (life.y - frame.origin.1) as f32;
+        let frame_index = if life.moving && !life.walk.frames.is_empty() {
+            life.walk.frame_at(state.map_life_time)
+        } else {
+            life.animation.frame_at(state.map_life_time)
+        };
+        let x = life.position_x - frame.origin.0 as f32;
+        let y = life.position_y - frame.origin.1 as f32;
         let uv = if life.flip {
             [1.0, 0.0, 0.0, 1.0]
         } else {
@@ -169,13 +196,39 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         state.viewport_dirty = true;
         ui.ctx().request_repaint();
     }
-    let life_animating = state.map_lifes.iter().any(|l| l.animation.frames.len() > 1);
+    if let Some(skill) = &state.skill_view {
+        if skill.frames.len() > 1 {
+            let now = ui.input(|i| i.time);
+            if state.skill_last > 0.0 {
+                state.skill_time += (now - state.skill_last).clamp(0.0, 0.1);
+            }
+            state.skill_last = now;
+            state.viewport_dirty = true;
+            ui.ctx().request_repaint();
+        }
+    }
+    let life_animating = state.map_lifes.iter().any(|l| {
+        l.animation.frames.len() > 1
+            || l.walk.frames.len() > 1
+            || (!l.npc && !l.hidden && l.rx1 > l.rx0)
+    });
     if life_animating {
         let now = ui.input(|i| i.time);
-        if state.map_life_last > 0.0 {
-            state.map_life_time += (now - state.map_life_last).clamp(0.0, 0.1);
-        }
+        let dt = if state.map_life_last > 0.0 {
+            (now - state.map_life_last).clamp(0.0, 0.1)
+        } else {
+            0.0
+        };
+        state.map_life_time += dt;
         state.map_life_last = now;
+        let footholds = state
+            .current_map
+            .as_ref()
+            .map(|m| m.footholds_by_id.clone())
+            .unwrap_or_default();
+        for life in &mut state.map_lifes {
+            life.tick(dt, state.map_life_time, &footholds);
+        }
         state.viewport_dirty = true;
         ui.ctx().request_repaint();
     }
@@ -345,6 +398,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             || !state.map_reactor_images.is_empty()
             || !state.map_lifes.is_empty()
             || !state.map_portals.is_empty()
+            || state.skill_view.is_some()
         {
             // 텍스처 업로드 (새 RenderContext 이므로 매 렌더 필요)
             if let Some((bw, bh, bpx)) = &state.map_back_image {
@@ -394,6 +448,16 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
                 for (f, frame) in portal.animation.frames.iter().enumerate() {
                     let _ =
                         rc.create_texture(portal_key(i, f), frame.width, frame.height, &frame.rgba);
+                }
+            }
+            if let Some(skill) = &state.skill_view {
+                for (f, frame) in skill.frames.iter().enumerate() {
+                    let _ = rc.create_texture(
+                        GpuKey(50_000 + f as u32),
+                        frame.width,
+                        frame.height,
+                        &frame.rgba,
+                    );
                 }
             }
             for (i, layer) in state.map_particle_layers.iter().enumerate() {
@@ -450,6 +514,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
         }
         draw_lifes(&mut batch, state);
         draw_portals(&mut batch, state);
+        draw_skill(&mut batch, state);
         draw_reactors(&mut batch, state);
         // map particles: 원본 ParticleSystem.Draw 와 같은 정적 샘플링.
         if !state.map_particle_layers.is_empty() {

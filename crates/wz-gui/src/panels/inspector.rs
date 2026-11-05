@@ -339,10 +339,55 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                     textures.mob.as_ref()
                 };
                 if let Some(icon) = icon {
-                    draw_minimap_icon(ui, rect, icon, life.x, life.y, info);
+                    draw_minimap_icon(
+                        ui,
+                        rect,
+                        icon,
+                        life.position_x as i32,
+                        life.position_y as i32,
+                        info,
+                    );
                 }
             }
         }
+    }
+
+    ui.separator();
+    ui.heading("스킬 미리보기");
+    ui.horizontal(|ui| {
+        ui.label("Skill ID:");
+        ui.text_edit_singleline(&mut state.skill_id_input);
+        ui.label("Ani:");
+        ui.text_edit_singleline(&mut state.skill_ani_input);
+    });
+    ui.horizontal(|ui| {
+        ui.label("x:");
+        ui.add(egui::DragValue::new(&mut state.skill_x));
+        ui.label("y:");
+        ui.add(egui::DragValue::new(&mut state.skill_y));
+        ui.checkbox(&mut state.skill_flip, "flip");
+        if ui.button("소환").clicked() {
+            let Some(root) = state.data_root.clone() else {
+                state.sound_status = "Data 루트 없음".into();
+                return;
+            };
+            let id = state.skill_id_input.trim().parse::<i32>().unwrap_or(0);
+            let ani = state.skill_ani_input.trim().to_string();
+            if let Some(mut skill) = async_io::map_loader::load_skill_view(&root, id, &ani) {
+                skill.x = state.skill_x;
+                skill.y = state.skill_y;
+                skill.flip = state.skill_flip;
+                state.skill_view = Some(skill);
+                state.skill_time = 0.0;
+                state.skill_last = 0.0;
+                state.viewport_dirty = true;
+            } else {
+                state.sound_status = format!("스킬을 찾지 못했습니다: {id}/{ani}");
+            }
+        }
+    });
+    if state.skill_view.is_some() {
+        ui.label("뷰포트에 스킬 애니메이션을 표시합니다");
     }
 
     ui.separator();

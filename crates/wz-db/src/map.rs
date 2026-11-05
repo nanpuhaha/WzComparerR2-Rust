@@ -142,6 +142,10 @@ pub struct MapLife {
     pub y: i32,
     pub cy: i32,
     pub fh: i32,
+    /// 몹 이동 범위 (`rx0`/`rx1`).
+    pub rx0: Option<i32>,
+    pub rx1: Option<i32>,
+    pub mob_time: i32,
     pub flip: bool,
     pub hide: bool,
 }
@@ -695,6 +699,9 @@ fn parse_life_arena(arena: &crate::Arena, life_root: crate::NodeId, map: &mut Ma
         let fh = get_arena_int(arena, child_id, "fh").unwrap_or(0);
         let flip = get_arena_bool(arena, child_id, "f");
         let hide = get_arena_bool(arena, child_id, "hide");
+        let rx0 = get_arena_int(arena, child_id, "rx0");
+        let rx1 = get_arena_int(arena, child_id, "rx1");
+        let mob_time = get_arena_int(arena, child_id, "mobTime").unwrap_or(0);
 
         map.life.push(MapLife {
             index: index as i32,
@@ -704,6 +711,9 @@ fn parse_life_arena(arena: &crate::Arena, life_root: crate::NodeId, map: &mut Ma
             y,
             cy,
             fh,
+            rx0,
+            rx1,
+            mob_time,
             flip,
             hide,
         });

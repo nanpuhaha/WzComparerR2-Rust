@@ -16,6 +16,7 @@ mod particles;
 mod portal;
 mod reactor;
 mod render_bridge;
+mod skill;
 mod sound_player;
 mod state;
 
