@@ -118,6 +118,7 @@ pub fn load_map_by_path(state: &mut AppState) {
         let tiles_clone = map.tiles.clone();
         let objs_clone = map.objects.clone();
         let reactors_clone = map.reactors.clone();
+        let backgrounds_clone = map.backgrounds.clone();
         let (tx, rx) = crossbeam_channel::unbounded();
         state.map_images_rx = Some(rx);
         std::thread::spawn(move || {
@@ -144,10 +145,17 @@ pub fn load_map_by_path(state: &mut AppState) {
                     reactors.push(image);
                 }
             }
+            let mut backgrounds = Vec::new();
+            for background in &backgrounds_clone {
+                if let Some((w, h, rgba)) = load_back_image(&root, &background.b_s) {
+                    backgrounds.push((background.x, background.y, w, h, rgba, background.front));
+                }
+            }
             let _ = tx.send(crate::state::MapImages {
                 tiles,
                 objs,
                 reactors,
+                backgrounds,
             });
         });
     }

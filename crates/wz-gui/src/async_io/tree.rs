@@ -68,6 +68,7 @@ pub fn poll_map_images(state: &mut AppState, ctx: &egui::Context) {
             state.map_tile_images = imgs.tiles;
             state.map_obj_images = imgs.objs;
             state.map_reactor_images = imgs.reactors;
+            state.map_background_images = imgs.backgrounds;
             state.map_images_rx = None;
             state.viewport_dirty = true;
             ctx.request_repaint();

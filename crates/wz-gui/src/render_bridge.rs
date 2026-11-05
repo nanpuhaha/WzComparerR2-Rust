@@ -66,10 +66,21 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             {
                 state.viewport_cached_has_back = state.map_back_image.is_some();
                 // back (non-front): z = -1000
-                if state.map_back_image.is_some() {
+                if state.map_back_image.is_some() && state.map_background_images.is_empty() {
                     state
                         .viewport_cached_layers
                         .push((GpuKey(2), [0.0, 0.0, 0.0, 0.0], -1000.0));
+                }
+                // backgrounds (back z=-1000, front z=1000)
+                for (i, (bx, by, bw, bh, _, front)) in
+                    state.map_background_images.iter().enumerate()
+                {
+                    let z = if *front { 1000.0 } else { -1000.0 + i as f32 };
+                    state.viewport_cached_layers.push((
+                        GpuKey(400 + i as u32),
+                        [*bx as f32, *by as f32, *bw as f32, *bh as f32],
+                        z,
+                    ));
                 }
                 // tiles: z = -500
                 for (i, (tx, ty, tw, th, _)) in state.map_tile_images.iter().enumerate() {
@@ -119,6 +130,9 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             for (i, (_, _, rw, rh, rpx)) in state.map_reactor_images.iter().enumerate() {
                 let _ = rc.create_texture(GpuKey(300 + i as u32), *rw, *rh, rpx);
             }
+            for (i, (_, _, bw, bh, bpx, _)) in state.map_background_images.iter().enumerate() {
+                let _ = rc.create_texture(GpuKey(400 + i as u32), *bw, *bh, bpx);
+            }
             // 캐시된 레이어를 z 순서로 정렬해 push
             let mut sorted: Vec<&(GpuKey, [f32; 4], f32)> =
                 state.viewport_cached_layers.iter().collect();
@@ -142,6 +156,7 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             && state.map_tile_images.is_empty()
             && state.map_obj_images.is_empty()
             && state.map_reactor_images.is_empty()
+            && state.map_background_images.is_empty()
         {
             // 그리드 폴백
             for gx in -2..=2i32 {
@@ -199,8 +214,9 @@ pub fn render_viewport(ui: &mut egui::Ui, state: &mut AppState) {
             painter.line_segment([p1, p2], egui::Stroke::new(1.5, egui::Color32::GREEN));
         }
         ui.label(format!(
-            "발판 {}개, 타일 {}개, 오브젝트 {}개, 리액터 {}개 표시",
+            "발판 {}개, 배경 {}개, 타일 {}개, 오브젝트 {}개, 리액터 {}개 표시",
             m.footholds.len(),
+            state.map_background_images.len(),
             state.map_tile_images.len(),
             state.map_obj_images.len(),
             state.map_reactor_images.len()
