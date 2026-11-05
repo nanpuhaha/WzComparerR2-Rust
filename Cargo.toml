@@ -10,6 +10,7 @@ members = [
     "crates/wz-diff",
     "crates/wz-avatar",
     "crates/wz-openapi",
+    "crates/wz-network",
     "crates/wz-cli",
     "tools/corpus-builder",
     "tools/oracle-diff",

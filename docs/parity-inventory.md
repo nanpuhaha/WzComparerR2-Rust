@@ -355,3 +355,16 @@ name/desc/attributes를 만들고, C# `itemtooltips` 모드(같은 LoadItem 순�
 원본과 같다. 회귀 테스트는
 `crates/wz-cli/tests/fixtures/db2_item_tab_tooltips.expected.json`의 행 수 +
 SHA-256으로 고정한다 (`db2_item_tab_tooltips_match_csharp`).
+
+## Network 오프라인 (`wz-network`)
+
+| 요소 | 원본 | 검증 |
+|---|---|---|
+| RC4 스트림 | `RC4CryptoTransform` | C# 실행 결과와 12개 (key 길이 8/16/32 × 데이터 1/8/17/64B) 벡터 완전 일치 |
+| 프레임 | `WcClient.EncodePack` (uint16 LE + UTF-8 JSON) | 인코딩/부분 수신/초과 길이 자체 테스트 |
+
+fixture: `crates/wz-network/tests/rc4_vectors.json`,
+테스트: `crates/wz-network/tests/csharp_parity.rs`,
+C# 하네스: `tools/csharp-worldmap ... -- networkrc4 <Network.dll> <keyhex> <datahex>`.
+
+TCP 연결, 재접속, 로그인 상태 머신은 서버가 필요해 제외한다.

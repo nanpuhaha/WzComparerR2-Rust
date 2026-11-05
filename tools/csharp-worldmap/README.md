@@ -331,3 +331,9 @@ Cash 3539, Consume 18377, Etc 5238, Install 3851, Pet 614, Special 1224
 = 32843 items
 ```
 All name/desc/attributes match Rust `wz db2-item-tab-tooltips` exactly.
+
+Verified Network RC4 (`networkrc4 <WzComparerR2.Network.dll> <keyhex> <datahex>`):
+```
+key 8/16/32 bytes × data 1/8/17/64 bytes = 12 vectors
+```
+All match Rust `wz-network::Rc4` exactly.

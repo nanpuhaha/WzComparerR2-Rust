@@ -1,0 +1,62 @@
+[
+  {
+    "key": "0011223344556677",
+    "data": "ce",
+    "out": "d1"
+  },
+  {
+    "key": "0011223344556677",
+    "data": "c2665b757f442c80",
+    "out": "dd6f03e6d448913f"
+  },
+  {
+    "key": "0011223344556677",
+    "data": "c42dfa66d76ebfc66c4dec5bad2a2cf0a1",
+    "out": "db24a2f57c6202796943ba63b39e2a96ae"
+  },
+  {
+    "key": "0011223344556677",
+    "data": "ce158903d968b929ec65ec1ab7426e52e25a5a12380b57f2d629d92c499e02c3a845cf661c6ce283ce40b5f31c434dd13f313c4997595ad14a6aa3ff77833cb9",
+    "out": "d11cd19072640496e96bba22a9f66834ed2fd353396c01e277ec519020fd4c3342b28b76e8c57853a612a7f48db0d18838f80b4ce4137b6ec29f5ffc8c978958"
+  },
+  {
+    "key": "00112233445566778899aabbccddeeff",
+    "data": "5f",
+    "out": "da"
+  },
+  {
+    "key": "00112233445566778899aabbccddeeff",
+    "data": "25930518ac6ec1cc",
+    "out": "a0c8a94f3e49a049"
+  },
+  {
+    "key": "00112233445566778899aabbccddeeff",
+    "data": "acccc5d4bd2f5c13becce3759f739f36a0",
+    "out": "299769832f083d9646955a4e0a36e2a2a9"
+  },
+  {
+    "key": "00112233445566778899aabbccddeeff",
+    "data": "6f7fc497e029e0d7832396a4f44183dc94d15190c2e163c2ac65b002b597625785d576d1b0cc013967009e55e36987d5ef93660a359d26101dd599bd976333ca",
+    "out": "ea2468c0720e81527b7a2f9f6104fe489d14c2c063f6e8ecccc4bb7ce46a854ac64ec378b6ec9313d6770617ce0efb2bbbb2060176258ea8bcaac91c26e42d0a"
+  },
+  {
+    "key": "00112233445566778899aabbccddeeff0123456789abcdef0011223344556677",
+    "data": "cc",
+    "out": "5c"
+  },
+  {
+    "key": "00112233445566778899aabbccddeeff0123456789abcdef0011223344556677",
+    "data": "5887eba84142e4c7",
+    "out": "c8c30de4c2b0626f"
+  },
+  {
+    "key": "00112233445566778899aabbccddeeff0123456789abcdef0011223344556677",
+    "data": "d65bb8806a8cedc35ef5f356267aeb073a",
+    "out": "461f5ecce97e6b6be5a5bb58554cebe5e3"
+  },
+  {
+    "key": "00112233445566778899aabbccddeeff0123456789abcdef0011223344556677",
+    "data": "a8fc24ab028c06a3d385544518cb1218af759551e01dd575603bf8578b8dba246558b5293a40464c2c10c255b57652ae1bafdf609d5b384bfe0676c03178e329",
+    "out": "38b8c2e7817e800b68d51c4b6bfd12fa76c31cbf69026a3fb351b50120c102fa9164d8ab1f0235e0ea832ab75815f8e565e844ffafcf54486a60a81fabcd9b9a"
+  }
+]

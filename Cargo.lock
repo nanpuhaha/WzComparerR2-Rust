@@ -1888,6 +1888,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "wz-network"
+version = "0.2.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "wz-openapi"
 version = "0.2.0"
 dependencies = [

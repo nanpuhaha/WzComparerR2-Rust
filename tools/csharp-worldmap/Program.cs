@@ -1234,6 +1234,17 @@ class Program
             item_id = itemId,
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void NetworkRc4(string networkDllPath, string keyHex, string dataHex)
+    {
+        var asm = System.Reflection.Assembly.LoadFrom(networkDllPath);
+        var type = asm.GetType("WzComparerR2.Network.RC4CryptoServiceProvider");
+        var rc4 = (System.Security.Cryptography.SymmetricAlgorithm)Activator.CreateInstance(type);
+        rc4.Key = Convert.FromHexString(keyHex);
+        var encryptor = rc4.CreateEncryptor();
+        var data = Convert.FromHexString(dataHex);
+        var outBytes = encryptor.TransformFinalBlock(data, 0, data.Length);
+        Console.WriteLine(Convert.ToHexString(outBytes).ToLowerInvariant());
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1259,6 +1270,7 @@ class Program
         else if (args[0] == "itemtooltips") ItemTooltips(args[1], args[2], args[3]);
         else if (args[0] == "gearprops") GearProps(args[1]);
         else if (args[0] == "openapi") OpenApi(args[1]);
+        else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();
