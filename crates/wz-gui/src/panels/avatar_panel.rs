@@ -10,10 +10,16 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     if async_io::tick_chair(state, now) {
         async_io::render_loaded_avatar(state);
     }
+    if async_io::tick_pets(state, now) {
+        async_io::render_loaded_avatar(state);
+    }
     if state.effect_auto_play && !state.effect_frames.is_empty() {
         repaint = true;
     }
     if state.chair_auto_play && !state.chair_frames.is_empty() {
+        repaint = true;
+    }
+    if state.pet_auto_play && !state.pet_animations.is_empty() {
         repaint = true;
     }
     if repaint {
@@ -247,6 +253,15 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         let auto = ui.checkbox(&mut state.chair_auto_play, "Rolling house 자동 재생");
         if auto.changed() {
             state.chair_last_time = 0.0;
+        }
+    }
+    if !state.pet_animations.is_empty() {
+        let auto = ui.checkbox(&mut state.pet_auto_play, "Pet 자동 재생");
+        if auto.changed() {
+            for pet in &mut state.pet_animations {
+                pet.last_time = 0.0;
+                pet.next_action = 0.0;
+            }
         }
     }
     ui.horizontal(|ui| {

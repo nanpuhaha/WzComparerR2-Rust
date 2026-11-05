@@ -72,6 +72,8 @@ pub struct LoadedAvatar {
     /// 체어 애니메이션 프레임 (rollingHouseChair 등). 비어 있으면 정적.
     pub chair_frames: Vec<Vec<AvatarPart>>,
     pub chair_delays: Vec<u32>,
+    /// petChair 슬롯 애니메이션/랜덤 행동.
+    pub pet_animations: Vec<PetAnimationData>,
 }
 
 /// C# `CustomChairType` — 현재 C# 원본은 `ScaleAvatarChair` 만 구현한다.
@@ -159,6 +161,27 @@ pub struct PartChairAnimationInfo {
     pub delays: Vec<u32>,
     pub part_z: Vec<i32>,
     pub pos_lv: Vec<crate::Point>,
+}
+
+/// 펫 한 동작의 전체 프레임.
+#[derive(Debug, Clone, Default)]
+pub struct PetActionFrames {
+    pub frames: Vec<Vec<AvatarPart>>,
+    pub delay_ms: u32,
+}
+
+/// 펫 슬롯의 애니메이션/랜덤 행동 데이터.
+#[derive(Debug, Clone, Default)]
+pub struct PetAnimationData {
+    pub slot: usize,
+    pub item_id: i32,
+    pub pos: crate::Point,
+    pub flip: bool,
+    pub actions: std::collections::BTreeMap<String, PetActionFrames>,
+    pub weights: Vec<(String, i32)>,
+    pub gap_min: u32,
+    pub gap_max: u32,
+    pub default_action: String,
 }
 
 /// `showcaseChair` — 아이템 4개를 배치하는 슬롯.
@@ -296,6 +319,8 @@ pub struct PetChairSlot {
     pub wonder_grade: i32,
     pub t_gap_min: i32,
     pub t_gap_max: i32,
+    /// `randAct/<action>/prob` 목록.
+    pub actions: Vec<(String, i32)>,
 }
 
 /// `petChairInfo` — 펫 3마리 슬롯.
@@ -607,12 +632,24 @@ fn parse_custom_chair(node: &ImageNode) -> CustomChairInfo {
             if child.name.parse::<usize>().is_err() {
                 continue;
             }
+            let mut actions = Vec::new();
+            if let Some(rand) = child_node(child, "randAct") {
+                for action in rand.object_children() {
+                    let name = action.name.to_string();
+                    if name.starts_with("tGap") {
+                        continue;
+                    }
+                    let prob = node_int(action, "prob").unwrap_or(0);
+                    actions.push((name, prob));
+                }
+            }
             slots.push(PetChairSlot {
                 pos: node_vec(child, "pos").unwrap_or(crate::Point::ZERO),
                 reverse_flip: node_int(child, "reverseFlip").unwrap_or(0) != 0,
                 wonder_grade: node_int(child, "wonderGrade").unwrap_or(0),
                 t_gap_min: node_int(child, "randAct/tGapMin").unwrap_or(0),
                 t_gap_max: node_int(child, "randAct/tGapMax").unwrap_or(0),
+                actions,
             });
         }
         PetChairInfo { slots }
@@ -1897,6 +1934,131 @@ fn build_rolling_frame(
     Some((root, parts))
 }
 
+/// 펫 한 동작의 모든 프레임을 슬롯 위치/반전으로 로드한다.
+fn load_pet_action_frames(
+    data_root: &std::path::Path,
+    item_id: i32,
+    action: &str,
+    pos: crate::Point,
+    flip: bool,
+) -> Option<PetActionFrames> {
+    let base = data_root.join("Item").join("Pet").join("_Canvas");
+    let image = format!("{item_id}.img");
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image.as_str()))
+        else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(image_entry.offset?) else {
+            continue;
+        };
+        let Some(action_node) = child_node(&node, action) else {
+            continue;
+        };
+        let frame_nodes: Vec<&ImageNode> =
+            if matches!(action_node.value, Some(wz_core::image::ImageValue::Png(_))) {
+                vec![action_node]
+            } else {
+                action_node.object_children().iter().collect()
+            };
+        let mut frames = Vec::new();
+        for frame in frame_nodes {
+            let Some(png) = frame.first_canvas() else {
+                continue;
+            };
+            let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(&png, archive.source()) else {
+                continue;
+            };
+            let (origin, z_index) = png_origin_z(&png);
+            let mut part = AvatarPart {
+                slot: "pet".into(),
+                width: w,
+                height: h,
+                rgba,
+                position: crate::Point::new(-origin.x, -origin.y),
+                origin,
+                z_index,
+                custom_origin_map: Default::default(),
+            };
+            place_pet_parts(std::slice::from_mut(&mut part), pos, flip);
+            frames.push(vec![part]);
+        }
+        if frames.is_empty() {
+            return None;
+        }
+        return Some(PetActionFrames {
+            frames,
+            delay_ms: 120,
+        });
+    }
+    None
+}
+
+fn load_pet_animation(
+    data_root: &std::path::Path,
+    item_id: i32,
+    slot_index: usize,
+    slot: &PetChairSlot,
+) -> Option<PetAnimationData> {
+    let mut names = std::collections::BTreeSet::new();
+    for (name, _) in &slot.actions {
+        names.insert(name.clone());
+    }
+    names.insert("stand0".into());
+    names.insert("stand1".into());
+
+    let mut actions = std::collections::BTreeMap::new();
+    for name in names {
+        if let Some(mut frames) =
+            load_pet_action_frames(data_root, item_id, &name, slot.pos, slot.reverse_flip)
+        {
+            for frame in &mut frames.frames {
+                for part in frame {
+                    part.slot = format!("pet{slot_index}_{}", part.slot);
+                }
+            }
+            actions.insert(name, frames);
+        }
+    }
+    if actions.is_empty() {
+        return None;
+    }
+    let default_action = if actions.contains_key("stand0") {
+        "stand0".to_string()
+    } else {
+        actions.keys().next()?.clone()
+    };
+    let mut weights = slot.actions.clone();
+    if weights.is_empty() {
+        weights.push((default_action.clone(), 1));
+    }
+    Some(PetAnimationData {
+        slot: slot_index,
+        item_id,
+        pos: slot.pos,
+        flip: slot.reverse_flip,
+        actions,
+        weights,
+        gap_min: slot.t_gap_min.max(0) as u32,
+        gap_max: slot.t_gap_max.max(0) as u32,
+        default_action,
+    })
+}
+
 /// `Item/Pet/_Canvas` 에서 펫 이미지를 찾아 첫 프레임을 로드한다.
 fn load_pet_item(
     data_root: &std::path::Path,
@@ -2815,6 +2977,7 @@ pub fn load_from_character_wz_with_skin(
         transform: AvatarTransform::default(),
         chair_frames: Vec::new(),
         chair_delays: Vec::new(),
+        pet_animations: Vec::new(),
     })
 }
 
@@ -2968,6 +3131,7 @@ pub fn load_avatar_with_equipment_and_mix(
     let mut chair_info = chair_info;
     let mut chair_frames: Vec<Vec<AvatarPart>> = Vec::new();
     let mut chair_delays: Vec<u32> = Vec::new();
+    let mut pet_animations: Vec<PetAnimationData> = Vec::new();
     for (slot, item_id) in equipment {
         if let Some(dir) = slot_dir_name(slot) {
             if dir == "Effect" {
@@ -3117,6 +3281,11 @@ pub fn load_avatar_with_equipment_and_mix(
                                 }
                                 merge_bone_tree(&mut root, pet_root);
                                 parts.extend(pet_parts);
+                                if let Some(anim) =
+                                    load_pet_animation(data_root, *item_id, i, &pet.slots[i])
+                                {
+                                    pet_animations.push(anim);
+                                }
                             }
                         }
                         if let Some(font) = game_font(data_root) {
@@ -3339,6 +3508,7 @@ pub fn load_avatar_with_equipment_and_mix(
         transform,
         chair_frames,
         chair_delays,
+        pet_animations,
     })
 }
 
@@ -4051,6 +4221,28 @@ mod chair_custom_type_tests {
                 ..Default::default()
             },
         )
+    }
+
+    #[test]
+    fn pet_chair_builds_animation_actions() {
+        let Some(av) = load_chair_with(
+            3018179,
+            ChairUserData {
+                pet_items: vec![5000000, 5000001, 5000002],
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        assert_eq!(av.pet_animations.len(), 3);
+        let pet = &av.pet_animations[0];
+        assert_eq!(pet.item_id, 5000000);
+        assert!(pet.actions.contains_key("stand0"));
+        assert!(pet.actions["stand0"].frames.len() > 1);
+        assert!(pet.actions.contains_key("chat") || pet.actions.contains_key("cry"));
+        assert!(!pet.weights.is_empty());
+        assert!(pet.gap_max >= pet.gap_min);
+        assert!(!pet.default_action.is_empty());
     }
 
     #[test]

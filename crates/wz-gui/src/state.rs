@@ -52,6 +52,27 @@ pub struct AvatarPartData {
     pub z_index: i32,
 }
 
+/// GUI 펫 한 동작의 프레임.
+#[derive(Clone, Default)]
+pub struct PetActionData {
+    pub frames: Vec<Vec<AvatarPartData>>,
+    pub delay_ms: u32,
+}
+
+/// GUI 펫 슬롯 애니메이션 상태.
+#[derive(Clone, Default)]
+pub struct PetAnimationState {
+    pub actions: std::collections::BTreeMap<String, PetActionData>,
+    pub weights: Vec<(String, i32)>,
+    pub gap_min: u32,
+    pub gap_max: u32,
+    pub action: String,
+    pub frame: usize,
+    pub last_time: f64,
+    pub next_action: f64,
+    pub rng: u64,
+}
+
 pub struct AppState {
     pub archive: Option<Arc<WzArchive>>,
     pub archive_path: Option<std::path::PathBuf>,
@@ -126,6 +147,8 @@ pub struct AppState {
     pub chair_time: i64,
     pub chair_showcase_input: String,
     pub chair_pet_input: String,
+    pub pet_animations: Vec<PetAnimationState>,
+    pub pet_auto_play: bool,
     pub chair_name: String,
     pub chair_job: String,
     pub chair_gender: String,
@@ -212,6 +235,8 @@ impl Default for AppState {
             chair_time: 0,
             chair_showcase_input: String::new(),
             chair_pet_input: String::new(),
+            pet_animations: Vec::new(),
+            pet_auto_play: false,
             chair_name: String::new(),
             chair_job: String::new(),
             chair_gender: String::new(),

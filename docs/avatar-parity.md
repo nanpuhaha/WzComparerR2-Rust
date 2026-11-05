@@ -86,10 +86,12 @@ remaining CharaSim gaps.
     `pos`/`reverseFlip`/`z`, `forcedHideBody`/`forcedAction`; played through the
     same chair frame slider/auto-play (fixed 100ms because WZ has no delay).
   - `petChair` → `petChairInfo` slots (`pos`, `reverseFlip`, `wonderGrade`,
-    `tGapMin/Max`) are parsed and the taming/base is loaded. Up to three pet item
-    IDs supplied by the GUI (`Pet items`) are loaded from `Item/Pet/_Canvas`
-    (`stand0`/`stand1`/`move`/`rest0`) and placed at the slot positions, with
-    `reverseFlip` mirroring. Pet animation/random actions are not simulated.
+    `tGapMin/Max`, `randAct/*/prob`) are parsed. Up to three pet item IDs supplied
+    by the GUI (`Pet items`) load every frame of `stand0`/`stand1`/`move`/`rest0`
+    and the `randAct` actions from `Item/Pet/_Canvas`, placed at the slot positions
+    with `reverseFlip` mirroring. `Pet 자동 재생` advances frames by `delay` and
+    switches actions using the WZ weights and `tGapMin/Max`; pet equipment is not
+    rendered.
   - `eventPointChair` → `index`/`point`/`term` are parsed and shown in the GUI
     (`Chair type`, `Event point`). Rendering uses the taming part; the chair body
     is hidden (`removeBody`).

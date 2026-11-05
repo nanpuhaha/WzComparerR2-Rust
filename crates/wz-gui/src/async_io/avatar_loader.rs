@@ -4,7 +4,7 @@
 // 워커 스레드가 결과를 채널로 보내고, UI 스레드는 `poll_load_result` 로
 // 매 프레임 폴링한다.
 
-use crate::state::{AppState, AvatarPartData};
+use crate::state::{AppState, AvatarPartData, PetActionData, PetAnimationState};
 
 fn apply_chair_metadata(state: &mut AppState, av: &wz_avatar::LoadedAvatar) {
     state.chair_type = av.chair_info.as_ref().and_then(|info| {
@@ -75,6 +75,7 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             state.chair_type = None;
             state.chair_event_point = None;
             state.chair_custom_fields.clear();
+            state.pet_animations.clear();
             render_loaded_avatar(state);
         }
         None => {
@@ -182,6 +183,37 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
             state.chair_frame = 0;
             state.chair_last_time = 0.0;
             apply_chair_metadata(state, &av);
+            state.pet_animations = av
+                .pet_animations
+                .iter()
+                .map(|pet| PetAnimationState {
+                    actions: pet
+                        .actions
+                        .iter()
+                        .map(|(name, action)| {
+                            (
+                                name.clone(),
+                                PetActionData {
+                                    frames: action
+                                        .frames
+                                        .iter()
+                                        .map(|frame| frame.iter().map(part_data).collect())
+                                        .collect(),
+                                    delay_ms: action.delay_ms,
+                                },
+                            )
+                        })
+                        .collect(),
+                    weights: pet.weights.clone(),
+                    gap_min: pet.gap_min,
+                    gap_max: pet.gap_max,
+                    action: pet.default_action.clone(),
+                    frame: 0,
+                    last_time: 0.0,
+                    next_action: 0.0,
+                    rng: 0x9E37_79B9_7F4A_7C15 ^ (pet.slot as u64 + 1),
+                })
+                .collect();
             render_loaded_avatar(state);
         }
         None => {
@@ -330,6 +362,108 @@ fn parse_custom_origins(input: &str) -> std::collections::BTreeMap<String, wz_av
         }
     }
     out
+}
+
+fn next_pet_rand(seed: &mut u64) -> u64 {
+    let mut x = *seed;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    *seed = x;
+    x
+}
+
+fn pet_gap_ms(pet: &mut PetAnimationState) -> u32 {
+    let min = pet.gap_min.max(200);
+    let max = pet.gap_max.max(min);
+    if max > min {
+        min + (next_pet_rand(&mut pet.rng) % (max - min + 1) as u64) as u32
+    } else {
+        min
+    }
+}
+
+fn pick_pet_action(pet: &mut PetAnimationState) -> String {
+    let total: i64 = pet.weights.iter().map(|(_, w)| (*w).max(0) as i64).sum();
+    if total <= 0 {
+        return pet.action.clone();
+    }
+    let mut pick = next_pet_rand(&mut pet.rng) % total as u64;
+    for (name, weight) in &pet.weights {
+        let weight = (*weight).max(0) as u64;
+        if pick < weight {
+            return name.clone();
+        }
+        pick -= weight;
+    }
+    pet.action.clone()
+}
+
+fn is_pet_slot(slot: &str) -> bool {
+    slot.strip_prefix("pet")
+        .and_then(|rest| rest.chars().next())
+        .is_some_and(|c| c.is_ascii_digit())
+}
+
+/// 현재 펫 프레임을 아바타 파트 목록에 반영한다.
+pub fn apply_pet_frames(state: &mut AppState) {
+    let mut replacements = Vec::new();
+    for pet in &state.pet_animations {
+        let Some(action) = pet.actions.get(&pet.action) else {
+            continue;
+        };
+        if action.frames.is_empty() {
+            continue;
+        }
+        let idx = pet.frame % action.frames.len();
+        replacements.extend(action.frames[idx].iter().cloned());
+    }
+    state
+        .avatar_loaded_parts
+        .retain(|part| !is_pet_slot(&part.slot));
+    state.avatar_loaded_parts.extend(replacements);
+}
+
+/// 펫 애니메이션/랜덤 행동 틱. 변경됐으면 `true`.
+pub fn tick_pets(state: &mut AppState, now: f64) -> bool {
+    if !state.pet_auto_play || state.pet_animations.is_empty() {
+        return false;
+    }
+    let mut changed = false;
+    for pet in &mut state.pet_animations {
+        if pet.action.is_empty() || !pet.actions.contains_key(&pet.action) {
+            pet.action = pet.actions.keys().next().cloned().unwrap_or_default();
+            pet.frame = 0;
+        }
+        if pet.next_action <= 0.0 {
+            pet.next_action = now + pet_gap_ms(pet) as f64 / 1000.0;
+            pet.last_time = now;
+        }
+        if let Some(action) = pet.actions.get(&pet.action) {
+            if !action.frames.is_empty() {
+                let delay = action.delay_ms.max(20) as f64 / 1000.0;
+                if now - pet.last_time >= delay {
+                    pet.last_time = now;
+                    pet.frame = (pet.frame + 1) % action.frames.len();
+                    changed = true;
+                }
+            }
+        }
+        if now >= pet.next_action {
+            let next = pick_pet_action(pet);
+            if pet.actions.contains_key(&next) && next != pet.action {
+                pet.action = next;
+                pet.frame = 0;
+                pet.last_time = now;
+                changed = true;
+            }
+            pet.next_action = now + pet_gap_ms(pet) as f64 / 1000.0;
+        }
+    }
+    if changed {
+        apply_pet_frames(state);
+    }
+    changed
 }
 
 /// 체어 애니메이션 틱. 다음 프레임으로 넘어갔으면 `true`.
@@ -639,6 +773,83 @@ mod tests {
         assert_eq!(state.chair_frame, 0);
         assert!(tick_chair(&mut state, 10.2));
         assert_eq!(state.chair_frame, 1);
+    }
+
+    fn pet_part(color: u8) -> AvatarPartData {
+        AvatarPartData {
+            slot: "pet0_body".into(),
+            width: 1,
+            height: 1,
+            rgba: vec![color, color, color, 255],
+            position: (0, 0),
+            z_index: 1,
+        }
+    }
+
+    fn pet_action(color: u8, frames: usize, delay_ms: u32) -> PetActionData {
+        PetActionData {
+            frames: (0..frames).map(|_| vec![pet_part(color)]).collect(),
+            delay_ms,
+        }
+    }
+
+    #[test]
+    fn apply_pet_frames_replaces_only_pet_parts() {
+        let body = AvatarPartData {
+            slot: "body".into(),
+            width: 1,
+            height: 1,
+            rgba: vec![9, 9, 9, 255],
+            position: (0, 0),
+            z_index: 0,
+        };
+        let mut state = AppState {
+            avatar_loaded_parts: vec![body, pet_part(1)],
+            pet_animations: vec![PetAnimationState {
+                actions: std::collections::BTreeMap::from([(
+                    "stand0".to_string(),
+                    pet_action(2, 1, 20),
+                )]),
+                action: "stand0".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        apply_pet_frames(&mut state);
+        assert!(state.avatar_loaded_parts.iter().any(|p| p.slot == "body"));
+        let pet = state
+            .avatar_loaded_parts
+            .iter()
+            .find(|p| p.slot == "pet0_body")
+            .expect("pet part");
+        assert_eq!(pet.rgba, vec![2, 2, 2, 255]);
+    }
+
+    #[test]
+    fn tick_pets_advances_frame_and_switches_action() {
+        let mut state = AppState {
+            pet_animations: vec![PetAnimationState {
+                actions: std::collections::BTreeMap::from([
+                    ("stand0".to_string(), pet_action(1, 2, 20)),
+                    ("chat".to_string(), pet_action(2, 1, 20)),
+                ]),
+                weights: vec![("chat".into(), 1)],
+                gap_min: 200,
+                gap_max: 200,
+                action: "stand0".into(),
+                frame: 0,
+                last_time: 0.0,
+                next_action: 0.0,
+                rng: 1,
+            }],
+            pet_auto_play: true,
+            ..Default::default()
+        };
+        assert!(!tick_pets(&mut state, 0.1));
+        assert!(tick_pets(&mut state, 0.15));
+        assert_eq!(state.pet_animations[0].frame, 1);
+        assert!(tick_pets(&mut state, 0.31));
+        assert_eq!(state.pet_animations[0].action, "chat");
     }
 
     #[test]
