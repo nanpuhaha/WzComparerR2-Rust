@@ -263,3 +263,11 @@ dotnet run ... -- characters ../../Data/Character/Hair/Hair_000.wz ../../Data/St
 ```
 Rust `wz db2-characters ... --json` matches all 9004 rows exactly, including
 the `default/hairOverHead` icon path.
+
+Verified DB2 Character grid output (Face):
+```
+dotnet run ... -- characters ../../Data/Character/Face/Face_000.wz ../../Data/String/String_000.wz
+→ 7424 rows
+```
+Rust `wz db2-characters ... --json` matches all 7424 rows exactly, including
+the `default/face` icon path.

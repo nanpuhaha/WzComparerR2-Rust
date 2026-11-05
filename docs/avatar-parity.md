@@ -654,3 +654,8 @@ merge semantics (recursive directory merge, conflict errors).
   source. Hair uses `default/hairOverHead` (Face uses `default/face`), matching
   `DB2Form.LoadCharacter`; other categories keep `info/icon`.
 - `Hair_000.wz` → C# `characters` 9004 == Rust 9004 rows, exact match.
+
+### DB2 Character/Face
+
+- The Face tab uses `default/face` for its icon source. `Face_000.wz` →
+  C# `characters` 7424 == Rust 7424 rows, exact match.
