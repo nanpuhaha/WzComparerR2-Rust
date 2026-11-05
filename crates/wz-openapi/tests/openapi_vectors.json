@@ -1,0 +1,23 @@
+[
+  {
+    "text": "OBDLADCOBBCKDCLFHJAIAPAILBPHONEM",
+    "decrypt": "3a3dbaf14f0e1429ad2a1aac30f6c6b8",
+    "decrypt_len": 16,
+    "check_ver": 198,
+    "item_id": null
+  },
+  {
+    "text": "COFNDKAHPJHPCBOOCDCNBHIKCAJKPGLFIIHPGGOIAJCEACKKEJPCMBFFBLCHPOFD",
+    "decrypt": "cf7e05b0c0e7d77b2e58ac0fb492aed22f8d485aec61968f688c9ef9f73ba152",
+    "decrypt_len": 32,
+    "check_ver": 59,
+    "item_id": null
+  },
+  {
+    "text": "CGGOEJANLBDIEIJMOIBENFINBEFKILEPJJEPONBFMFLCPNKOOPPDBHPBFHOBOAJHIMDPFPNFNPDNDEPIMAICGCLADHFAIJEPKFOECECIMKGNBIJCBDHACMKCJMOLCBID",
+    "decrypt": "14e831953fed14b83824b0aeb9ecc98c15bc5b5622b6dabb7470c21e95fb25809c5153c8bb5a527d1d4b2e635838bf9adfecafe49e589171b820baa6d8282789",
+    "decrypt_len": 64,
+    "check_ver": 166,
+    "item_id": null
+  }
+]

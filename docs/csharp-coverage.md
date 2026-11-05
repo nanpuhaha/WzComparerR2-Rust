@@ -45,7 +45,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | Rendering | 25 | 2,726 | `wz-render`, `wz-image` | 🟡 (light/water/sprite) |
 | Animation | 15 | 2,415 | `wz-avatar` frame loader | 🟡 |
 | Controls | 16 | 2,138 | — | ⬜ |
-| OpenAPI | 4 | 2,086 | — | ⬜ |
+| OpenAPI | 4 | 2,086 | `wz-openapi` 오프라인 helpers(Decrypt/CheckVer/GetItemID), HTTP는 API 키 필요 | 🟡 |
 | Text | 4 | 707 | `wz-core::text` | ✅ |
 | Encoders | 6 | 534 | `wz-image` | ✅ (PNG/BC7) |
 | Config | 6 | 355 | — | ⬜ |
@@ -88,7 +88,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
    ArcaneForce(7), AuthenticForce(8), Bits(79), EquipBag(2) 스물한 카테고리를
    실데이터 비교했고, DB2 전체 화면 이미지 뷰어(GUI)도 구현했다. 나머지 8개
    전용 그리드는 미구현.
-6. `WzComparerR2.Common/Controls` (2,138 LOC), `OpenAPI` (2,086 LOC) — 미구현.
+6. `WzComparerR2.Common/Controls` (2,138 LOC) — 미구현.
+   `OpenAPI` (2,086 LOC) 중 네트워크 없이 검증 가능한 `Decrypt`,
+   `CheckVer`, `GetItemID`를 `wz-openapi`로 옮겨 C# 실행 결과와 비교했다.
+   캐릭터 조회/아바타 API 호출은 Nexon API 키가 필요해 제외한다.
 7. `LuaConsole` (1,451), `Network` (1,954), `PluginBase` (693) — 미구현.
 
 ## 이번 턴 추가 구현
@@ -159,6 +162,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - 데이터 부재 재확인: `wz parity-scan Data` → Skill common 0, WorldMap
   QuestLimit/Fog 0, Familiar 파일 0, BIN 파일 0. weather는 원본 C# 소스에
   구현이 없다.
+- OpenAPI 오프라인 helpers: C# `Utils.Decrypt`/`CheckVer`/`GetItemID`를
+  16/32/64바이트 벡터에서 비교해 완전 일치(`wz-openapi` 통합 테스트).
 - `ItemStringHelper.GetGearPropString` 전수 비교: Coat 228, Weapon 1262,
   Cap 965, Accessory 1576, Face 4, Ring 978, TamingMob 89 — 총 5,102개
   (key,value) 쌍의 문자열이 C#과 완전 일치. `reqLevel`/`tuc`/`incACC`/
@@ -179,7 +184,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 ## 남은 작업
 
 - DB2/CharaSimControl/Comparer HTML/EasyComparer 등 UI·리포팅 모듈.
-- Common Controls/OpenAPI, LuaConsole, Network, PluginBase.
+- Common Controls, LuaConsole, Network, PluginBase.
+- OpenAPI HTTP 호출(Nexon API 키 필요).
 - WorldMap 실제 QuestLimit/Fog 데이터는 클라이언트에 없음.
 - weather는 원본 C# 로더/에셋에 없음.
 

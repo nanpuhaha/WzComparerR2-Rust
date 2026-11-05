@@ -316,3 +316,11 @@ Coat 228, Weapon 1262, Cap 965, Accessory 1576, Face 4, Ring 978, TamingMob 89
 ```
 All match Rust `wz gear-props` exactly, including nulls for `reqLevel`/`tuc`/
 `incACC`/`incEVA`/`incMDD`.
+
+Verified OpenAPI helpers (`openapi <text>`):
+```
+dotnet run ... -- openapi OBDLADCO...
+-> decrypt hex / decrypt_len / check_ver / item_id
+```
+Rust `wz-openapi` matches 16/32/64-byte vectors exactly, including the
+8-char `GetItemID` exception case.

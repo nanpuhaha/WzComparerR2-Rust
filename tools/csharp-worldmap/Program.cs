@@ -1113,6 +1113,19 @@ class Program
         });
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void OpenApi(string text)
+    {
+        byte[] dec = null;
+        try { dec = WzComparerR2.OpenAPI.Utils.Decrypt(text); } catch { }
+        string itemId = null;
+        try { itemId = WzComparerR2.OpenAPI.Utils.GetItemID(text); } catch { }
+        Console.WriteLine(JsonSerializer.Serialize(new {
+            decrypt = dec == null ? null : Convert.ToHexString(dec).ToLowerInvariant(),
+            decrypt_len = dec?.Length ?? 0,
+            check_ver = dec == null ? 0 : WzComparerR2.OpenAPI.Utils.CheckVer(dec),
+            item_id = itemId,
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1136,6 +1149,7 @@ class Program
         else if (args[0] == "itemtooltip") ItemTooltip(args[1], args[2], args[3], args[4]);
         else if (args[0] == "itemtab") ItemTab(args[1], args[2], args[3]);
         else if (args[0] == "gearprops") GearProps(args[1]);
+        else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

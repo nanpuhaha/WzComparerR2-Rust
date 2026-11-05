@@ -316,3 +316,19 @@ Rust도 동일하게 null이며, 툴팁 표시용은 `tooltip_stat_line`이 담�
 `wz gear-props <character.wz> --json`으로 출력하며, 회귀 테스트는
 `crates/wz-cli/tests/fixtures/gear_props.expected.json`의 쌍 수 + SHA-256으로
 고정한다 (`commands::db2::gear_props_tests::gear_props_match_csharp`).
+
+## OpenAPI 오프라인 helpers (`NexonOpenAPI.Utils`)
+
+Nexon API 키/HTTP 없이 검증 가능한 부분을 `crates/wz-openapi`로 옮겼다.
+
+| 함수 | 설명 | C# 비교 |
+|---|---|---|
+| `decrypt` | `'A'` 오프셋 니블 문자열 → AES-128-CBC(패딩 없음) 복호화 | 16/32/64바이트 벡터 hex 완전 일치 |
+| `check_ver` | `pack[len - len/16 - 1]` | 동일 |
+| `get_item_id` | `CharTable` 8행 매핑, 8자 초과는 예외 → `None` | 동일 (예외 케이스 포함) |
+
+fixture: `crates/wz-openapi/tests/openapi_vectors.json`,
+테스트: `crates/wz-openapi/tests/csharp_parity.rs`.
+C# 하네스: `tools/csharp-worldmap ... -- openapi <text>`.
+
+HTTP 기반 캐릭터/아바타 조회는 API 키가 필요해 대상에서 제외한다.
