@@ -180,11 +180,82 @@ class Program
         DumpPaths(img.Node, "", paths);
         Console.WriteLine(JsonSerializer.Serialize(paths));
     }
+    static string PropLine(string key, long value)
+    {
+        string sign = value > 0 ? "+" : "";
+        return key switch
+        {
+            "incSTR" => $"STR : {sign}{value}",
+            "incDEX" => $"DEX : {sign}{value}",
+            "incINT" => $"INT : {sign}{value}",
+            "incLUK" => $"LUK : {sign}{value}",
+            "incAllStat" or "statR" => $"올스탯 : {sign}{value}",
+            "incMHP" => $"최대 HP : {sign}{value}",
+            "incMMP" => $"최대 MP : {sign}{value}",
+            "incPAD" => $"공격력 : {sign}{value}",
+            "incMAD" => $"마력 : {sign}{value}",
+            "incPDD" => $"방어력 : {sign}{value}",
+            "incMDD" => $"마법방어력 : {sign}{value}",
+            "incACC" => $"명중치 : {sign}{value}",
+            "incEVA" => $"회피치 : {sign}{value}",
+            "incSpeed" => $"이동속도 : {sign}{value}",
+            "incJump" => $"점프력 : {sign}{value}",
+            "incCraft" => $"손재주 : {sign}{value}",
+            "incDAMr" or "damR" => $"데미지 : {sign}{value}%",
+            "incCr" => $"크리티컬 확률 : {sign}{value}%",
+            "incCDr" => $"크리티컬 데미지 : {sign}{value}%",
+            "incBDR" or "bdR" => $"보스 몬스터 공격 시 데미지 +{value}%",
+            "incIMDR" or "imdR" => $"몬스터 방어율 무시 : +{value}%",
+            "incEXPr" => $"추가 경험치 : {sign}{value}%",
+            "tuc" => $"업그레이드 가능 횟수 : {value}",
+            "reqLevel" => $"착용 레벨 : {value}",
+            "only" when value != 0 => "중복 소지 불가",
+            "tradeBlock" when value != 0 => "교환 불가",
+            "equipTradeBlock" when value != 0 => "장착 시 교환 불가",
+            "accountSharable" when value != 0 => "월드 내 나의 캐릭터 간 이동만 가능",
+            "onlyEquip" when value != 0 => "중복 장착 불가",
+            "notExtend" when value != 0 => "유효기간 연장 불가",
+            "noPotential" when value != 0 => "잠재능력 설정 불가",
+            "fixedPotential" when value != 0 => "잠재능력 재설정 불가",
+            "superiorEqp" when value != 0 => "아이템 강화 성공시 더욱 높은 효과를 받을 수 있습니다.",
+            "blockGoldHammer" when value != 0 => "황금망치 사용 불가",
+            "cantRepair" when value != 0 => "수리 불가",
+            _ => null,
+        };
+    }
+    static void GearTooltip(string path, string imageName)
+    {
+        var st = new Wz_Structure();
+        st.Load(path);
+        var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == imageName);
+        var img = imgNode?.Value as Wz_Image;
+        if (img == null) { Console.WriteLine("{\"error\":\"image not found\"}"); return; }
+        img.TryExtract();
+        var info = img.Node.Nodes["info"] ?? img.Node;
+        var order = new[] {
+            "reqLevel","incSTR","incDEX","incINT","incLUK","incAllStat","statR",
+            "incMHP","incMMP","incPAD","incMAD","incPDD","incMDD","incACC","incEVA",
+            "incSpeed","incJump","incCraft","incDAMr","incCr","incCDr","incBDR",
+            "incIMDR","incEXPr","tuc","only","tradeBlock","equipTradeBlock",
+            "accountSharable","onlyEquip","notExtend","noPotential","fixedPotential",
+            "superiorEqp","blockGoldHammer","cantRepair"
+        };
+        var lines = new List<string>();
+        foreach (var key in order)
+        {
+            var c = info.Nodes[key];
+            if (c?.Value == null) continue;
+            var line = PropLine(key, Convert.ToInt64(c.Value));
+            if (line != null) lines.Add(line);
+        }
+        Console.WriteLine(JsonSerializer.Serialize(lines, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
         else if (args[0] == "mapnodes") MapNodes(args[1], args[2]);
         else if (args[0] == "nodepaths") NodePaths(args[1], args[2]);
+        else if (args[0] == "gear") GearTooltip(args[1], args[2]);
         else Real(args[1]);
     }
 }

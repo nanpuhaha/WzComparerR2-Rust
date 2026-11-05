@@ -15,6 +15,7 @@ wz-db.workspace = true
 wz-image.workspace = true
 wz-pool.workspace = true
 wz-render.workspace = true
+serde_json.workspace = true
 sha2.workspace = true
 fontdue.workspace = true
 

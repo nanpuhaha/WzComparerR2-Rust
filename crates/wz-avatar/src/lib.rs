@@ -8,6 +8,7 @@ use std::sync::Arc;
 pub mod compose;
 pub mod frame;
 pub mod frame_layers;
+pub mod gear_tooltip;
 pub mod loader;
 pub mod mix;
 pub mod prism;
@@ -20,11 +21,13 @@ pub use frame_layers::{
     avatar_z_priority, collect_frame_assembly, collect_frame_layers, decode_canvas_pixels,
     resolve_outlink, split_outlink, FrameAssembly, FrameLayer, ResolvedCanvas,
 };
+pub use gear_tooltip::{build_gear_tooltip, render_gear_tooltip, GearTooltip};
 pub use loader::{
-    load_avatar_with_equipment, load_avatar_with_equipment_and_mix, load_body_action_frames,
-    load_equipment_item, load_from_character_wz, load_from_character_wz_with_skin,
-    load_item_action_frames, render_tooltip_bitmap, AvatarPart, ChairInfo, ChairUserData,
-    CustomChairInfo, CustomChairType, EffectFrames, LoadedAvatar, MixOptions,
+    item_id_to_slot, load_avatar_with_equipment, load_avatar_with_equipment_and_mix,
+    load_body_action_frames, load_equipment_item, load_from_character_wz,
+    load_from_character_wz_with_skin, load_item_action_frames, render_tooltip_bitmap, AvatarPart,
+    ChairInfo, ChairUserData, CustomChairInfo, CustomChairType, EffectFrames, LoadedAvatar,
+    MixOptions,
 };
 pub use mix::mix_rgba8;
 pub use prism::{apply_prism_rgba8, PrismData};

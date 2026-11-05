@@ -28,11 +28,11 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | 디렉터리 | 파일 | LOC | 대응 | 상태 |
 |---|---:|---:|---|---|
 | (root) WinForms 메인/비교 창 | 48 | 26,281 | `wz-gui` 최소 PoC | ⬜/🟡 |
-| CharaSimControl | 40 | 21,299 | `render_tooltip_bitmap` 일부 | 🟡 |
+| CharaSimControl | 40 | 21,299 | `render_tooltip_bitmap`, `gear_tooltip` | 🟡 |
 | AvatarCommon | 12 | 4,086 | `wz-avatar` | ✅ |
 | Comparer | 6 | 3,080 | `wz-diff` + `virtual_node` | 🟡 |
 | Patcher | 16 | 2,547 | `wz-core::patch`, `wz patch` | ✅ core/CLI, UI ⬜ |
-| CharaSim | 5 | 1,957 | `wz-avatar::stats` | 🟡 |
+| CharaSim | 5 | 1,957 | `wz-avatar::stats`, `gear_tooltip` | 🟡 |
 | Config | 16 | 1,086 | — | ⬜ |
 | SoundPlayer | 5 | 400 | `wz-gui::sound_player` | ✅ |
 

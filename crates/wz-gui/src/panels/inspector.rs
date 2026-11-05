@@ -70,24 +70,46 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                                             })
                                             .map(|sr| sr.name.clone())
                                             .unwrap_or_else(|| name.to_string());
-                                        let lines: Vec<String> = props
-                                            .iter()
-                                            .map(|(k, v)| format!("{k}: {v}"))
-                                            .collect();
-                                        let icon = node.first_canvas().and_then(|png| {
-                                            wz_image::decode_png_ref_to_rgba(&png, arch.source())
-                                                .ok()
-                                        });
                                         let data_root = state
                                             .data_root
                                             .clone()
                                             .or_else(|| async_io::canvas::find_data_root(None));
-                                        state.tooltip_bitmap =
-                                            data_root.as_deref().and_then(|root| {
-                                                wz_avatar::render_tooltip_bitmap(
-                                                    root, &title, &lines, icon,
-                                                )
+                                        let gear = tooltip_id
+                                            .and_then(wz_avatar::item_id_to_slot)
+                                            .zip(tooltip_id)
+                                            .and_then(|(slot, id)| {
+                                                data_root.as_deref().and_then(|root| {
+                                                    wz_avatar::build_gear_tooltip(
+                                                        root, slot, id, &title,
+                                                    )
+                                                })
                                             });
+                                        if let Some(gear) = gear {
+                                            state.tooltip_bitmap = data_root
+                                                .as_deref()
+                                                .and_then(|root| {
+                                                    wz_avatar::render_gear_tooltip(root, &gear)
+                                                });
+                                        } else {
+                                            let lines: Vec<String> = props
+                                                .iter()
+                                                .map(|(k, v)| format!("{k}: {v}"))
+                                                .collect();
+                                            let icon = node.first_canvas().and_then(|png| {
+                                                wz_image::decode_png_ref_to_rgba(
+                                                    &png,
+                                                    arch.source(),
+                                                )
+                                                .ok()
+                                            });
+                                            state.tooltip_bitmap = data_root.as_deref().and_then(
+                                                |root| {
+                                                    wz_avatar::render_tooltip_bitmap(
+                                                        root, &title, &lines, icon,
+                                                    )
+                                                },
+                                            );
+                                        }
                                         state.tooltip_texture = None;
                                     }
                                     if let Some((w, h, rgba)) = &state.tooltip_bitmap {
