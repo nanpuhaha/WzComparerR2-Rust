@@ -148,6 +148,11 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
                     .split(',')
                     .filter_map(|v| v.trim().parse::<i32>().ok())
                     .collect(),
+                pet_equip_items: state
+                    .chair_pet_equip_input
+                    .split(',')
+                    .filter_map(|v| v.trim().parse::<i32>().ok())
+                    .collect(),
                 name: (!state.chair_name.is_empty()).then(|| state.chair_name.clone()),
                 job: (!state.chair_job.is_empty()).then(|| state.chair_job.clone()),
                 gender: (!state.chair_gender.is_empty()).then(|| state.chair_gender.clone()),
@@ -214,6 +219,7 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
                     rng: 0x9E37_79B9_7F4A_7C15 ^ (pet.slot as u64 + 1),
                 })
                 .collect();
+            apply_pet_frames(state);
             render_loaded_avatar(state);
         }
         None => {

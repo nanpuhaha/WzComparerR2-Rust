@@ -167,6 +167,7 @@ pub struct PartChairAnimationInfo {
 #[derive(Debug, Clone, Default)]
 pub struct PetActionFrames {
     pub frames: Vec<Vec<AvatarPart>>,
+    pub frame_names: Vec<String>,
     pub delay_ms: u32,
 }
 
@@ -269,6 +270,7 @@ pub struct ChairUserData {
     pub time_minutes: Option<i64>,
     pub showcase_items: Vec<i32>,
     pub pet_items: Vec<i32>,
+    pub pet_equip_items: Vec<i32>,
 }
 
 /// `hashTagChairInfo/action/N` — 동작별 강제 포즈.
@@ -1934,6 +1936,80 @@ fn build_rolling_frame(
     Some((root, parts))
 }
 
+/// PetEquip 이미지에서 `pet_id/action/frame` 을 프레임 이름별로 로드한다.
+fn load_pet_equip_frames(
+    data_root: &std::path::Path,
+    equip_id: i32,
+    pet_id: i32,
+    action: &str,
+    pos: crate::Point,
+    flip: bool,
+) -> std::collections::BTreeMap<String, AvatarPart> {
+    let mut out = std::collections::BTreeMap::new();
+    let base = data_root.join("Character").join("PetEquip").join("_Canvas");
+    let image = format!("{equip_id:08}.img");
+    for entry in std::fs::read_dir(base).ok().into_iter().flatten().flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image.as_str()))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let Some(pet_node) = child_node(&node, &pet_id.to_string()) else {
+            continue;
+        };
+        let Some(action_node) = child_node(pet_node, action) else {
+            continue;
+        };
+        let frame_nodes: Vec<&ImageNode> =
+            if matches!(action_node.value, Some(wz_core::image::ImageValue::Png(_))) {
+                vec![action_node]
+            } else {
+                action_node.object_children().iter().collect()
+            };
+        for frame in frame_nodes {
+            let Some(png) = frame.first_canvas() else {
+                continue;
+            };
+            let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(&png, archive.source()) else {
+                continue;
+            };
+            let (origin, z_index) = png_origin_z(&png);
+            let mut part = AvatarPart {
+                slot: "pet_equip".into(),
+                width: w,
+                height: h,
+                rgba,
+                position: crate::Point::new(-origin.x, -origin.y),
+                origin,
+                z_index,
+                custom_origin_map: Default::default(),
+            };
+            place_pet_parts(std::slice::from_mut(&mut part), pos, flip);
+            out.insert(frame.name.to_string(), part);
+        }
+    }
+    out
+}
+
 /// 펫 한 동작의 모든 프레임을 슬롯 위치/반전으로 로드한다.
 fn load_pet_action_frames(
     data_root: &std::path::Path,
@@ -1941,6 +2017,7 @@ fn load_pet_action_frames(
     action: &str,
     pos: crate::Point,
     flip: bool,
+    equip_id: Option<i32>,
 ) -> Option<PetActionFrames> {
     let base = data_root.join("Item").join("Pet").join("_Canvas");
     let image = format!("{item_id}.img");
@@ -1975,7 +2052,11 @@ fn load_pet_action_frames(
             } else {
                 action_node.object_children().iter().collect()
             };
+        let equip_frames = equip_id
+            .map(|id| load_pet_equip_frames(data_root, id, item_id, action, pos, flip))
+            .unwrap_or_default();
         let mut frames = Vec::new();
+        let mut frame_names = Vec::new();
         for frame in frame_nodes {
             let Some(png) = frame.first_canvas() else {
                 continue;
@@ -1995,13 +2076,20 @@ fn load_pet_action_frames(
                 custom_origin_map: Default::default(),
             };
             place_pet_parts(std::slice::from_mut(&mut part), pos, flip);
-            frames.push(vec![part]);
+            let name = frame.name.to_string();
+            let mut frame_parts = vec![part];
+            if let Some(equip) = equip_frames.get(&name) {
+                frame_parts.push(equip.clone());
+            }
+            frames.push(frame_parts);
+            frame_names.push(name);
         }
         if frames.is_empty() {
             return None;
         }
         return Some(PetActionFrames {
             frames,
+            frame_names,
             delay_ms: 120,
         });
     }
@@ -2013,6 +2101,7 @@ fn load_pet_animation(
     item_id: i32,
     slot_index: usize,
     slot: &PetChairSlot,
+    equip_id: Option<i32>,
 ) -> Option<PetAnimationData> {
     let mut names = std::collections::BTreeSet::new();
     for (name, _) in &slot.actions {
@@ -2023,9 +2112,14 @@ fn load_pet_animation(
 
     let mut actions = std::collections::BTreeMap::new();
     for name in names {
-        if let Some(mut frames) =
-            load_pet_action_frames(data_root, item_id, &name, slot.pos, slot.reverse_flip)
-        {
+        if let Some(mut frames) = load_pet_action_frames(
+            data_root,
+            item_id,
+            &name,
+            slot.pos,
+            slot.reverse_flip,
+            equip_id,
+        ) {
             for frame in &mut frames.frames {
                 for part in frame {
                     part.slot = format!("pet{slot_index}_{}", part.slot);
@@ -3281,9 +3375,19 @@ pub fn load_avatar_with_equipment_and_mix(
                                 }
                                 merge_bone_tree(&mut root, pet_root);
                                 parts.extend(pet_parts);
-                                if let Some(anim) =
-                                    load_pet_animation(data_root, *item_id, i, &pet.slots[i])
-                                {
+                                let equip_id = mix
+                                    .chair
+                                    .pet_equip_items
+                                    .get(i)
+                                    .copied()
+                                    .filter(|id| *id != 0);
+                                if let Some(anim) = load_pet_animation(
+                                    data_root,
+                                    *item_id,
+                                    i,
+                                    &pet.slots[i],
+                                    equip_id,
+                                ) {
                                     pet_animations.push(anim);
                                 }
                             }
@@ -4243,6 +4347,32 @@ mod chair_custom_type_tests {
         assert!(!pet.weights.is_empty());
         assert!(pet.gap_max >= pet.gap_min);
         assert!(!pet.default_action.is_empty());
+    }
+
+    #[test]
+    fn pet_chair_renders_pet_equipment() {
+        let Some(av) = load_chair_with(
+            3018179,
+            ChairUserData {
+                pet_items: vec![5000000],
+                pet_equip_items: vec![1802000],
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        let frames = &av.pet_animations[0].actions["stand0"].frames;
+        assert!(!frames.is_empty());
+        let has_equip = frames
+            .iter()
+            .any(|frame| frame.iter().any(|part| part.slot.ends_with("pet_equip")));
+        assert!(has_equip, "pet equip part missing");
+        let equip = frames
+            .iter()
+            .flat_map(|frame| frame.iter())
+            .find(|part| part.slot.ends_with("pet_equip"))
+            .unwrap();
+        assert!(equip.width > 1 && equip.height > 1);
     }
 
     #[test]

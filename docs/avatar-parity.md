@@ -90,8 +90,10 @@ remaining CharaSim gaps.
     by the GUI (`Pet items`) load every frame of `stand0`/`stand1`/`move`/`rest0`
     and the `randAct` actions from `Item/Pet/_Canvas`, placed at the slot positions
     with `reverseFlip` mirroring. `Pet 자동 재생` advances frames by `delay` and
-    switches actions using the WZ weights and `tGapMin/Max`; pet equipment is not
-    rendered.
+    switches actions using the WZ weights and `tGapMin/Max`.
+  - Pet equipment: `Character/PetEquip/_Canvas/<equip>.img/<petId>/<action>/<frame>`
+    is loaded for the matching pet action/frame and overlaid on the pet. The GUI
+    supplies one equip ID per pet (`Pet equips`).
   - `eventPointChair` → `index`/`point`/`term` are parsed and shown in the GUI
     (`Chair type`, `Event point`). Rendering uses the taming part; the chair body
     is hidden (`removeBody`).

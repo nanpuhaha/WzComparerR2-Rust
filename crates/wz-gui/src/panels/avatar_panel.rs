@@ -214,6 +214,11 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     });
     ui.label("petChair: 쉼표로 구분한 펫 ID (최대 3개)");
     ui.horizontal(|ui| {
+        ui.label("Pet equips:");
+        ui.text_edit_singleline(&mut state.chair_pet_equip_input);
+    });
+    ui.label("PetEquip: 쉼표로 구분한 장비 ID (펫 순서와 동일)");
+    ui.horizontal(|ui| {
         ui.label("Name:");
         ui.text_edit_singleline(&mut state.chair_name);
         ui.label("Job:");
