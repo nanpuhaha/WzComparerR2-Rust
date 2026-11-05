@@ -199,3 +199,10 @@ dotnet run ... -- characters ../../Data/Character/Shoes/Shoes_000.wz ../../Data/
 → 1703 rows
 ```
 Rust `wz db2-characters ... --json` matches all 1703 rows exactly.
+
+Verified DB2 Character grid output (Accessory):
+```
+dotnet run ... -- characters ../../Data/Character/Accessory/Accessory_000.wz ../../Data/String/String_000.wz
+→ 2369 rows
+```
+Rust `wz db2-characters ... --json` matches all 2369 rows exactly.

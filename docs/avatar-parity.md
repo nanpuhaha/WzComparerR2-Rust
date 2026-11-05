@@ -598,3 +598,9 @@ merge semantics (recursive directory merge, conflict errors).
 - The generic `wz db2-characters` path also covers the Shoes tab.
   `Shoes_000.wz` → C# `characters` 1703 == Rust 1703 rows, exact match
   (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
+
+### DB2 Character/Accessory
+
+- The generic `wz db2-characters` path also covers the Accessory tab.
+  `Accessory_000.wz` → C# `characters` 2369 == Rust 2369 rows, exact match
+  (`id/name/desc/h1/icon/reqLevel/reqJob/tuc/islot/vslot/stat`).
