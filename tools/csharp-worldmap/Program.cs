@@ -441,6 +441,42 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void MapGrid(string mapWzPath, string stringWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(mapWzPath);
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        if (!linker.Load(str.wz_files[0], null, null))
+        {
+            Console.WriteLine("{\"error\":\"string linker load failed\"}");
+            return;
+        }
+        var rows = new List<object>();
+        foreach (Wz_Node n in st.WzNode.Nodes)
+        {
+            var img = n.Value as Wz_Image;
+            if (img == null) continue;
+            var id = n.Text.Replace(".img", "");
+            if (id.Length == 0 || !id.All(char.IsDigit)) continue;
+            int idNum;
+            if (!int.TryParse(id, out idNum)) continue;
+            linker.StringMap.TryGetValue(idNum, out var sr);
+            img.TryExtract();
+            var linkNode = img.Node.FindNodeByPath(@"info\link");
+            int? link = linkNode?.Value == null ? (int?)null : Convert.ToInt32(linkNode.Value);
+            rows.Add(new {
+                id,
+                street_name = sr?.StreetName ?? "",
+                map_name = sr?.MapName ?? "",
+                has_minimap = img.Node.FindNodeByPath(@"miniMap\canvas") != null,
+                link,
+            });
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -450,6 +486,7 @@ class Program
         else if (args[0] == "db2") Db2(args[1], args[2]);
         else if (args[0] == "icons") Icons(args[1], args[2]);
         else if (args[0] == "items") ItemGrid(args[1], args[2], args[3]);
+        else if (args[0] == "maps") MapGrid(args[1], args[2]);
         else if (args[0] == "set") SetTooltip(args[1], int.Parse(args[2]));
         else if (args[0] == "potential") PotentialTooltip(args[1], int.Parse(args[2]), int.Parse(args[3]));
         else Real(args[1]);

@@ -1,0 +1,611 @@
+[
+  {
+    "id": "000000000",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": null
+  },
+  {
+    "id": "000010000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uB2E8\uD48D\uB098\uBB34 \uC5B8\uB355",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "000020000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uB2EC\uD33D\uC774\uB3D9\uC0B0",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "000030000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uB2EC\uD33D\uC774\uAF43\uBC2D",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "000030001",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBC84\uC12F\uB9C8\uC744\uBBFC\uAC00",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "000040000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC791\uC740\uC232\uC18D",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "000050000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC704\uD5D8\uD55C\uC232\uC18D",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "000110000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uB2E8\uD48D\uB098\uBB34 \uC5B8\uB355",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "000120000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uB2EC\uD33D\uC774\uB3D9\uC0B0",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "000140000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC791\uC740\uC232\uC18D",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "000150000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC704\uD5D8\uD55C\uC232\uC18D",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001000000",
+    "street_name": "\uB808\uC778\uBCF4\uC6B0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001000001",
+    "street_name": "\uB808\uC778\uBCF4\uC6B0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8\uBB34\uAE30\uC0C1\uC810",
+    "has_minimap": false,
+    "link": null
+  },
+  {
+    "id": "001000002",
+    "street_name": "\uB808\uC778\uBCF4\uC6B0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8\uBBFC\uAC00",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001000003",
+    "street_name": "\uB808\uC778\uBCF4\uC6B0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8\uC7A1\uD654\uC0C1\uC810",
+    "has_minimap": false,
+    "link": null
+  },
+  {
+    "id": "001010000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A5 \uC785\uAD6C",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001010100",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A51",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001010200",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A52",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001010300",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A53",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001010400",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A54",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001020000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC120\uD0DD\uC758 \uAC08\uB9BC\uAE38",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001020100",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001020200",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001020300",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001020400",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001020500",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001100000",
+    "street_name": "\uB808\uC778\uBCF4\uC6B0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001110000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A5 \uC785\uAD6C",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001120000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC120\uD0DD\uC758 \uAC08\uB9BC\uAE38",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001130000",
+    "street_name": "\uD788\uB4E0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8 \uC678\uACFD",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001130001",
+    "street_name": "\uD788\uB4E0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8 \uC678\uACFD",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001130010",
+    "street_name": "\uD788\uB4E0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8 \uC678\uACFD",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "001130011",
+    "street_name": "\uD788\uB4E0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8 \uC678\uACFD",
+    "has_minimap": false,
+    "link": 1130010
+  },
+  {
+    "id": "001130020",
+    "street_name": "\uD788\uB4E0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8 \uC678\uACFD",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "002000000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC0AC\uC6B0\uC2A4\uD398\uB9AC",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "002000001",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC0AC\uC6B0\uC2A4\uD398\uB9AC \uBC29\uC5B4\uAD6C\uC0C1\uC810",
+    "has_minimap": false,
+    "link": null
+  },
+  {
+    "id": "002000100",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC120\uCC29\uC7A5",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "002000110",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uCD9C\uBC1C\uD558\uAE30\uC804\u003C\uC5EC\uC12F\uAC08\uB798\uAE38\uD589\u003E",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "002000111",
+    "street_name": "\uD56D\uD574\uC911",
+    "map_name": "\uC5EC\uC12F\uAC08\uB798\uAE38\uD589",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "002010000",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": null
+  },
+  {
+    "id": "002100000",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC0AC\uC6B0\uC2A4\uD398\uB9AC",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "003000000",
+    "street_name": "\uCF54\uCF54\uC12C",
+    "map_name": "\uBA54\uC774\uD50C \uC544\uC77C\uB79C\uB4DC\uB85C",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "003000001",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 3000000
+  },
+  {
+    "id": "003000002",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 3000000
+  },
+  {
+    "id": "003000003",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 3000000
+  },
+  {
+    "id": "003000004",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 3000000
+  },
+  {
+    "id": "003000005",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 3000000
+  },
+  {
+    "id": "003000006",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 3000000
+  },
+  {
+    "id": "003000007",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 3000000
+  },
+  {
+    "id": "003000008",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 3000000
+  },
+  {
+    "id": "003000009",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 3000000
+  },
+  {
+    "id": "003000100",
+    "street_name": "\uCF54\uCF54\uC12C",
+    "map_name": "\uC595\uC740 \uD574\uC548\uAC00",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "003000200",
+    "street_name": "\uCF54\uCF54\uC12C",
+    "map_name": "\uC870\uB09C\uC790\uC758 \uC6C0\uB9C9",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "003000300",
+    "street_name": "\uCF54\uCF54\uC12C",
+    "map_name": "\uCF54\uCF54\uC12C \uD574\uC548\uAC00",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "003000301",
+    "street_name": "\uCF54\uCF54\uC12C",
+    "map_name": "\uBD88\uAC00\uC0AC\uB9AC \uD574\uC548\uAC00 1",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "003000302",
+    "street_name": "\uCF54\uCF54\uC12C",
+    "map_name": "\uBD88\uAC00\uC0AC\uB9AC \uD574\uC548\uAC00 2",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "003000400",
+    "street_name": "\uCF54\uCF54\uC12C",
+    "map_name": "\uCF54\uCF54\uC12C \uC778\uADFC\uD574\uC5ED",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "003000500",
+    "street_name": "\uCF54\uCF54\uC12C",
+    "map_name": "\uCF54\uCF54\uC12C \uC800\uD3B8",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "003000600",
+    "street_name": "\uCF54\uCF54\uC12C",
+    "map_name": "\uCF54\uCF54\uC12C \uC5B4\uB518\uAC00",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000000",
+    "street_name": "\uB0AF\uC120 \uACF5\uAC04",
+    "map_name": "\uC5B4\uB460",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000001",
+    "street_name": "\uB0AF\uC120 \uACF5\uAC04",
+    "map_name": "\uC0C8\uC5B4\uB098\uC624\uB294 \uBE5B",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000002",
+    "street_name": "\uB0AF\uC120 \uACF5\uAC04",
+    "map_name": "\uBE5B",
+    "has_minimap": false,
+    "link": null
+  },
+  {
+    "id": "004000003",
+    "street_name": "\uD788\uB4E0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8",
+    "has_minimap": false,
+    "link": null
+  },
+  {
+    "id": "004000004",
+    "street_name": "\uD788\uB4E0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uBAA8\uD5D8\uAC00 \uC601\uC0C1",
+    "has_minimap": false,
+    "link": null
+  },
+  {
+    "id": "004000005",
+    "street_name": "\uD788\uB4E0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uB9AC\uC2A4 \uD56D\uAD6C",
+    "has_minimap": false,
+    "link": null
+  },
+  {
+    "id": "004000010",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uB2E8\uD48D\uB098\uBB34 \uC704",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000011",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uB2E8\uD48D\uB098\uBB34 \uC5B8\uB355",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000012",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uB2EC\uD33D\uC774\uB3D9\uC0B0",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000013",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC791\uC740\uC232\uC18D",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000014",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC704\uD5D8\uD55C\uC232\uC18D",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000020",
+    "street_name": "\uB808\uC778\uBCF4\uC6B0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC554\uD5C8\uC2A4\uD2B8",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000021",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A5 \uC785\uAD6C",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000022",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A51",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000023",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A52",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000024",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A53",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000025",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uBAA8\uD5D8\uAC00\uC758 \uC218\uB828\uC7A54",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000026",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC120\uD0DD\uC758 \uAC08\uB9BC\uAE38",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000030",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC0AC\uC6B0\uC2A4\uD398\uB9AC",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000031",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC120\uCC29\uC7A5",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000032",
+    "street_name": "\uBA54\uC774\uD50C\uB85C\uB4DC",
+    "map_name": "\uC0F9\uADF8\uB9AC\uB77C \uD638",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000033",
+    "street_name": "\uD788\uB4E0\uC2A4\uD2B8\uB9AC\uD2B8",
+    "map_name": "\uC0F9\uADF8\uB9AC\uB77C \uC120\uB0B4",
+    "has_minimap": true,
+    "link": null
+  },
+  {
+    "id": "004000034",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 4000033
+  },
+  {
+    "id": "004000035",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 4000033
+  },
+  {
+    "id": "004000036",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 4000033
+  },
+  {
+    "id": "004000037",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 4000033
+  },
+  {
+    "id": "004000038",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 4000033
+  },
+  {
+    "id": "004000039",
+    "street_name": "",
+    "map_name": "",
+    "has_minimap": false,
+    "link": 4000033
+  }
+]

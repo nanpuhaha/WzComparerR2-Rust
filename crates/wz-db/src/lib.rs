@@ -25,6 +25,7 @@ pub mod calc;
 pub mod chara_prop;
 pub mod db2;
 pub mod db2_items;
+pub mod db2_maps;
 pub mod gear_stats;
 pub mod linker;
 pub mod map;
@@ -41,6 +42,7 @@ pub use calc::{evaluate_expression, CalcError};
 pub use chara_prop::CharaProp;
 pub use db2::{image_rows as db2_image_rows, Db2Row};
 pub use db2_items::{item_grid_rows as db2_item_grid_rows, Db2ItemRow};
+pub use db2_maps::{map_grid_rows as db2_map_grid_rows, Db2MapRow};
 pub use gear_stats::extract_gear_props;
 pub use linker::{
     extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,

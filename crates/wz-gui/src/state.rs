@@ -203,6 +203,7 @@ pub struct AppState {
     pub db2_status: String,
     pub db2_icons: Vec<(String, egui::TextureHandle)>,
     pub db2_item_rows: Vec<wz_db::Db2ItemRow>,
+    pub db2_map_rows: Vec<wz_db::Db2MapRow>,
     /// 프리즘 (C# `PrismData`) — 호출자/UI 공급. WZ에는 저장되지 않는다.
     pub prism_enabled: bool,
     pub prism_color_type: i32,
@@ -375,6 +376,7 @@ impl Default for AppState {
             db2_status: "DB2 미로드".into(),
             db2_icons: Vec::new(),
             db2_item_rows: Vec::new(),
+            db2_map_rows: Vec::new(),
             prism_enabled: false,
             prism_color_type: 0,
             prism_hue: 0,

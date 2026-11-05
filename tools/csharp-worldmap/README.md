@@ -25,6 +25,8 @@ Commands:
   `path/width/height/format/RGBA SHA-256`.
 - `items <item.wz> <image.img> <String_000.wz>` — emits the DB2 Item grid rows
   (`id/name/desc/has_icon`) using the original `StringLinker`.
+- `maps <map.wz> <String_000.wz>` — emits the DB2 Map grid rows
+  (`id/street_name/map_name/has_minimap/link`).
 
 Verified output (macOS, .NET 10):
 - fixture output matches `crates/wz-gui/tests/fixtures/worldmap_quest_fog.expected.json`.
@@ -73,3 +75,10 @@ dotnet run ... -- items ../../Data/Item/Consume/Consume_000.wz 0200.img ../../Da
 Rust `wz db2-items ... --json` matches all 530 rows exactly.
 Requires `-p:CommonPath=<WzComparerR2.Common.dll>` (built with
 `-p:DotnetEdition=core -p:SystemDrawingCommonVersion=8.0.0`).
+
+Verified DB2 Map grid output:
+```
+dotnet run ... -- maps ../../Data/Map/Map/Map0/Map0_000.wz ../../Data/String/String_000.wz
+→ 87 rows
+```
+Rust `wz db2-maps ... --json` matches all 87 rows exactly.

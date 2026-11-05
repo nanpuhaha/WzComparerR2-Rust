@@ -437,3 +437,14 @@ merge semantics (recursive directory merge, conflict errors).
 - Executed C# reference: `tools/csharp-worldmap items ...` loads
   `WzComparerR2.Common.StringLinker` and prints the same rows.
   `Consume_000.wz/0200.img` → C# 530 == Rust 530 rows, exact match.
+
+## DB2 Map grid
+
+- `wz-db::db2_maps` mirrors `DB2Form.LoadMap`: each numeric `MapX/<id>.img`
+  becomes `id/street_name/map_name/has_minimap/link`, with names from
+  `StringLinker.StringMap` and `info/link` accepting string-encoded IDs
+  (`"001130010"`).
+- `wz db2-maps <map.wz> --string <String_000.wz>` prints the grid; the GUI
+  Catalog has a DB2 Map grid table.
+- Executed C# reference: `tools/csharp-worldmap maps ...` uses the original
+  `StringLinker`. `Map0_000.wz` → C# 87 == Rust 87 rows, exact match.
