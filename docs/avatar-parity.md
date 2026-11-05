@@ -53,16 +53,17 @@ remaining CharaSim gaps.
   updates the effect bone skin for scene renderers; the GUI can step frames manually
   or auto-play with `tick_effect` using the WZ delays.
 - Chair: `ChairInfo` captures `info/scale`, `customChair`, group taming IDs/`bodyRelMove`.
-  Group taming members are loaded from `Character/TamingMob` and merged with their
-  `bodyRelMove` offsets. `ChairInfo::effective_scale()` handles `ScaleAvatarChair`
-  and falls back to `info/scale` for other/unknown custom types.
+  Group taming members are loaded from `Character/TamingMob` (via their `sit` action)
+  and merged with their `bodyRelMove` offsets. Real sample: chair `03016200`
+  (`03016.img`) with taming mobs `01983279`..`01983282`. `CustomChairType` is an enum
+  (`Unsupported`, `ScaleAvatarChair`, `Other(String)`); `effective_scale()` handles
+  `ScaleAvatarChair` and falls back to `info/scale` for other/unknown types.
 - Custom origin: the two-step C# semantics are implemented:
   `CustomOriginMap` (originValue → childName) + `CustomOrigin` (childName → Point)
   → `apply_custom_origin_map`. The GUI accepts `childName:x,y;...`.
-- Still out of scope: a real group-chair sample in this client (the code path is
-  implemented but the current `Item/Install` corpus has no `info/group*` sample),
-  unknown future `customChair` types, and the GUI part renderer using per-frame
-  effect origins (the scene API supports them).
+- Still out of scope: switching the avatar **body** to the chair's `sit` action
+  (group taming members already use `sit`), behavior for future `CustomChairType::Other`
+  types, and the GUI part renderer using per-frame effect origins (the scene API supports them).
 
 ## Verification
 

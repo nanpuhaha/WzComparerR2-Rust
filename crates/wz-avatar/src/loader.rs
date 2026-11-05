@@ -63,11 +63,32 @@ pub struct LoadedAvatar {
     pub chair_info: Option<ChairInfo>,
 }
 
+/// C# `CustomChairType` — 미래 타입은 `Other` 로 보존한다.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum CustomChairType {
+    #[default]
+    Unsupported,
+    ScaleAvatarChair,
+    Other(String),
+}
+
+impl CustomChairType {
+    pub fn parse(text: &str) -> Self {
+        if text.eq_ignore_ascii_case("ScaleAvatarChair") {
+            Self::ScaleAvatarChair
+        } else if text.is_empty() {
+            Self::Unsupported
+        } else {
+            Self::Other(text.to_string())
+        }
+    }
+}
+
 /// C# `ChairPart` 의 메타데이터 중 정적 로더가 해석하는 부분.
 #[derive(Debug, Clone, Default)]
 pub struct ChairInfo {
     pub scale: i32,
-    pub custom_chair_type: Option<String>,
+    pub custom_chair_type: CustomChairType,
     pub custom_scale: Option<i32>,
     pub group_count: usize,
     pub group_taming_ids: Vec<i32>,
@@ -88,14 +109,9 @@ pub struct EffectFrames {
 impl ChairInfo {
     /// `ScaleAvatarChair` 이면 `scaleAvatar.scale`, 아니면 `info.scale`.
     pub fn effective_scale(&self) -> i32 {
-        if self
-            .custom_chair_type
-            .as_deref()
-            .is_some_and(|t| t.eq_ignore_ascii_case("ScaleAvatarChair"))
-        {
-            self.custom_scale.unwrap_or(100)
-        } else {
-            self.scale
+        match self.custom_chair_type {
+            CustomChairType::ScaleAvatarChair => self.custom_scale.unwrap_or(100),
+            _ => self.scale,
         }
     }
 }
@@ -290,6 +306,7 @@ fn node_int(node: &ImageNode, path: &str) -> Option<i32> {
     match find_path_node(node, path).and_then(|n| n.value.as_ref()) {
         Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
         Some(wz_core::image::ImageValue::Short(v)) => Some(i32::from(*v)),
+        Some(wz_core::image::ImageValue::Str(v)) => v.parse::<i32>().ok(),
         _ => None,
     }
 }
@@ -354,17 +371,17 @@ fn png_origin_z(png: &wz_core::image::PngRef) -> (crate::Point, i32) {
     (origin, z_index)
 }
 
-/// `Item/Install/_Canvas` 의 체어 이미지를 정적 1프레임으로 로드한다.
+/// `Item/Install/<dir>` 에서 카테고리 이미지의 아이템 노드를 찾는다.
 ///
-/// 체어 카테고리 이미지는 `03010.img` 처럼 5자리이고, 그 자식이 아이템 ID 다.
-/// `effect/0`, `0`, `default` 순으로 캔버스를 찾는다.
-fn load_chair_item(
+/// `dir` 은 `""`(메타데이터) 또는 `"_Canvas"`(픽셀) 이다.
+fn find_install_item(
     data_root: &std::path::Path,
+    dir: &str,
     item_id: i32,
-) -> Option<(Bone, Vec<AvatarPart>, ChairInfo)> {
-    let canvas_dir = data_root.join("Item").join("Install").join("_Canvas");
+) -> Option<(WzArchive, ImageNode)> {
+    let base = data_root.join("Item").join("Install").join(dir);
     let category = format!("{:05}.img", item_id / 1000);
-    for entry in std::fs::read_dir(canvas_dir).ok()?.flatten() {
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) != Some("wz") {
             continue;
@@ -389,80 +406,100 @@ fn load_chair_item(
         let Some(item) = child_node(&node, &format!("{:08}", item_id)) else {
             continue;
         };
-        let png = child_node(item, "effect")
-            .and_then(|effect| child_node(effect, "0"))
-            .and_then(|frame| frame.first_canvas())
-            .or_else(|| child_node(item, "0").and_then(|frame| frame.first_canvas()))
-            .or_else(|| child_node(item, "default").and_then(|frame| frame.first_canvas()))
-            .or_else(|| item.first_canvas())?;
-        let (w, h, rgba) = wz_image::decode_png_ref_to_rgba(&png, archive.source()).ok()?;
-        let (origin, z_index) = png_origin_z(&png);
+        return Some((archive, item.clone()));
+    }
+    None
+}
 
-        let info = child_node(item, "info");
-        let scale = info.and_then(|i| node_int(i, "scale")).unwrap_or(100);
-        let custom = info.and_then(|i| child_node(i, "customChair"));
-        let custom_chair_type = custom.and_then(|c| node_str(c, "type"));
-        let custom_scale = custom.and_then(|c| node_int(c, "scaleAvatar/scale"));
-        let mut group_count = 0;
-        let mut group_taming_ids = Vec::new();
-        let mut group_body_rel_move = Vec::new();
-        if let Some(info) = info {
-            for group in info.object_children() {
-                if !group.name.to_ascii_lowercase().contains("group") {
+/// `Item/Install/_Canvas` 의 체어 이미지를 정적 1프레임으로 로드한다.
+///
+/// 체어 카테고리 이미지는 `03010.img` 처럼 5자리이고, 그 자식이 아이템 ID 다.
+/// `effect/0`, `0`, `default` 순으로 캔버스를 찾는다.
+fn load_chair_item(
+    data_root: &std::path::Path,
+    item_id: i32,
+) -> Option<(Bone, Vec<AvatarPart>, ChairInfo)> {
+    let (archive, item) = find_install_item(data_root, "_Canvas", item_id)?;
+    let meta = find_install_item(data_root, "", item_id).map(|(_, node)| node);
+
+    let png = child_node(&item, "effect")
+        .and_then(|effect| child_node(effect, "0"))
+        .and_then(|frame| frame.first_canvas())
+        .or_else(|| child_node(&item, "0").and_then(|frame| frame.first_canvas()))
+        .or_else(|| child_node(&item, "default").and_then(|frame| frame.first_canvas()))
+        .or_else(|| item.first_canvas())?;
+    let (w, h, rgba) = wz_image::decode_png_ref_to_rgba(&png, archive.source()).ok()?;
+    let (origin, z_index) = png_origin_z(&png);
+
+    let info = meta
+        .as_ref()
+        .and_then(|node| child_node(node, "info"))
+        .or_else(|| child_node(&item, "info"));
+    let scale = info.and_then(|i| node_int(i, "scale")).unwrap_or(100);
+    let custom = info.and_then(|i| child_node(i, "customChair"));
+    let custom_chair_type = custom
+        .and_then(|c| node_str(c, "type"))
+        .map(|t| CustomChairType::parse(&t))
+        .unwrap_or_default();
+    let custom_scale = custom.and_then(|c| node_int(c, "scaleAvatar/scale"));
+    let mut group_count = 0;
+    let mut group_taming_ids = Vec::new();
+    let mut group_body_rel_move = Vec::new();
+    if let Some(info) = info {
+        for group in info.object_children() {
+            if !group.name.to_ascii_lowercase().contains("group") {
+                continue;
+            }
+            for entry in group.object_children() {
+                let lower = entry.name.to_ascii_lowercase();
+                if !(lower.contains("sit") || lower.contains("mainuser")) {
                     continue;
                 }
-                for entry in group.object_children() {
-                    let lower = entry.name.to_ascii_lowercase();
-                    if !(lower.contains("sit") || lower.contains("mainuser")) {
-                        continue;
-                    }
-                    group_count = entry.object_children().len();
-                    for member in entry.object_children() {
-                        let id = node_int(member, "tamingMobM")
-                            .or_else(|| node_int(member, "tamingMobF"))
-                            .or_else(|| node_int(member, "tamingMob"))
-                            .unwrap_or(0);
-                        group_taming_ids.push(id);
-                        group_body_rel_move
-                            .push(node_vec(member, "bodyRelMove").unwrap_or(crate::Point::ZERO));
-                    }
+                group_count = entry.object_children().len();
+                for member in entry.object_children() {
+                    let id = node_int(member, "tamingMobM")
+                        .or_else(|| node_int(member, "tamingMobF"))
+                        .or_else(|| node_int(member, "tamingMob"))
+                        .unwrap_or(0);
+                    group_taming_ids.push(id);
+                    group_body_rel_move
+                        .push(node_vec(member, "bodyRelMove").unwrap_or(crate::Point::ZERO));
                 }
             }
         }
-        let body_rel_move = child_node(item, "0")
-            .and_then(|n| node_vec(n, "bodyRelMove"))
-            .or_else(|| child_node(item, "1").and_then(|n| node_vec(n, "bodyRelMove")))
-            .or_else(|| group_body_rel_move.first().copied());
-
-        let mut skin = SkinLayer::new("chair");
-        skin.z = "chair".into();
-        skin.z_index = z_index;
-        skin.origin = origin;
-        skin.width = w;
-        skin.height = h;
-
-        let mut root = Bone::new("@chair");
-        root.position = body_rel_move.unwrap_or(crate::Point::ZERO);
-        root.append_bone(skin, "chair", crate::Point::ZERO);
-        let part = AvatarPart {
-            slot: "chair".into(),
-            width: w,
-            height: h,
-            rgba,
-            ..Default::default()
-        };
-        let chair_info = ChairInfo {
-            scale,
-            custom_chair_type,
-            custom_scale,
-            group_count,
-            group_taming_ids,
-            group_body_rel_move,
-            body_rel_move,
-        };
-        return Some((root, vec![part], chair_info));
     }
-    None
+    let body_rel_move = child_node(&item, "0")
+        .and_then(|n| node_vec(n, "bodyRelMove"))
+        .or_else(|| child_node(&item, "1").and_then(|n| node_vec(n, "bodyRelMove")))
+        .or_else(|| group_body_rel_move.first().copied());
+
+    let mut skin = SkinLayer::new("chair");
+    skin.z = "chair".into();
+    skin.z_index = z_index;
+    skin.origin = origin;
+    skin.width = w;
+    skin.height = h;
+
+    let mut root = Bone::new("@chair");
+    root.position = body_rel_move.unwrap_or(crate::Point::ZERO);
+    root.append_bone(skin, "chair", crate::Point::ZERO);
+    let part = AvatarPart {
+        slot: "chair".into(),
+        width: w,
+        height: h,
+        rgba,
+        ..Default::default()
+    };
+    let chair_info = ChairInfo {
+        scale,
+        custom_chair_type,
+        custom_scale,
+        group_count,
+        group_taming_ids,
+        group_body_rel_move,
+        body_rel_move,
+    };
+    Some((root, vec![part], chair_info))
 }
 
 /// RGBA8 버퍼를 최근접 이웃으로 `factor` 배 확대/축소한다.
@@ -794,18 +831,37 @@ fn load_item_frame(
 
 /// `Character/TamingMob/_Canvas` 에서 taming mob 한 마리를 로드한다.
 fn load_taming_item(data_root: &std::path::Path, item_id: i32) -> Option<(Bone, Vec<AvatarPart>)> {
-    let path = data_root
+    let dir = data_root
         .join("Character")
         .join("TamingMob")
-        .join("_Canvas")
-        .join("_Canvas_000.wz");
-    let archive = WzArchive::open(&path).ok()?;
-    load_item_frame(
-        &archive,
-        Some(&format!("{:08}.img", item_id)),
-        &["stand1", "default"],
-        "TamingMob",
-    )
+        .join("_Canvas");
+    let image = format!("{:08}.img", item_id);
+    for entry in std::fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        if tree
+            .root
+            .entries
+            .iter()
+            .any(|e| e.name.as_deref() == Some(image.as_str()))
+        {
+            return load_item_frame(
+                &archive,
+                Some(&image),
+                &["sit", "stand1", "default"],
+                "TamingMob",
+            );
+        }
+    }
+    None
 }
 
 /// `Character/<dir>/_Canvas/_Canvas_000.wz` 를 열어 아이템 이미지를 조립한다.
@@ -1093,8 +1149,13 @@ pub fn load_avatar_with_equipment_and_mix(
                 continue;
             };
             let image_name = format!("{:08}.img", item_id);
+            let actions: &[&str] = if dir == "TamingMob" {
+                &["sit", "stand1", "default"]
+            } else {
+                &["default", "stand1"]
+            };
             if let Some((mut item_root, mut item_parts)) =
-                load_item_frame(&archive, Some(&image_name), &["default", "stand1"], dir)
+                load_item_frame(&archive, Some(&image_name), actions, dir)
             {
                 let mix_setting = match dir {
                     "Hair" => mix.hair,
@@ -1502,6 +1563,27 @@ mod special_slot_tests {
     }
 
     #[test]
+    fn group_chair_loads_taming_members() {
+        let Some(data_root) = data_root() else {
+            return;
+        };
+        let equipment = vec![("Chair".to_string(), 3016200)];
+        if let Some(av) = load_avatar_with_equipment(&data_root, 2000, &equipment) {
+            let info = av.chair_info.as_ref().expect("chair info");
+            assert!(info.group_count >= 2, "group chair count");
+            assert!(
+                info.group_taming_ids.iter().any(|id| *id != 0),
+                "group taming ids"
+            );
+            assert!(av.parts.iter().any(|p| p.slot == "chair"), "chair missing");
+            assert!(
+                av.parts.iter().any(|p| p.slot.starts_with("tamingmob")),
+                "group taming parts missing"
+            );
+        }
+    }
+
+    #[test]
     fn effect_frame_index_changes_pixels() {
         let Some(data_root) = data_root() else {
             return;
@@ -1622,5 +1704,36 @@ mod effect_origin_tests {
             .expect("effect skin");
         assert_eq!(skin.origin, crate::Point::new(3, 4));
         assert_eq!(skin.z_index, 2);
+    }
+}
+
+#[cfg(test)]
+mod custom_chair_type_tests {
+    use super::*;
+
+    #[test]
+    fn parses_known_and_unknown_types() {
+        assert_eq!(
+            CustomChairType::parse("scaleavatarchair"),
+            CustomChairType::ScaleAvatarChair
+        );
+        assert_eq!(CustomChairType::parse(""), CustomChairType::Unsupported);
+        assert!(matches!(
+            CustomChairType::parse("FutureChair"),
+            CustomChairType::Other(v) if v == "FutureChair"
+        ));
+    }
+
+    #[test]
+    fn effective_scale_only_uses_scale_avatar_for_scale_type() {
+        let mut info = ChairInfo {
+            scale: 110,
+            custom_scale: Some(80),
+            custom_chair_type: CustomChairType::ScaleAvatarChair,
+            ..Default::default()
+        };
+        assert_eq!(info.effective_scale(), 80);
+        info.custom_chair_type = CustomChairType::Other("FutureChair".into());
+        assert_eq!(info.effective_scale(), 110);
     }
 }
