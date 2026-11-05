@@ -133,9 +133,13 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
                 .then_some((state.face_mix_color, state.face_mix_opacity)),
             effect_frame: state.effect_frame,
             custom_origins: parse_custom_origins(&state.custom_origin_input),
+            body_action: Some(state.body_action.clone()),
+            body_frame: Some(state.body_frame),
             chair: wz_avatar::ChairUserData {
                 level: Some(state.chair_level),
                 score: Some(state.chair_score),
+                vote: Some(state.chair_vote),
+                bgm: (!state.chair_bgm.is_empty()).then(|| state.chair_bgm.clone()),
                 pop: Some(state.chair_pop),
                 time_minutes: Some(state.chair_time),
                 showcase_items: state

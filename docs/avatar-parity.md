@@ -99,7 +99,8 @@ remaining CharaSim gaps.
     is hidden (`removeBody`).
   - `hashTagChair` → `action/*` list parsed; the first action
     (`forceCharacterAction` + frame) drives the body pose.
-  - `mirrorChair` → `avatarPosY`/`avatarInvisibleWeapon` parsed; weapon hidden.
+  - `mirrorChair` → `avatarPosY`/`avatarInvisibleWeapon` parsed; weapon hidden and
+  body/equipment parts are reflected across `avatarPosY` (`mirror_*` parts).
   - `2019rollingHouseChair` / `yetiChair` → generic `part/N/part0..` animation
     frames are loaded through the same chair frame slider/auto-play.
   - `identityChair` → the player level is rendered from `identityChairInfo/number`
@@ -112,10 +113,11 @@ remaining CharaSim gaps.
     built-in 5x7 bitmap font at `textPos`/`popPos` (`popMin`/`popMax` clamped).
   - `timeChair` → the GUI `Time` minutes value is rendered as `HH:MM` at `textPos`
     (clamped by `timeMax`).
-  - `outfitVoteChair` → the GUI `Score` value is rendered at `scoreTextPos` with
-    the built-in font; the avatar layer/button rectangles are parsed.
-  - `bgmSelectionChair` → button rectangle and taming are loaded; BGM selection
-    itself is metadata-only (no BGM list/value in the chair WZ).
+  - `outfitVoteChair` → the GUI `Vote` value (fallback `Score`) is rendered at
+    `scoreTextPos` with the built-in font; the avatar layer/button rectangles are parsed.
+  - `bgmSelectionChair` → button rectangle and taming are loaded; a caller-supplied
+    BGM string is rendered at the button origin. The BGM list/audio is not in the
+    chair WZ.
   - `showcaseChair` → `pos/0..3` and `slotSet` are parsed; up to four equipment
     IDs supplied by the GUI (`Showcase items`) are loaded from `Character/<slot>`
     and placed at those positions. `item_id_to_slot` now handles both 7-digit
@@ -136,6 +138,14 @@ remaining CharaSim gaps.
   → `apply_custom_origin_map`. The GUI accepts `childName:x,y;...`.
 - Chair pose: when a `Chair` is in the equipment list, the body frame prefers `sit`
   over `stand1`/`stand`. Group taming members also use `sit`.
+- Equipment slots: `FaceAccessory`, `EyeAccessory`, `Earrings`, `Pendant`, `Belt`,
+  `ShoulderPad`, `Pocket`, `Emblem` load from `Character/Accessory`; `Saddle` loads
+  from `Character/TamingMob`; `CashWeapon` maps to `Weapon`. Icon-only images are
+  skipped. Ring items and Android items are icon-only in this client and are not
+  avatar sprites.
+- Body action: `MixOptions.body_action`/`body_frame` select a static body pose
+  (`walk1`, `jump`, `alert`, `prone`, `ladder`, `rope`, ...); GUI exposes a combo
+  and frame index. Full frame-by-frame action playback is still pending.
 - `info/sitEmotion` selects the head/face emotion action (C# `EmotionTable`);
   taming `characterEmotion` overrides it.
 - taming `info/flip` mirrors body/equipment parts **and** the body/equipment bone

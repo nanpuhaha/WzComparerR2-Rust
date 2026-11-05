@@ -280,7 +280,7 @@ dependencies = [
 
 [[package]]
 name = "corpus-builder"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "flate2",
  "serde",
@@ -951,7 +951,7 @@ checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
 name = "oracle-diff"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "serde_json",
@@ -1798,7 +1798,7 @@ dependencies = [
 
 [[package]]
 name = "wz-avatar"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "fontdue",
  "sha2",
@@ -1812,7 +1812,7 @@ dependencies = [
 
 [[package]]
 name = "wz-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "regex",
@@ -1831,7 +1831,7 @@ dependencies = [
 
 [[package]]
 name = "wz-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aes",
  "chacha20",
@@ -1847,7 +1847,7 @@ dependencies = [
 
 [[package]]
 name = "wz-db"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde_json",
  "wz-core",
@@ -1857,7 +1857,7 @@ dependencies = [
 
 [[package]]
 name = "wz-diff"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1869,14 +1869,14 @@ dependencies = [
 
 [[package]]
 name = "wz-error"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "thiserror 1.0.69",
 ]
 
 [[package]]
 name = "wz-image"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -1887,7 +1887,7 @@ dependencies = [
 
 [[package]]
 name = "wz-pool"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dashmap",
  "lru",
@@ -1898,7 +1898,7 @@ dependencies = [
 
 [[package]]
 name = "wz-render"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bytemuck",
  "glam",

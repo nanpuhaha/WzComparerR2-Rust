@@ -21,7 +21,7 @@ members = [
 exclude = ["crates/wz-gui"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 # 실제 하한은 여기 적힌 숫자가 아니라 **의존성 그래프가 정한다**.
 # 실측: cargo +1.85.0 check 와 +1.87.0 check 는 모두
@@ -38,14 +38,14 @@ repository = "https://github.com/nanpuhaha/WzComparerR2-Rust"
 authors = ["Seo, Jang-won <nanpuhaha@gmail.com>", "WzComparerR2 contributors"]
 
 [workspace.dependencies]
-wz-error = { path = "crates/wz-error", version = "0.1.0" }
-wz-pool = { path = "crates/wz-pool", version = "0.1.0" }
-wz-core = { path = "crates/wz-core", version = "0.1.0" }
-wz-image = { path = "crates/wz-image", version = "0.1.0" }
-wz-render = { path = "crates/wz-render", version = "0.1.0" }
-wz-db = { path = "crates/wz-db", version = "0.1.0" }
-wz-diff = { path = "crates/wz-diff", version = "0.1.0" }
-wz-avatar = { path = "crates/wz-avatar", version = "0.1.0" }
+wz-error = { path = "crates/wz-error", version = "0.2.0" }
+wz-pool = { path = "crates/wz-pool", version = "0.2.0" }
+wz-core = { path = "crates/wz-core", version = "0.2.0" }
+wz-image = { path = "crates/wz-image", version = "0.2.0" }
+wz-render = { path = "crates/wz-render", version = "0.2.0" }
+wz-db = { path = "crates/wz-db", version = "0.2.0" }
+wz-diff = { path = "crates/wz-diff", version = "0.2.0" }
+wz-avatar = { path = "crates/wz-avatar", version = "0.2.0" }
 
 
 memmap2 = "0.9"

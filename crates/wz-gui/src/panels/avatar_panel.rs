@@ -26,6 +26,22 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.ctx()
             .request_repaint_after(std::time::Duration::from_millis(50));
     }
+    ui.horizontal(|ui| {
+        ui.label("Body action:");
+        egui::ComboBox::from_id_salt("body_action")
+            .selected_text(&state.body_action)
+            .show_ui(ui, |ui| {
+                for action in [
+                    "stand1", "walk1", "walk2", "jump", "alert", "prone", "ladder", "rope", "sit",
+                    "stand2",
+                ] {
+                    ui.selectable_value(&mut state.body_action, action.into(), action);
+                }
+            });
+        ui.label("Frame:");
+        ui.add(egui::DragValue::new(&mut state.body_frame).range(0..=20));
+    });
+    ui.label("Body action/frame은 장비 로드 시 적용됩니다");
     ui.label("29개 슬롯 (드롭다운 선택)");
     egui::ScrollArea::vertical()
         .max_height(240.0)
@@ -198,6 +214,8 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.add(egui::DragValue::new(&mut state.chair_level).range(1..=300));
         ui.label("Score:");
         ui.add(egui::DragValue::new(&mut state.chair_score).range(0..=99999));
+        ui.label("Vote:");
+        ui.add(egui::DragValue::new(&mut state.chair_vote).range(-99999..=99999));
         ui.label("Pop:");
         ui.add(egui::DragValue::new(&mut state.chair_pop).range(-99999..=99999));
         ui.label("Time:");
@@ -230,7 +248,11 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         ui.label("Guild:");
         ui.text_edit_singleline(&mut state.chair_guild);
     });
-    ui.label("identity/score 체어 값은 장비 로드 시 적용됩니다");
+    ui.horizontal(|ui| {
+        ui.label("BGM:");
+        ui.text_edit_singleline(&mut state.chair_bgm);
+    });
+    ui.label("identity/score/vote/BGM 체어 값은 장비 로드 시 적용됩니다");
     if !state.chair_custom_fields.is_empty() {
         egui::CollapsingHeader::new("customChair fields").show(ui, |ui| {
             egui::ScrollArea::vertical()

@@ -294,6 +294,8 @@ pub struct ChairUserData {
     pub gender: Option<String>,
     pub guild: Option<String>,
     pub score: Option<i32>,
+    pub vote: Option<i64>,
+    pub bgm: Option<String>,
     pub pop: Option<i64>,
     pub time_minutes: Option<i64>,
     pub showcase_items: Vec<i32>,
@@ -2259,6 +2261,52 @@ fn place_pet_parts(parts: &mut [AvatarPart], pos: crate::Point, flip: bool) {
     }
 }
 
+/// `FaceAccessory` 의 `info/fixedEmotion` 을 찾는다.
+fn load_face_accessory_emotion(
+    data_root: &std::path::Path,
+    equipment: &[(String, i32)],
+) -> Option<String> {
+    let item_id = equipment
+        .iter()
+        .find(|(slot, _)| slot == "FaceAccessory")
+        .map(|(_, id)| *id)?;
+    let base = data_root.join("Character").join("Accessory");
+    let image = format!("{item_id:08}.img");
+    for entry in std::fs::read_dir(base).ok()?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("wz") {
+            continue;
+        }
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(image_entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some(image.as_str()))
+        else {
+            continue;
+        };
+        let Some(offset) = image_entry.offset else {
+            continue;
+        };
+        let Ok(node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let Some(info) = child_node(&node, "info") else {
+            continue;
+        };
+        if let Some(emotion) = node_str(info, "fixedEmotion") {
+            return Some(emotion.split('/').next().unwrap_or(&emotion).to_string());
+        }
+    }
+    None
+}
+
 /// `Character/<slot>/_Canvas` 에서 장비 이미지를 찾아 로드한다.
 fn load_character_item_by_id(
     data_root: &std::path::Path,
@@ -3397,7 +3445,11 @@ pub fn slot_dir_name(slot: &str) -> Option<&'static str> {
         "Cape" => Some("Cape"),
         "Weapon" => Some("Weapon"),
         "Shield" | "SubWeapon" => Some("Shield"),
-        "FaceAccessory" => Some("Accessory"),
+        "FaceAccessory" | "EyeAccessory" | "Earrings" | "Pendant" | "Belt" | "ShoulderPad"
+        | "Pocket" | "Emblem" => Some("Accessory"),
+        "Ring1" | "Ring2" | "Ring3" | "Ring4" => Some("Ring"),
+        "Saddle" => Some("TamingMob"),
+        "CashWeapon" => Some("Weapon"),
         "Hair" => Some("Hair"),
         "Face" => Some("Face"),
         "Taming" => Some("TamingMob"),
@@ -3417,6 +3469,9 @@ pub fn item_id_to_slot(id: i32) -> Option<&'static str> {
     };
     match prefix {
         100 => Some("Cap"),
+        101 => Some("FaceAccessory"),
+        102 => Some("EyeAccessory"),
+        103 => Some("Earrings"),
         104 => Some("Coat"),
         105 => Some("Longcoat"),
         106 => Some("Pants"),
@@ -3424,6 +3479,14 @@ pub fn item_id_to_slot(id: i32) -> Option<&'static str> {
         108 => Some("Glove"),
         109 => Some("Shield"),
         110 => Some("Cape"),
+        111 => Some("Ring1"),
+        112 => Some("Pendant"),
+        113 => Some("Belt"),
+        115 => Some("ShoulderPad"),
+        116 => Some("Pocket"),
+        118 => Some("Emblem"),
+        170 | 171 => Some("CashWeapon"),
+        190 => Some("Saddle"),
         130 | 131 | 132 | 133 | 134 | 136 | 137 | 138 | 140..=159 => Some("Weapon"),
         _ => None,
     }
@@ -3473,6 +3536,9 @@ pub struct MixOptions {
     pub custom_origins: std::collections::BTreeMap<String, crate::Point>,
     /// identity/score 체어에 표시할 호출자 값.
     pub chair: ChairUserData,
+    /// 호출자가 선택한 body action/프레임 (정적 포즈).
+    pub body_action: Option<String>,
+    pub body_frame: Option<usize>,
 }
 
 pub fn load_avatar_with_equipment(
@@ -3505,21 +3571,39 @@ pub fn load_avatar_with_equipment_and_mix(
             .flatten()
     });
     let chair_action = chair_info.as_ref().map(|c| c.body_action());
-    let emotion = chair_info.as_ref().and_then(|info| {
-        if let Some(taming) = &info.taming {
-            for key in ["sit", "stand0"] {
-                if let Some(emotion) = taming.character_emotions.get(key) {
-                    return Some(emotion.clone());
+    let requested_action = mix
+        .body_action
+        .as_ref()
+        .filter(|name| !name.is_empty())
+        .map(|name| {
+            if name.eq_ignore_ascii_case("hide") || name.eq_ignore_ascii_case("hideBody") {
+                ChairBodyAction::Hide
+            } else {
+                ChairBodyAction::Action {
+                    name: name.clone(),
+                    frame: mix.body_frame,
                 }
             }
-            None
-        } else {
-            info.sit_emotion
-                .and_then(|index| EMOTION_TABLE.get(index as usize).map(|s| s.to_string()))
-        }
+        });
+    let body_action = requested_action.or_else(|| chair_action.clone());
+    let fixed_emotion = load_face_accessory_emotion(data_root, equipment);
+    let emotion = fixed_emotion.or_else(|| {
+        chair_info.as_ref().and_then(|info| {
+            if let Some(taming) = &info.taming {
+                for key in ["sit", "stand0"] {
+                    if let Some(emotion) = taming.character_emotions.get(key) {
+                        return Some(emotion.clone());
+                    }
+                }
+                None
+            } else {
+                info.sit_emotion
+                    .and_then(|index| EMOTION_TABLE.get(index as usize).map(|s| s.to_string()))
+            }
+        })
     });
     let body_image = format!("{:08}.img", body_skin);
-    let (mut root, mut parts) = match &chair_action {
+    let (mut root, mut parts) = match &body_action {
         Some(ChairBodyAction::Hide) => (Bone::new("@root"), Vec::new()),
         Some(ChairBodyAction::Action { name, frame }) => {
             let actions = [name.as_str(), "sit", "stand1", "stand"];
@@ -3529,7 +3613,7 @@ pub fn load_avatar_with_equipment_and_mix(
     };
 
     // C# `hideBody`: bodyAction 이 null 이면 LinkPlayerParts 가 body+head 를 모두 숨긴다.
-    if !matches!(&chair_action, Some(ChairBodyAction::Hide)) {
+    if !matches!(&body_action, Some(ChairBodyAction::Hide)) {
         let head_actions: Vec<&str> = match &emotion {
             Some(emotion) => vec![emotion.as_str(), "front", "back"],
             None => vec!["front", "back"],
@@ -3632,9 +3716,10 @@ pub fn load_avatar_with_equipment_and_mix(
                                 parts.extend(text_parts);
                             }
                         }
-                        if let (Some(vote), Some(score)) =
-                            (custom.outfit_vote.as_ref(), mix.chair.score)
-                        {
+                        if let (Some(vote), Some(score)) = (
+                            custom.outfit_vote.as_ref(),
+                            mix.chair.vote.or(mix.chair.score.map(i64::from)),
+                        ) {
                             if let Some((text_root, text_parts)) = text_chair_part(
                                 "vote_text",
                                 &score.to_string(),
@@ -3642,6 +3727,18 @@ pub fn load_avatar_with_equipment_and_mix(
                                 vote.z,
                                 2,
                             ) {
+                                merge_bone_tree(&mut root, text_root);
+                                parts.extend(text_parts);
+                            }
+                        }
+                        if let (Some(bgm_info), Some(bgm), Some(font)) = (
+                            custom.bgm_selection.as_ref(),
+                            mix.chair.bgm.as_deref(),
+                            game_font(data_root).as_deref(),
+                        ) {
+                            if let Some((text_root, text_parts)) =
+                                font_text_chair_part(font, "bgm_text", bgm, bgm_info.button_lt, 1)
+                            {
                                 merge_bone_tree(&mut root, text_root);
                                 parts.extend(text_parts);
                             }
@@ -3793,12 +3890,23 @@ pub fn load_avatar_with_equipment_and_mix(
                     Some(emotion) => vec![emotion.as_str(), "default", "stand1"],
                     None => vec!["default", "stand1"],
                 }
+            } else if let Some(action) = mix.body_action.as_deref() {
+                vec![action, "default", "stand1", "walk1"]
             } else {
                 vec!["default", "stand1"]
             };
+            let part_slot = if matches!(dir, "Accessory" | "Ring" | "Android") || slot == "Saddle" {
+                slot.to_ascii_lowercase()
+            } else {
+                dir.to_string()
+            };
             if let Some((mut item_root, mut item_parts)) =
-                load_item_frame(&archive, Some(&image_name), &actions, dir)
+                load_item_frame(&archive, Some(&image_name), &actions, &part_slot)
             {
+                item_parts.retain(|part| !part.slot.contains("icon"));
+                if item_parts.is_empty() {
+                    continue;
+                }
                 let mix_setting = match dir {
                     "Hair" => mix.hair,
                     "Face" => mix.face,
@@ -3905,6 +4013,26 @@ pub fn load_avatar_with_equipment_and_mix(
                 merge_bone_tree(&mut root, taming_root);
                 parts.extend(taming_parts);
             }
+        }
+    }
+
+    // WZ `mirrorChair` — body/equipment을 avatarPosY 기준으로 반사 복제한다.
+    if let Some(mirror) = chair_info
+        .as_ref()
+        .and_then(|c| c.custom_chair.as_ref())
+        .and_then(|c| c.mirror.as_ref())
+    {
+        let source: Vec<AvatarPart> = parts
+            .iter()
+            .filter(|part| is_avatar_body_slot(&part.slot))
+            .cloned()
+            .collect();
+        for mut part in source {
+            transform_part_op(&mut part, TransformOp::FlipY);
+            part.position.y += mirror.avatar_pos_y * 2;
+            part.slot = format!("mirror_{}", part.slot);
+            part.z_index = part.z_index.min(0);
+            parts.push(part);
         }
     }
 
@@ -4821,6 +4949,77 @@ mod chair_custom_type_tests {
     }
 
     #[test]
+    fn face_accessory_fixed_emotion_changes_face() {
+        let Some(root) = data_root() else { return };
+        let base_equipment = vec![("Face".to_string(), 20000)];
+        let fixed_equipment = vec![
+            ("Face".to_string(), 20000),
+            ("FaceAccessory".to_string(), 1012877),
+        ];
+        assert_eq!(
+            load_face_accessory_emotion(&root, &fixed_equipment).as_deref(),
+            Some("smile")
+        );
+        let Some(base) = load_avatar_with_equipment(&root, 2000, &base_equipment) else {
+            return;
+        };
+        let Some(fixed) = load_avatar_with_equipment(&root, 2000, &fixed_equipment) else {
+            return;
+        };
+        let base_face = base.parts.iter().find(|p| p.slot == "face").unwrap();
+        let fixed_face = fixed.parts.iter().find(|p| p.slot == "face").unwrap();
+        assert_ne!(base_face.rgba, fixed_face.rgba);
+        assert!(fixed.parts.iter().any(|p| p.slot == "faceaccessory"));
+    }
+
+    #[test]
+    fn body_action_option_switches_pose() {
+        let Some(root) = data_root() else { return };
+        let Some(base) = load_avatar_with_equipment(&root, 2000, &[]) else {
+            return;
+        };
+        let Some(walk) = load_avatar_with_equipment_and_mix(
+            &root,
+            2000,
+            &[],
+            &MixOptions {
+                body_action: Some("walk1".into()),
+                body_frame: Some(0),
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        let base_body = base.parts.iter().find(|p| p.slot == "body").unwrap();
+        let walk_body = walk.parts.iter().find(|p| p.slot == "body").unwrap();
+        assert_ne!(
+            base_body.rgba, walk_body.rgba,
+            "walk1 should differ from stand1"
+        );
+    }
+
+    #[test]
+    fn loads_accessory_and_saddle_slots() {
+        let Some(root) = data_root() else { return };
+        let equipment = vec![
+            ("FaceAccessory".to_string(), 1010000),
+            ("EyeAccessory".to_string(), 1020000),
+            ("Earrings".to_string(), 1030000),
+            ("Saddle".to_string(), 1902000),
+        ];
+        let Some(av) = load_avatar_with_equipment(&root, 2000, &equipment) else {
+            return;
+        };
+        for slot in ["faceaccessory", "eyeaccessory", "earrings", "saddle"] {
+            assert!(
+                av.parts.iter().any(|p| p.slot == slot),
+                "slot {slot} missing: {:?}",
+                av.parts.iter().map(|p| p.slot.clone()).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
     fn game_font_renders_korean_text() {
         let Some(root) = data_root() else { return };
         let Some(font) = game_font(&root) else {
@@ -4942,6 +5141,26 @@ mod chair_custom_type_tests {
             .iter()
             .find(|p| p.slot == "vote_text")
             .expect("vote_text part");
+        assert!(part.width > 1 && part.height > 1);
+        assert!(part.rgba.chunks(4).any(|p| p[3] != 0));
+    }
+
+    #[test]
+    fn bgm_selection_chair_renders_bgm_text() {
+        let Some(av) = load_chair_with(
+            3019043,
+            ChairUserData {
+                bgm: Some("BGM".into()),
+                ..Default::default()
+            },
+        ) else {
+            return;
+        };
+        let part = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "bgm_text")
+            .expect("bgm_text");
         assert!(part.width > 1 && part.height > 1);
         assert!(part.rgba.chunks(4).any(|p| p[3] != 0));
     }
@@ -5132,6 +5351,25 @@ mod chair_custom_type_tests {
             }
         );
         assert!(has_slot(&av, "body"));
+    }
+
+    #[test]
+    fn mirror_chair_duplicates_body_across_avatar_pos_y() {
+        let Some(av) = load_chair(3019098) else {
+            return;
+        };
+        let body = av.parts.iter().find(|p| p.slot == "body").expect("body");
+        let mirror = av
+            .parts
+            .iter()
+            .find(|p| p.slot == "mirror_body")
+            .expect("mirror_body");
+        assert_eq!(mirror.width, body.width);
+        assert_eq!(mirror.height, body.height);
+        assert_eq!(
+            mirror.position.y,
+            -28 * 2 - (body.position.y + body.height as i32)
+        );
     }
 
     #[test]

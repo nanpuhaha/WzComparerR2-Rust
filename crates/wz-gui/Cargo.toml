@@ -1,7 +1,7 @@
 [package]
 name = "wz-gui"
 description = "WzComparerR2 Rust 데스크톱 GUI (Phase 8 PoC)"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.90"
 license = "MIT"
