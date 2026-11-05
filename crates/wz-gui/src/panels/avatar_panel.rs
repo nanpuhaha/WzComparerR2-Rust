@@ -16,6 +16,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
     if async_io::tick_action(state, now) {
         async_io::render_loaded_avatar(state);
     }
+    if async_io::tick_rings(state, now) {
+        async_io::render_loaded_avatar(state);
+    }
     if state.effect_auto_play && !state.effect_frames.is_empty() {
         repaint = true;
     }
@@ -26,6 +29,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
         repaint = true;
     }
     if state.action_auto_play && state.action_frames.len() > 1 {
+        repaint = true;
+    }
+    if state.ring_auto_play && state.ring_frames.len() > 1 {
         repaint = true;
     }
     if repaint {
@@ -310,6 +316,12 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             state.chair_last_time = 0.0;
         }
     }
+    if !state.ring_frames.is_empty() {
+        let auto = ui.checkbox(&mut state.ring_auto_play, "Ring 이펙트 자동 재생");
+        if auto.changed() {
+            state.ring_last_time = 0.0;
+        }
+    }
     if !state.pet_animations.is_empty() {
         let auto = ui.checkbox(&mut state.pet_auto_play, "Pet 자동 재생");
         if auto.changed() {
@@ -354,6 +366,11 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
             ));
         }
     }
+    ui.horizontal(|ui| {
+        ui.label("Potential:");
+        ui.text_edit_singleline(&mut state.chara_potentials_input);
+    });
+    ui.label("잠재 형식: code:level,code:level (장비 로드 시 집계)");
     if let Some(stats) = &state.chara_stats {
         egui::CollapsingHeader::new("CharaSim stats").show(ui, |ui| {
             let summary = stats.summary();

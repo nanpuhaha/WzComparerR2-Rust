@@ -48,6 +48,16 @@ fn part_data(p: &wz_avatar::AvatarPart) -> AvatarPartData {
     }
 }
 
+fn parse_potentials(input: &str) -> Vec<(i32, i32)> {
+    input
+        .split(',')
+        .filter_map(|part| {
+            let (code, level) = part.trim().split_once(':')?;
+            Some((code.trim().parse().ok()?, level.trim().parse().ok()?))
+        })
+        .collect()
+}
+
 fn parse_equipment(input: &str) -> Vec<(String, i32)> {
     let mut equipment = Vec::new();
     for part in input.split(',') {
@@ -181,6 +191,10 @@ pub fn load_avatar_from_loader(state: &mut AppState) {
             state.chair_event_point = None;
             state.chair_custom_fields.clear();
             state.pet_animations.clear();
+            state.ring_frames.clear();
+            state.ring_delays.clear();
+            state.ring_frame = 0;
+            state.ring_last_time = 0.0;
             state.chara_stats = None;
             render_loaded_avatar(state);
         }
@@ -275,7 +289,10 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
             state.chara_stats = Some(wz_avatar::compute_character_stats(
                 &data_root,
                 &equipment,
-                &wz_avatar::StatOptions::default(),
+                &wz_avatar::StatOptions {
+                    potentials: parse_potentials(&state.chara_potentials_input),
+                    ..Default::default()
+                },
             ));
             state.avatar_status = format!("장비 로드: {} 파트", av.parts.len());
             state.avatar_loaded_parts = av.parts.iter().map(part_data).collect();
@@ -335,8 +352,17 @@ pub fn load_avatar_with_equipment_input(state: &mut AppState) {
                     rng: 0x9E37_79B9_7F4A_7C15 ^ (pet.slot as u64 + 1),
                 })
                 .collect();
+            state.ring_frames = av
+                .ring_frames
+                .iter()
+                .map(|frame| frame.iter().map(part_data).collect())
+                .collect();
+            state.ring_delays = av.ring_delays.clone();
+            state.ring_frame = 0;
+            state.ring_last_time = 0.0;
             apply_pet_frames(state);
             load_action_frames(state, &data_root);
+            apply_ring_frame(state);
             render_loaded_avatar(state);
         }
         None => {
@@ -587,6 +613,43 @@ pub fn tick_pets(state: &mut AppState, now: f64) -> bool {
         apply_pet_frames(state);
     }
     changed
+}
+
+pub fn apply_ring_frame(state: &mut AppState) {
+    if state.ring_frames.is_empty() {
+        return;
+    }
+    let idx = state.ring_frame % state.ring_frames.len();
+    state
+        .avatar_loaded_parts
+        .retain(|part| !part.slot.starts_with("ring"));
+    state
+        .avatar_loaded_parts
+        .extend(state.ring_frames[idx].iter().cloned());
+}
+
+pub fn tick_rings(state: &mut AppState, now: f64) -> bool {
+    if !state.ring_auto_play || state.ring_frames.len() < 2 {
+        return false;
+    }
+    let delay = state
+        .ring_delays
+        .get(state.ring_frame % state.ring_delays.len().max(1))
+        .copied()
+        .unwrap_or(120)
+        .max(20) as f64
+        / 1000.0;
+    if state.ring_last_time <= 0.0 {
+        state.ring_last_time = now;
+        return false;
+    }
+    if now - state.ring_last_time < delay {
+        return false;
+    }
+    state.ring_last_time = now;
+    state.ring_frame = (state.ring_frame + 1) % state.ring_frames.len();
+    apply_ring_frame(state);
+    true
 }
 
 /// 체어 애니메이션 틱. 다음 프레임으로 넘어갔으면 `true`.
@@ -975,6 +1038,32 @@ mod tests {
             .find(|p| p.slot == "body")
             .expect("body");
         assert_eq!(body.rgba, vec![2, 2, 2, 255]);
+    }
+
+    #[test]
+    fn ring_frame_replaces_ring_parts_and_ticks() {
+        let part = |n: u8| AvatarPartData {
+            slot: "ring1_0".into(),
+            width: 1,
+            height: 1,
+            rgba: vec![n, n, n, 255],
+            position: (0, 0),
+            z_index: 0,
+        };
+        let mut state = AppState {
+            avatar_loaded_parts: vec![part(1)],
+            ring_frames: vec![vec![part(1)], vec![part(2)]],
+            ring_delays: vec![120, 120],
+            ring_frame: 1,
+            ring_auto_play: true,
+            ring_last_time: 0.0,
+            ..Default::default()
+        };
+        apply_ring_frame(&mut state);
+        assert_eq!(state.avatar_loaded_parts[0].rgba, vec![2, 2, 2, 255]);
+        assert!(!tick_rings(&mut state, 0.1));
+        assert!(tick_rings(&mut state, 0.3));
+        assert_eq!(state.ring_frame, 0);
     }
 
     #[test]

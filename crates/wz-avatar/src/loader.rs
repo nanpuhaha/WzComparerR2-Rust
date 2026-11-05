@@ -102,6 +102,9 @@ pub struct LoadedAvatar {
     pub chair_delays: Vec<u32>,
     /// petChair 슬롯 애니메이션/랜덤 행동.
     pub pet_animations: Vec<PetAnimationData>,
+    /// Ring 이펙트 프레임 (Ring1~4).
+    pub ring_frames: Vec<Vec<AvatarPart>>,
+    pub ring_delays: Vec<u32>,
 }
 
 /// C# `CustomChairType` — 현재 C# 원본은 `ScaleAvatarChair` 만 구현한다.
@@ -3606,6 +3609,8 @@ pub fn load_from_character_wz_with_skin(
         chair_frames: Vec::new(),
         chair_delays: Vec::new(),
         pet_animations: Vec::new(),
+        ring_frames: Vec::new(),
+        ring_delays: Vec::new(),
     })
 }
 
@@ -3930,6 +3935,7 @@ pub fn load_avatar_with_equipment_and_mix(
     let mut chair_frames: Vec<Vec<AvatarPart>> = Vec::new();
     let mut chair_delays: Vec<u32> = Vec::new();
     let mut pet_animations: Vec<PetAnimationData> = Vec::new();
+    let mut ring_layers: Vec<Vec<Vec<AvatarPart>>> = Vec::new();
     for (slot, item_id) in equipment {
         if let Some(dir) = slot_dir_name(slot) {
             if dir == "Effect" {
@@ -4215,37 +4221,57 @@ pub fn load_avatar_with_equipment_and_mix(
                 // Ring item effects live in Effect/ItemEff.img/<ringId>/0|1.
                 if slot.starts_with("Ring") && item_id / 10000 == 111 {
                     for layer in ["0", "1"] {
-                        let Some((w, h, rgba, origin, z)) =
-                            load_item_eff_frames(data_root, *item_id, layer)
-                                .into_iter()
-                                .next()
-                        else {
+                        let frames = load_item_eff_frames(data_root, *item_id, layer);
+                        if frames.is_empty() {
                             continue;
-                        };
+                        }
                         let part_slot = format!("{}_{}", slot.to_ascii_lowercase(), layer);
-                        let local = crate::Point::new(-origin.x, -origin.y);
-                        let mut skin = SkinLayer::new(&part_slot);
-                        skin.z = "effect".into();
-                        skin.z_index = z;
-                        skin.origin = crate::Point::ZERO;
-                        skin.width = w;
-                        skin.height = h;
-                        root.append_bone(skin, &part_slot, local);
-                        parts.push(AvatarPart {
-                            slot: part_slot,
-                            width: w,
-                            height: h,
-                            rgba,
-                            position: local,
-                            origin,
-                            z_index: z,
-                            custom_origin_map: Default::default(),
-                        });
+                        let layer_frames = frames
+                            .into_iter()
+                            .map(|(w, h, rgba, origin, z)| {
+                                let local = crate::Point::new(-origin.x, -origin.y);
+                                vec![AvatarPart {
+                                    slot: part_slot.clone(),
+                                    width: w,
+                                    height: h,
+                                    rgba,
+                                    position: local,
+                                    origin,
+                                    z_index: z,
+                                    custom_origin_map: Default::default(),
+                                }]
+                            })
+                            .collect();
+                        ring_layers.push(layer_frames);
                     }
                 }
             }
         }
     }
+
+    let ring_count = ring_layers.iter().map(|f| f.len()).max().unwrap_or(0);
+    let ring_frames: Vec<Vec<AvatarPart>> = (0..ring_count)
+        .map(|i| {
+            ring_layers
+                .iter()
+                .flat_map(|frames| frames[i % frames.len()].iter().cloned())
+                .collect()
+        })
+        .collect();
+    if let Some(first) = ring_frames.first() {
+        for part in first {
+            let local = part.position;
+            let mut skin = SkinLayer::new(&part.slot);
+            skin.z = "effect".into();
+            skin.z_index = part.z_index;
+            skin.origin = crate::Point::ZERO;
+            skin.width = part.width;
+            skin.height = part.height;
+            root.append_bone(skin, &part.slot, local);
+        }
+        parts.extend(first.iter().cloned());
+    }
+    let ring_delays = vec![120; ring_frames.len()];
 
     if let Some(info) = &chair_info {
         let has_group = !info.group_taming_ids.is_empty();
@@ -4408,6 +4434,8 @@ pub fn load_avatar_with_equipment_and_mix(
         chair_frames,
         chair_delays,
         pet_animations,
+        ring_frames,
+        ring_delays,
     })
 }
 
@@ -5287,6 +5315,8 @@ mod chair_custom_type_tests {
             .expect("ring effect part");
         assert!(part.width > 1 && part.height > 1);
         assert!(part.rgba.chunks(4).any(|p| p[3] != 0));
+        assert!(av.ring_frames.len() > 1);
+        assert_eq!(av.ring_delays.len(), av.ring_frames.len());
     }
 
     #[test]
