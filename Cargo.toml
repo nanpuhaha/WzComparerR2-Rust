@@ -58,7 +58,7 @@ mlua = { version = "0.9", features = ["lua54", "vendored"] }
 
 
 memmap2 = "0.9"
-thiserror = "1.0"
+thiserror = "2.0"
 bytes = "1.7"
 indexmap = "2.5"
 compact_str = "0.9"
