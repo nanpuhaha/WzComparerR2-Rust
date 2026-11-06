@@ -2015,3 +2015,31 @@ CLI: `wz potential-cases <Data> --levels-per-code 2`,
 C#: `-- potcases <Item_000.wz> <fixture.json>`.
 
 한계: `PotentialTooltipRender`의 GDI+ 래스터/색상은 여전히 미검증이다(문자열만).
+
+## 세트 아이템 (`SetItem.CreateFromNode`)
+
+GDI와 무관한 세트 데이터 파싱/그룹 결합을 `wz-avatar::set_item`으로 옮겼다.
+
+- `ItemID` 파트: 단일 값이면 그 ID 하나, 자식이 있으면 `representName`/`typeName`/
+  `byGender` + 숫자 키(0부터 가능) → ID 집합
+- `Effect`: 단계별 `GearPropType` 값, `Option`(잠재능력 참조 → `Potential.CreateFromNode`),
+  `OptionToMob`(1..N, `mob`/`mobName`/속성), `activeSkill`(0..N, `id`/`level`),
+  `bonusByTime`(0..N, `termStart`/속성)
+- `Desc`: `weapon`/`subweapon`/`pocket`/`emblem` 그룹을 `CombinePart`로 병합.
+  병합 파트 ID는 **전체 파트의 최대 ID + 1**, 병합된 기존 파트는 제거,
+  `RepresentName`은 Desc 값, `TypeName`은 `GetGearTypeString(weapon|subWeapon|pocket|emblem)`.
+- `Potential` 노드 파싱(`wz-db::potential::from_node`)도 추가: `info`의
+  optionType/reqLevel/weight/string과 `level/<pLevel>` 속성 → `ConvertSummary()`
+
+검증(실제 C# 실행):
+- 입력은 실제 `Etc/SetItemInfo.img` **644개 세트** + `Item/ItemOption.img`
+- C# 하네스가 실제 `SetItem.CreateFromNode` + `Potential.CreateFromNode`를 실행해
+  파트/이펙트/옵션/몹/액티브스킬/시간보너스 구조 전체를 덤프
+- `crates/wz-avatar/tests/set_item_parity.rs` — 644개 구조 **완전 일치**
+  (예: 6번 세트의 무기 파트 13개 ID 병합, `Option` 30291/10241 요약)
+- 단위 테스트 4종(파트/이펙트/Desc 병합/Option 참조)
+
+fixture: `crates/wz-avatar/tests/fixtures/set_items_expected.json`,
+C#: `-- setitems <Etc_000.wz> <Item_000.wz>`.
+
+한계: 세트 툴팁의 GDI+ 그리기/색상은 미검증이다(구조/문자열까지).

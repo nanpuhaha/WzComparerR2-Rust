@@ -277,6 +277,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   옮기고 실제 장비 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
 - `GetGearPropString` signFlag: 0/1/2 부호 규칙(음수에서 `+-5`)을 옮기고 실제
   장비 속성 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
+- 세트 아이템: `SetItem.CreateFromNode`의 파트/이펙트/Option/OptionToMob/
+  activeSkill/bonusByTime/Desc 병합을 옮기고 실제 SetItemInfo.img 644세트
+  구조를 실제 C# 호출과 완전 일치. `Potential.from_node`도 함께 이식.
 - 잠재능력 코어: `Potential`의 요약 치환(길이 내림차순)/레벨/옵션타입/
   `ToString`/`IsPotentialEx`를 옮기고 실제 ItemOption.img 600케이스 + 옵션
   판정 1,127건 + 레벨 215건을 실제 C# 호출과 비교.

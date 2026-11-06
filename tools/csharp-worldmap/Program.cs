@@ -4727,6 +4727,86 @@ return tostring(ok) .. '|' .. tostring(acc)
         Console.WriteLine(JsonSerializer.Serialize(new { rows, option_checks = optionChecks, levels },
             new JsonSerializerOptions { WriteIndented = false }));
     }
+    // 실제 `SetItem.CreateFromNode(setItemNode, optionNode)` 구조 덤프.
+    static void SetItems(string etcWzPath, string itemWzPath)
+    {
+        var etc = new Wz_Structure(); etc.Load(etcWzPath);
+        var setRoot = etc.wz_files[0].Node.FindNodeByPath("SetItemInfo.img", true);
+        var item = new Wz_Structure(); item.Load(itemWzPath);
+        var optionRoot = item.wz_files[0].Node.FindNodeByPath("ItemOption.img", true);
+        if (setRoot == null) throw new Exception("SetItemInfo.img not found");
+
+        object PropValue(object value)
+        {
+            switch (value)
+            {
+                case int i: return i;
+                case List<WzComparerR2.CharaSim.Potential> potens:
+                    return potens.Select(p => new
+                    {
+                        code = p.code,
+                        option_type = p.optionType,
+                        req_level = p.reqLevel,
+                        weight = p.weight,
+                        summary = p.ConvertSummary(),
+                    }).ToList();
+                case List<WzComparerR2.CharaSim.SetItemOptionToMob> list:
+                    return list.Select(o => new
+                    {
+                        mobs = o.Mobs,
+                        mob_name = o.MobName,
+                        props = o.Props.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
+                    }).ToList();
+                case List<WzComparerR2.CharaSim.SetItemActiveSkill> skills:
+                    return skills.Select(s => new { skill_id = s.SkillID, level = s.Level }).ToList();
+                case List<WzComparerR2.CharaSim.SetItemBonusByTime> bonuses:
+                    return bonuses.Select(b => new
+                    {
+                        term_start = b.TermStart,
+                        props = b.Props.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
+                    }).ToList();
+                default: return value?.ToString();
+            }
+        }
+
+        var rows = new List<object>();
+        foreach (var node in setRoot.Nodes)
+        {
+            var set = WzComparerR2.CharaSim.SetItem.CreateFromNode(node, optionRoot);
+            if (set == null) continue;
+            var idParts = set.ItemIDs.Parts
+                .OrderBy(kv => kv.Key)
+                .Select(kv => new
+                {
+                    part_id = kv.Key,
+                    represent_name = kv.Value.RepresentName,
+                    type_name = kv.Value.TypeName,
+                    by_gender = kv.Value.ByGender,
+                    item_ids = kv.Value.ItemIDs.Keys.OrderBy(x => x).ToList(),
+                }).ToList();
+            var effects = set.Effects
+                .OrderBy(kv => kv.Key)
+                .Select(kv => new
+                {
+                    count = kv.Key,
+                    enabled = kv.Value.Enabled,
+                    props = kv.Value.Props.ToDictionary(p => p.Key.ToString(), p => PropValue(p.Value)),
+                }).ToList();
+            rows.Add(new
+            {
+                set_item_id = set.SetItemID,
+                set_item_name = set.SetItemName,
+                complete_count = set.CompleteCount,
+                parts = set.Parts,
+                expand_tool_tip = set.ExpandToolTip,
+                item_ids = idParts,
+                effects,
+            });
+        }
+
+        Console.WriteLine(JsonSerializer.Serialize(new { count = rows.Count, rows },
+            new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4764,6 +4844,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "astrajob") AstraJob(args[1]);
         else if (args[0] == "itemtypes") ItemTypes(args[1]);
         else if (args[0] == "potcases") PotentialCases(args[1], args[2]);
+        else if (args[0] == "setitems") SetItems(args[1], args[2]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));

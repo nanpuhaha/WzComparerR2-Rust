@@ -3,6 +3,7 @@
 //! GDI와 무관하게 계산되는 부분만 옮겼다(문자열 치환/정수 판정).
 
 use std::collections::BTreeMap;
+use wz_core::image::{ImageValue, Node};
 
 /// `(GearType 이름) -> enum 값`.
 pub fn gear_type_value(name: &str) -> Option<i32> {
@@ -267,6 +268,122 @@ pub fn potential_to_string(code: i32, summary: Option<&str>, weight: i32) -> Str
         out.push_str(&format!(" - {weight}"));
     }
     out
+}
+
+/// `Potential.CreateFromNode`이 만드는 관찰 가능한 값.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PotentialOption {
+    pub code: i32,
+    pub option_type: i32,
+    pub req_level: i32,
+    pub weight: i32,
+    /// `ConvertSummary()` 결과(치환 후 문자열).
+    pub summary: Option<String>,
+}
+
+fn child<'a>(node: &'a Node, name: &str) -> Option<&'a Node> {
+    node.object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == name)
+}
+
+fn node_i64(node: &Node) -> Option<i64> {
+    match &node.value {
+        Some(ImageValue::Int(v)) => Some(i64::from(*v)),
+        Some(ImageValue::Short(v)) => Some(i64::from(*v)),
+        Some(ImageValue::Long(v)) => Some(*v),
+        Some(ImageValue::Uint(v)) => Some(i64::from(*v)),
+        Some(ImageValue::Float(v)) => Some(f64::from(*v) as i64),
+        Some(ImageValue::Double(v)) => Some(*v as i64),
+        Some(ImageValue::Str(s)) | Some(ImageValue::Uol(s)) => s.parse().ok(),
+        _ => None,
+    }
+}
+
+fn node_string(node: &Node) -> Option<String> {
+    match &node.value {
+        Some(ImageValue::Str(s)) | Some(ImageValue::Uol(s)) => Some(s.to_string()),
+        _ => None,
+    }
+}
+
+/// `Potential.CreateFromNode(potentialNode, pLevel)`.
+///
+/// 노드 이름이 코드이고, `info` 아래 `optionType`/`reqLevel`/`weight`/`string`,
+/// `level/<pLevel>` 아래에 `GearPropType` 값이 있다. `level/<pLevel>`이 없으면
+/// 원본처럼 `None`을 돌려준다.
+pub fn from_node(node: &Node, level: i32) -> Option<PotentialOption> {
+    let code: i32 = node.name.as_ref().parse().ok()?;
+    let mut option = PotentialOption {
+        code,
+        option_type: 0,
+        req_level: 0,
+        weight: 0,
+        summary: None,
+    };
+    let mut props: BTreeMap<String, i64> = BTreeMap::new();
+    let mut props_f: BTreeMap<String, f64> = BTreeMap::new();
+    let mut summary_text: Option<String> = None;
+
+    for sub in node.object_children() {
+        match sub.name.as_ref() {
+            "info" => {
+                for info in sub.object_children() {
+                    match info.name.as_ref() {
+                        "optionType" => option.option_type = node_i64(info).unwrap_or(0) as i32,
+                        "reqLevel" => option.req_level = node_i64(info).unwrap_or(0) as i32,
+                        "weight" => option.weight = node_i64(info).unwrap_or(0) as i32,
+                        "string" => summary_text = node_string(info),
+                        _ => {}
+                    }
+                }
+            }
+            "level" => {
+                let level_node = child(sub, &level.to_string())?;
+                for prop in level_node.object_children() {
+                    let name = prop.name.to_string();
+                    if name == "face" {
+                        props.insert(name, 0);
+                        continue;
+                    }
+                    match &prop.value {
+                        Some(ImageValue::Int(v)) => {
+                            props.insert(name, i64::from(*v));
+                        }
+                        Some(ImageValue::Short(v)) => {
+                            props.insert(name, i64::from(*v));
+                        }
+                        Some(ImageValue::Long(v)) => {
+                            props.insert(name, *v);
+                        }
+                        Some(ImageValue::Uint(v)) => {
+                            props.insert(name, i64::from(*v));
+                        }
+                        Some(ImageValue::Float(v)) => {
+                            props_f.insert(name, f64::from(*v));
+                        }
+                        Some(ImageValue::Double(v)) => {
+                            props_f.insert(name, *v);
+                        }
+                        Some(ImageValue::Str(s)) | Some(ImageValue::Uol(s)) => {
+                            if let Ok(v) = s.parse::<i64>() {
+                                props.insert(name, v);
+                            } else if let Ok(v) = s.parse::<f64>() {
+                                props_f.insert(name, v);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    option.summary = summary_text
+        .as_deref()
+        .and_then(|text| convert_summary(text, &props, &props_f));
+    Some(option)
 }
 
 #[cfg(test)]

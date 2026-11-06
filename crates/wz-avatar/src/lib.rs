@@ -17,7 +17,8 @@ mod loader;
 pub mod mix;
 pub mod prism;
 pub mod scene;
-pub mod stats;
+pub mod set_item;
+mod stats;
 pub mod zmap;
 pub use astra_job_req::{
     extra_job_req_string_for_gear, get_astra_extra_job_req_string, AstraSubWeaponInfo,
@@ -49,6 +50,11 @@ pub use loader::{
 pub use mix::mix_rgba8;
 pub use prism::{apply_prism_rgba8, PrismData};
 pub use scene::{AvatarBatch, AvatarScene, AvatarVertex};
+pub use set_item::{
+    create_from_node as create_set_item_from_node, set_item_json, PotentialRef, SetItem,
+    SetItemActiveSkill, SetItemBonusByTime, SetItemEffect, SetItemIDList, SetItemIDPart,
+    SetItemOptionToMob, SetProp,
+};
 pub use stats::{compute_character_stats, CharacterStats, SetStatus, StatOptions};
 
 /// 29 predefined avatar equipment and component slots.

@@ -761,3 +761,11 @@ Verified potential core (`potcases <Item_000.wz> <fixture.json>`):
 Calls the real `Potential.CreateFromNode` / `ConvertSummary` / `ToString` /
 `IsPotentialEx` / `CheckOptionType` / `GetPotentialLevel`; matches Rust
 `wz_db::potential`.
+
+Verified set item model (`setitems <Etc_000.wz> <Item_000.wz>`):
+```
+644 sets from real Etc/SetItemInfo.img + ItemOption.img
+```
+Dumps full structure (id parts, effects, Option potentials, OptionToMob,
+activeSkill, bonusByTime, Desc-combined weapon/subweapon/pocket/emblem parts);
+matches Rust `wz_avatar::set_item` exactly.

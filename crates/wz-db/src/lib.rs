@@ -167,8 +167,9 @@ pub use plugin_events::{EventBus, InvalidRegion, InvalidateState, PluginEvent, R
 pub use plugin_find::{plugin_files, FoundNode, PluginMetadata, PluginWzSet};
 pub use plugin_ribbon::{RibbonBar, RibbonError, RibbonModel, RibbonPanel};
 pub use potential::{
-    check_option_type, convert_summary, gear_type_value, is_double_hand_weapon, is_left_weapon,
-    is_potential_ex, is_weapon, potential_level, potential_to_string,
+    check_option_type, convert_summary, from_node as potential_from_node, gear_type_value,
+    is_double_hand_weapon, is_left_weapon, is_potential_ex, is_weapon, potential_level,
+    potential_to_string, PotentialOption,
 };
 pub use query::{
     execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,
