@@ -1961,3 +1961,26 @@ C#: `-- geartypenames`.
 
 fixture: `astra_job_names.json`, `astra_job_expected.json`,
 C#: `-- astrajob <names.json>`.
+
+## 아이템 분류 판정 (`Item.GetItemType`)
+
+`item_type(code)` — ID의 백만 단위로 분류한다.
+
+| `code / 1000000` | 결과 |
+|---|---|
+| 2 | Consume |
+| 3 | Install |
+| 4 | Etc |
+| 5 | `code / 10000 == 500`이면 Pet, 아니면 Cash |
+| 그 외 | Unknown |
+
+`ItemType::name()`은 C# `ToString()`과 같은 이름을 돌려주고,
+`item_category_name`과 조합하면 툴팁 분류명이 된다.
+
+검증: 실제 `Data/Item`의 아이템 ID **598개** + 경계 18개(0/1/1e6/1_999_999/
+2e6/5e6/5_009_999/5_010_000/6e6/-1/`i32::MAX` 등) = **616행**을 실제 C#
+`Item.GetItemType` + `GetItemCategoryName` 결과와 비교
+(`crates/wz-db/tests/item_type_parity.rs`). 단위 테스트 1종.
+
+fixture: `item_type_cases.json`, `item_type_expected.json`,
+C#: `-- itemtypes <ids.json>`.

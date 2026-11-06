@@ -277,6 +277,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   옮기고 실제 장비 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
 - `GetGearPropString` signFlag: 0/1/2 부호 규칙(음수에서 `+-5`)을 옮기고 실제
   장비 속성 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
+- 아이템 분류 판정: `Item.GetItemType`(백만 단위, 5xxx Pet/Cash 구분)을 옮기고
+  실제 아이템 ID 598개 + 경계 18개를 실제 C# 호출과 616행 비교.
 - 장비 직업 제한: `GetExtraJobReqString(GearType…)` 51그룹과
   `GetAstraExtraJobReqString`(직업명 `(N차)` 제거)을 옮기고 GearType 161개 ×
   4시나리오 = 644행을 실제 C# 호출과 비교.

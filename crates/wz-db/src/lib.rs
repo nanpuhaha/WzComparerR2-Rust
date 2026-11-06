@@ -52,6 +52,7 @@ pub mod gear_type_names;
 pub mod item_tooltip;
 pub mod item_tooltip_extra;
 pub mod item_tooltip_layout;
+pub mod item_type;
 pub mod linker;
 pub mod main_window;
 pub mod map;
@@ -146,6 +147,7 @@ pub use item_tooltip_extra::{
 pub use item_tooltip_layout::{
     layout_item, line_height, wrapped_lines, ItemLayout, ItemLayoutInput,
 };
+pub use item_type::{item_type, ItemType};
 pub use linker::{
     extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,
 };

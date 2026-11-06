@@ -745,3 +745,9 @@ Verified gear job requirements (`astrajob <names.json>`):
 ```
 Calls the real `GetExtraJobReqString` and `GetAstraExtraJobReqString`; matches
 Rust `wz_avatar::extra_job_req_string_for_gear`.
+
+Verified item types (`itemtypes <ids.json>`):
+```
+616 ids (598 real item ids + boundaries): Item.GetItemType + GetItemCategoryName
+```
+Matches Rust `wz_db::item_type` / `item_category_name`.
