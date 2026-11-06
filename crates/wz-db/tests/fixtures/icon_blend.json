@@ -1,0 +1,44 @@
+[
+  {
+    "path": "0200.img//02000000/info/icon",
+    "dx": 29,
+    "dy": 19,
+    "out_len": 57600,
+    "out_sha256": "5501fcce678261fa9ff5481138fac14d91f5a69fb7d59767234414a4c86ad2c6"
+  },
+  {
+    "path": "0200.img//02000000/info/iconRaw",
+    "dx": 29,
+    "dy": 19,
+    "out_len": 57600,
+    "out_sha256": "83d08558fccd7b856dccdbdfe0d3fdefec50f010877d93069611931ef6e9deb7"
+  },
+  {
+    "path": "0200.img//02000001/info/icon",
+    "dx": 29,
+    "dy": 19,
+    "out_len": 57600,
+    "out_sha256": "1dce7b50bdb89d8c0872600929fe56bf3a96dc06b3030c95060fbab77348f5b7"
+  },
+  {
+    "path": "0200.img//02000001/info/iconRaw",
+    "dx": 29,
+    "dy": 19,
+    "out_len": 57600,
+    "out_sha256": "d9a64033888a460d742a5fa57b41f6b57d26b500ee497c56a585977101ac1fc3"
+  },
+  {
+    "path": "0200.img//02000002/info/icon",
+    "dx": 29,
+    "dy": 19,
+    "out_len": 57600,
+    "out_sha256": "5592eb1f1620907a52896b63bdb144214118cdd8c47ab82ad28fa9ba64c5b511"
+  },
+  {
+    "path": "0200.img//02000002/info/iconRaw",
+    "dx": 29,
+    "dy": 19,
+    "out_len": 57600,
+    "out_sha256": "390171cb7962c307273c7c31972e43bdff7d065f76408dc484e92b092874a6f8"
+  }
+]

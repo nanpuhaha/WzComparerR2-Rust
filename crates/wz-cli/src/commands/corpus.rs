@@ -5,7 +5,7 @@ pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
     println!("      StringLinker(5 roots), 아바타/맵 데이터, C# 오라클 차분 하네스");
     println!(
         "미구현: WinForms UI, Common Controls 그래픽(Device), \
-         ItemTooltip 텍스트 래스터/알파 합성(GDI+)"
+         ItemTooltip 텍스트 래스터/GDI+ 감마 합성"
     );
     println!(
         "일부: OpenAPI helpers/HTTP(목 서버 검증, 실 키 필요), Network \

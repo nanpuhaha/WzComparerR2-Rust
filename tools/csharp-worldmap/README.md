@@ -554,3 +554,11 @@ env -> userdata (type check)
 The harness runs the **verbatim** `LuaSandbox.InitLuaEnv` prelude under real
 NLua on macOS; Rust `wz-lua` matches the observable contract with userdata
 collections.
+
+Verified ItemTooltip icon alpha blend (`iconblend <fixture.json>`):
+```
+6 canvases over a deterministic translucent 120x120 background
+```
+Integer straight-alpha source-over matches Rust
+`wz_db::pixel_ops::compose_icon_block_alpha` by SHA-256. GDI+'s
+premultiplied/gamma compositing is not reproducible on macOS.

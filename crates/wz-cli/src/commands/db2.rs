@@ -5440,10 +5440,22 @@ pub fn cmd_pixel_fixture(
             break 'outer;
         }
     }
+    // 알파 source-over 비교용 반투명 배경(결정적 패턴).
+    let mut background = vec![0u8; 120 * 120 * 4];
+    for y in 0..120u32 {
+        for x in 0..120u32 {
+            let index = ((y * 120 + x) * 4) as usize;
+            background[index] = ((x * 7 + y * 3) & 0xFF) as u8;
+            background[index + 1] = ((x * 5 + y * 11) & 0xFF) as u8;
+            background[index + 2] = ((x * 13 + y * 2) & 0xFF) as u8;
+            background[index + 3] = (((x * 3 + y * 5) & 0x7F) + 64) as u8;
+        }
+    }
     println!(
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({
             "canvas": { "width": 120, "height": 120, "icon_x": 15, "pic_h": 7 },
+            "background_b64": b64_encode(&background),
             "icons": icons
         }))?
     );

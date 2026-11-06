@@ -2986,6 +2986,79 @@ class Program
         return newByte;
     }
 
+    // straight-alpha source-over (정수, 반올림은 +d/2 후 정수 나눗셈).
+    static byte[] BlendPixel(byte[] src, byte[] dst)
+    {
+        int sa = src[3];
+        if (sa == 0) return new[] { dst[0], dst[1], dst[2], dst[3] };
+        int da = dst[3];
+        int inv = 255 - sa;
+        int dstContrib = (da * inv + 127) / 255;
+        int outA = Math.Min(255, sa + dstContrib);
+        if (outA == 0) return new byte[4];
+        var output = new byte[4];
+        for (int c = 0; c < 3; c++)
+        {
+            int num = src[c] * sa + (dst[c] * da * inv + 127) / 255;
+            output[c] = (byte)Math.Min(255, (num + outA / 2) / outA);
+        }
+        output[3] = (byte)outA;
+        return output;
+    }
+
+    static void IconBlend(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var canvasEl = doc.RootElement.GetProperty("canvas");
+        int cw = canvasEl.GetProperty("width").GetInt32();
+        int ch = canvasEl.GetProperty("height").GetInt32();
+        int iconX = canvasEl.GetProperty("icon_x").GetInt32();
+        int picH = canvasEl.GetProperty("pic_h").GetInt32();
+        var background = Convert.FromBase64String(doc.RootElement.GetProperty("background_b64").GetString()!);
+
+        var rows = new List<object>();
+        foreach (var icon in doc.RootElement.GetProperty("icons").EnumerateArray())
+        {
+            int w = icon.GetProperty("width").GetInt32();
+            int h = icon.GetProperty("height").GetInt32();
+            var rgba = Convert.FromBase64String(icon.GetProperty("rgba_b64").GetString()!);
+            var enlarged = EnlargeBitmapBytes(rgba, w, h);
+            var originEl = icon.GetProperty("origin");
+            int dx = iconX + 6 + (1 - originEl[0].GetInt32()) * 2;
+            int dy = picH + 6 + (33 - originEl[1].GetInt32()) * 2;
+
+            var canvas = (byte[])background.Clone();
+            int ew = w * 2, eh = h * 2;
+            for (int y = 0; y < eh; y++)
+            {
+                int ty = dy + y;
+                if (ty < 0 || ty >= ch) continue;
+                for (int x = 0; x < ew; x++)
+                {
+                    int tx = dx + x;
+                    if (tx < 0 || tx >= cw) continue;
+                    int si = (y * ew + x) * 4;
+                    int di = (ty * cw + tx) * 4;
+                    var src = new[] { enlarged[si], enlarged[si + 1], enlarged[si + 2], enlarged[si + 3] };
+                    var dst = new[] { canvas[di], canvas[di + 1], canvas[di + 2], canvas[di + 3] };
+                    var blended = BlendPixel(src, dst);
+                    Array.Copy(blended, 0, canvas, di, 4);
+                }
+            }
+
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            rows.Add(new
+            {
+                path = icon.GetProperty("path").GetString(),
+                dx,
+                dy,
+                out_len = canvas.Length,
+                out_sha256 = Convert.ToHexString(sha.ComputeHash(canvas)).ToLowerInvariant(),
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
     static void IconBlock(string fixturePath)
     {
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
@@ -3303,6 +3376,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "textlayout") TextLayout();
         else if (args[0] == "pixelops") PixelOps(args[1]);
         else if (args[0] == "iconblock") IconBlock(args[1]);
+        else if (args[0] == "iconblend") IconBlend(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

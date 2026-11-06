@@ -69,6 +69,79 @@ pub fn blit_opaque_argb(
     }
 }
 
+/// straight-alpha source-over 한 픽셀.
+///
+/// GDI+는 premultiplied alpha/감마를 쓰지만 macOS에서 실행할 수 없으므로,
+/// 여기서는 **정수 straight-alpha** 규칙을 명시적으로 고정한다.
+///
+/// ```text
+/// outA = srcA + round(dstA * (255 - srcA) / 255)
+/// outC = round((srcC*srcA + dstC*dstA*(255-srcA)/255) / outA)
+/// ```
+///
+/// 반올림은 각 나눗셈에서 `+d/2` 후 정수 나눗셈(양수 전용).
+pub fn blend_pixel(src: [u8; 4], dst: [u8; 4]) -> [u8; 4] {
+    let sa = u32::from(src[3]);
+    if sa == 0 {
+        return dst;
+    }
+    let da = u32::from(dst[3]);
+    let inv = 255 - sa;
+    let dst_contrib = (da * inv + 127) / 255;
+    let out_a = (sa + dst_contrib).min(255);
+    if out_a == 0 {
+        return [0, 0, 0, 0];
+    }
+    let mut out = [0u8; 4];
+    for channel in 0..3 {
+        let num = u32::from(src[channel]) * sa + (u32::from(dst[channel]) * da * inv + 127) / 255;
+        out[channel] = ((num + out_a / 2) / out_a).min(255) as u8;
+    }
+    out[3] = out_a as u8;
+    out
+}
+
+/// 배경 버퍼 위에 아이콘 블록을 source-over로 합성한다.
+///
+/// `background`는 `canvas_width x canvas_height` RGBA이고 그대로 복사해 시작한다.
+pub fn compose_icon_block_alpha(
+    icon: &IconBlock<'_>,
+    background: &[u8],
+    canvas_width: u32,
+    canvas_height: u32,
+    icon_x: i32,
+    pic_h: i32,
+) -> Vec<u8> {
+    let mut canvas = background.to_vec();
+    let enlarged = enlarge_2x(icon.rgba, icon.width, icon.height);
+    let (dx, dy) = icon.offset(icon_x, pic_h);
+    let (ew, eh) = (icon.width * 2, icon.height * 2);
+    for y in 0..eh as i32 {
+        let ty = dy + y;
+        if ty < 0 || ty >= canvas_height as i32 {
+            continue;
+        }
+        for x in 0..ew as i32 {
+            let tx = dx + x;
+            if tx < 0 || tx >= canvas_width as i32 {
+                continue;
+            }
+            let si = ((y as u32 * ew + x as u32) * 4) as usize;
+            let di = ((ty as u32 * canvas_width + tx as u32) * 4) as usize;
+            let src = [
+                enlarged[si],
+                enlarged[si + 1],
+                enlarged[si + 2],
+                enlarged[si + 3],
+            ];
+            let dst = [canvas[di], canvas[di + 1], canvas[di + 2], canvas[di + 3]];
+            let out = blend_pixel(src, dst);
+            canvas[di..di + 4].copy_from_slice(&out);
+        }
+    }
+    canvas
+}
+
 /// ItemTooltip 아이콘 블록: 확대 아이콘을 배치 좌표에 불투명 blit한다.
 ///
 /// 원본 `ItemTooltipRender22`의 좌표식:
@@ -130,6 +203,19 @@ mod tests {
         assert_eq!(&out[12..16], &[0, 255, 0, 255]);
         // 두 번째 목적지 행은 첫 행의 복사
         assert_eq!(&out[16..32], &out[0..16]);
+    }
+
+    #[test]
+    fn source_over_matches_straight_alpha_math() {
+        // 불투명 빨강 위에 반투명 파랑
+        assert_eq!(
+            blend_pixel([0, 0, 255, 128], [255, 0, 0, 255]),
+            [127, 0, 128, 255]
+        );
+        // 투명 소스는 배경을 유지
+        assert_eq!(blend_pixel([9, 9, 9, 0], [1, 2, 3, 4]), [1, 2, 3, 4]);
+        // 투명 배경 위 불투명 소스는 소스 그대로
+        assert_eq!(blend_pixel([7, 8, 9, 255], [0, 0, 0, 0]), [7, 8, 9, 255]);
     }
 
     #[test]

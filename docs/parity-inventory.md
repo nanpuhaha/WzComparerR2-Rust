@@ -1050,11 +1050,31 @@ y = picH  + 6 + (33 - originY) * 2
 
 fixture: `icon_block.json`, C#: `-- iconblock <fixture.json>`.
 
-범위 한계(명시적 분리):
-- **알파 합성은 미검증**. 원본 `Graphics.DrawImage`는 source-over 합성을 하고,
-  GDI+ 없이는 premultiplied alpha/감마 동작을 재현할 수 없다. 여기서는
-  알파 255 픽셀만 옮기는 결정적 부분집합만 지원하며, 그 경계를 테스트로
-  고정했다(`opaque_blit_skips_translucent_and_clips`).
+### 알파 source-over 합성
+
+반투명 아이콘을 배경 위에 얹는 경로를 **정수 straight-alpha** 규칙으로
+구현하고 고정했다(`wz-db::pixel_ops::blend_pixel`).
+
+```text
+outA = srcA + round(dstA * (255 - srcA) / 255)
+outC = round((srcC*srcA + dstC*dstA*(255-srcA)/255) / outA)
+```
+
+반올림은 각 나눗셈에서 `+d/2` 후 정수 나눗셈(양수 전용)으로 명시했다.
+
+검증:
+- 배경은 fixture에 담긴 결정적 반투명 패턴(120×120, alpha 64..191)
+- 실제 아이콘 6개를 확대·배치 후 전 픽셀 source-over
+- C# 하네스가 **같은 정수 수식**으로 합성한 결과와 SHA-256 완전 일치
+  (`crates/wz-db/tests/icon_blend_parity.rs`, 예: `5501fcce…d2c6`)
+- 단위 테스트로 규칙 고정: 불투명 위 반투명(`[0,0,255,128]` over
+  `[255,0,0,255]` → `[127,0,128,255]`), 투명 소스/투명 배경 경계
+
+남는 한계(명시적 분리):
+- 실제 `Graphics.DrawImage`는 **premultiplied alpha + 감마**를 쓰므로 위
+  정수식과 픽셀 값이 다를 수 있다. macOS에는 GDI+가 없어 그 경로는 실행
+  비교가 불가능하다. 즉 "원본과 동일한 합성식"이 아니라 "GDI+ 없이 재현
+  가능한 결정적 합성식"을 검증한 것이다.
 - 텍스트 래스터라이제이션(폰트 힌팅/안티에일리어싱)도 GDI+ 의존이라 미검증이다.
 
 ## Common/Controls 마우스 히트테스트/드래그/휠 (`AnimationControl`)
