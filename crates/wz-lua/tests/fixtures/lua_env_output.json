@@ -1,0 +1,23 @@
+{
+  "note": "LuaConsole LuaEnvironment: C# string.Format 기반 env:WriteLine과 출력 버퍼. {n}/{{/}} 만 지원.",
+  "formats": [
+    { "format": "\"{0}\" not loaded.", "args": ["Mob/1.img"], "expected": "\"Mob/1.img\" not loaded." },
+    { "format": "{0} + {1} = {2}", "args": ["1", "2", "3"], "expected": "1 + 2 = 3" },
+    { "format": "{{literal}}", "args": [], "expected": "{literal}" },
+    { "format": "no args", "args": [], "expected": "no args" }
+  ],
+  "format_errors": [
+    { "format": "{2}", "args": ["a"] },
+    { "format": "{x}", "args": ["a"] },
+    { "format": "unmatched {", "args": [] },
+    { "format": "unmatched }", "args": [] }
+  ],
+  "env_cases": [
+    { "script": "env:Write('a') env:WriteLine('b')", "output": "ab\n" },
+    { "script": "env:WriteLine('\"{0}\" not loaded.', 'Mob/1.img')", "output": "\"Mob/1.img\" not loaded.\n" },
+    { "script": "env:WriteLine(42)", "output": "42\n" },
+    { "script": "env:WriteLine()", "output": "\n" },
+    { "script": "env:Write(nil)", "output": "" },
+    { "script": "env:write('x') env:write_line('y')", "output": "xy\n" }
+  ]
+}

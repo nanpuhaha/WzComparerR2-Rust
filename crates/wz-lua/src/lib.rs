@@ -131,6 +131,8 @@ impl mlua::UserData for Collection {
 pub struct Sandbox {
     lua: Lua,
     pub script_base_dir: Option<PathBuf>,
+    /// `env:Write`/`env:WriteLine` 출력 버퍼.
+    output: std::rc::Rc<std::cell::RefCell<String>>,
 }
 
 impl Sandbox {
@@ -139,6 +141,7 @@ impl Sandbox {
         Ok(Self {
             lua,
             script_base_dir: None,
+            output: std::rc::Rc::new(std::cell::RefCell::new(String::new())),
         })
     }
 
@@ -151,11 +154,54 @@ impl Sandbox {
         wc_r2_dir: Option<&Path>,
         cwd: &Path,
     ) -> mlua::Result<()> {
-        let env_value = match env {
-            Some(value) => json_to_lua(&self.lua, &value)?,
-            None => Value::Nil,
+        // 원본 `LuaEnvironment`는 `env:Write/WriteLine`을 제공한다. JSON 필드는
+        // 그대로 두고 메서드만 얹는다.
+        let env_table = match env {
+            Some(serde_json::Value::Object(map)) => {
+                let table = self.lua.create_table()?;
+                for (key, value) in map {
+                    table.set(key.as_str(), json_to_lua(&self.lua, &value)?)?;
+                }
+                table
+            }
+            _ => self.lua.create_table()?,
         };
-        self.lua.globals().set("env", env_value)?;
+        let out = self.output.clone();
+        let write = self.lua.create_function(move |_, values: MultiValue| {
+            // `env:Write(...)`의 self(테이블)를 제거한다.
+            let parts = strip_self(values);
+            let Some(value) = parts.into_iter().next() else {
+                return Ok(());
+            };
+            if let Value::Nil = value {
+                return Ok(());
+            }
+            let mut buffer = out.borrow_mut();
+            buffer.push_str(&describe(value));
+            Ok(())
+        })?;
+        let out = self.output.clone();
+        let write_line = self.lua.create_function(move |_, values: MultiValue| {
+            let parts: Vec<String> = strip_self(values).into_iter().map(describe).collect();
+            let mut buffer = out.borrow_mut();
+            match parts.len() {
+                0 => {}
+                1 => buffer.push_str(&parts[0]),
+                _ => {
+                    let formatted =
+                        format_dotnet(&parts[0], &parts[1..]).map_err(mlua::Error::RuntimeError)?;
+                    buffer.push_str(&formatted);
+                }
+            }
+            buffer.push('\n');
+            Ok(())
+        })?;
+        env_table.set("Write", write.clone())?;
+        env_table.set("WriteLine", write_line.clone())?;
+        // Lua 관례(`env:write(...)`)도 함께 지원한다.
+        env_table.set("write", write)?;
+        env_table.set("write_line", write_line)?;
+        self.lua.globals().set("env", env_table)?;
         // 호스트가 Lua 콜백을 호출하고 **첫 반환값만** 쓰는 계약.
         // 원본 NLua 경로(`RegisterLuaDelegateType` + `LuaDelegate.CallFunction`)를
         // Lua 함수 인자에 대해 같은 의미로 재현한 것이다.
@@ -180,6 +226,16 @@ impl Sandbox {
     pub fn do_string(&self, chunk: &str) -> mlua::Result<Vec<String>> {
         let values: MultiValue = self.lua.load(chunk).eval()?;
         Ok(values.into_iter().map(describe).collect::<Vec<_>>())
+    }
+
+    /// `env:Write`/`env:WriteLine`이 쌓인 출력(개행 포함)을 비우며 가져온다.
+    pub fn drain_output(&self) -> String {
+        std::mem::take(&mut *self.output.borrow_mut())
+    }
+
+    /// 지금까지의 출력(비우지 않음).
+    pub fn output(&self) -> String {
+        self.output.borrow().clone()
     }
 
     /// Lua 콜백을 호출하고 첫 반환값만 돌려준다(NLua 델리게이트 계약).
@@ -210,6 +266,66 @@ impl Sandbox {
     pub fn resolved_package_path(&self) -> mlua::Result<String> {
         self.lua.globals().get::<_, Table>("package")?.get("path")
     }
+}
+
+/// `env:Method(...)`의 self 인자를 제거한다.
+fn strip_self(values: MultiValue) -> Vec<Value> {
+    let mut parts: Vec<Value> = values.into_iter().collect();
+    if matches!(parts.first(), Some(Value::Table(_))) {
+        parts.remove(0);
+    }
+    parts
+}
+
+/// C# `string.Format`의 `{n}`/`{{`/`}}` 처리(형식 지정자 없음).
+///
+/// 원본 LuaConsole은 `env:WriteLine("\"{0}\" not loaded.", path)`처럼 쓴다.
+/// 인덱스가 범위를 벗어나면 `FormatException`에 해당하는 오류를 돌려준다.
+pub fn format_dotnet(format: &str, args: &[String]) -> Result<String, String> {
+    let chars: Vec<char> = format.chars().collect();
+    let mut out = String::new();
+    let mut i = 0usize;
+    while i < chars.len() {
+        match chars[i] {
+            '{' => {
+                if i + 1 < chars.len() && chars[i + 1] == '{' {
+                    out.push('{');
+                    i += 2;
+                    continue;
+                }
+                let close = chars[i + 1..]
+                    .iter()
+                    .position(|c| *c == '}')
+                    .map(|p| p + i + 1)
+                    .ok_or_else(|| "FormatException: unmatched '{'".to_string())?;
+                let index_text: String = chars[i + 1..close].iter().collect();
+                let index: usize = index_text
+                    .parse()
+                    .map_err(|_| format!("FormatException: bad index '{index_text}'"))?;
+                let Some(value) = args.get(index) else {
+                    return Err(format!(
+                        "FormatException: index {index} out of range ({} args)",
+                        args.len()
+                    ));
+                };
+                out.push_str(value);
+                i = close + 1;
+            }
+            '}' => {
+                if i + 1 < chars.len() && chars[i + 1] == '}' {
+                    out.push('}');
+                    i += 2;
+                } else {
+                    return Err("FormatException: unmatched '}'".to_string());
+                }
+            }
+            c => {
+                out.push(c);
+                i += 1;
+            }
+        }
+    }
+    Ok(out)
 }
 
 fn describe(value: Value<'_>) -> String {

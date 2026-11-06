@@ -56,6 +56,10 @@ pub struct ConsoleEntry {
 pub struct ConsoleModel {
     pub history: Vec<ConsoleEntry>,
     pub input: String,
+    /// 실행한 명령(최근 순 아님, 입력 순서).
+    pub commands: Vec<String>,
+    /// ↑/↓ 탐색 위치.
+    pub recall: Option<usize>,
 }
 
 impl ConsoleModel {
@@ -73,7 +77,23 @@ impl ConsoleModel {
             kind: EntryKind::Command,
             text: source.to_string(),
         });
+        self.commands.push(source.to_string());
+        self.recall = None;
         let outcome = execute(sandbox, source);
+        // `env:Write/WriteLine` 출력을 먼저 이력에 남긴다.
+        let env_output = sandbox.drain_output();
+        if !env_output.is_empty() {
+            let mut lines: Vec<&str> = env_output.split('\n').collect();
+            if lines.last() == Some(&"") {
+                lines.pop();
+            }
+            for line in lines {
+                self.history.push(ConsoleEntry {
+                    kind: EntryKind::Output,
+                    text: line.to_string(),
+                });
+            }
+        }
         match &outcome {
             ExecutionOutcome::Values(values) => {
                 for value in values {
@@ -99,6 +119,38 @@ impl ConsoleModel {
         self.input.clear();
         Some(outcome)
     }
+
+    /// ↑ — 직전 명령을 입력으로 가져온다.
+    pub fn recall_prev(&mut self) -> Option<&str> {
+        if self.commands.is_empty() {
+            return None;
+        }
+        let index = match self.recall {
+            None => self.commands.len() - 1,
+            Some(0) => 0,
+            Some(i) => i - 1,
+        };
+        self.recall = Some(index);
+        self.input = self.commands[index].clone();
+        Some(self.input.as_str())
+    }
+
+    /// ↓ — 다음 명령으로 이동. 마지막이면 입력을 비운다.
+    pub fn recall_next(&mut self) -> Option<&str> {
+        match self.recall {
+            None => None,
+            Some(i) if i + 1 < self.commands.len() => {
+                self.recall = Some(i + 1);
+                self.input = self.commands[i + 1].clone();
+                Some(self.input.as_str())
+            }
+            Some(_) => {
+                self.recall = None;
+                self.input.clear();
+                None
+            }
+        }
+    }
 }
 
 /// 패널 렌더. `Run`/Enter로 청크를 실행한다.
@@ -114,6 +166,14 @@ pub fn show(ui: &mut egui::Ui) {
             });
             model
         });
+
+    // ↑/↓로 명령 이력을 탐색한다.
+    if ui.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+        model.recall_prev();
+    }
+    if ui.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+        model.recall_next();
+    }
 
     ui.horizontal(|ui| {
         ui.label("Lua 실행");
@@ -227,6 +287,35 @@ mod tests {
         assert_eq!(model.history.len(), 2);
         assert_eq!(model.history[1].kind, EntryKind::Error);
         assert!(model.history[1].text.contains("nope"));
+    }
+
+    #[test]
+    fn command_history_recalls_up_and_down() {
+        let mut sb = sandbox();
+        let mut model = ConsoleModel::new();
+        model.submit(&mut sb, "return 1");
+        model.submit(&mut sb, "return 2");
+        assert_eq!(model.commands, vec!["return 1", "return 2"]);
+        assert_eq!(model.recall_prev(), Some("return 2"));
+        assert_eq!(model.recall_prev(), Some("return 1"));
+        assert_eq!(model.recall_prev(), Some("return 1"));
+        assert_eq!(model.recall_next(), Some("return 2"));
+        assert_eq!(model.recall_next(), None);
+        assert!(model.input.is_empty());
+    }
+
+    #[test]
+    fn env_writeline_output_is_recorded_before_return_values() {
+        let mut sb = sandbox();
+        let mut model = ConsoleModel::new();
+        model.submit(&mut sb, "env:WriteLine('hi {0}', 'lua') return 7");
+        let kinds: Vec<EntryKind> = model.history.iter().map(|e| e.kind).collect();
+        assert_eq!(
+            kinds,
+            vec![EntryKind::Command, EntryKind::Output, EntryKind::Output]
+        );
+        assert_eq!(model.history[1].text, "hi lua");
+        assert_eq!(model.history[2].text, "7");
     }
 
     #[test]

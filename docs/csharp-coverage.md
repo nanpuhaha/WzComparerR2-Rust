@@ -247,6 +247,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   source-over**까지 실제 클라이언트 아이콘 6개(27×30/27×27, origin `[-3,30]`)로
   비교해 캔버스 SHA-256이 완전 일치. GDI+의 premultiplied/감마 합성과 텍스트
   래스터는 macOS에서 실행 불가라 남는다.
+- LuaConsole 출력/이력: `env:Write/WriteLine`(C# `string.Format`)를 포팅하고
+  self 인자 제거·출력 버퍼·명령 이력(↑/↓)을 구현. fixture 14케이스 + GUI
+  테스트로 검증.
 - LuaConsole 콘솔 패널: 검증된 `wz_lua` 샌드박스로 청크를 실행하고 반환값/오류를
   이력으로 렌더. `ExecutionOutcome`/`ConsoleModel` 단위 테스트 5종과 스모크
   (`lua console values=2 [3, lua]`).

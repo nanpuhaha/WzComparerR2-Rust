@@ -79,6 +79,11 @@ impl eframe::App for PocApp {
                                     println!("SMOKE FAIL: lua console {e}")
                                 }
                             }
+                            lua_console::execute(&mut sb, "env:WriteLine('hi {0}', 'lua')");
+                            println!(
+                                "SMOKE OK: lua env output={}",
+                                sb.drain_output().trim_end()
+                            );
                         }
                         // 오프스크린 wgpu 업로드/샘플링/블렌드 해시.
                         let sprite = crate::offscreen::test_sprite();

@@ -1622,3 +1622,28 @@ C#: `-- mainwindow <PluginBase.dll> <plugin.dll> <fixture.json>`.
 
 남는 것: 원본 콘솔의 `print` 리다이렉트, 명령 히스토리(↑/↓), 자동완성,
 `DoStringAsync` 취소 훅은 UI 의존이라 미구현이다.
+
+## LuaConsole 출력/명령 이력 (`LuaEnvironment`, `ConsoleModel`)
+
+원본 `FrmConsole.LuaEnvironment`는 `env:Write/WriteLine`으로 콘솔에 출력하고,
+2개 이상 인자는 C# `string.Format`으로 포맷한다. 예:
+`env:WriteLine('"{0}" not loaded.', topWzPath)`.
+
+- `wz_lua::format_dotnet` — `{n}`/`{{`/`}}` 지원, 잘못된 인덱스/괄호는
+  `FormatException` 오류(원본과 같이 Lua 오류로 전파)
+- `Sandbox`가 `env.Write/WriteLine`(+소문자 `write/write_line`)을 등록하고
+  출력 버퍼에 누적. `drain_output()`으로 회수
+- `env:Write(...)`의 self 인자는 제거해 JSON 필드(`env.tag`)와 공존
+- GUI `ConsoleModel`은 제출 시 `commands`에 명령을 쌓고, `env` 출력 →
+  반환값 순으로 이력에 남긴다. ↑/↓로 명령 이력 탐색
+
+검증:
+- fixture `crates/wz-lua/tests/fixtures/lua_env_output.json`:
+  포맷 4건(`"{0}" not loaded.`, `{0} + {1} = {2}`, `{{literal}}`, 인자 없음),
+  오류 4건, `env` 스크립트 6건(대소문자 메서드, nil, 빈 인자, 개행)
+- `crates/wz-lua/tests/lua_env_output.rs` 4종 통과
+- GUI 콘솔 테스트 2종(이력 ↑/↓, env 출력→반환값 순서) 추가(총 75)
+- 스모크: `SMOKE OK: lua env output=hi lua`
+
+남는 것: 원본의 `print` 전역 리다이렉트는 소스에 없어(스크립트는 `env:` 사용)
+구현하지 않았고, `DoStringAsync` 취소 토큰/디버그 훅도 미구현이다.
