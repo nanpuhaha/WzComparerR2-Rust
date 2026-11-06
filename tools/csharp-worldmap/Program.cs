@@ -3799,6 +3799,109 @@ return tostring(ok) .. '|' .. tostring(acc)
         Console.WriteLine(JsonSerializer.Serialize(new { keywords, access, punctuation = punct.Select(c => c.ToString()).ToList(), cases },
             new JsonSerializerOptions { WriteIndented = true }));
     }
+    // `AnimationGraphics.Draw` / `FrameAnimationData`의 스프라이트 호출 기하.
+    // 실제 Character 캔버스(w/h/origin)를 입력으로 쓴다.
+    static void SpriteGeometry(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var positions = new[] { (0, 0), (20, 10), (-5, 7), (100, -50), (13, -21) };
+        var scales = new[] { 1.0f, 0.5f, 2.0f, 1.333f };
+        var angles = new[] { 0, 30, 90, 180, 270, 45 };
+
+        var rows = new List<object>();
+        foreach (var frame in doc.RootElement.GetProperty("frames").EnumerateArray())
+        {
+            int w = frame.GetProperty("width").GetInt32();
+            int h = frame.GetProperty("height").GetInt32();
+            int ox = frame.GetProperty("origin")[0].GetInt32();
+            int oy = frame.GetProperty("origin")[1].GetInt32();
+
+            var dests = new List<object>();
+            foreach (var (px, py) in positions)
+            {
+                foreach (var scale in scales)
+                {
+                    dests.Add(new
+                    {
+                        px, py, scale,
+                        x = (int)Math.Round(px - ox * (double)scale),
+                        y = (int)Math.Round(py - oy * (double)scale),
+                        w = (int)Math.Round(w * (double)scale),
+                        h = (int)Math.Round(h * (double)scale),
+                    });
+                }
+            }
+
+            var flips = new List<object>();
+            foreach (var fx in new[] { false, true })
+            {
+                foreach (var fy in new[] { false, true })
+                {
+                    flips.Add(new
+                    {
+                        flip_x = fx,
+                        flip_y = fy,
+                        x = fx ? w - ox : ox,
+                        y = fy ? h - oy : oy,
+                    });
+                }
+            }
+
+            var rotations = new List<object>();
+            foreach (var angle in angles)
+            {
+                // MathHelper.ToRadians(angle)
+                float rad = angle * 0.0174532924f;
+                double sin = Math.Sin(rad);
+                double cos = Math.Cos(rad);
+                var pts = new (double x, double y)[]
+                {
+                    (-ox, -oy), (w - ox, -oy), (-ox, h - oy), (w - ox, h - oy),
+                };
+                double minX = double.PositiveInfinity, minY = double.PositiveInfinity;
+                double maxX = double.NegativeInfinity, maxY = double.NegativeInfinity;
+                foreach (var (x, y) in pts)
+                {
+                    double rx = x * cos - y * sin;
+                    double ry = x * sin + y * cos;
+                    minX = Math.Min(minX, rx); minY = Math.Min(minY, ry);
+                    maxX = Math.Max(maxX, rx); maxY = Math.Max(maxY, ry);
+                }
+                rotations.Add(new
+                {
+                    angle,
+                    width = (int)Math.Ceiling(maxX - minX),
+                    height = (int)Math.Ceiling(maxY - minY),
+                    origin_x = (int)Math.Ceiling(-minX),
+                    origin_y = (int)Math.Ceiling(-minY),
+                });
+            }
+
+            rows.Add(new
+            {
+                path = frame.GetProperty("path").GetString(),
+                width = w,
+                height = h,
+                origin = new[] { ox, oy },
+                destinations = dests,
+                flips,
+                rotations,
+            });
+        }
+
+        var blends = new Dictionary<string, object>
+        {
+            ["non_premultiplied_hidef"] = new { color_src = "SourceAlpha", color_dst = "InverseSourceAlpha", alpha_src = "One", alpha_dst = "InverseSourceAlpha", function = "Add" },
+            ["opaque"] = new { color_src = "One", color_dst = "Zero", alpha_src = "One", alpha_dst = "Zero", function = "Add" },
+            ["src_alpha_mask"] = new { color_src = "Zero", color_dst = "InverseSourceAlpha", alpha_src = "Zero", alpha_dst = "InverseSourceAlpha", function = "Add" },
+            ["multiply_rgb"] = new { color_src = "Zero", color_dst = "SourceColor", alpha_src = "Zero", alpha_dst = "One", function = "Add" },
+        };
+        // AnimationGraphics.Draw는 항상 회전 0 / 배율 1 / flip 없음 / alpha=A0.
+        var spriteCall = new { rotation_radians = 0.0f, scale = 1.0f, flip_h = false, flip_v = false, alpha = 255, blend = "non_premultiplied_hidef" };
+
+        Console.WriteLine(JsonSerializer.Serialize(new { rows, blends, sprite_call = spriteCall },
+            new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -3863,6 +3966,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "itemlayout") ItemLayout(args[1]);
         else if (args[0] == "formatparse") FormatParse(args[1]);
         else if (args[0] == "luasyntax") LuaSyntax(args[1], args[2..]);
+        else if (args[0] == "spritegeometry") SpriteGeometry(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

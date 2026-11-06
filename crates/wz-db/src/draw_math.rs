@@ -238,3 +238,238 @@ mod tests {
         assert_eq!(icon[4], (35, 37));
     }
 }
+
+// ---------------------------------------------------------------------------
+// `AnimationGraphics.Draw` / `FrameAnimationData` 스프라이트 호출 기하
+// ---------------------------------------------------------------------------
+
+use crate::controls_input::round_half_even;
+// ---------------------------------------------------------------------------
+
+/// XNA `Blend` 인자.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BlendFactor {
+    Zero,
+    One,
+    SourceAlpha,
+    InverseSourceAlpha,
+    SourceColor,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BlendFunction {
+    Add,
+}
+
+/// `BlendState` — 색/알파 블렌드 인자.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BlendFactors {
+    pub color_src: BlendFactor,
+    pub color_dst: BlendFactor,
+    pub alpha_src: BlendFactor,
+    pub alpha_dst: BlendFactor,
+    pub function: BlendFunction,
+}
+
+/// `StateEx.NonPremultipled_Hidef` — `AnimationGraphics`가 항상 쓰는 상태.
+pub fn non_premultiplied_hidef() -> BlendFactors {
+    BlendFactors {
+        color_src: BlendFactor::SourceAlpha,
+        color_dst: BlendFactor::InverseSourceAlpha,
+        alpha_src: BlendFactor::One,
+        alpha_dst: BlendFactor::InverseSourceAlpha,
+        function: BlendFunction::Add,
+    }
+}
+
+/// `BlendState.Opaque`.
+pub fn opaque_blend() -> BlendFactors {
+    BlendFactors {
+        color_src: BlendFactor::One,
+        color_dst: BlendFactor::Zero,
+        alpha_src: BlendFactor::One,
+        alpha_dst: BlendFactor::Zero,
+        function: BlendFunction::Add,
+    }
+}
+
+/// `StateEx.SrcAlphaMask`.
+pub fn src_alpha_mask() -> BlendFactors {
+    BlendFactors {
+        color_src: BlendFactor::Zero,
+        color_dst: BlendFactor::InverseSourceAlpha,
+        alpha_src: BlendFactor::Zero,
+        alpha_dst: BlendFactor::InverseSourceAlpha,
+        function: BlendFunction::Add,
+    }
+}
+
+/// `StateEx.MultiplyRGB`.
+pub fn multiply_rgb() -> BlendFactors {
+    BlendFactors {
+        color_src: BlendFactor::Zero,
+        color_dst: BlendFactor::SourceColor,
+        alpha_src: BlendFactor::Zero,
+        alpha_dst: BlendFactor::One,
+        function: BlendFunction::Add,
+    }
+}
+
+/// 한 번의 `SpriteBatch.Draw` 호출.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpriteCall {
+    /// `AtlasRect`(없으면 텍스처 전체).
+    pub source: Option<(i32, i32, i32, i32)>,
+    /// `position - origin*scale`과 `size*scale`.
+    pub destination: (i32, i32, i32, i32),
+    pub origin: (i32, i32),
+    pub rotation_radians: f32,
+    pub scale: f32,
+    pub flip_h: bool,
+    pub flip_v: bool,
+    /// `frame.A0`.
+    pub alpha: u8,
+    pub blend: BlendFactors,
+}
+
+/// `position - origin*scale`, `size*scale` (반올림은 banker's).
+pub fn sprite_destination_scaled(
+    position: (i32, i32),
+    origin: (i32, i32),
+    source_size: (i32, i32),
+    scale: f32,
+) -> (i32, i32, i32, i32) {
+    (
+        round_half_even(position.0 as f32 - origin.0 as f32 * scale),
+        round_half_even(position.1 as f32 - origin.1 as f32 * scale),
+        round_half_even(source_size.0 as f32 * scale),
+        round_half_even(source_size.1 as f32 * scale),
+    )
+}
+
+/// `AnimationGraphics.Draw(FrameAnimator|MultiFrameAnimator)`의 호출 하나.
+///
+/// 원본은 회전 0, 배율 1, `SpriteEffects.None`, `Color.White * A0`,
+/// `NonPremultipled_Hidef`로 그린다.
+pub fn frame_sprite_call(
+    position: (i32, i32),
+    source: Option<(i32, i32, i32, i32)>,
+    origin: (i32, i32),
+    size: (i32, i32),
+    alpha: u8,
+) -> SpriteCall {
+    SpriteCall {
+        source,
+        destination: sprite_destination_scaled(position, origin, size, 1.0),
+        origin,
+        rotation_radians: 0.0,
+        scale: 1.0,
+        flip_h: false,
+        flip_v: false,
+        alpha,
+        blend: non_premultiplied_hidef(),
+    }
+}
+
+/// `FrameAnimationData.ApplyFlip`의 새 origin.
+pub fn flipped_origin(
+    texture_size: (i32, i32),
+    origin: (i32, i32),
+    flip_x: bool,
+    flip_y: bool,
+) -> (i32, i32) {
+    (
+        if flip_x {
+            texture_size.0 - origin.0
+        } else {
+            origin.0
+        },
+        if flip_y {
+            texture_size.1 - origin.1
+        } else {
+            origin.1
+        },
+    )
+}
+
+/// `FrameAnimationData.GetRotationBound` — 회전 후 경계와 새 origin.
+///
+/// `((new_w, new_h), (origin_x, origin_y))`.
+pub fn rotation_bound(
+    source_size: (i32, i32),
+    radians: f32,
+    origin: (i32, i32),
+) -> ((i32, i32), (i32, i32)) {
+    // C# `Math.Sin/Cos(double)`와 같은 정밀도를 쓰기 위해 f64로 계산한다.
+    let sin = f64::from(radians).sin();
+    let cos = f64::from(radians).cos();
+    let pts = [
+        (f64::from(-origin.0), f64::from(-origin.1)),
+        (f64::from(source_size.0 - origin.0), f64::from(-origin.1)),
+        (f64::from(-origin.0), f64::from(source_size.1 - origin.1)),
+        (
+            f64::from(source_size.0 - origin.0),
+            f64::from(source_size.1 - origin.1),
+        ),
+    ];
+    let mut min_x = f64::INFINITY;
+    let mut min_y = f64::INFINITY;
+    let mut max_x = f64::NEG_INFINITY;
+    let mut max_y = f64::NEG_INFINITY;
+    for (x, y) in pts {
+        let rx = x * cos - y * sin;
+        let ry = x * sin + y * cos;
+        min_x = min_x.min(rx);
+        min_y = min_y.min(ry);
+        max_x = max_x.max(rx);
+        max_y = max_y.max(ry);
+    }
+    (
+        ((max_x - min_x).ceil() as i32, (max_y - min_y).ceil() as i32),
+        ((-min_x).ceil() as i32, (-min_y).ceil() as i32),
+    )
+}
+
+#[cfg(test)]
+mod frame_geometry_tests {
+    use super::*;
+
+    #[test]
+    fn destination_uses_scale_and_origin() {
+        assert_eq!(
+            sprite_destination_scaled((20, 10), (5, -3), (27, 30), 2.0),
+            (10, 16, 54, 60)
+        );
+    }
+
+    #[test]
+    fn frame_call_is_unrotated_and_non_premultiplied() {
+        let call = frame_sprite_call((40, 30), Some((0, 0, 27, 30)), (13, 20), (27, 30), 255);
+        assert_eq!(call.destination, (27, 10, 27, 30));
+        assert_eq!(call.rotation_radians, 0.0);
+        assert_eq!(call.scale, 1.0);
+        assert!(!call.flip_h && !call.flip_v);
+        assert_eq!(call.blend, non_premultiplied_hidef());
+        assert_eq!(call.alpha, 255);
+    }
+
+    #[test]
+    fn flip_mirrors_origin() {
+        assert_eq!(flipped_origin((27, 30), (13, 20), true, false), (14, 20));
+        assert_eq!(flipped_origin((27, 30), (13, 20), false, true), (13, 10));
+        assert_eq!(flipped_origin((27, 30), (13, 20), true, true), (14, 10));
+    }
+
+    #[test]
+    fn rotation_bound_matches_known_values() {
+        // 90도: 폭/높이가 뒤집히고 origin도 회전한다.
+        let ((w, h), origin) = rotation_bound((27, 30), std::f32::consts::FRAC_PI_2, (13, 20));
+        // float π/2의 cos는 -4.37e-8이라 경계가 1px씩 밀린다(원본도 동일).
+        assert_eq!((w, h), (31, 28));
+        assert_eq!(origin, (11, 14));
+        // 0도는 그대로.
+        let ((w, h), origin) = rotation_bound((27, 30), 0.0, (13, 20));
+        assert_eq!((w, h), (27, 30));
+        assert_eq!(origin, (13, 20));
+    }
+}

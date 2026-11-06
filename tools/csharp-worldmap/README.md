@@ -612,3 +612,11 @@ wz item-tooltip-render <Data> crates/wz-avatar/tests/fixtures/item_tooltip_canva
 ```
 It composes the verified parser/layout/icon-pixel pipeline with the game font;
 GDI+ glyph rasterization is not reproducible on macOS.
+
+Verified sprite-call geometry (`spritegeometry <fixture.json>`):
+```
+120 real Character canvases: 20 destinations each, 4 flips, 6 rotations, 4 blend states
+```
+Matches Rust `wz_db::draw_math` (`sprite_destination_scaled`, `frame_sprite_call`,
+`flipped_origin`, `rotation_bound`). Note `MathHelper.ToRadians(90)` keeps a
+tiny cosine, so rotated bounds round up by 1px — the original does the same.

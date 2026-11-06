@@ -352,6 +352,18 @@ enum Command {
         json: bool,
     },
 
+    /// 스프라이트 호출 기하 fixture 생성 (실제 Mob/Character 캔버스)
+    FrameGeometryFixture {
+        /// Data 루트
+        data_root: PathBuf,
+        /// Data 기준 하위 디렉터리
+        #[arg(long, default_value = "Mob/_Canvas")]
+        dir: String,
+        /// 최대 프레임 수
+        #[arg(long, default_value_t = 120)]
+        limit: usize,
+    },
+
     /// ItemTooltip 오프스크린 렌더(파서→배치→아이콘→폰트) 해시 출력
     ItemTooltipRender {
         /// Data 루트
@@ -1116,6 +1128,11 @@ fn main() {
             env,
             json,
         } => commands::cmd_lua_run(&script, base_dir.as_deref(), env.as_deref(), json),
+        Command::FrameGeometryFixture {
+            data_root,
+            dir,
+            limit,
+        } => commands::cmd_frame_geometry_fixture(&data_root, &dir, limit),
         Command::ItemTooltipRender {
             data_root,
             fixture,

@@ -119,8 +119,10 @@ pub use dotnet_metadata::{
     plugin_entries, plugin_types, read_assembly, DotnetAssembly, PluginEntryInfo, PublicType,
 };
 pub use draw_math::{
-    border_path, gear_detail_number_glyphs, icon_border_path, path_rects, sprite_destination,
-    GlyphDraw,
+    border_path, flipped_origin, frame_sprite_call, gear_detail_number_glyphs, icon_border_path,
+    multiply_rgb, non_premultiplied_hidef, opaque_blend, path_rects, rotation_bound,
+    sprite_destination, sprite_destination_scaled, src_alpha_mask, BlendFactor, BlendFactors,
+    BlendFunction, GlyphDraw, SpriteCall,
 };
 pub use format_parser::{parse as parse_format, DocElement, Span};
 pub use gear_stats::extract_gear_props;

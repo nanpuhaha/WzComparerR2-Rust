@@ -291,6 +291,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   구간 최대 길이/재생 판정, 시간 오프셋 클램프, 스케일 클램프가 C# 참조
   구현과 완전 일치(7 타임라인, 30 프로브, 90 GIF, 6 구간, 4 최대길이,
   5 오프셋, 5 리셋, 8 스케일 케이스).
+- 스프라이트 호출 기하: `AnimationGraphics.Draw`/`ApplyFlip`/`ApplyRotation`의
+  목적 사각형·origin·회전 경계·블렌드 상태를 실제 Character 캔버스 120개로
+  C#과 완전 일치(위치 5×배율 4, flip 4조합, 회전 6각도, 블렌드 4종).
 - GDI 비의존 드로잉 계산: `DrawGearDetailNumber` 전진(숫자 `w+1`, `-` y+3,
   `%` x+1/`w+2`), `AnimationGraphics.Draw` 목적 사각형, `DrawPath` 1px 사각형,
   `GetBorderPath`/`GetIconBorderPath`가 C# 31케이스와 완전 일치.

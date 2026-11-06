@@ -1352,3 +1352,36 @@ C#: `-- luasyntax <Lua.xshd> <file.lua>…`.
 남는 한계: 게임 폰트는 GDI+가 아니므로 **원본 픽셀과 동일하지 않다**. GDI+
 premultiplied/감마와 글리프 힌팅은 macOS에서 실행할 수 없어 여전히 미검증이며,
 이 렌더는 "결정적 회귀 기준"이지 "원본과의 픽셀 동일성" 주장이 아니다.
+
+## 스프라이트 호출 기하 (`AnimationGraphics.Draw` / `FrameAnimationData`)
+
+`AnimationGraphics.Draw`는 프레임마다 `SpriteBatch.Draw`를 한 번 호출한다.
+회전 0, 배율 1, `SpriteEffects.None`, `Color.White * A0`,
+`StateEx.NonPremultipled_Hidef`이며, 위치는 `animator.Position` 평행이동이다.
+`FrameAnimationData`의 `ApplyFlip`/`ApplyRotation`은 **텍스처를 구워** origin을
+바꾼다.
+
+| 함수 | 규칙 |
+|---|---|
+| `sprite_destination_scaled` | `(position - origin*scale, size*scale)`, 은행가 반올림 |
+| `frame_sprite_call` | source/destination/origin/alpha + 회전 0·배율 1·flip 없음·NonPremultiplied |
+| `flipped_origin` | `flipX → w - originX`, `flipY → h - originY` |
+| `rotation_bound` | 네 모서리를 회전해 min/max → `ceil` 크기·origin (`Math.Sin/Cos` double 정밀도) |
+| 블렌드 상태 | `NonPremultiplied_Hidef`, `Opaque`, `SrcAlphaMask`, `MultiplyRGB` 인자 |
+
+검증:
+- 입력은 실제 `Data/Character` 캔버스 **120개**(width/height/origin)
+- C# 하네스가 같은 공식을 double로 계산해 5개 위치 × 4개 배율 = 20 목적 사각형,
+  flip 4조합, 회전 6각도(0/30/90/180/270/45)를 덤프
+- `crates/wz-db/tests/sprite_geometry_parity.rs` 2종이 **모든 값과 4개 블렌드
+  상태**를 완전 일치로 확인
+- 부동소수 주의: `MathHelper.ToRadians(90)`의 cos가 0이 아니라 `-4.37e-8`이라
+  회전 경계가 1px 밀린다(원본도 동일). Rust도 같은 float 상수·double 삼각함수를
+  써서 일치시켰다.
+
+fixture: `sprite_frames_input.json`, `sprite_geometry.json`,
+CLI: `wz frame-geometry-fixture <Data> --dir Character`,
+C#: `-- spritegeometry <fixture.json>`.
+
+남는 것: 실제 GPU 드로우(텍스처 업로드/샘플러/블렌드 적용)는 wgpu 호스트
+의존이며, 여기서는 **호출 인자**만 검증했다.

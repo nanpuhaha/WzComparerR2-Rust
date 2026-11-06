@@ -1,0 +1,1205 @@
+{
+  "dir": "Character",
+  "frames": [
+    {
+      "file": "00038380.img//default",
+      "height": 43,
+      "origin": [
+        16,
+        16
+      ],
+      "path": "00038380.img//default/hairOverHead",
+      "width": 44
+    },
+    {
+      "file": "00038380.img//default",
+      "height": 39,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00038380.img//default/hair",
+      "width": 43
+    },
+    {
+      "file": "00038380.img//default",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038380.img//default/hairBelowBody",
+      "width": 43
+    },
+    {
+      "file": "00038380.img//default/hairShade",
+      "height": 21,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00038380.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00038380.img//backDefault",
+      "height": 43,
+      "origin": [
+        18,
+        16
+      ],
+      "path": "00038380.img//backDefault/backHair",
+      "width": 46
+    },
+    {
+      "file": "00038380.img//backDefault",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038380.img//backDefault/backHairBelowCap",
+      "width": 46
+    },
+    {
+      "file": "00038381.img//default",
+      "height": 43,
+      "origin": [
+        16,
+        16
+      ],
+      "path": "00038381.img//default/hairOverHead",
+      "width": 44
+    },
+    {
+      "file": "00038381.img//default",
+      "height": 39,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00038381.img//default/hair",
+      "width": 43
+    },
+    {
+      "file": "00038381.img//default",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038381.img//default/hairBelowBody",
+      "width": 43
+    },
+    {
+      "file": "00038381.img//default/hairShade",
+      "height": 21,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00038381.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00038381.img//backDefault",
+      "height": 43,
+      "origin": [
+        18,
+        16
+      ],
+      "path": "00038381.img//backDefault/backHair",
+      "width": 46
+    },
+    {
+      "file": "00038381.img//backDefault",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038381.img//backDefault/backHairBelowCap",
+      "width": 46
+    },
+    {
+      "file": "00038382.img//default",
+      "height": 43,
+      "origin": [
+        16,
+        16
+      ],
+      "path": "00038382.img//default/hairOverHead",
+      "width": 44
+    },
+    {
+      "file": "00038382.img//default",
+      "height": 39,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00038382.img//default/hair",
+      "width": 43
+    },
+    {
+      "file": "00038382.img//default",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038382.img//default/hairBelowBody",
+      "width": 43
+    },
+    {
+      "file": "00038382.img//default/hairShade",
+      "height": 21,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00038382.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00038382.img//backDefault",
+      "height": 43,
+      "origin": [
+        18,
+        16
+      ],
+      "path": "00038382.img//backDefault/backHair",
+      "width": 46
+    },
+    {
+      "file": "00038382.img//backDefault",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038382.img//backDefault/backHairBelowCap",
+      "width": 46
+    },
+    {
+      "file": "00038383.img//default",
+      "height": 43,
+      "origin": [
+        16,
+        16
+      ],
+      "path": "00038383.img//default/hairOverHead",
+      "width": 44
+    },
+    {
+      "file": "00038383.img//default",
+      "height": 39,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00038383.img//default/hair",
+      "width": 43
+    },
+    {
+      "file": "00038383.img//default",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038383.img//default/hairBelowBody",
+      "width": 43
+    },
+    {
+      "file": "00038383.img//default/hairShade",
+      "height": 21,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00038383.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00038383.img//backDefault",
+      "height": 43,
+      "origin": [
+        18,
+        16
+      ],
+      "path": "00038383.img//backDefault/backHair",
+      "width": 46
+    },
+    {
+      "file": "00038383.img//backDefault",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038383.img//backDefault/backHairBelowCap",
+      "width": 46
+    },
+    {
+      "file": "00038384.img//default",
+      "height": 43,
+      "origin": [
+        16,
+        16
+      ],
+      "path": "00038384.img//default/hairOverHead",
+      "width": 44
+    },
+    {
+      "file": "00038384.img//default",
+      "height": 39,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00038384.img//default/hair",
+      "width": 43
+    },
+    {
+      "file": "00038384.img//default",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038384.img//default/hairBelowBody",
+      "width": 43
+    },
+    {
+      "file": "00038384.img//default/hairShade",
+      "height": 21,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00038384.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00038384.img//backDefault",
+      "height": 43,
+      "origin": [
+        18,
+        16
+      ],
+      "path": "00038384.img//backDefault/backHair",
+      "width": 46
+    },
+    {
+      "file": "00038384.img//backDefault",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038384.img//backDefault/backHairBelowCap",
+      "width": 46
+    },
+    {
+      "file": "00038385.img//default",
+      "height": 43,
+      "origin": [
+        16,
+        16
+      ],
+      "path": "00038385.img//default/hairOverHead",
+      "width": 44
+    },
+    {
+      "file": "00038385.img//default",
+      "height": 39,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00038385.img//default/hair",
+      "width": 43
+    },
+    {
+      "file": "00038385.img//default",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038385.img//default/hairBelowBody",
+      "width": 43
+    },
+    {
+      "file": "00038385.img//default/hairShade",
+      "height": 21,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00038385.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00038385.img//backDefault",
+      "height": 43,
+      "origin": [
+        18,
+        16
+      ],
+      "path": "00038385.img//backDefault/backHair",
+      "width": 46
+    },
+    {
+      "file": "00038385.img//backDefault",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038385.img//backDefault/backHairBelowCap",
+      "width": 46
+    },
+    {
+      "file": "00038386.img//default",
+      "height": 43,
+      "origin": [
+        16,
+        16
+      ],
+      "path": "00038386.img//default/hairOverHead",
+      "width": 44
+    },
+    {
+      "file": "00038386.img//default",
+      "height": 39,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00038386.img//default/hair",
+      "width": 43
+    },
+    {
+      "file": "00038386.img//default",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038386.img//default/hairBelowBody",
+      "width": 43
+    },
+    {
+      "file": "00038386.img//default/hairShade",
+      "height": 21,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00038386.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00038386.img//backDefault",
+      "height": 43,
+      "origin": [
+        18,
+        16
+      ],
+      "path": "00038386.img//backDefault/backHair",
+      "width": 46
+    },
+    {
+      "file": "00038386.img//backDefault",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038386.img//backDefault/backHairBelowCap",
+      "width": 46
+    },
+    {
+      "file": "00038387.img//default",
+      "height": 43,
+      "origin": [
+        16,
+        16
+      ],
+      "path": "00038387.img//default/hairOverHead",
+      "width": 44
+    },
+    {
+      "file": "00038387.img//default",
+      "height": 39,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00038387.img//default/hair",
+      "width": 43
+    },
+    {
+      "file": "00038387.img//default",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038387.img//default/hairBelowBody",
+      "width": 43
+    },
+    {
+      "file": "00038387.img//default/hairShade",
+      "height": 21,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00038387.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00038387.img//backDefault",
+      "height": 43,
+      "origin": [
+        18,
+        16
+      ],
+      "path": "00038387.img//backDefault/backHair",
+      "width": 46
+    },
+    {
+      "file": "00038387.img//backDefault",
+      "height": 39,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00038387.img//backDefault/backHairBelowCap",
+      "width": 46
+    },
+    {
+      "file": "00040490.img//default",
+      "height": 43,
+      "origin": [
+        22,
+        23
+      ],
+      "path": "00040490.img//default/hairOverHead",
+      "width": 50
+    },
+    {
+      "file": "00040490.img//default",
+      "height": 32,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00040490.img//default/hair",
+      "width": 38
+    },
+    {
+      "file": "00040490.img//default/hairShade",
+      "height": 19,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00040490.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00040490.img//backDefault",
+      "height": 49,
+      "origin": [
+        23,
+        24
+      ],
+      "path": "00040490.img//backDefault/backHair",
+      "width": 50
+    },
+    {
+      "file": "00040490.img//backDefault",
+      "height": 37,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00040490.img//backDefault/backHairBelowCap",
+      "width": 40
+    },
+    {
+      "file": "00040491.img//default",
+      "height": 43,
+      "origin": [
+        22,
+        23
+      ],
+      "path": "00040491.img//default/hairOverHead",
+      "width": 50
+    },
+    {
+      "file": "00040491.img//default",
+      "height": 32,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00040491.img//default/hair",
+      "width": 38
+    },
+    {
+      "file": "00040491.img//default/hairShade",
+      "height": 19,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00040491.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00040491.img//backDefault",
+      "height": 49,
+      "origin": [
+        23,
+        24
+      ],
+      "path": "00040491.img//backDefault/backHair",
+      "width": 50
+    },
+    {
+      "file": "00040491.img//backDefault",
+      "height": 37,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00040491.img//backDefault/backHairBelowCap",
+      "width": 40
+    },
+    {
+      "file": "00040492.img//default",
+      "height": 43,
+      "origin": [
+        22,
+        23
+      ],
+      "path": "00040492.img//default/hairOverHead",
+      "width": 50
+    },
+    {
+      "file": "00040492.img//default",
+      "height": 32,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00040492.img//default/hair",
+      "width": 38
+    },
+    {
+      "file": "00040492.img//default/hairShade",
+      "height": 19,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00040492.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00040492.img//backDefault",
+      "height": 49,
+      "origin": [
+        23,
+        24
+      ],
+      "path": "00040492.img//backDefault/backHair",
+      "width": 50
+    },
+    {
+      "file": "00040492.img//backDefault",
+      "height": 37,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00040492.img//backDefault/backHairBelowCap",
+      "width": 40
+    },
+    {
+      "file": "00040493.img//default",
+      "height": 43,
+      "origin": [
+        22,
+        23
+      ],
+      "path": "00040493.img//default/hairOverHead",
+      "width": 50
+    },
+    {
+      "file": "00040493.img//default",
+      "height": 32,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00040493.img//default/hair",
+      "width": 38
+    },
+    {
+      "file": "00040493.img//default/hairShade",
+      "height": 19,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00040493.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00040493.img//backDefault",
+      "height": 49,
+      "origin": [
+        23,
+        24
+      ],
+      "path": "00040493.img//backDefault/backHair",
+      "width": 50
+    },
+    {
+      "file": "00040493.img//backDefault",
+      "height": 37,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00040493.img//backDefault/backHairBelowCap",
+      "width": 40
+    },
+    {
+      "file": "00040494.img//default",
+      "height": 43,
+      "origin": [
+        22,
+        23
+      ],
+      "path": "00040494.img//default/hairOverHead",
+      "width": 50
+    },
+    {
+      "file": "00040494.img//default",
+      "height": 32,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00040494.img//default/hair",
+      "width": 38
+    },
+    {
+      "file": "00040494.img//default/hairShade",
+      "height": 19,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00040494.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00040494.img//backDefault",
+      "height": 49,
+      "origin": [
+        23,
+        24
+      ],
+      "path": "00040494.img//backDefault/backHair",
+      "width": 50
+    },
+    {
+      "file": "00040494.img//backDefault",
+      "height": 37,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00040494.img//backDefault/backHairBelowCap",
+      "width": 40
+    },
+    {
+      "file": "00040495.img//default",
+      "height": 43,
+      "origin": [
+        22,
+        23
+      ],
+      "path": "00040495.img//default/hairOverHead",
+      "width": 50
+    },
+    {
+      "file": "00040495.img//default",
+      "height": 32,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00040495.img//default/hair",
+      "width": 38
+    },
+    {
+      "file": "00040495.img//default/hairShade",
+      "height": 19,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00040495.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00040495.img//backDefault",
+      "height": 49,
+      "origin": [
+        23,
+        24
+      ],
+      "path": "00040495.img//backDefault/backHair",
+      "width": 50
+    },
+    {
+      "file": "00040495.img//backDefault",
+      "height": 37,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00040495.img//backDefault/backHairBelowCap",
+      "width": 40
+    },
+    {
+      "file": "00040496.img//default",
+      "height": 43,
+      "origin": [
+        22,
+        23
+      ],
+      "path": "00040496.img//default/hairOverHead",
+      "width": 50
+    },
+    {
+      "file": "00040496.img//default",
+      "height": 32,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00040496.img//default/hair",
+      "width": 38
+    },
+    {
+      "file": "00040496.img//default/hairShade",
+      "height": 19,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00040496.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00040496.img//backDefault",
+      "height": 49,
+      "origin": [
+        23,
+        24
+      ],
+      "path": "00040496.img//backDefault/backHair",
+      "width": 50
+    },
+    {
+      "file": "00040496.img//backDefault",
+      "height": 37,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00040496.img//backDefault/backHairBelowCap",
+      "width": 40
+    },
+    {
+      "file": "00040497.img//default",
+      "height": 43,
+      "origin": [
+        22,
+        23
+      ],
+      "path": "00040497.img//default/hairOverHead",
+      "width": 50
+    },
+    {
+      "file": "00040497.img//default",
+      "height": 32,
+      "origin": [
+        15,
+        12
+      ],
+      "path": "00040497.img//default/hair",
+      "width": 38
+    },
+    {
+      "file": "00040497.img//default/hairShade",
+      "height": 19,
+      "origin": [
+        14,
+        12
+      ],
+      "path": "00040497.img//default/hairShade/0",
+      "width": 35
+    },
+    {
+      "file": "00040497.img//backDefault",
+      "height": 49,
+      "origin": [
+        23,
+        24
+      ],
+      "path": "00040497.img//backDefault/backHair",
+      "width": 50
+    },
+    {
+      "file": "00040497.img//backDefault",
+      "height": 37,
+      "origin": [
+        18,
+        12
+      ],
+      "path": "00040497.img//backDefault/backHairBelowCap",
+      "width": 40
+    },
+    {
+      "file": "00041360.img//default",
+      "height": 38,
+      "origin": [
+        18,
+        17
+      ],
+      "path": "00041360.img//default/hairOverHead",
+      "width": 49
+    },
+    {
+      "file": "00041360.img//default",
+      "height": 33,
+      "origin": [
+        16,
+        12
+      ],
+      "path": "00041360.img//default/hair",
+      "width": 39
+    },
+    {
+      "file": "00041360.img//default",
+      "height": 69,
+      "origin": [
+        27,
+        12
+      ],
+      "path": "00041360.img//default/hairBelowBody",
+      "width": 51
+    },
+    {
+      "file": "00041360.img//backDefault",
+      "height": 74,
+      "origin": [
+        21,
+        16
+      ],
+      "path": "00041360.img//backDefault/backHair",
+      "width": 58
+    },
+    {
+      "file": "00041360.img//backDefault",
+      "height": 70,
+      "origin": [
+        17,
+        12
+      ],
+      "path": "00041360.img//backDefault/backHairBelowCap",
+      "width": 54
+    },
+    {
+      "file": "00041360.img//proneStab/0",
+      "height": 38,
+      "origin": [
+        21,
+        17
+      ],
+      "path": "00041360.img//proneStab/0/hairOverHead",
+      "width": 77
+    },
+    {
+      "file": "00041360.img//proneStab/0",
+      "height": 33,
+      "origin": [
+        16,
+        12
+      ],
+      "path": "00041360.img//proneStab/0/hair",
+      "width": 72
+    },
+    {
+      "file": "00041361.img//default",
+      "height": 38,
+      "origin": [
+        18,
+        17
+      ],
+      "path": "00041361.img//default/hairOverHead",
+      "width": 49
+    },
+    {
+      "file": "00041361.img//default",
+      "height": 33,
+      "origin": [
+        16,
+        12
+      ],
+      "path": "00041361.img//default/hair",
+      "width": 39
+    },
+    {
+      "file": "00041361.img//default",
+      "height": 69,
+      "origin": [
+        27,
+        12
+      ],
+      "path": "00041361.img//default/hairBelowBody",
+      "width": 51
+    },
+    {
+      "file": "00041361.img//backDefault",
+      "height": 74,
+      "origin": [
+        21,
+        16
+      ],
+      "path": "00041361.img//backDefault/backHair",
+      "width": 58
+    },
+    {
+      "file": "00041361.img//backDefault",
+      "height": 70,
+      "origin": [
+        17,
+        12
+      ],
+      "path": "00041361.img//backDefault/backHairBelowCap",
+      "width": 54
+    },
+    {
+      "file": "00041361.img//proneStab/0",
+      "height": 38,
+      "origin": [
+        21,
+        17
+      ],
+      "path": "00041361.img//proneStab/0/hairOverHead",
+      "width": 77
+    },
+    {
+      "file": "00041361.img//proneStab/0",
+      "height": 33,
+      "origin": [
+        16,
+        12
+      ],
+      "path": "00041361.img//proneStab/0/hair",
+      "width": 72
+    },
+    {
+      "file": "00041362.img//default",
+      "height": 38,
+      "origin": [
+        18,
+        17
+      ],
+      "path": "00041362.img//default/hairOverHead",
+      "width": 49
+    },
+    {
+      "file": "00041362.img//default",
+      "height": 33,
+      "origin": [
+        16,
+        12
+      ],
+      "path": "00041362.img//default/hair",
+      "width": 39
+    },
+    {
+      "file": "00041362.img//default",
+      "height": 69,
+      "origin": [
+        27,
+        12
+      ],
+      "path": "00041362.img//default/hairBelowBody",
+      "width": 51
+    },
+    {
+      "file": "00041362.img//backDefault",
+      "height": 74,
+      "origin": [
+        21,
+        16
+      ],
+      "path": "00041362.img//backDefault/backHair",
+      "width": 58
+    },
+    {
+      "file": "00041362.img//backDefault",
+      "height": 70,
+      "origin": [
+        17,
+        12
+      ],
+      "path": "00041362.img//backDefault/backHairBelowCap",
+      "width": 54
+    },
+    {
+      "file": "00041362.img//proneStab/0",
+      "height": 38,
+      "origin": [
+        21,
+        17
+      ],
+      "path": "00041362.img//proneStab/0/hairOverHead",
+      "width": 77
+    },
+    {
+      "file": "00041362.img//proneStab/0",
+      "height": 33,
+      "origin": [
+        16,
+        12
+      ],
+      "path": "00041362.img//proneStab/0/hair",
+      "width": 72
+    },
+    {
+      "file": "00041363.img//default",
+      "height": 38,
+      "origin": [
+        18,
+        17
+      ],
+      "path": "00041363.img//default/hairOverHead",
+      "width": 49
+    },
+    {
+      "file": "00041363.img//default",
+      "height": 33,
+      "origin": [
+        16,
+        12
+      ],
+      "path": "00041363.img//default/hair",
+      "width": 39
+    },
+    {
+      "file": "00041363.img//default",
+      "height": 69,
+      "origin": [
+        27,
+        12
+      ],
+      "path": "00041363.img//default/hairBelowBody",
+      "width": 51
+    },
+    {
+      "file": "00041363.img//backDefault",
+      "height": 74,
+      "origin": [
+        21,
+        16
+      ],
+      "path": "00041363.img//backDefault/backHair",
+      "width": 58
+    },
+    {
+      "file": "00041363.img//backDefault",
+      "height": 70,
+      "origin": [
+        17,
+        12
+      ],
+      "path": "00041363.img//backDefault/backHairBelowCap",
+      "width": 54
+    },
+    {
+      "file": "00041363.img//proneStab/0",
+      "height": 38,
+      "origin": [
+        21,
+        17
+      ],
+      "path": "00041363.img//proneStab/0/hairOverHead",
+      "width": 77
+    },
+    {
+      "file": "00041363.img//proneStab/0",
+      "height": 33,
+      "origin": [
+        16,
+        12
+      ],
+      "path": "00041363.img//proneStab/0/hair",
+      "width": 72
+    },
+    {
+      "file": "00041364.img//default",
+      "height": 38,
+      "origin": [
+        18,
+        17
+      ],
+      "path": "00041364.img//default/hairOverHead",
+      "width": 49
+    },
+    {
+      "file": "00041364.img//default",
+      "height": 33,
+      "origin": [
+        16,
+        12
+      ],
+      "path": "00041364.img//default/hair",
+      "width": 39
+    },
+    {
+      "file": "00041364.img//default",
+      "height": 69,
+      "origin": [
+        27,
+        12
+      ],
+      "path": "00041364.img//default/hairBelowBody",
+      "width": 51
+    },
+    {
+      "file": "00041364.img//backDefault",
+      "height": 74,
+      "origin": [
+        21,
+        16
+      ],
+      "path": "00041364.img//backDefault/backHair",
+      "width": 58
+    }
+  ]
+}

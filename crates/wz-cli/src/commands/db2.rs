@@ -5697,3 +5697,103 @@ pub fn cmd_item_tooltip_render(
     }
     Ok(())
 }
+
+/// 실제 캔버스에서 (width, height, origin)을 모아 스프라이트 기하 fixture를 만든다.
+pub fn cmd_frame_geometry_fixture(
+    data_root: &Path,
+    dir: &str,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut files = Vec::new();
+    fn walk(d: &Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(d) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("wz") {
+                out.push(path);
+            }
+        }
+    }
+    walk(&data_root.join(dir), &mut files);
+    files.sort();
+
+    let mut frames = Vec::new();
+    for path in files {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else { continue };
+            let Ok(image) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            fn walk_node(
+                node: &wz_core::image::Node,
+                path: &str,
+                frames: &mut Vec<serde_json::Value>,
+                limit: usize,
+            ) {
+                if frames.len() >= limit {
+                    return;
+                }
+                let here = format!("{path}/{}", node.name);
+                if let Some(wz_core::image::ImageValue::Png(png)) = &node.value {
+                    if png.width >= 16 && png.height >= 16 {
+                        let origin = png
+                            .sub_property
+                            .as_ref()
+                            .and_then(|sub| {
+                                sub.object_children()
+                                    .iter()
+                                    .find(|c| c.name.as_ref() == "origin")
+                            })
+                            .or_else(|| {
+                                node.object_children()
+                                    .iter()
+                                    .find(|c| c.name.as_ref() == "origin")
+                            })
+                            .and_then(|c| match &c.value {
+                                Some(wz_core::image::ImageValue::Vector(v)) => Some((v.x, v.y)),
+                                _ => None,
+                            });
+                        if let Some((ox, oy)) = origin {
+                            frames.push(serde_json::json!({
+                                "path": here,
+                                "file": path,
+                                "width": png.width,
+                                "height": png.height,
+                                "origin": [ox, oy],
+                            }));
+                        }
+                    }
+                }
+                for child in node.object_children() {
+                    walk_node(child, &here, frames, limit);
+                }
+            }
+            let name = entry.name.as_deref().unwrap_or("");
+            walk_node(&image, name, &mut frames, limit);
+            if frames.len() >= limit {
+                break;
+            }
+        }
+        if frames.len() >= limit {
+            break;
+        }
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({ "dir": dir, "frames": frames }))?
+    );
+    Ok(())
+}
