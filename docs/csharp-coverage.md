@@ -301,6 +301,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - 오프스크린 wgpu: CPU 스프라이트를 실제 GPU 텍스처로 업로드해 nearest/linear
   샘플링과 straight-alpha 블렌드를 수행하고 readback SHA-256을 고정. GPU
   블렌드가 premultiplied로 기록됨(`(0,0,255,128)→(0,0,128,128)`)을 확인.
+- 프레임 베이킹: `ApplyFlip`/`ApplyRotation`을 CPU 역방향 최근접 샘플링으로
+  옮기고 실제 Character 캔버스 6개 × 54케이스의 크기/origin/픽셀 SHA-256이
+  C# 참조 구현과 일치.
 - CPU 스프라이트 샘플링/합성: 실제 Character 캔버스 6개의 픽셀에 AtlasRect
   추출·flip·알파 스케일·straight-alpha/opaque 블렌드를 적용해 36케이스
   SHA-256이 C#과 완전 일치.

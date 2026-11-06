@@ -4136,6 +4136,105 @@ return tostring(ok) .. '|' .. tostring(acc)
         Console.WriteLine(JsonSerializer.Serialize(new { emissions, paints },
             new JsonSerializerOptions { WriteIndented = true }));
     }
+    // `FrameAnimationData.ApplyFlip`/`ApplyRotation`의 CPU 베이킹 참조 구현.
+    // SpriteBatch 기본 샘플러는 선형이지만, 결정적 비교를 위해 최근접으로 고정한다.
+    static void FrameBake(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var canvases = doc.RootElement.GetProperty("canvases").EnumerateArray().Select(c => new
+        {
+            W = c.GetProperty("width").GetInt32(),
+            H = c.GetProperty("height").GetInt32(),
+            Ox = c.GetProperty("origin")[0].GetInt32(),
+            Oy = c.GetProperty("origin")[1].GetInt32(),
+            Rgba = Convert.FromBase64String(c.GetProperty("rgba_b64").GetString()!),
+        }).ToList();
+
+        (int w, int h, int ox, int oy) RotationBound(int w, int h, float rad, int ox, int oy)
+        {
+            double sin = Math.Sin(rad), cos = Math.Cos(rad);
+            var pts = new (double x, double y)[] { (-ox, -oy), (w - ox, -oy), (-ox, h - oy), (w - ox, h - oy) };
+            double minX = double.PositiveInfinity, minY = double.PositiveInfinity;
+            double maxX = double.NegativeInfinity, maxY = double.NegativeInfinity;
+            foreach (var (x, y) in pts)
+            {
+                double rx = x * cos - y * sin, ry = x * sin + y * cos;
+                minX = Math.Min(minX, rx); minY = Math.Min(minY, ry);
+                maxX = Math.Max(maxX, rx); maxY = Math.Max(maxY, ry);
+            }
+            return ((int)Math.Ceiling(maxX - minX), (int)Math.Ceiling(maxY - minY),
+                (int)Math.Ceiling(-minX), (int)Math.Ceiling(-minY));
+        }
+
+        byte[] Sample(byte[] src, int sw, int sh, int x, int y)
+        {
+            if (x < 0 || y < 0 || x >= sw || y >= sh) return new byte[4];
+            int i = (y * sw + x) * 4;
+            return new[] { src[i], src[i + 1], src[i + 2], src[i + 3] };
+        }
+
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.GetProperty("cases").EnumerateArray())
+        {
+            var c = canvases[item.GetProperty("canvas").GetInt32()];
+            string kind = item.GetProperty("kind").GetString()!;
+            int w = c.W, h = c.H, ox = c.Ox, oy = c.Oy;
+            byte[] outRgba;
+            int newW, newH, newOx, newOy;
+
+            if (kind == "flip")
+            {
+                bool fx = item.GetProperty("flip_x").GetBoolean();
+                bool fy = item.GetProperty("flip_y").GetBoolean();
+                newW = w; newH = h;
+                newOx = fx ? w - ox : ox;
+                newOy = fy ? h - oy : oy;
+                outRgba = new byte[w * h * 4];
+                for (int y = 0; y < h; y++)
+                    for (int x = 0; x < w; x++)
+                    {
+                        int sx = fx ? w - 1 - x : x;
+                        int sy = fy ? h - 1 - y : y;
+                        Array.Copy(c.Rgba, (sy * w + sx) * 4, outRgba, (y * w + x) * 4, 4);
+                    }
+            }
+            else
+            {
+                int degrees = item.GetProperty("degrees").GetInt32();
+                int angle = ((degrees + 360) % 360 + 360) % 360;
+                if (angle == 0) { outRgba = (byte[])c.Rgba.Clone(); newW = w; newH = h; newOx = ox; newOy = oy; }
+                else
+                {
+                    float rad = angle * 0.0174532924f;
+                    (newW, newH, newOx, newOy) = RotationBound(w, h, rad, ox, oy);
+                    double sin = Math.Sin(rad), cos = Math.Cos(rad);
+                    outRgba = new byte[newW * newH * 4];
+                    for (int dy = 0; dy < newH; dy++)
+                        for (int dx = 0; dx < newW; dx++)
+                        {
+                            double qx = dx - newOx, qy = dy - newOy;
+                            double vx = qx * cos + qy * sin;
+                            double vy = -qx * sin + qy * cos;
+                            int sx = (int)Math.Round(ox + vx);
+                            int sy = (int)Math.Round(oy + vy);
+                            Array.Copy(Sample(c.Rgba, w, h, sx, sy), 0, outRgba, (dy * newW + dx) * 4, 4);
+                        }
+                }
+            }
+
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            rows.Add(new
+            {
+                canvas = item.GetProperty("canvas").GetInt32(),
+                kind,
+                width = newW,
+                height = newH,
+                origin = new[] { newOx, newOy },
+                sha256 = Convert.ToHexString(sha.ComputeHash(outRgba)).ToLowerInvariant(),
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4204,6 +4303,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "spritecompose") SpriteCompose(args[1]);
         else if (args[0] == "pluginribbon") PluginRibbon(args[1], args[2]);
         else if (args[0] == "pluginmodel") PluginModel(args[1]);
+        else if (args[0] == "framebake") FrameBake(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

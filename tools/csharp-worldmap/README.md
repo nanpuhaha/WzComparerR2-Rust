@@ -641,3 +641,10 @@ Verified plugin event/invalidate model (`pluginmodel <fixture.json>`):
 ```
 Uses real .NET multicast delegates and `System.Drawing.Rectangle.Union`; matches
 Rust `wz_db::plugin_events`.
+
+Verified frame texture baking (`framebake <fixture.json>`):
+```
+6 real Character canvases -> 54 cases (4 flips + 5 rotations each)
+```
+`ApplyFlip`/`ApplyRotation` CPU bakes match Rust `wz_avatar::frame_bake` in
+size, origin and pixel SHA-256 (nearest inverse sampling, banker's rounding).

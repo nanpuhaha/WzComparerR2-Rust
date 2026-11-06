@@ -5851,7 +5851,7 @@ pub fn cmd_sprite_compose_fixture(
                 let here = format!("{path}/{}", node.name);
                 if let Some(wz_core::image::ImageValue::Png(png)) = &node.value {
                     if png.width >= 16 && png.height >= 16 {
-                        let has_origin = png
+                        let origin = png
                             .sub_property
                             .as_ref()
                             .and_then(|sub| {
@@ -5864,14 +5864,18 @@ pub fn cmd_sprite_compose_fixture(
                                     .iter()
                                     .find(|c| c.name.as_ref() == "origin")
                             })
-                            .is_some();
-                        if has_origin {
+                            .and_then(|c| match &c.value {
+                                Some(wz_core::image::ImageValue::Vector(v)) => Some((v.x, v.y)),
+                                _ => None,
+                            });
+                        if let Some((ox, oy)) = origin {
                             if let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(png, source)
                             {
                                 canvases.push(serde_json::json!({
                                     "path": here,
                                     "width": w,
                                     "height": h,
+                                    "origin": [ox, oy],
                                     "rgba_b64": b64_encode(&rgba),
                                 }));
                             }

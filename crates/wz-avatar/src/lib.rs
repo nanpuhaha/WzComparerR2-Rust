@@ -7,7 +7,8 @@ use std::sync::Arc;
 
 pub mod compose;
 pub mod frame;
-pub mod frame_layers;
+pub mod frame_bake;
+mod frame_layers;
 pub mod gear_tooltip;
 pub mod item_tooltip_canvas;
 pub mod job_name;
@@ -19,6 +20,7 @@ pub mod stats;
 pub mod zmap;
 pub use compose::{bounding_box, compose, ComposeError, ComposedFrame, LayerSource};
 pub use frame::FrameTiming;
+pub use frame_bake::{apply_flip, apply_rotation, BakedFrame};
 pub use frame_layers::{
     avatar_z_priority, collect_frame_assembly, collect_frame_layers, decode_canvas_pixels,
     resolve_outlink, split_outlink, FrameAssembly, FrameLayer, ResolvedCanvas,

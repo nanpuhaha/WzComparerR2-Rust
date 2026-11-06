@@ -1546,3 +1546,30 @@ C#: `-- pluginmodel <fixture.json>`.
 
 남는 것: 실제 컨트롤의 WM_PAINT 큐/스레드 선점과 `BeginInvoke` 순서는
 WinForms 메시지 루프 의존이라 모델링하지 않았다.
+
+## 프레임 텍스처 베이킹 (`ApplyFlip` / `ApplyRotation`)
+
+원본은 `RenderTarget2D` + `SpriteBatch.Draw`로 텍스처를 구워 origin을 바꾼다.
+GPU 없이 **역방향 최근접 샘플링**으로 같은 결과를 만든다
+(`wz-avatar::frame_bake`).
+
+- **flip**: 같은 크기에서 픽셀을 좌우/상하 반전하고
+  `origin = flipped_origin(w, h, origin, fx, fy)`
+- **rotation**: `((angle+360)%360)` 정규화(0이면 항등),
+  `rotation_bound`(f64 삼각함수, `MathHelper.ToRadians` float 상수)로
+  새 크기/origin, `q = dest - newOrigin`, `v = R(-θ)q`,
+  `src = Math.Round(origin + v)`(은행가 반올림)
+
+검증:
+- 입력은 실제 `Data/Character` 캔버스 6개의 픽셀/origin
+- 케이스: flip 4조합 × 6 + 회전 5각도(30/45/90/180/270) × 6 = **54개**
+- C# 참조 구현과 `width/height/origin` 및 픽셀 **SHA-256 완전 일치**
+- `crates/wz-avatar/tests/frame_bake_parity.rs` 1종 + 단위 테스트 4종
+  (예: 44×43 → 90°에서 60×60, origin `[16,16] → [28,22]`)
+
+fixture: `frame_bake_input.json`, `frame_bake_expected.json`,
+C#: `-- framebake <fixture.json>`.
+
+한계: XNA `SpriteBatch` 기본 샘플러는 **선형**이지만 결정적 비교를 위해
+최근접으로 고정했다. 실제 GPU 베이킹(선형/감마)은 wgpu 오프스크린 경로로는
+가능하지만 C# `GraphicsDevice` 실행이 macOS에서 불가해 대조하지 못했다.
