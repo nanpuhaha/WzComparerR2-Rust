@@ -1761,6 +1761,42 @@ class Program
         }).ToList();
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void MapTooltips(string mapWzPath, string stringWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        linker.Load(str.wz_files[0], null, null);
+        var st = new Wz_Structure(); st.Load(mapWzPath);
+        var rows = new List<object>();
+        foreach (Wz_Node n in st.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            if (!img.TryExtract()) continue;
+            var map = WzComparerR2.CharaSim.Map.CreateFromNode(img.Node, null);
+            if (map == null) continue;
+            linker.StringMap.TryGetValue(map.MapID, out var sr);
+            if (sr == null && map.Link != null) linker.StringMap.TryGetValue(map.Link.Value, out sr);
+            string MobName(int id) => linker.StringMob.TryGetValue(id, out var m) ? m.Name : null;
+            string NpcName(int id) => linker.StringNpc.TryGetValue(id, out var m) ? m.Name : null;
+            rows.Add(new {
+                id = map.MapID,
+                link = map.Link,
+                barrier = map.Barrier,
+                barrier_arc = map.BarrierArc,
+                barrier_aut = map.BarrierAut,
+                map_mark = map.MapMark,
+                bgm = map.Bgm,
+                street = sr?.StreetName ?? "(null)",
+                map_name = sr?.MapName ?? "(null)",
+                id_text = $"ID:{map.MapID}",
+                desc = string.IsNullOrEmpty(sr?["mapDesc"]) ? null : sr["mapDesc"],
+                bgm_text = string.IsNullOrEmpty(map.Bgm) ? null : map.Bgm,
+                mobs = map.Mobs.Select(id => new object[] { id, MobName(id) ?? "(null)" }).ToList(),
+                npcs = map.Npcs.Select(id => new object[] { id, NpcName(id) ?? "(null)" }).ToList(),
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1798,6 +1834,7 @@ class Program
         else if (args[0] == "damageskinmodel") DamageSkinModel(args[1], args[2]);
         else if (args[0] == "avatarstructure") AvatarStructure(int.Parse(args[1]));
         else if (args[0] == "avatarunpack") AvatarUnpack(int.Parse(args[1]), args[2]);
+        else if (args[0] == "maptooltips") MapTooltips(args[1], args[2]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

@@ -526,3 +526,18 @@ OK: login flow complete
 `name/bits/value` 목록 해시가 C# `Utils.Unpack`과 완전 일치.
 fixture: `crates/wz-openapi/tests/avatar_vectors.json`,
 테스트: `avatar_csharp_parity.rs`, CLI: `wz avatar-unpack <version> <packhex>`.
+
+## Map 툴팁 텍스트 (`MapTooltipRenderer`)
+
+- `Map.CreateFromNode`(findNode=null 경로)와 같은 필드: `link`, `barrier`,
+  `barrierArc`, `barrierAut`, `mapMark`, `bgm`, `AFKmob/flyingMob` + `life`의
+  몹/ NPC ID(중복 제거)
+- `GetMapName`/`GetMapDesc`: `StringMap[id]`, 없으면 `StringMap[link]`
+  - street/mapName은 없으면 `(null)`, 설명은 `mapDesc`
+- 몹/NPC 이름: `StringMob`/`StringNpc`, 없으면 `(null)`
+- 몹 레벨 접미사는 `Mob/<id>.img/info/level`이 필요하지만 이 클라이언트에는
+  `level` 노드가 0개라 생략(양쪽 동일)
+
+`Map0_000.wz` **87개**가 C# 하네스와 완전 일치.
+fixture: `crates/wz-cli/tests/fixtures/map_tooltips.expected.json`,
+테스트: `map_tooltips_match_csharp`, CLI: `wz map-tooltips`.

@@ -390,3 +390,9 @@ Verified OpenAPI avatar unpack (`avatarstructure <v>`, `avatarunpack <v> <packhe
 19 versions x 2 packs = 38 cases
 ```
 Field lists match Rust `wz_openapi::avatar::unpack` exactly.
+
+Verified Map tooltip text (`maptooltips <Map0_000.wz> <String_000.wz>`):
+```
+87 maps
+```
+street/map name/desc/bgm/mobs/npcs match Rust `wz map-tooltips` exactly.

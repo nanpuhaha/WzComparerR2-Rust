@@ -2995,3 +2995,187 @@ pub fn cmd_avatar_unpack(
     }
     Ok(())
 }
+
+pub fn cmd_map_tooltips(
+    wz_path: &Path,
+    string_wz: &Path,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let string_archive = WzArchive::open(string_wz)?;
+    let (string_arena, string_root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&string_arena, string_root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+
+    let mut rows = Vec::new();
+    for entry in &tree.root.entries {
+        if entry.node_type != 4 {
+            continue;
+        }
+        let Some(offset) = entry.offset else {
+            continue;
+        };
+        let Ok(mut node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let Some(name) = entry.name.as_deref() else {
+            continue;
+        };
+        node.name = std::sync::Arc::from(name);
+        let Some(map) = wz_db::MapTooltipFields::from_node(&node) else {
+            continue;
+        };
+        let sr = linker
+            .string_map
+            .get(&map.id)
+            .or_else(|| map.link.and_then(|link| linker.string_map.get(&link)));
+        let street = sr.and_then(|sr| sr.street_name.clone());
+        let map_name = sr.and_then(|sr| sr.map_name.clone());
+        let desc = sr
+            .and_then(|sr| sr.values.get("mapDesc").cloned())
+            .filter(|s| !s.is_empty());
+        let text = map.text(
+            street,
+            map_name,
+            desc,
+            &|id| linker.string_mob.get(&id).map(|sr| sr.name.clone()),
+            &|id| linker.string_npc.get(&id).map(|sr| sr.name.clone()),
+        );
+        rows.push(serde_json::json!({
+            "id": map.id,
+            "link": map.link,
+            "barrier": map.barrier,
+            "barrier_arc": map.barrier_arc,
+            "barrier_aut": map.barrier_aut,
+            "map_mark": map.map_mark,
+            "bgm": map.bgm,
+            "street": text.street,
+            "map_name": text.map_name,
+            "id_text": text.id_text,
+            "desc": text.desc,
+            "bgm_text": text.bgm,
+            "mobs": text.mobs,
+            "npcs": text.npcs,
+        }));
+    }
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!(
+                "{} {} / {} {}",
+                row["id"], row["street"], row["map_name"], row["id_text"]
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod map_tooltip_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn map_tooltips_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let wz = root.join("Map/Map/Map0/Map0_000.wz");
+        let string_wz = root.join("String/String_000.wz");
+        if !wz.exists() || !string_wz.exists() {
+            return;
+        }
+        use wz_db::{Arena, StringLinker};
+        let archive = wz_core::WzArchive::open(&wz).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let string_archive = wz_core::WzArchive::open(&string_wz).unwrap();
+        let (string_arena, string_root) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&string_arena, string_root));
+
+        let rec = char::from(0x1e);
+        let mut rows = Vec::new();
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else { continue };
+            let Ok(mut node) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            let Some(name) = entry.name.as_deref() else {
+                continue;
+            };
+            node.name = std::sync::Arc::from(name);
+            let Some(map) = wz_db::MapTooltipFields::from_node(&node) else {
+                continue;
+            };
+            let sr = linker
+                .string_map
+                .get(&map.id)
+                .or_else(|| map.link.and_then(|l| linker.string_map.get(&l)));
+            let text = map.text(
+                sr.and_then(|s| s.street_name.clone()),
+                sr.and_then(|s| s.map_name.clone()),
+                sr.and_then(|s| s.values.get("mapDesc").cloned())
+                    .filter(|s| !s.is_empty()),
+                &|id| linker.string_mob.get(&id).map(|s| s.name.clone()),
+                &|id| linker.string_npc.get(&id).map(|s| s.name.clone()),
+            );
+            let mobs = text
+                .mobs
+                .iter()
+                .map(|(id, n)| format!("{id}:{n}"))
+                .collect::<Vec<_>>()
+                .join("|");
+            let npcs = text
+                .npcs
+                .iter()
+                .map(|(id, n)| format!("{id}:{n}"))
+                .collect::<Vec<_>>()
+                .join("|");
+            rows.push(
+                [
+                    map.id.to_string(),
+                    map.link.map(|v| v.to_string()).unwrap_or_default(),
+                    map.barrier.to_string(),
+                    map.barrier_arc.to_string(),
+                    map.barrier_aut.to_string(),
+                    map.map_mark.clone().unwrap_or_default(),
+                    map.bgm.clone().unwrap_or_default(),
+                    text.street,
+                    text.map_name,
+                    text.id_text,
+                    text.desc.unwrap_or_default(),
+                    mobs,
+                    npcs,
+                ]
+                .join(&rec.to_string()),
+            );
+        }
+        let canon = rows.join(&rec.to_string());
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/map_tooltips.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(rows.len() as u64, expected["rows"].as_u64().unwrap());
+        assert_eq!(
+            sha256_hex(canon.as_bytes()),
+            expected["sha256"].as_str().unwrap()
+        );
+    }
+}

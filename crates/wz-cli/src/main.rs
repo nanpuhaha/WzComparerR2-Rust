@@ -417,6 +417,18 @@ enum Command {
         json: bool,
     },
 
+    /// Map 툴팁 텍스트 (마을/맵 이름, 설명, BGM, 몹/NPC)
+    MapTooltips {
+        /// Map WZ 파일
+        wz: PathBuf,
+        /// String_000.wz
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// OpenAPI 아바타 비트팩 해제
     AvatarUnpack {
         /// 코드 버전 (26~44, 없는 버전은 원본처럼 보정)
@@ -864,6 +876,7 @@ fn main() {
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
+        Command::MapTooltips { wz, string, json } => commands::cmd_map_tooltips(&wz, &string, json),
         Command::AvatarUnpack {
             version,
             pack,

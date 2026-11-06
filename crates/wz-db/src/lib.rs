@@ -43,6 +43,7 @@ pub mod gear_stats;
 pub mod item_tooltip;
 pub mod linker;
 pub mod map;
+pub mod map_tooltip;
 pub mod node;
 pub mod npc_quote;
 pub mod particle;
@@ -92,6 +93,7 @@ pub use map::{
     MapData, MapEvent, MapInfo, MapLife, MapLight, MapLight2D, MapParticle, MapPortal, MapReactor,
     MapTooltip, MapVirtualRect, MiniMapInfo, ObjItem, SkyWhale, TileItem,
 };
+pub use map_tooltip::{MapTooltipFields, MapTooltipText};
 pub use node::{NodeId, NodeValue, RawDataRef};
 pub use npc_quote::{message as npc_quote_message, parse as npc_quote_parse, NpcQuote};
 pub use particle::{parse_particle_desc, ParticleDesc, ParticleTexture};
