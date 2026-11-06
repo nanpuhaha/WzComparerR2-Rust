@@ -3068,6 +3068,103 @@ class Program
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    // `AnimationControl`의 히트테스트/드래그/휠 계산. WinForms 이벤트 대신
+    // 좌표/델타를 받되, 반올림과 사각형 판정은 실제 .NET API를 쓴다.
+    static void ControlsInput()
+    {
+        var items = new (int px, int py, int bx, int by, int bw, int bh)[]
+        {
+            (0, 0, 0, 0, 100, 50),
+            (20, 10, -5, -5, 30, 30),
+            (-3, 7, 2, 2, 10, 10),
+        };
+        var scales = new[] { 0.1f, 0.5f, 1.0f, 1.333f, 2.0f, 10.0f };
+        var points = new[]
+        {
+            (0, 0), (5, 5), (9, 9), (10, 10), (11, 4), (20, 20), (-3, 7), (-4, 6), (25, 12), (24, 11),
+        };
+
+        System.Drawing.Rectangle Rect(int px, int py, int bx, int by, int bw, int bh, float scale) =>
+            new System.Drawing.Rectangle(
+                (int)Math.Round(px + bx * scale),
+                (int)Math.Round(py + by * scale),
+                (int)Math.Round(bw * scale),
+                (int)Math.Round(bh * scale));
+
+        var rects = new List<object>();
+        foreach (var (px, py, bx, by, bw, bh) in items)
+        {
+            foreach (var scale in scales)
+            {
+                var r = Rect(px, py, bx, by, bw, bh, scale);
+                rects.Add(new { px, py, bx, by, bw, bh, scale, x = r.X, y = r.Y, w = r.Width, h = r.Height });
+            }
+        }
+
+        var hits = new List<object>();
+        foreach (var scale in scales)
+        {
+            foreach (var (x, y) in points)
+            {
+                var found = new List<int>();
+                for (int i = items.Length - 1; i >= 0; i--)
+                {
+                    var (px, py, bx, by, bw, bh) = items[i];
+                    if (Rect(px, py, bx, by, bw, bh, scale).Contains(x, y)) found.Add(i);
+                }
+                hits.Add(new { scale, x, y, indices = found });
+            }
+        }
+
+        // 0.5 경계(은행가 반올림) 케이스
+        var ties = new List<object>();
+        foreach (var (bx, scale) in new (int, float)[] { (3, 0.5f), (5, 0.5f), (7, 0.5f), (1, 1.5f), (3, 1.5f), (5, 1.5f) })
+        {
+            var r = Rect(0, 0, bx, 0, 0, 0, scale);
+            ties.Add(new { bx, scale, x = r.X, y = r.Y });
+        }
+
+        var drags = new List<object>();
+        foreach (var (mdx, mdy, sx, sy, cx, cy) in new (int, int, int, int, int, int)[]
+        {
+            (10, 20, 5, 6, 13, 29), (0, 0, 0, 0, 0, 0), (-5, 3, 10, 10, -5, 3), (100, 100, 0, 0, 99, 101),
+        })
+        {
+            drags.Add(new { mouse_down = new[] { mdx, mdy }, start = new[] { sx, sy }, current = new[] { cx, cy },
+                            position = new[] { cx - mdx + sx, cy - mdy + sy } });
+        }
+
+        var dragBoxes = new List<object>();
+        foreach (var (dw, dh) in new (int, int)[] { (4, 4), (8, 8) })
+        {
+            foreach (var (cx, cy) in new[] { (10, 20), (13, 23), (14, 24), (5, 15) })
+            {
+                var box = new System.Drawing.Rectangle(new System.Drawing.Point(10, 20), new System.Drawing.Size(dw, dh));
+                dragBoxes.Add(new { drag_size = new[] { dw, dh }, current = new[] { cx, cy }, inside = box.Contains(cx, cy) });
+            }
+        }
+
+        static float Wheel(float oldScale, int delta)
+        {
+            const int WHEEL_DELTA = 120;
+            float wheelTicks = delta / WHEEL_DELTA;
+            float newScale = oldScale * (1 + 0.1f * wheelTicks);
+            if (oldScale.CompareTo(1f) * newScale.CompareTo(1f) == -1) newScale = 1f;
+            return Math.Min(10f, Math.Max(0.1f, newScale));
+        }
+        var wheels = new List<object>();
+        foreach (var (oldScale, delta) in new (float, int)[]
+        {
+            (1.0f, 120), (1.0f, 240), (1.0f, 60), (1.0f, -120), (0.95f, -120), (0.95f, 120),
+            (9.9f, 240), (0.1f, -240), (2.0f, 0),
+        })
+        {
+            wheels.Add(new { old_scale = oldScale, delta, new_scale = Wheel(oldScale, delta) });
+        }
+
+        Console.WriteLine(JsonSerializer.Serialize(new { rects, hits, ties, drags, drag_boxes = dragBoxes, wheels },
+            new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -3126,6 +3223,7 @@ class Program
         else if (args[0] == "textlayout") TextLayout();
         else if (args[0] == "pixelops") PixelOps(args[1]);
         else if (args[0] == "iconblock") IconBlock(args[1]);
+        else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

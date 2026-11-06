@@ -26,6 +26,7 @@ pub mod calc;
 pub mod chara_prop;
 pub mod chara_tooltip;
 pub mod common_controls;
+pub mod controls_input;
 pub mod cosmetic_eulo;
 pub mod damage_skin;
 pub mod db2;
@@ -74,6 +75,10 @@ pub use chara_tooltip::{npc_lines, npc_locations, reactor_from_node, NpcTooltip,
 pub use common_controls::{
     add_item_times, clamp_scale, create_timeline, get_process_from_timeline, gif_timeline,
     max_length, playing_indices, should_reset, update_time_offset, KeyFrame,
+};
+pub use controls_input::{
+    drag_position, hit_items, item_rect, outside_drag_box, rect_contains, round_half_even,
+    wheel_scale, HitItem,
 };
 pub use cosmetic_eulo::{
     cosmetic_eulo_text, get_cosmetic_gender, get_gear_type, get_gender, is_sub_weapon,

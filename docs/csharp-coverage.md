@@ -44,7 +44,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | (root) | 15 | 2,832 | `wz-db` | 🟡 |
 | Rendering | 25 | 2,726 | `wz-render`, `wz-image` | 🟡 (light/water/sprite) |
 | Animation | 15 | 2,415 | `wz-avatar` frame loader | 🟡 |
-| Controls | 16 | 2,138 | `wz-db::common_controls` (타임라인/GIF 지연/구간/스케일) | 🟡 |
+| Controls | 16 | 2,138 | `wz-db::common_controls`(타임라인/GIF), `controls_input`(히트테스트/드래그/휠) | 🟡 |
 | OpenAPI | 4 | 2,086 | `wz-openapi` helpers + AvatarCodeStructure/Unpack + HTTP 계층(목 서버 검증) | 🟡 |
 | Text | 4 | 707 | `wz-core::text` | ✅ |
 | Encoders | 6 | 534 | `wz-image` | ✅ (PNG/BC7) |
@@ -267,6 +267,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   구간 최대 길이/재생 판정, 시간 오프셋 클램프, 스케일 클램프가 C# 참조
   구현과 완전 일치(7 타임라인, 30 프로브, 90 GIF, 6 구간, 4 최대길이,
   5 오프셋, 5 리셋, 8 스케일 케이스).
+- `Common/Controls` 입력 계산: 히트테스트 사각형(은행가 반올림),
+  `Rectangle.Contains` 경계, 히트 순서, 드래그 델타, 드래그 저장 박스,
+  휠 줌(정수 나눗셈·100% 횡단·클램프)이 C# 115케이스와 완전 일치.
 - `AchievementTooltipRenderer` 텍스트: `Achievement.CreateFromNode` +
   툴팁 라인을 옮겨 `AchievementData_000.wz` **1,579개 업적**의 13개 필드와
   라인 순서가 C#과 완전 일치.

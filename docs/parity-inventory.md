@@ -1035,3 +1035,32 @@ fixture: `icon_block.json`, C#: `-- iconblock <fixture.json>`.
   알파 255 픽셀만 옮기는 결정적 부분집합만 지원하며, 그 경계를 테스트로
   고정했다(`opaque_blit_skips_translucent_and_clips`).
 - 텍스트 래스터라이제이션(폰트 힌팅/안티에일리어싱)도 GDI+ 의존이라 미검증이다.
+
+## Common/Controls 마우스 히트테스트/드래그/휠 (`AnimationControl`)
+
+WinForms 이벤트 객체 대신 좌표/델타를 입력으로 받는 순수 계산으로 옮겼다.
+C# 의미론에 의존하는 지점이 있어 그대로 재현했다.
+
+| 원본 | Rust | 주의점 |
+|---|---|---|
+| `GetItemAt`/`GetItemsAt` 사각형 | `item_rect` | `Math.Round(float)` = **은행가 반올림**(0.5→짝수) |
+| `Rectangle.Contains` | `rect_contains` | 오른쪽/아래 경계 제외(`x <= px < x+w`) |
+| 히트 순서 | `hit_items` | 뒤에서부터(위 레이어 먼저) |
+| `MouseMove` 드래그 | `drag_position` | `cur - mouseDown + start` |
+| 드래그 저장 박스 | `outside_drag_box` | `(mouseDown, dragSize)` 밖이면 저장 |
+| `MouseWheel` + `GlobalScale` | `wheel_scale` | `e.Delta / 120`이 **정수 나눗셈**(<120은 0틱), 100% 횡단 시 1 고정, 0.1~10 클램프 |
+
+검증: C# 하네스가 실제 `Math.Round`/`System.Drawing.Rectangle`로 계산한
+**115케이스**(rects 18, hits 60, ties 6, drags 4, drag boxes 8, wheels 9)와
+완전 일치.
+- 은행가 반올림 확인: `3*0.5→2`, `5*0.5→2`, `7*0.5→4`, `1*1.5→2`,
+  `3*1.5→4`, `5*1.5→8`
+- 휠: `(0.95, +120) → 1.0`(100% 횡단 고정), `(9.9, +240) → 10.0`(클램프),
+  `(1.0, +60) → 1.0`(정수 나눗셈 0틱)
+
+fixture: `crates/wz-db/tests/fixtures/controls_input.json`,
+테스트: `crates/wz-db/tests/controls_input_parity.rs`,
+C#: `-- controlsinput`.
+
+범위: WinForms 컨트롤 인스턴스화/이벤트 구독/`Invalidate` 호출은 여전히
+호스트 의존이다. 여기서는 이벤트가 전달하는 좌표/델타로부터의 계산만 다룬다.

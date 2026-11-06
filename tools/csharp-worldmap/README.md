@@ -537,3 +537,10 @@ Verified ItemTooltip icon block (`iconblock <fixture.json>`):
 Composited SHA-256 matches Rust `wz_db::pixel_ops::compose_icon_block`
 (enlarge + ItemTooltipRender22 placement + alpha==255 blit).
 Alpha source-over compositing is GDI+-bound and intentionally not reproduced.
+
+Verified Common/Controls input math (`controlsinput`):
+```
+115 cases: 18 rects, 60 hit tests, 6 half-even ties, 4 drags, 8 drag boxes, 9 wheel
+```
+Uses the real `Math.Round` (banker's rounding) and `System.Drawing.Rectangle`
+to match Rust `wz_db::controls_input`.
