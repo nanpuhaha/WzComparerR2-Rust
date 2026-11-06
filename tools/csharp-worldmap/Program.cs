@@ -3669,6 +3669,136 @@ return tostring(ok) .. '|' .. tostring(acc)
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // LuaConsole `Resources/Lua.xshd`의 규칙을 읽어 토큰 경계를 계산한다.
+    // ICSharpCode.TextEditor(WinForms)를 로드할 수 없으므로 규칙 추출 + 스캔은
+    // 이 하네스가 수행한다(설정 파일은 원본 그대로 사용).
+    static void LuaSyntax(string xshdPath, params string[] files)
+    {
+        var xdoc = System.Xml.Linq.XDocument.Load(xshdPath);
+        System.Xml.Linq.XNamespace ns = xdoc.Root!.Name.Namespace;
+        var keywords = xdoc.Descendants(ns + "KeyWords")
+            .Where(k => (string?)k.Attribute("name") == "LanguageKeywords")
+            .SelectMany(k => k.Elements(ns + "Key"))
+            .Select(k => (string)k.Attribute("word")!)
+            .Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
+        var access = xdoc.Descendants(ns + "KeyWords")
+            .Where(k => (string?)k.Attribute("name") == "AccessKeywords")
+            .SelectMany(k => k.Elements(ns + "Key"))
+            .Select(k => (string)k.Attribute("word")!)
+            .Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
+        var punct = xdoc.Descendants(ns + "KeyWords")
+            .Where(k => (string?)k.Attribute("name") == "Punctuation")
+            .SelectMany(k => k.Elements(ns + "Key"))
+            .Select(k => (string)k.Attribute("word")!)
+            .Where(w => w.Length == 1)
+            .Select(w => w[0])
+            .Distinct().OrderBy(c => c).ToList();
+
+        var cases = new List<object>();
+        foreach (var file in files)
+        {
+            string src = File.ReadAllText(file);
+            var tokens = new List<object>();
+            int i = 0, len = src.Length;
+            while (i < len)
+            {
+                int start = i;
+                char c = src[i];
+                if (c == '-' && i + 1 < len && src[i + 1] == '-')
+                {
+                    if (i + 3 < len && src[i + 2] == '[' && src[i + 3] == '[')
+                    {
+                        i += 4;
+                        while (i + 1 < len && !(src[i] == ']' && src[i + 1] == ']')) i++;
+                        i = Math.Min(i + 2, len);
+                    }
+                    else
+                    {
+                        i += 2;
+                        while (i < len && src[i] != '\n') i++;
+                    }
+                    tokens.Add(new { kind = "Comment", start, end = i });
+                    continue;
+                }
+                if (c == '"')
+                {
+                    i++;
+                    while (i < len && src[i] != '"') i++;
+                    i = Math.Min(i + 1, len);
+                    tokens.Add(new { kind = "String", start, end = i });
+                    continue;
+                }
+                if (c == '\'')
+                {
+                    i++;
+                    while (i < len && src[i] != '\'' && src[i] != '\n') i++;
+                    if (i < len && src[i] == '\'') i++;
+                    tokens.Add(new { kind = "String", start, end = i });
+                    continue;
+                }
+                if (c == '[' && i + 1 < len && src[i + 1] == '[')
+                {
+                    i += 2;
+                    while (i + 1 < len && !(src[i] == ']' && src[i + 1] == ']')) i++;
+                    i = Math.Min(i + 2, len);
+                    tokens.Add(new { kind = "String", start, end = i });
+                    continue;
+                }
+                if (c >= '0' && c <= '9')
+                {
+                    i++;
+                    while (i < len && src[i] >= '0' && src[i] <= '9') i++;
+                    if (i + 1 < len && src[i] == '.' && src[i + 1] >= '0' && src[i + 1] <= '9')
+                    {
+                        i++;
+                        while (i < len && src[i] >= '0' && src[i] <= '9') i++;
+                    }
+                    tokens.Add(new { kind = "Number", start, end = i });
+                    continue;
+                }
+                if (c == '_' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
+                {
+                    i++;
+                    while (i < len && (src[i] == '_' || (src[i] >= 'A' && src[i] <= 'Z') || (src[i] >= 'a' && src[i] <= 'z') || (src[i] >= '0' && src[i] <= '9'))) i++;
+                    string word = src.Substring(start, i - start);
+                    string kind = access.Contains(word) ? "AccessKeyword"
+                        : keywords.Contains(word) ? "Keyword" : "Identifier";
+                    tokens.Add(new { kind, start, end = i });
+                    continue;
+                }
+                if (punct.Contains(c))
+                {
+                    i++;
+                    tokens.Add(new { kind = "Punctuation", start, end = i });
+                    continue;
+                }
+                if (char.IsWhiteSpace(c))
+                {
+                    i++;
+                    while (i < len && char.IsWhiteSpace(src[i])) i++;
+                    tokens.Add(new { kind = "Whitespace", start, end = i });
+                    continue;
+                }
+                i++;
+                tokens.Add(new { kind = "Other", start, end = i });
+            }
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            var canonical = string.Join("\u001e", tokens.Select(t =>
+            {
+                dynamic d = t;
+                return d.kind + ":" + d.start + ":" + d.end;
+            }));
+            cases.Add(new
+            {
+                file = Path.GetFileName(file),
+                token_count = tokens.Count,
+                sha256 = Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant(),
+            });
+        }
+
+        Console.WriteLine(JsonSerializer.Serialize(new { keywords, access, punctuation = punct.Select(c => c.ToString()).ToList(), cases },
+            new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -3732,6 +3862,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "luadelegate") LuaDelegate(args[1]);
         else if (args[0] == "itemlayout") ItemLayout(args[1]);
         else if (args[0] == "formatparse") FormatParse(args[1]);
+        else if (args[0] == "luasyntax") LuaSyntax(args[1], args[2..]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

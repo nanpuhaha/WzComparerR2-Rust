@@ -596,3 +596,11 @@ Verified format parser (`formatparse <fixture.json>`):
 ```
 Calls the **original** `WzComparerR2.Text.Parser.Parse`; run kinds/text/colors/
 fonts/image ids/sizes/line breaks match Rust `wz_db::format_parser`.
+
+Verified Lua syntax highlighting (`luasyntax <Lua.xshd> <file.lua>...`):
+```
+DumpAnimations 915, DumpImages 659, DumpSounds 494, DumpXml 324, Helper 233 tokens
+```
+The harness parses the original `Resources/Lua.xshd` for keyword/punctuation
+lists and scans the example scripts; token counts and SHA-256 match Rust
+`wz_lua::highlight`.

@@ -1,0 +1,83 @@
+{
+  "note": "Lua.xshd(원본 Resources/Lua.xshd)에서 추출한 규칙과, 원본 예제 5개를 C# 참조 스캐너로 토큰화한 결과(BOM 제거 후).",
+  "keywords": [
+    "and",
+    "break",
+    "do",
+    "else",
+    "elseif",
+    "end",
+    "false",
+    "for",
+    "function",
+    "if",
+    "in",
+    "local",
+    "nil",
+    "not",
+    "or",
+    "repeat",
+    "return",
+    "then",
+    "true",
+    "until",
+    "while"
+  ],
+  "access_keywords": [
+    "self"
+  ],
+  "punctuation": [
+    "!",
+    "$",
+    "%",
+    "&",
+    "(",
+    ")",
+    "*",
+    "+",
+    ",",
+    "-",
+    ".",
+    "/",
+    ";",
+    "<",
+    "=",
+    ">",
+    "?",
+    "@",
+    "[",
+    "]",
+    "^",
+    "{",
+    "|",
+    "}",
+    "~"
+  ],
+  "cases": [
+    {
+      "file": "DumpAnimations.lua",
+      "token_count": 915,
+      "sha256": "d5eb850f41f18d1a076e54c11a3c58d4986d1f8d3bb7b85eb367605728d7fe91"
+    },
+    {
+      "file": "DumpImages.lua",
+      "token_count": 659,
+      "sha256": "95248d573c9d9632ff8894310b954bb01bd1917b2a4f48f1cc6c808890940d85"
+    },
+    {
+      "file": "DumpSounds.lua",
+      "token_count": 494,
+      "sha256": "a72e98902c42587760976ec643fa67f5d33fb45f6754ce57ec4237ce5a2ff884"
+    },
+    {
+      "file": "DumpXml.lua",
+      "token_count": 324,
+      "sha256": "ef7d053ef0ff9f5d6d26cc3baeb02556553d7ff65a3b8606b6c6d282dd9e438b"
+    },
+    {
+      "file": "Helper.lua",
+      "token_count": 233,
+      "sha256": "bf85bb00547c2a8543037efec263361940efba4442582efd763e2626c92f0948"
+    }
+  ]
+}

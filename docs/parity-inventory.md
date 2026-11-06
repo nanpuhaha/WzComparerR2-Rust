@@ -1294,3 +1294,36 @@ C#: `-- formatparse <fixture.json>`.
 이로써 ItemTooltip 파이프라인에서 **남은 미검증部分是 글리프 래스터라이제이션과
 GDI+ premultiplied/감마 합성뿐**이다(파서 → run → 레이아웃 기하 → 아이콘
 확대/배치/불투명 blit/정수 source-over → 세로 배치가 모두 실행 비교됨).
+
+## LuaConsole 문법 강조 (`Resources/Lua.xshd`)
+
+원본 에디터(`FrmLuaEditor`)는 `AppSyntaxModeProvider` → `Lua.xshd`로 강조한다.
+ICSharpCode.TextEditor는 WinForms라 로드할 수 없으므로, **설정 파일이 정의한
+토큰 경계**를 `wz-lua::highlight`로 옮겼다(색/굵기는 UI 몫).
+
+| 규칙 | 처리 |
+|---|---|
+| `--[[ … ]]` / `--` | 블록/줄 주석(우선순위 최상) |
+| `"…"`, `'…'`(줄 끝에서 중단), `[[ … ]]` | 문자열 |
+| `LanguageKeywords` 21개 | 키워드 |
+| `AccessKeywords` `self` | 접근 키워드 |
+| `Punctuation` 25종(중복 `/` 제거 후) | 구두점 |
+| 숫자 | `\d+(\.\d+)?` — xshd에 정규식이 없어(구형 `<Digits>` 기본값) 이 규칙으로 고정 |
+| 그 외 | 식별자/공백/기타 |
+
+검증:
+- C# 하네스가 **원본 `Lua.xshd`를 실제로 파싱**해 키워드/구두점 목록을 추출하고,
+  같은 규칙으로 원본 예제 5개를 토큰화
+- Rust 토큰 스트림이 5개 파일에서 **토큰 수와 SHA-256까지 완전 일치**
+  (`DumpAnimations` 915, `DumpImages` 659, `DumpSounds` 494, `DumpXml` 324,
+  `Helper` 233)
+- 원본 예제 파일은 저장소에 넣지 않으므로, 원본 체크아웃이 없으면 규칙 집합
+  검사만 수행하고 실제 비교는 건너뛴다(`WZ_C2_EXAMPLES`로 경로 지정 가능)
+- BOM은 `strip_bom`으로 제거한다(.NET `ReadAllText`와 동일)
+
+fixture: `crates/wz-lua/tests/fixtures/lua_syntax.json`,
+테스트: `crates/wz-lua/tests/lua_syntax_parity.rs`, 단위 테스트 6종,
+C#: `-- luasyntax <Lua.xshd> <file.lua>…`.
+
+남는 것: 에디터 UI(콘솔/에디터 창), 색상/폰트 렌더링, `MarkPrevious`
+(직전 토큰을 메서드 호출색으로 바꾸는 규칙)는 UI 계층이라 미구현이다.
