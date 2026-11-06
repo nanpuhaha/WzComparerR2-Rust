@@ -5638,3 +5638,62 @@ pub fn cmd_item_format_strings(
     );
     Ok(())
 }
+
+fn b64_decode_bytes(text: &str) -> Vec<u8> {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = Vec::new();
+    let mut acc = 0u32;
+    let mut bits = 0u32;
+    for byte in text.bytes().filter(|b| *b != b'=') {
+        let value = T.iter().position(|c| *c == byte).expect("base64 alphabet") as u32;
+        acc = (acc << 6) | value;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+        }
+    }
+    out
+}
+
+/// 검증된 ItemTooltip 파이프라인을 오프스크린 렌더하고 해시를 출력한다.
+pub fn cmd_item_tooltip_render(
+    data_root: &Path,
+    fixture_path: &Path,
+    out: Option<&Path>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    #[derive(serde::Deserialize)]
+    struct Fixture {
+        title: String,
+        desc: String,
+        icon_width: u32,
+        icon_height: u32,
+        origin: [i32; 2],
+        icon_rgba_b64: String,
+    }
+
+    let fixture: Fixture = serde_json::from_str(&std::fs::read_to_string(fixture_path)?)?;
+    let icon = b64_decode_bytes(&fixture.icon_rgba_b64);
+    let spec = wz_avatar::ItemTooltipSpec {
+        title: &fixture.title,
+        desc: &fixture.desc,
+        icon: Some((fixture.icon_width, fixture.icon_height, icon)),
+        origin: (fixture.origin[0], fixture.origin[1]),
+    };
+    let (w, h, rgba) = wz_avatar::render_item_tooltip(data_root, &spec)
+        .ok_or("게임 폰트를 Data에서 찾지 못했습니다")?;
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(&rgba);
+    println!("{}x{} sha256={:x}", w, h, hasher.finalize());
+
+    if let Some(path) = out {
+        let mut ppm = format!("P6\n{} {}\n255\n", w, h).into_bytes();
+        for pixel in rgba.chunks(4) {
+            ppm.extend_from_slice(&pixel[..3]);
+        }
+        std::fs::write(path, ppm)?;
+        println!("wrote {}", path.display());
+    }
+    Ok(())
+}

@@ -111,20 +111,62 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                                                 .iter()
                                                 .map(|(k, v)| format!("{k}: {v}"))
                                                 .collect();
+                                            // 검증된 ItemTooltip 파이프라인으로 렌더한다:
+                                            // 서식 파서 → 세로 배치 → 아이콘 확대/합성 → 게임 폰트.
+                                            let desc = tooltip_id
+                                                .and_then(|id| {
+                                                    state
+                                                        .string_linker
+                                                        .as_ref()
+                                                        .and_then(|linker| linker.get_by_id(id))
+                                                })
+                                                .and_then(|sr| sr.desc.clone());
                                             let icon = node.first_canvas().and_then(|png| {
+                                                let origin = png
+                                                    .sub_property
+                                                    .as_ref()
+                                                    .and_then(|sub| {
+                                                        sub.object_children().iter().find(|c| {
+                                                            c.name.as_ref() == "origin"
+                                                        })
+                                                    })
+                                                    .and_then(|c| match &c.value {
+                                                        Some(wz_core::image::ImageValue::Vector(v)) => {
+                                                            Some((v.x, v.y))
+                                                        }
+                                                        _ => None,
+                                                    })
+                                                    .unwrap_or((0, 0));
                                                 wz_image::decode_png_ref_to_rgba(
                                                     &png,
                                                     arch.source(),
                                                 )
                                                 .ok()
+                                                .map(|(w, h, rgba)| (w, h, rgba, origin))
                                             });
-                                            state.tooltip_bitmap = data_root.as_deref().and_then(
-                                                |root| {
-                                                    wz_avatar::render_tooltip_bitmap(
-                                                        root, &title, &lines, icon,
-                                                    )
-                                                },
-                                            );
+                                            state.tooltip_bitmap =
+                                                data_root.as_deref().and_then(|root| {
+                                                    if let (Some((w, h, rgba, origin)), Some(desc)) =
+                                                        (icon.clone(), desc.as_deref())
+                                                    {
+                                                        wz_avatar::render_item_tooltip(
+                                                            root,
+                                                            &wz_avatar::ItemTooltipSpec {
+                                                                title: &title,
+                                                                desc,
+                                                                icon: Some((w, h, rgba)),
+                                                                origin,
+                                                            },
+                                                        )
+                                                    } else {
+                                                        wz_avatar::render_tooltip_bitmap(
+                                                            root,
+                                                            &title,
+                                                            &lines,
+                                                            icon.map(|(w, h, rgba, _)| (w, h, rgba)),
+                                                        )
+                                                    }
+                                                });
                                         }
                                         state.tooltip_texture = None;
                                     }

@@ -10,7 +10,7 @@ pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
     println!(
         "일부: OpenAPI helpers/HTTP(목 서버 검증, 실 키 필요), Network \
          RC4/프레임/패킷 JSON/로그인·재접속 루프백, PluginBase FindWz/파일 탐색/PE 메타데이터/인스턴스화, \
-         LuaConsole 샌드박스/CLR 브리지/델리게이트/문법 강조, TextRenderer 레이아웃 코어/아이콘 확대·블록 합성 픽셀/입력 히트테스트/드로잉 기하/툴팁 세로 배치/서식 파서"
+         LuaConsole 샌드박스/CLR 브리지/델리게이트/문법 강조, TextRenderer 레이아웃 코어/아이콘 확대·블록 합성 픽셀/입력 히트테스트/드로잉 기하/툴팁 세로 배치/서식 파서/오프스크린 렌더"
     );
     println!("데이터 없음: Skill common, WorldMap QuestLimit/Fog, Familiar, BIN");
     println!("원본 없음: weather (원본 C# 소스에 구현 없음)");

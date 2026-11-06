@@ -9,8 +9,9 @@ pub mod compose;
 pub mod frame;
 pub mod frame_layers;
 pub mod gear_tooltip;
+pub mod item_tooltip_canvas;
 pub mod job_name;
-pub mod loader;
+mod loader;
 pub mod mix;
 pub mod prism;
 pub mod scene;
@@ -26,6 +27,7 @@ pub use gear_tooltip::{
     build_gear_tooltip, build_gear_tooltip_full, gear_prop_line, render_gear_tooltip,
     tooltip_stat_line, GearTooltip,
 };
+pub use item_tooltip_canvas::{render_item_tooltip, ItemTooltipSpec};
 pub use job_name::{get_fifth_job_name, get_job_name};
 pub use loader::{
     item_id_to_slot, load_avatar_with_equipment, load_avatar_with_equipment_and_mix,

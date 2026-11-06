@@ -352,6 +352,17 @@ enum Command {
         json: bool,
     },
 
+    /// ItemTooltip 오프스크린 렌더(파서→배치→아이콘→폰트) 해시 출력
+    ItemTooltipRender {
+        /// Data 루트
+        data_root: PathBuf,
+        /// 렌더 fixture JSON
+        fixture: PathBuf,
+        /// 결과를 PPM으로 저장
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+
     /// 서식 문자열(`Parser.Parse`) fixture 생성 (실제 아이템 desc/desc_leftalign)
     ItemFormatStrings {
         /// Data 루트
@@ -1105,6 +1116,11 @@ fn main() {
             env,
             json,
         } => commands::cmd_lua_run(&script, base_dir.as_deref(), env.as_deref(), json),
+        Command::ItemTooltipRender {
+            data_root,
+            fixture,
+            out,
+        } => commands::cmd_item_tooltip_render(&data_root, &fixture, out.as_deref()),
         Command::ItemFormatStrings {
             data_root,
             string,

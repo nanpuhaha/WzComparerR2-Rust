@@ -604,3 +604,11 @@ DumpAnimations 915, DumpImages 659, DumpSounds 494, DumpXml 324, Helper 233 toke
 The harness parses the original `Resources/Lua.xshd` for keyword/punctuation
 lists and scans the example scripts; token counts and SHA-256 match Rust
 `wz_lua::highlight`.
+
+ItemTooltip offscreen render is verified in-repo (not via this harness):
+```
+wz item-tooltip-render <Data> crates/wz-avatar/tests/fixtures/item_tooltip_canvas.json
+-> 300x153 sha256=76cffc4d...e526
+```
+It composes the verified parser/layout/icon-pixel pipeline with the game font;
+GDI+ glyph rasterization is not reproducible on macOS.

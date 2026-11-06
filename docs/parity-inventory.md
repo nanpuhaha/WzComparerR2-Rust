@@ -1327,3 +1327,28 @@ C#: `-- luasyntax <Lua.xshd> <file.lua>…`.
 
 남는 것: 에디터 UI(콘솔/에디터 창), 색상/폰트 렌더링, `MarkPrevious`
 (직전 토큰을 메서드 호출색으로 바꾸는 규칙)는 UI 계층이라 미구현이다.
+
+## ItemTooltip 오프스크린 렌더 (`wz-avatar::item_tooltip_canvas`)
+
+검증된 부품을 실제 RGBA 캔버스로 합친다.
+
+1. `wz_db::format_parser` — `#c`/`#t`/`#fc`/`#@` 토큰 제거(원본 Parser와 일치)
+2. `wz_db::item_tooltip_layout` — `picH`/`splitterH`/`iconY`
+3. `wz_db::pixel_ops` — 아이콘 2배 확대 + 배치식 + straight-alpha source-over
+4. 게임 폰트 래스터(`draw_game_text`, GUI와 동일 경로)
+
+출력: 300×`picH` RGBA. 배경/테두리/구분선은 고정 색, 텍스트는 게임 폰트.
+
+검증:
+- 입력은 **실제** 클라이언트 아이콘(`0200.img/02000000/info/icon` 27×30,
+  origin `-3,30`)과 실제 `String_000.wz` 서식 문자열
+- 300×153, SHA-256 `76cffc4d2e1609536bc2fe2d467011824a54baf35f250cb2cd90b0339eaee526`
+  를 fixture로 고정
+- `crates/wz-avatar/tests/item_tooltip_canvas_render.rs` 2종(해시 고정,
+  아이콘 없이 렌더) 통과
+- CLI `wz item-tooltip-render <Data> <fixture.json> [--out out.ppm]`로 같은 해시 출력
+- GUI 인스펙터의 아이템 툴팁 경로가 이 렌더러를 사용한다(egui 텍스처 업로드)
+
+남는 한계: 게임 폰트는 GDI+가 아니므로 **원본 픽셀과 동일하지 않다**. GDI+
+premultiplied/감마와 글리프 힌팅은 macOS에서 실행할 수 없어 여전히 미검증이며,
+이 렌더는 "결정적 회귀 기준"이지 "원본과의 픽셀 동일성" 주장이 아니다.
