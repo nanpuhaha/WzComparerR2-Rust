@@ -700,3 +700,10 @@ Verified skill requirement labels (`skillreqamount <fixture.json>`):
 ```
 Calls the real `ItemStringHelper.GetSkillReqAmount`; matches Rust
 `skill_req_amount` (ten-thousand digit branch, `？？` fallback).
+
+Verified CJK number expressions (`cjknumber <fixture.json>`):
+```
+130 real item prices + boundaries -> plain/detailed strings (260 total)
+```
+Calls the real `ItemStringHelper.ToCJKNumberExpr`; matches Rust
+`to_cjk_number_expr`.

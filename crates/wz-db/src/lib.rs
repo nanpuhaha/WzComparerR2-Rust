@@ -132,7 +132,7 @@ pub use format_parser::{parse as parse_format, DocElement, Span};
 pub use gear_stats::extract_gear_props;
 pub use item_tooltip::{
     build_item_tooltip, item_attribute_lines, item_category_name, item_core_spec_string,
-    skill_req_amount, ItemTooltipView,
+    skill_req_amount, to_cjk_number_expr, ItemTooltipView,
 };
 pub use item_tooltip_extra::{
     cant_account_sharable_tooltip, cash_tag_lines, exp_restriction_lines, exp_to_next_level,

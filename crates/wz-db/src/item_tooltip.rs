@@ -212,3 +212,105 @@ mod tests {
         );
     }
 }
+
+/// `ItemStringHelper.ToCJKNumberExpr` — 가격/수치를 한글 단위로 표기.
+///
+/// - `detailed = false`: `경/조/억/만` 블록을 공백으로 구분 (`1억 2345만 6789`)
+/// - `detailed = true`: 자리마다 `십/백/천` + 블록 단위, 0은 1~3개 연속일 때만
+///   하나로 압축 (`일억이천삼백사십오만육천칠백팔십구`)
+pub fn to_cjk_number_expr(value: i64, detailed: bool) -> String {
+    let mut out = String::new();
+    let mut v = value as i128;
+    if v < 0 {
+        out.push('-');
+        v = -v;
+    }
+    if detailed {
+        const SMALL: [&str; 4] = ["", "십", "백", "천"];
+        const BIG: [&str; 5] = ["", "만", "억", "조", "경"];
+        let digits: Vec<u8> = v.to_string().bytes().collect();
+        let len = digits.len();
+        let mut block_has_value = false;
+        let mut zero_count = 0usize;
+        for (i, digit) in digits.iter().enumerate() {
+            let pos_from_right = len - i - 1;
+            let small = pos_from_right % 4;
+            let big = pos_from_right / 4;
+            if *digit == b'0' {
+                zero_count += 1;
+            } else {
+                if (1..=3).contains(&zero_count) {
+                    out.push('0');
+                }
+                zero_count = 0;
+                out.push(*digit as char);
+                if small > 0 {
+                    out.push_str(SMALL[small]);
+                }
+                block_has_value = true;
+            }
+            if small == 0 {
+                if block_has_value && big > 0 && big < BIG.len() {
+                    out.push_str(BIG[big]);
+                }
+                block_has_value = false;
+                zero_count = 0;
+            }
+        }
+    } else {
+        const UNITS: [(i128, &str); 4] = [
+            (1_0000_0000_0000_0000, "경"),
+            (1_0000_0000_0000, "조"),
+            (1_0000_0000, "억"),
+            (1_0000, "만"),
+        ];
+        let mut first = true;
+        for (unit, suffix) in UNITS {
+            if v >= unit {
+                let part = v / unit;
+                if !first {
+                    out.push(' ');
+                }
+                out.push_str(&format!("{part}{suffix}"));
+                v -= part * unit;
+                first = false;
+            }
+        }
+        if v > 0 {
+            if !first {
+                out.push(' ');
+            }
+            out.push_str(&v.to_string());
+        }
+    }
+    if out.is_empty() {
+        "0".to_string()
+    } else {
+        out
+    }
+}
+
+#[cfg(test)]
+mod cjk_number_tests {
+    use super::to_cjk_number_expr;
+
+    #[test]
+    fn non_detailed_blocks() {
+        assert_eq!(to_cjk_number_expr(0, false), "0");
+        assert_eq!(to_cjk_number_expr(1234, false), "1234");
+        assert_eq!(to_cjk_number_expr(12345, false), "1만 2345");
+        assert_eq!(to_cjk_number_expr(123456789, false), "1억 2345만 6789");
+        assert_eq!(to_cjk_number_expr(-10000, false), "-1만");
+        assert_eq!(to_cjk_number_expr(1_0000_0000_0000_0000, false), "1경");
+    }
+
+    #[test]
+    fn detailed_uses_small_and_big_units() {
+        assert_eq!(to_cjk_number_expr(0, true), "0");
+        assert_eq!(to_cjk_number_expr(1234, true), "1천2백3십4");
+        assert_eq!(to_cjk_number_expr(12345, true), "1만2천3백4십5");
+        assert_eq!(to_cjk_number_expr(10000, true), "1만");
+        assert_eq!(to_cjk_number_expr(10001, true), "1만01");
+        assert_eq!(to_cjk_number_expr(-45, true), "-4십5");
+    }
+}

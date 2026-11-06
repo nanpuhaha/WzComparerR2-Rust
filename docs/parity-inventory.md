@@ -1841,3 +1841,26 @@ C#: `-- dotline <fixture.json>`.
 
 fixture: `skill_req_cases.json`, `skill_req_expected.json`,
 C#: `-- skillreqamount <fixture.json>`.
+
+## 가격/수치 표기 (`ToCJKNumberExpr`)
+
+`to_cjk_number_expr(value, detailed)`로 두 모드를 옮겼다.
+
+- `detailed = false`: `경/조/억/만` 블록을 공백으로 구분
+  (`123456789 → "1억 2345만 6789"`, 음수는 `-` 접두)
+- `detailed = true`: 자리마다 `십/백/천`, 블록마다 `만/억/조/경`.
+  0은 **1~3개 연속일 때만 하나로** 압축(`10001 → "1만01"`)
+- 0은 `"0"`, 음수는 절댓값으로 변환 후 계산
+
+검증:
+- 입력은 실제 아이템 `info/price` 값 120여 개 + 경계 15개 = **130케이스**
+  (0/1/9999/10000/10001/1e8/1e12/1e16/`i64::MAX`/음수 포함)
+- C# 하네스가 **실제 `ItemStringHelper.ToCJKNumberExpr(value)` 와
+  `(value, true)`** 를 호출
+- `crates/wz-db/tests/cjk_number_parity.rs` — plain/detailed **260문자열** 완전 일치
+  (예: `i64::MAX` → plain `922경 3372조 368억 5477만 5807`,
+  detailed `9백2십2경3천3백7십2조03백6십8억…`)
+- 단위 테스트 2종
+
+fixture: `cjk_number_cases.json`, `cjk_number_expected.json`,
+C#: `-- cjknumber <fixture.json>`.
