@@ -5317,10 +5317,79 @@ fn b64_encode(bytes: &[u8]) -> String {
 ///
 /// 아이콘은 `_outlink`로 분할 `_Canvas` 파일에 있으므로, 캔버스가 실제로
 /// 들어 있는 WZ(예: `Item/Consume/_Canvas/_Canvas_000.wz`)를 받는다.
-pub fn cmd_pixel_fixture(wz_path: &Path, limit: usize) -> Result<(), Box<dyn std::error::Error>> {
+fn canvas_origin(node: &wz_core::image::Node) -> Option<(i32, i32)> {
+    let Some(wz_core::image::ImageValue::Png(png)) = &node.value else {
+        return None;
+    };
+    png.sub_property
+        .as_ref()?
+        .object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == "origin")
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Vector(v)) => Some((v.x, v.y)),
+            _ => None,
+        })
+}
+
+fn normalize_path(path: &str) -> String {
+    let mut out = String::with_capacity(path.len());
+    let mut last_slash = false;
+    for ch in path.chars() {
+        if ch == '/' {
+            if last_slash {
+                continue;
+            }
+            last_slash = true;
+        } else {
+            last_slash = false;
+        }
+        out.push(ch);
+    }
+    out.trim_matches('/').to_string()
+}
+
+/// 캔버스 노드의 `origin`(Vector)을 경로별로 수집한다. 분할 `_Canvas`에는
+/// origin이 없고 원본 아이템 파일에 있으므로 경로로 대조한다.
+fn collect_origins(
+    node: &wz_core::image::Node,
+    path: &str,
+    out: &mut std::collections::HashMap<String, (i32, i32)>,
+) {
+    let here = format!("{path}/{}", node.name);
+    if let Some(origin) = canvas_origin(node) {
+        out.insert(normalize_path(&here), origin);
+    }
+    for child in node.object_children() {
+        collect_origins(child, &here, out);
+    }
+}
+
+pub fn cmd_pixel_fixture(
+    wz_path: &Path,
+    origin_wz: Option<&Path>,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
     let archive = WzArchive::open(wz_path)?;
     let tree = archive.read_tree()?;
     let source = archive.source().clone();
+    let mut origins: std::collections::HashMap<String, (i32, i32)> =
+        std::collections::HashMap::new();
+    if let Some(origin_wz) = origin_wz {
+        let origin_archive = WzArchive::open(origin_wz)?;
+        let origin_tree = origin_archive.read_tree()?;
+        for entry in &origin_tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else { continue };
+            let Ok(image) = origin_archive.parse_image_at(offset) else {
+                continue;
+            };
+            let name = entry.name.as_deref().unwrap_or("");
+            collect_origins(&image, name, &mut origins);
+        }
+    }
     let mut icons = Vec::new();
 
     fn walk(
@@ -5328,12 +5397,14 @@ pub fn cmd_pixel_fixture(wz_path: &Path, limit: usize) -> Result<(), Box<dyn std
         path: &str,
         source: &std::sync::Arc<dyn wz_pool::ByteSource>,
         limit: usize,
+        origins: &std::collections::HashMap<String, (i32, i32)>,
         out: &mut Vec<serde_json::Value>,
     ) {
         if out.len() >= limit {
             return;
         }
         let here = format!("{path}/{}", node.name);
+        let origin = canvas_origin(node).or_else(|| origins.get(&normalize_path(&here)).copied());
         if let Some(wz_core::image::ImageValue::Png(png)) = &node.value {
             if png.width >= 16 && png.height >= 16 {
                 if let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(png, source) {
@@ -5341,13 +5412,14 @@ pub fn cmd_pixel_fixture(wz_path: &Path, limit: usize) -> Result<(), Box<dyn std
                         "path": here,
                         "width": w,
                         "height": h,
+                        "origin": origin.map(|(x, y)| [x, y]),
                         "rgba_b64": b64_encode(&rgba),
                     }));
                 }
             }
         }
         for child in node.object_children() {
-            walk(child, &here, source, limit, out);
+            walk(child, &here, source, limit, origins, out);
             if out.len() >= limit {
                 return;
             }
@@ -5363,14 +5435,17 @@ pub fn cmd_pixel_fixture(wz_path: &Path, limit: usize) -> Result<(), Box<dyn std
             continue;
         };
         let name = entry.name.as_deref().unwrap_or("");
-        walk(&image, name, &source, limit, &mut icons);
+        walk(&image, name, &source, limit, &origins, &mut icons);
         if icons.len() >= limit {
             break 'outer;
         }
     }
     println!(
         "{}",
-        serde_json::to_string_pretty(&serde_json::json!({ "icons": icons }))?
+        serde_json::to_string_pretty(&serde_json::json!({
+            "canvas": { "width": 120, "height": 120, "icon_x": 15, "pic_h": 7 },
+            "icons": icons
+        }))?
     );
     Ok(())
 }

@@ -131,7 +131,7 @@ pub use map_tooltip::{MapTooltipFields, MapTooltipText};
 pub use node::{NodeId, NodeValue, RawDataRef};
 pub use npc_quote::{message as npc_quote_message, parse as npc_quote_parse, NpcQuote};
 pub use particle::{parse_particle_desc, ParticleDesc, ParticleTexture};
-pub use pixel_ops::enlarge_2x;
+pub use pixel_ops::{blit_opaque_argb, compose_icon_block, enlarge_2x, IconBlock};
 pub use plugin_find::{plugin_files, FoundNode, PluginMetadata, PluginWzSet};
 pub use query::{
     execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,

@@ -317,6 +317,9 @@ enum Command {
     PixelFixture {
         /// Item WZ 파일
         wz: PathBuf,
+        /// origin이 들어 있는 원본 아이템 WZ (분할 _Canvas에는 없음)
+        #[arg(long)]
+        origin_wz: Option<PathBuf>,
         /// 최대 아이콘 수
         #[arg(long, default_value_t = 6)]
         limit: usize,
@@ -1056,7 +1059,11 @@ fn main() {
             &base_url,
             json,
         ),
-        Command::PixelFixture { wz, limit } => commands::cmd_pixel_fixture(&wz, limit),
+        Command::PixelFixture {
+            wz,
+            origin_wz,
+            limit,
+        } => commands::cmd_pixel_fixture(&wz, origin_wz.as_deref(), limit),
         Command::ItemCosmeticEulo {
             data_root,
             string,

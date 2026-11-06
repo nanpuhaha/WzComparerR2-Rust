@@ -529,3 +529,11 @@ Verified ItemTooltip icon pixels (`pixelops <fixture.json>`):
 `EnlargeBitmap`'s byte loop (transcribed; LockBits stride == width*4) produces
 SHA-256-identical output to Rust `wz_db::pixel_ops::enlarge_2x`.
 Alpha compositing and text rasterization remain GDI+-bound.
+
+Verified ItemTooltip icon block (`iconblock <fixture.json>`):
+```
+6 canvases -> 120x120 ARGB, dx=29 dy=19, opaque-only blit
+```
+Composited SHA-256 matches Rust `wz_db::pixel_ops::compose_icon_block`
+(enlarge + ItemTooltipRender22 placement + alpha==255 blit).
+Alpha source-over compositing is GDI+-bound and intentionally not reproduced.

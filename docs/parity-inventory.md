@@ -1008,6 +1008,30 @@ fixture: `crates/wz-db/tests/fixtures/pixel_ops_input.json`(입력 RGBA),
 `pixel_ops.json`(C# 출력 해시), C#: `-- pixelops <fixture.json>`,
 CLI: `wz pixel-fixture <canvas.wz> --limit N`.
 
-범위 한계: 아이콘 **확대 픽셀**만 비교했다. 툴팁 캔버스로의 알파 합성
-(`Graphics.DrawImage`의 source-over)과 텍스트 래스터라이제이션은 GDI+ 의존이라
-여전히 미검증이다.
+### 아이콘 블록 합성 (불투명 blit)
+
+`ItemTooltipRender22`는 확대 아이콘을 다음 좌표에 그린다.
+
+```
+x = iconX + 6 + (1 - originX) * 2
+y = picH  + 6 + (33 - originY) * 2
+```
+
+이 배치와 **알파 255 픽셀만** 복사하는 blit을 `wz-db::pixel_ops::compose_icon_block`
+으로 구현했다(120×120 투명 ARGB 캔버스, `iconX=15`, `picH=7`).
+
+- 입력: 실제 캔버스 6개 + 원본 아이템 파일의 `origin`
+  (`origin`은 분할 `_Canvas`가 아니라 원본 `Consume_000.wz`의
+  `PngRef.sub_property`에 들어 있어 경로로 대조한다)
+- C# 하네스가 같은 좌표식/같은 불투명 blit을 수행
+- `crates/wz-db/tests/icon_block_parity.rs` — 6개 모두 `(dx,dy)`와 캔버스
+  SHA-256 완전 일치(예: `dx=29, dy=19`, `eef9db66…5da3`)
+
+fixture: `icon_block.json`, C#: `-- iconblock <fixture.json>`.
+
+범위 한계(명시적 분리):
+- **알파 합성은 미검증**. 원본 `Graphics.DrawImage`는 source-over 합성을 하고,
+  GDI+ 없이는 premultiplied alpha/감마 동작을 재현할 수 없다. 여기서는
+  알파 255 픽셀만 옮기는 결정적 부분집합만 지원하며, 그 경계를 테스트로
+  고정했다(`opaque_blit_skips_translucent_and_clips`).
+- 텍스트 래스터라이제이션(폰트 힌팅/안티에일리어싱)도 GDI+ 의존이라 미검증이다.

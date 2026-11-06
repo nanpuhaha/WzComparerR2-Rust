@@ -2986,6 +2986,64 @@ class Program
         return newByte;
     }
 
+    static void IconBlock(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var canvasEl = doc.RootElement.GetProperty("canvas");
+        int cw = canvasEl.GetProperty("width").GetInt32();
+        int ch = canvasEl.GetProperty("height").GetInt32();
+        int iconX = canvasEl.GetProperty("icon_x").GetInt32();
+        int picH = canvasEl.GetProperty("pic_h").GetInt32();
+
+        var rows = new List<object>();
+        foreach (var icon in doc.RootElement.GetProperty("icons").EnumerateArray())
+        {
+            int w = icon.GetProperty("width").GetInt32();
+            int h = icon.GetProperty("height").GetInt32();
+            var rgba = Convert.FromBase64String(icon.GetProperty("rgba_b64").GetString()!);
+            var enlarged = EnlargeBitmapBytes(rgba, w, h);
+
+            var originEl = icon.GetProperty("origin");
+            int ox = originEl[0].GetInt32();
+            int oy = originEl[1].GetInt32();
+            // 원본 ItemTooltipRender22 좌표식
+            int dx = iconX + 6 + (1 - ox) * 2;
+            int dy = picH + 6 + (33 - oy) * 2;
+
+            var canvas = new byte[cw * ch * 4];
+            int ew = w * 2, eh = h * 2;
+            for (int y = 0; y < eh; y++)
+            {
+                int ty = dy + y;
+                if (ty < 0 || ty >= ch) continue;
+                for (int x = 0; x < ew; x++)
+                {
+                    int tx = dx + x;
+                    if (tx < 0 || tx >= cw) continue;
+                    int si = (y * ew + x) * 4;
+                    if (enlarged[si + 3] != 255) continue; // 불투명 픽셀만
+                    int di = (ty * cw + tx) * 4;
+                    Array.Copy(enlarged, si, canvas, di, 4);
+                }
+            }
+
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            rows.Add(new
+            {
+                path = icon.GetProperty("path").GetString(),
+                dx,
+                dy,
+                enlarged_width = ew,
+                enlarged_height = eh,
+                canvas_width = cw,
+                canvas_height = ch,
+                out_len = canvas.Length,
+                out_sha256 = Convert.ToHexString(sha.ComputeHash(canvas)).ToLowerInvariant(),
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
     static void PixelOps(string fixturePath)
     {
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
@@ -3067,6 +3125,7 @@ class Program
         else if (args[0] == "db2bin") Db2Bin();
         else if (args[0] == "textlayout") TextLayout();
         else if (args[0] == "pixelops") PixelOps(args[1]);
+        else if (args[0] == "iconblock") IconBlock(args[1]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();
