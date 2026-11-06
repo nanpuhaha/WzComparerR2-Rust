@@ -1444,6 +1444,61 @@ class Program
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static string ClassifyNode(Wz_Node node)
+    {
+        if (node == null) return "missing";
+        object v = node.Value;
+        return v switch
+        {
+            null => "null",
+            int i => $"int:{i}",
+            short sh => $"int:{sh}",
+            long l => $"int:{l}",
+            uint ui => $"int:{ui}",
+            float f => $"float:{f}",
+            double db => $"float:{db}",
+            string s => $"string:{s}",
+            Wz_Png => "canvas",
+            Wz_Sound => "sound",
+            Wz_Uol u => "other",
+            _ => "other",
+        };
+    }
+    static void FindWz(string[] args, int start)
+    {
+        var maps = new Dictionary<string, Wz_Structure>(StringComparer.OrdinalIgnoreCase);
+        int i = start;
+        while (i < args.Length && args[i] != "--")
+        {
+            var sp = args[i].Split('=', 2);
+            var st = new Wz_Structure();
+            st.Load(sp[1]);
+            maps[sp[0]] = st;
+            i++;
+        }
+        i++;
+        var rows = new List<object>();
+        for (; i < args.Length; i++)
+        {
+            var fullPath = args[i];
+            var parts = fullPath.Split('/', '\\');
+            Wz_Node found = null;
+            if (parts.Length > 0 && maps.TryGetValue(parts[0], out var structure))
+            {
+                found = parts.Length <= 1
+                    ? structure.WzNode
+                    : structure.WzNode.FindNodeByPath(true, parts.Skip(1).ToArray());
+            }
+            rows.Add(new {
+                path = fullPath,
+                found = found != null,
+                name = found?.Text,
+                value = found == null ? null : ClassifyNode(found),
+                children = found?.Nodes.Count ?? 0,
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1475,6 +1530,7 @@ class Program
         else if (args[0] == "fifthjobnames") FifthJobNames();
         else if (args[0] == "achievements") AchievementTooltip(args[1]);
         else if (args[0] == "worldarchive") WorldArchive(args[1], args[2]);
+        else if (args[0] == "findwz") FindWz(args, 1);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

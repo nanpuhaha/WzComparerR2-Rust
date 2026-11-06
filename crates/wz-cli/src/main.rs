@@ -417,6 +417,18 @@ enum Command {
         json: bool,
     },
 
+    /// PluginManager.FindWz 경로 조회 (type=path 등록 후 경로)
+    FindWz {
+        /// `Mob=Data/Mob/...wz` 형식. 여러 번 지정 가능.
+        #[arg(long = "map", value_name = "TYPE=PATH")]
+        maps: Vec<String>,
+        /// 조회할 전체 경로 (예: `Mob/8645262.img/stand/0`)
+        path: String,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// WorldArchive/몬스터북 툴팁 텍스트
     WorldArchive {
         /// String_000.wz 경로
@@ -809,6 +821,7 @@ fn main() {
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
+        Command::FindWz { maps, path, json } => commands::cmd_find_wz(&maps, &path, json),
         Command::WorldArchive { string, etc, json } => {
             commands::cmd_world_archive(&string, &etc, json)
         }

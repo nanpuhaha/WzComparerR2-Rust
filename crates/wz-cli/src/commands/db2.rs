@@ -2438,3 +2438,77 @@ mod world_archive_tests {
         );
     }
 }
+
+pub fn cmd_find_wz(
+    maps: &[String],
+    path: &str,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut set = wz_db::PluginWzSet::new();
+    for entry in maps {
+        let Some((wz_type, file)) = entry.split_once('=') else {
+            return Err(format!("잘못된 --map 형식: {entry}").into());
+        };
+        set.add(wz_type, Path::new(file))?;
+    }
+    let found = set.find(path);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&found)?);
+    } else if let Some(node) = found {
+        println!(
+            "{} value={} children={} depth={}",
+            node.name, node.value, node.children, node.depth
+        );
+    } else {
+        println!("not found");
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod findwz_tests {
+    #[test]
+    fn findwz_matches_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let mappings = [
+            ("Mob", "Mob/_Canvas/_Canvas_011.wz"),
+            ("Npc", "Npc/_Canvas/_Canvas_000.wz"),
+            ("Skill", "Skill/_Canvas/_Canvas_000.wz"),
+            ("Reactor", "Reactor/_Canvas/_Canvas_000.wz"),
+            ("String", "String/String_000.wz"),
+        ];
+        for (_, rel) in mappings {
+            if !root.join(rel).exists() {
+                return;
+            }
+        }
+        let mut set = wz_db::PluginWzSet::new();
+        for (kind, rel) in mappings {
+            set.add(kind, &root.join(rel)).unwrap();
+        }
+        let expected: Vec<serde_json::Value> = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/findwz.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        for row in expected {
+            let path = row["path"].as_str().unwrap();
+            let found = set.find(path);
+            assert_eq!(found.is_some(), row["found"].as_bool().unwrap(), "{path}");
+            if let Some(node) = found {
+                assert_eq!(node.name, row["name"].as_str().unwrap(), "{path} name");
+                assert_eq!(node.value, row["value"].as_str().unwrap(), "{path} value");
+                assert_eq!(
+                    node.children as u64,
+                    row["children"].as_u64().unwrap(),
+                    "{path} children"
+                );
+            }
+        }
+    }
+}

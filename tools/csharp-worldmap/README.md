@@ -359,3 +359,9 @@ Verified WorldArchive tooltip text (`worldarchive <String_000.wz> <Etc_002.wz>`)
 1845 mob/npc entries (world archive desc + monster book + NPC quotes)
 ```
 All lines match Rust `wz world-archive` exactly.
+
+Verified PluginBase `FindWz` path lookup (`findwz Mob=<wz> ... -- <paths>`):
+```
+57 paths across Mob/Npc/Skill/Reactor/String
+```
+found/name/value/children all match Rust `wz find-wz`.

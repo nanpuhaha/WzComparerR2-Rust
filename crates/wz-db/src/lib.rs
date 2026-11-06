@@ -44,6 +44,7 @@ pub mod map;
 pub mod node;
 pub mod npc_quote;
 pub mod particle;
+pub mod plugin_find;
 pub mod query;
 pub mod resolve;
 pub mod skill_summary;
@@ -90,6 +91,7 @@ pub use map::{
 pub use node::{NodeId, NodeValue, RawDataRef};
 pub use npc_quote::{message as npc_quote_message, parse as npc_quote_parse, NpcQuote};
 pub use particle::{parse_particle_desc, ParticleDesc, ParticleTexture};
+pub use plugin_find::{FoundNode, PluginWzSet};
 pub use query::{
     execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,
     QueryRule, QueryRuleKind, QueryValueType, StringComparisonMode, ValueRule, DEFAULT_MAX_RESULTS,

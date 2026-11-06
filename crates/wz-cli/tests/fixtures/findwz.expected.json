@@ -1,0 +1,401 @@
+[
+  {
+    "path": "Mob/8645262.img",
+    "found": true,
+    "name": "8645262.img",
+    "value": "null",
+    "children": 6
+  },
+  {
+    "path": "Mob/8645262.img/stand/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/8645262.img/fly/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/8645262.img/info/level",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/8645262.img/nope",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/8645263.img",
+    "found": true,
+    "name": "8645263.img",
+    "value": "null",
+    "children": 4
+  },
+  {
+    "path": "Mob/8645263.img/stand/0",
+    "found": true,
+    "name": "0",
+    "value": "canvas",
+    "children": 0
+  },
+  {
+    "path": "Mob/8645263.img/fly/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/8645263.img/info/level",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/8645263.img/nope",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/9832023.img",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/9832023.img/stand/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/9832023.img/fly/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/9832023.img/info/level",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/9832023.img/nope",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/3210204.img",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/3210204.img/stand/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/3210204.img/fly/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/3210204.img/info/level",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/3210204.img/nope",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/0000000.img",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/0000000.img/stand/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/0000000.img/fly/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/0000000.img/info/level",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob/0000000.img/nope",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Npc/0002000.img",
+    "found": true,
+    "name": "0002000.img",
+    "value": "null",
+    "children": 3
+  },
+  {
+    "path": "Npc/0002000.img/stand/0",
+    "found": true,
+    "name": "0",
+    "value": "canvas",
+    "children": 0
+  },
+  {
+    "path": "Npc/0002000.img/info/link",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Npc/0002000.img/default/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Npc/0002001.img",
+    "found": true,
+    "name": "0002001.img",
+    "value": "null",
+    "children": 1
+  },
+  {
+    "path": "Npc/0002001.img/stand/0",
+    "found": true,
+    "name": "0",
+    "value": "canvas",
+    "children": 0
+  },
+  {
+    "path": "Npc/0002001.img/info/link",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Npc/0002001.img/default/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Npc/1541000.img",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Npc/1541000.img/stand/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Npc/1541000.img/info/link",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Npc/1541000.img/default/0",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Skill/000.img",
+    "found": true,
+    "name": "000.img",
+    "value": "null",
+    "children": 2
+  },
+  {
+    "path": "Skill/100.img",
+    "found": true,
+    "name": "100.img",
+    "value": "null",
+    "children": 2
+  },
+  {
+    "path": "Skill/100.img/skill/1001005",
+    "found": true,
+    "name": "1001005",
+    "value": "null",
+    "children": 5
+  },
+  {
+    "path": "Skill/100.img/skill/1001005/icon",
+    "found": true,
+    "name": "icon",
+    "value": "canvas",
+    "children": 0
+  },
+  {
+    "path": "Skill/100.img/info/icon",
+    "found": true,
+    "name": "icon",
+    "value": "canvas",
+    "children": 0
+  },
+  {
+    "path": "Skill/9999.img",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Reactor/0100000.img",
+    "found": true,
+    "name": "0100000.img",
+    "value": "null",
+    "children": 1
+  },
+  {
+    "path": "Reactor/0100000.img/0/0",
+    "found": true,
+    "name": "0",
+    "value": "canvas",
+    "children": 0
+  },
+  {
+    "path": "Reactor/0100000.img/info/link",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Reactor/0100001.img",
+    "found": true,
+    "name": "0100001.img",
+    "value": "null",
+    "children": 1
+  },
+  {
+    "path": "Reactor/0100001.img/0/0",
+    "found": true,
+    "name": "0",
+    "value": "canvas",
+    "children": 0
+  },
+  {
+    "path": "Reactor/0100001.img/info/link",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "String/Mob.img/100000/name",
+    "found": true,
+    "name": "name",
+    "value": "string:달팽이",
+    "children": 0
+  },
+  {
+    "path": "String/Consume.img/02000000/name",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "String/Skill.img/100/bookName",
+    "found": true,
+    "name": "bookName",
+    "value": "string:전사의 기본",
+    "children": 0
+  },
+  {
+    "path": "String/Npc.img/0002000/name",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "String/Nope.img/x",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Unknown/x",
+    "found": false,
+    "name": null,
+    "value": null,
+    "children": 0
+  },
+  {
+    "path": "Mob",
+    "found": true,
+    "name": "_Canvas_011.wz",
+    "value": "other",
+    "children": 55
+  },
+  {
+    "path": "Npc",
+    "found": true,
+    "name": "_Canvas_000.wz",
+    "value": "other",
+    "children": 943
+  }
+]

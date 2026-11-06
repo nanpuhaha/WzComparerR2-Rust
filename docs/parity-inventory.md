@@ -418,3 +418,20 @@ C# `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook` +
 `String_000.wz` + `Etc_002.wz` **1,845개** 항목(NPC 대사 767개) 완전 일치.
 fixture: `crates/wz-cli/tests/fixtures/world_archive.expected.json`,
 테스트: `world_archive_matches_csharp`, CLI: `wz world-archive`.
+
+## PluginBase `FindWz` 경로 조회
+
+`MainForm.CharaSimLoader_WzFileFinding` + `Wz_Node.FindNodeByPath` 동작을
+`wz-db::plugin_find`로 옮겼다.
+
+- 경로를 `/` 또는 `\`로 분리, 첫 세그먼트를 `Wz_Type`으로 해석
+- 등록된 타입 WZ의 루트에서 나머지 세그먼트를 순서대로 탐색
+- 중간에 `.img`를 만나면 추출 후 내부로 계속 진행
+- 결과: 이름/값 분류(`null`/`int:`/`string:`/`canvas`/`sound`)/자식 수
+
+C# `Wz_Structure.WzNode.FindNodeByPath(true, ...)`와 비교:
+Mob/Npc/Skill/Reactor/String **57개 경로** 완전 일치 (found/name/value/children).
+fixture: `crates/wz-cli/tests/fixtures/findwz.expected.json`,
+테스트: `findwz_matches_csharp`, CLI:
+`wz find-wz --map Mob=<wz> ... -- <path>`.
+플러그인 DLL 로딩/메뉴 주입은 WinForms 호스트가 필요해 제외한다.
