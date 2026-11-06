@@ -8,6 +8,10 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 
+[dev-dependencies]
+serde_json.workspace = true
+serde.workspace = true
+
 [dependencies]
 wz-error.workspace = true
 wz-core.workspace = true

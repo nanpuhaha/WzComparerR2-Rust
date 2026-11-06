@@ -641,3 +641,21 @@ CLI: `wz item-text-extras <Data> <dir> --string <String_000.wz>`.
 검증: Consume **26** + Install **23** = 49개가 C# 하네스와 완전 일치.
 fixture: `crates/wz-cli/tests/fixtures/item_incline.expected.json`,
 테스트: `item_incline_lines_match_csharp`, CLI: `wz item-incline <Data> <dir>`.
+
+## PluginBase 어셈블리 메타데이터 (`LoadPlugin` 타입 열거)
+
+`wz-db::dotnet_metadata`가 최소 PE/CLI 리더로 다음을 읽는다.
+
+- PE 섹션/RVA 매핑, CLI 헤더, 메타데이터 스트림(`#~`, `#Strings`, `#Blob`)
+- 45개 테이블 스키마와 coded index(태그 비트 고정)로 TypeDef/TypeRef/
+  NestedClass/Assembly/CustomAttribute/MemberRef 파싱
+- 어셈블리 이름/버전, `AssemblyTitle/Company/InformationalVersion/FileVersion`
+- public(중첩 public 포함) 타입의 이름, 기반 타입, abstract 여부
+- `PluginEntry` 서브클래스(비추상) 판별
+
+검증: fixture 어셈블리(`WzComparerR2.FixturePlugin.dll`)에서 C#
+`Assembly.GetExportedTypes()` + 속성 결과와 **완전 일치**
+(`Fixture.AlphaPlugin`, `Fixture.DerivedPlugin`, abstract/internal 제외).
+fixture: `crates/wz-db/tests/fixtures/plugin_*.json|dll`,
+테스트: `plugin_metadata_parity.rs`, CLI: `wz plugin-metadata <dll>`.
+인스턴스화/메뉴 주입은 WinForms 의존으로 미구현.

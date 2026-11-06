@@ -4096,3 +4096,28 @@ mod item_incline_tests {
         }
     }
 }
+
+pub fn cmd_plugin_metadata(dll: &Path, json: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let assembly = wz_db::read_assembly(dll)?;
+    let types = wz_db::plugin_types(&assembly);
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "name": assembly.name,
+                "version": assembly.version,
+                "title": assembly.title,
+                "company": assembly.company,
+                "informational": assembly.informational_version,
+                "file_version": assembly.file_version,
+                "plugin_types": types,
+            }))?
+        );
+    } else {
+        println!("{} {}", assembly.name, assembly.version.unwrap_or_default());
+        for t in types {
+            println!("  {t}");
+        }
+    }
+    Ok(())
+}

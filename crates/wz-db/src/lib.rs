@@ -39,6 +39,7 @@ pub mod db2_npcs;
 pub mod db2_reactors;
 pub mod db2_skills;
 pub mod db2_taming_mobs;
+pub mod dotnet_metadata;
 pub mod gear_stats;
 pub mod item_tooltip;
 pub mod item_tooltip_extra;
@@ -83,6 +84,7 @@ pub use db2_npcs::{npc_grid_rows as db2_npc_grid_rows, Db2NpcRow};
 pub use db2_reactors::{reactor_grid_rows as db2_reactor_grid_rows, Db2ReactorRow};
 pub use db2_skills::{skill_grid_rows as db2_skill_grid_rows, Db2SkillRow};
 pub use db2_taming_mobs::{taming_mob_grid_rows as db2_taming_mob_grid_rows, Db2TamingMobRow};
+pub use dotnet_metadata::{plugin_types, read_assembly, DotnetAssembly, PublicType};
 pub use gear_stats::extract_gear_props;
 pub use item_tooltip::{
     build_item_tooltip, item_attribute_lines, item_core_spec_string, ItemTooltipView,

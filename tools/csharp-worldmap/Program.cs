@@ -4,6 +4,7 @@ using WzComparerR2.WzLib;
 using WzComparerR2.Common;
 using WzComparerR2.CharaSim;
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 
 class Program
@@ -2078,6 +2079,37 @@ class Program
             .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void PluginEntries(string dllPath)
+    {
+        var asm = System.Reflection.Assembly.LoadFrom(dllPath);
+        string Attr<T>() where T : Attribute
+        {
+            var a = (T)Attribute.GetCustomAttribute(asm, typeof(T));
+            return a switch
+            {
+                AssemblyTitleAttribute t => t.Title,
+                AssemblyCompanyAttribute c => c.Company,
+                AssemblyInformationalVersionAttribute i => i.InformationalVersion,
+                AssemblyFileVersionAttribute f => f.Version,
+                _ => null,
+            };
+        }
+        var baseType = typeof(WzComparerR2.PluginBase.PluginEntry);
+        var types = asm.GetExportedTypes()
+            .Where(t => t.IsSubclassOf(baseType) && !t.IsAbstract)
+            .Select(t => t.FullName)
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToList();
+        Console.WriteLine(JsonSerializer.Serialize(new {
+            name = asm.GetName().Name,
+            version = asm.GetName().Version?.ToString(),
+            title = Attr<AssemblyTitleAttribute>(),
+            company = Attr<AssemblyCompanyAttribute>(),
+            informational = Attr<AssemblyInformationalVersionAttribute>(),
+            file_version = Attr<AssemblyFileVersionAttribute>(),
+            plugin_types = types,
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2122,6 +2154,7 @@ class Program
         else if (args[0] == "itemcashlines") ItemCashLines(args[1], args[2]);
         else if (args[0] == "itemtextextras") ItemTextExtras(args[1], args[2], args[3]);
         else if (args[0] == "itemincline") ItemIncline(args[1], args[2]);
+        else if (args[0] == "pluginentries") PluginEntries(args[1]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

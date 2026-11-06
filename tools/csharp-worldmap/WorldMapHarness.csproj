@@ -9,6 +9,9 @@
     <Reference Include="WzComparerR2.WzLib">
       <HintPath>$(WzLibPath)</HintPath>
     </Reference>
+    <Reference Include="WzComparerR2.PluginBase">
+      <HintPath>$(PluginBasePath)</HintPath>
+    </Reference>
     <Reference Include="WzComparerR2.Network">
       <HintPath>$(NetworkPath)</HintPath>
     </Reference>

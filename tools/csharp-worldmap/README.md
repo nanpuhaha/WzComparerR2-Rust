@@ -434,3 +434,10 @@ Verified ItemTooltip incline/trade lines (`itemincline <Data> <dir>`):
 Consume 26, Install 23
 ```
 Incline and tradeAvailable lines match Rust `wz item-incline` exactly.
+
+Verified PluginBase reflection (`pluginentries <dll>`):
+```
+WzComparerR2.FixturePlugin 1.2.3.4
+AlphaPlugin, DerivedPlugin (abstract/internal excluded)
+```
+Matches Rust `wz plugin-metadata` exactly via the minimal PE/CLI reader.
