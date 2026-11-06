@@ -738,3 +738,10 @@ Verified gear type names (`geartypenames`):
 ```
 Matches Rust `wz_db::gear_type_string` (139 switch groups; `body` is commented
 out in the original and returns null).
+
+Verified gear job requirements (`astrajob <names.json>`):
+```
+161 GearType names x 4 scenarios (no astra / astra id0 job114 / id7 job112 / hasReqSpecJobs)
+```
+Calls the real `GetExtraJobReqString` and `GetAstraExtraJobReqString`; matches
+Rust `wz_avatar::extra_job_req_string_for_gear`.

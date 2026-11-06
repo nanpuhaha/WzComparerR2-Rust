@@ -1941,3 +1941,23 @@ C#: `-- diff22jobreq <fixture-dir> <gear_diff_cases.json> <job_ids> <job_lists>`
 
 fixture: `gear_type_names_expected.json`,
 C#: `-- geartypenames`.
+
+## 장비 직업 제한 (`GetExtraJobReqString(GearType, …)`, `GetAstraExtraJobReqString`)
+
+- `extra_job_req_string_for_gear(gear_type, has_req_spec_jobs, astra, id)`
+  - 51개 그룹: 고정 문자열(예 `desperado`), `GetExtraJobReqString(specJob)` 위임
+    (예 `aranPendulum` → 21), `shield`/`cygnusGem` 아스트라 특례
+  - `shield`: `hasReqSpecJobs`가 아니고 아스트라 표에 id가 있으면 그 직업명,
+    아니면 `None`
+  - `cygnusGem`: 아스트라가 있으면 그 직업명, 없으면 `시그너스 기사단 착용 가능`
+- `get_astra_extra_job_req_string(table, id)` — `JobName`의 끝 `(N차)`를 제거해
+  `"{직업} 착용 가능"` (`Regex.Replace` 규칙)
+
+검증:
+- GearType **161개 이름** × 4시나리오(아스트라 없음 / id=0 표(job 114) /
+  id=7 표(job 112) / `hasReqSpecJobs=true`) = **644행**
+- C# 하네스가 실제 `GetExtraJobReqString`/`GetAstraExtraJobReqString` 호출
+- `crates/wz-avatar/tests/astra_job_parity.rs` 완전 일치, 단위 테스트 2종
+
+fixture: `astra_job_names.json`, `astra_job_expected.json`,
+C#: `-- astrajob <names.json>`.

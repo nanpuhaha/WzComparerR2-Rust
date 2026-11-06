@@ -4626,6 +4626,36 @@ return tostring(ok) .. '|' .. tostring(acc)
             }).ToList();
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // 실제 `GetExtraJobReqString(GearType, ...)` / `GetAstraExtraJobReqString`.
+    static void AstraJob(string fixturePath)
+    {
+        var names = JsonSerializer.Deserialize<List<string>>(File.ReadAllText(fixturePath))!;
+        var rows = new List<object>();
+        foreach (var name in names)
+        {
+            var type = (WzComparerR2.CharaSim.GearType)Enum.Parse(
+                typeof(WzComparerR2.CharaSim.GearType), name);
+
+            var table0 = new Dictionary<int, WzComparerR2.CharaSim.AstraSubWeaponInfo>
+            {
+                [0] = new WzComparerR2.CharaSim.AstraSubWeaponInfo(0, 0, 114),
+            };
+            var table7 = new Dictionary<int, WzComparerR2.CharaSim.AstraSubWeaponInfo>
+            {
+                [7] = new WzComparerR2.CharaSim.AstraSubWeaponInfo(7, 0, 112),
+            };
+
+            rows.Add(new
+            {
+                name,
+                none = WzComparerR2.CharaSim.ItemStringHelper.GetExtraJobReqString(type),
+                astra0 = WzComparerR2.CharaSim.ItemStringHelper.GetExtraJobReqString(type, false, table0, 0),
+                astra7 = WzComparerR2.CharaSim.ItemStringHelper.GetExtraJobReqString(type, false, table7, 7),
+                astra0_has = WzComparerR2.CharaSim.ItemStringHelper.GetExtraJobReqString(type, true, table0, 0),
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4660,6 +4690,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "smallformatters") SmallFormatters(args[1]);
         else if (args[0] == "diff22jobreq") Diff22JobReq(args[1], args[2], args[3], args[4]);
         else if (args[0] == "geartypenames") GearTypeNames();
+        else if (args[0] == "astrajob") AstraJob(args[1]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));

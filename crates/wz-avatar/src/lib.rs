@@ -5,7 +5,8 @@
 
 use std::sync::Arc;
 
-pub mod compose;
+pub mod astra_job_req;
+mod compose;
 pub mod frame;
 pub mod frame_bake;
 mod frame_layers;
@@ -18,6 +19,9 @@ pub mod prism;
 pub mod scene;
 pub mod stats;
 pub mod zmap;
+pub use astra_job_req::{
+    extra_job_req_string_for_gear, get_astra_extra_job_req_string, AstraSubWeaponInfo,
+};
 pub use compose::{bounding_box, compose, ComposeError, ComposedFrame, LayerSource};
 pub use frame::FrameTiming;
 pub use frame_bake::{apply_flip, apply_rotation, BakedFrame};
