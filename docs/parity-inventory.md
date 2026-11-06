@@ -513,3 +513,16 @@ OK: login flow complete
 - RSA 복호화는 `KeyDecryptor`로 주입한다(원본은 `RSACryptoServiceProvider`).
 - C# `WcClient`는 WinForms/PluginBase 의존으로 macOS에서 실행할 수 없어
   동일 하네스 비교 대신 루프백 검증을 사용했다.
+
+## OpenAPI 아바타 코드 비트팩 (`AvatarCodeStructure`/`Utils.Unpack`)
+
+- 구조 정의는 C# `AvatarCodeStructure.Structure`를 덤프해
+  `crates/wz-openapi/src/avatar_structure.json`에 넣었다(v26–36, 39–41, 43, 44).
+- `Utils.Unpack`을 그대로 구현: 최상위부터 `bits`만큼 LSB-first로 읽고,
+  값이 0이 아니고 하위 항목이 있으면 `ExpandOffset` 위치에 삽입.
+- 없는 버전 보정은 `UnpackedAvatarData` 생성자와 동일(최소/최대 클램프).
+
+검증: 19개 버전 × {zeros, random 2048B} = **38케이스**에서 필드 수와
+`name/bits/value` 목록 해시가 C# `Utils.Unpack`과 완전 일치.
+fixture: `crates/wz-openapi/tests/avatar_vectors.json`,
+테스트: `avatar_csharp_parity.rs`, CLI: `wz avatar-unpack <version> <packhex>`.

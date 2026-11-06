@@ -1716,6 +1716,51 @@ class Program
             .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static object DataInfoToObj(object info)
+    {
+        var t = info.GetType();
+        return new Dictionary<string, object>
+        {
+            ["name"] = t.GetProperty("Name").GetValue(info),
+            ["bits"] = t.GetProperty("Bits").GetValue(info),
+            ["expand_offset"] = t.GetProperty("ExpandOffset").GetValue(info),
+            ["subitems"] = ((System.Collections.IEnumerable)t.GetProperty("SubItems").GetValue(info))
+                .Cast<object>().Select(DataInfoToObj).ToList(),
+        };
+    }
+    static object GetAvatarStructure(int version)
+    {
+        var asm = typeof(WzComparerR2.CharaSim.Item).Assembly;
+        var type = asm.GetType("WzComparerR2.OpenAPI.AvatarCodeStructure");
+        var dict = (System.Collections.IDictionary)type.GetField("Structure",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic).GetValue(null);
+        var list = (System.Collections.IEnumerable)dict[version];
+        return list.Cast<object>().Select(DataInfoToObj).ToList();
+    }
+    static void AvatarStructure(int version)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(GetAvatarStructure(version), new JsonSerializerOptions { WriteIndented = true }));
+    }
+    static void AvatarUnpack(int version, string packHex)
+    {
+        var asm = typeof(WzComparerR2.CharaSim.Item).Assembly;
+        var unpackedType = asm.GetType("WzComparerR2.OpenAPI.UnpackedAvatarData");
+        var obj = Activator.CreateInstance(unpackedType, version);
+        var utils = asm.GetType("WzComparerR2.OpenAPI.Utils");
+        var unpack = utils.GetMethod("Unpack");
+        unpack.Invoke(null, new object[] { obj, Convert.FromHexString(packHex) });
+        var list = (System.Collections.IEnumerable)unpackedType.GetProperty("Unpacked").GetValue(obj);
+        var rows = list.Cast<object>().Select(i =>
+        {
+            var t = i.GetType();
+            return new {
+                name = t.GetProperty("Name").GetValue(i),
+                bits = t.GetProperty("Bits").GetValue(i),
+                value = t.GetProperty("Value").GetValue(i),
+            };
+        }).ToList();
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1751,6 +1796,8 @@ class Program
         else if (args[0] == "netpack") NetPack(args[1]);
         else if (args[0] == "charatooltips") CharaTooltips(args[1], args[2], args[3], args[4]);
         else if (args[0] == "damageskinmodel") DamageSkinModel(args[1], args[2]);
+        else if (args[0] == "avatarstructure") AvatarStructure(int.Parse(args[1]));
+        else if (args[0] == "avatarunpack") AvatarUnpack(int.Parse(args[1]), args[2]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

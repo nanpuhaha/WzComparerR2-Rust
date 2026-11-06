@@ -1828,6 +1828,7 @@ dependencies = [
  "wz-error",
  "wz-image",
  "wz-network",
+ "wz-openapi",
  "wz-pool",
  "wz-render",
 ]
@@ -1904,6 +1905,7 @@ dependencies = [
  "aes",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

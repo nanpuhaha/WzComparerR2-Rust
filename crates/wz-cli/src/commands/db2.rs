@@ -2960,3 +2960,38 @@ pub fn cmd_net_loopback() -> Result<(), Box<dyn std::error::Error>> {
     let _ = Packet::Heartbeat;
     Ok(())
 }
+
+pub fn cmd_avatar_unpack(
+    version: i32,
+    pack_hex: &str,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let pack: Vec<u8> = (0..pack_hex.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&pack_hex[i..i + 2], 16))
+        .collect::<Result<_, _>>()?;
+    let (effective, unknown, fields) = wz_openapi::avatar::unpack(version, &pack);
+    if json {
+        let rows: Vec<_> = fields
+            .iter()
+            .map(|f| serde_json::json!({"name": f.name, "bits": f.bits, "value": f.value}))
+            .collect();
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "version": effective,
+                "unknown": unknown,
+                "fields": rows,
+            }))?
+        );
+    } else {
+        println!(
+            "version {effective} (unknown={unknown}) fields={}",
+            fields.len()
+        );
+        for f in fields.iter().take(12) {
+            println!("  {}\t{}\t{}", f.name, f.bits, f.value);
+        }
+    }
+    Ok(())
+}

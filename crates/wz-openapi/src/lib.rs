@@ -3,6 +3,8 @@
 //! 원본 `NexonOpenAPI.Utils`의 `Decrypt`, `CheckVer`, `GetItemID`를 옮겼다.
 //! API 키/HTTP 호출은 클라이언트 자격 증명이 필요해 대상에서 제외한다.
 
+pub mod avatar;
+
 use aes::cipher::{BlockDecrypt, KeyInit};
 use aes::Aes128;
 

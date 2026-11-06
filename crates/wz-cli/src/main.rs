@@ -417,6 +417,17 @@ enum Command {
         json: bool,
     },
 
+    /// OpenAPI 아바타 비트팩 해제
+    AvatarUnpack {
+        /// 코드 버전 (26~44, 없는 버전은 원본처럼 보정)
+        version: i32,
+        /// 팩 바이트 hex
+        pack: String,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Network 루프백 핸드셰이크/로그인 데모
     NetLoopback,
 
@@ -853,6 +864,11 @@ fn main() {
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
+        Command::AvatarUnpack {
+            version,
+            pack,
+            json,
+        } => commands::cmd_avatar_unpack(version, &pack, json),
         Command::NetLoopback => commands::cmd_net_loopback(),
         Command::DamageSkinModel { wz, image, json } => {
             commands::cmd_damage_skin_model(&wz, &image, json)

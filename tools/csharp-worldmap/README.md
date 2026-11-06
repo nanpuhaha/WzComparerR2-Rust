@@ -384,3 +384,9 @@ Verified DamageSkin model (`damageskinmodel <Etc_000.wz> DamageSkin.img`):
 ```
 desc/extractID/customType/sample and per-section keys/spacing/bottomFix match
 Rust `wz damage-skin-model` exactly.
+
+Verified OpenAPI avatar unpack (`avatarstructure <v>`, `avatarunpack <v> <packhex>`):
+```
+19 versions x 2 packs = 38 cases
+```
+Field lists match Rust `wz_openapi::avatar::unpack` exactly.

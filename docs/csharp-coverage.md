@@ -45,7 +45,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | Rendering | 25 | 2,726 | `wz-render`, `wz-image` | 🟡 (light/water/sprite) |
 | Animation | 15 | 2,415 | `wz-avatar` frame loader | 🟡 |
 | Controls | 16 | 2,138 | — | ⬜ |
-| OpenAPI | 4 | 2,086 | `wz-openapi` 오프라인 helpers(Decrypt/CheckVer/GetItemID), HTTP는 API 키 필요 | 🟡 |
+| OpenAPI | 4 | 2,086 | `wz-openapi` helpers + AvatarCodeStructure v26–44/Unpack, HTTP는 API 키 필요 | 🟡 |
 | Text | 4 | 707 | `wz-core::text` | ✅ |
 | Encoders | 6 | 534 | `wz-image` | ✅ (PNG/BC7) |
 | Config | 6 | 355 | — | ⬜ |
@@ -91,7 +91,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 6. `WzComparerR2.Common/Controls` (2,138 LOC) — 미구현.
    `OpenAPI` (2,086 LOC) 중 네트워크 없이 검증 가능한 `Decrypt`,
    `CheckVer`, `GetItemID`를 `wz-openapi`로 옮겨 C# 실행 결과와 비교했다.
-   캐릭터 조회/아바타 API 호출은 Nexon API 키가 필요해 제외한다.
+   추가로 `AvatarCodeStructure` v26–44 구조를 C#에서 덤프해
+   `Utils.Unpack`(비트 읽기 + ExpandOffset 삽입)을 구현했고, 19개 버전 ×
+   2개 팩 38케이스가 C# 결과와 일치한다. 캐릭터 조회/아바타 HTTP 호출은
+   Nexon API 키가 필요해 제외한다.
 7. `LuaConsole` (1,451) — 미구현.
    `PluginBase` (693) 중 `PluginManager.FindWz` 경로 조회를 `wz find-wz`로
    옮겼다. 타입별 WZ 등록 후 세그먼트를 따라가며 `.img`를 추출하는 원본
@@ -177,6 +180,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   구현이 없다.
 - PluginBase `FindWz`: 57개 경로 C# 일치.
 - Network 오프라인: RC4 12개 벡터 + 프레임 코덱 자체 테스트.
+- OpenAPI 아바타 비트팩: v26–44 38케이스 C# 일치.
 - OpenAPI 오프라인 helpers: C# `Utils.Decrypt`/`CheckVer`/`GetItemID`를
   16/32/64바이트 벡터에서 비교해 완전 일치(`wz-openapi` 통합 테스트).
 - `DamageSkinTooltipRenderer`는 텍스트 라인이 없고 ID/샘플만 그린다. 대신
