@@ -62,6 +62,69 @@ impl RecipeSpec {
     }
 }
 
+/// 캐시/기간/펫 제한 태그 라인 (`ItemTooltipRender2` 순서 그대로).
+///
+/// `props`는 아이템 `info`의 정수 프로퍼티다(`cash`, `noMoveToLocker` 등).
+pub fn cash_tag_lines(
+    item_id: i32,
+    props: &std::collections::BTreeMap<String, i64>,
+) -> Vec<String> {
+    let value = |key: &str| props.get(key).copied().unwrap_or(0);
+    let mut lines = Vec::new();
+
+    if item_id / 1000 == 5533 {
+        lines.push(
+            "\n\n#c더블 클릭 시 미리보기에서 상자 속 아이템들을 3초마다 차례로 확인할 수 있습니다.\n\n캐시 보관함에서 더블 클릭하여 사용 가능하며, 상자는 교환할 수 없습니다.\n상자에서 획득한 보상품은 타인과 교환할 수 없습니다.#"
+                .to_string(),
+        );
+    }
+
+    if value("cash") != 0 {
+        if value("noMoveToLocker") > 0 {
+            lines.push("\n#c캐시 보관함으로 이동시킬 수 없는 아이템입니다.#".to_string());
+        }
+        if value("onlyCash") > 0 {
+            lines.push("\n#c넥슨캐시로만 구매할 수 있습니다.#".to_string());
+        }
+        if value("cashTradeBlock") > 0 {
+            lines.push(
+                "\n#c이 아이템은 넥슨캐시로 구매 후에도 타인과의 교환이 제한됩니다.#".to_string(),
+            );
+        } else if value("tradeBlock") == 0 {
+            let thousands = item_id / 1000;
+            let ten_thousands = item_id / 10000;
+            if !matches!(ten_thousands, 501 | 502 | 516) && !matches!(thousands, 5157 | 5158) {
+                lines.push(
+                    "\n#c넥슨캐시로 구매하면 사용 전 1회에 한해 타인과 교환 할 수 있습니다.#"
+                        .to_string(),
+                );
+            }
+        }
+    }
+    if value("flatRate") > 0 {
+        lines.push("\n#c기간 정액제 아이템입니다.#".to_string());
+    }
+    if value("noScroll") > 0 {
+        lines.push("#c펫 스킬 주문서와 펫작명하기를 사용할 수 없습니다.#".to_string());
+    }
+    if value("noRevive") > 0 {
+        lines.push("#c생명의 물을 사용할 수 없습니다.#".to_string());
+    }
+    lines
+}
+
+/// 아이템 `info`의 정수 프로퍼티 맵.
+pub fn item_int_props(item: &Node) -> std::collections::BTreeMap<String, i64> {
+    let info = child(item, "info").unwrap_or(item);
+    let mut props = std::collections::BTreeMap::new();
+    for c in info.object_children() {
+        if let Some(v) = as_int(Some(c)) {
+            props.insert(c.name.to_string(), v);
+        }
+    }
+    props
+}
+
 /// 원본 `Character.ExpToNextLevel`.
 pub fn exp_to_next_level(level: i32) -> i64 {
     const EXPTNL: [i64; 11] = [
@@ -335,6 +398,21 @@ mod tests {
         assert_eq!(exp_to_next_level(200), 2_207_026_470);
         assert_eq!(exp_to_next_level(260), 2_902_427_248_153);
         assert_eq!(exp_to_next_level(0), -1);
+    }
+
+    #[test]
+    fn cash_lines_include_cash_default_notice() {
+        let mut props = std::collections::BTreeMap::new();
+        props.insert("cash".to_string(), 1);
+        assert_eq!(
+            cash_tag_lines(5000000, &props),
+            vec!["\n#c넥슨캐시로 구매하면 사용 전 1회에 한해 타인과 교환 할 수 있습니다.#"]
+        );
+        props.insert("cashTradeBlock".to_string(), 1);
+        assert_eq!(
+            cash_tag_lines(5000000, &props),
+            vec!["\n#c이 아이템은 넥슨캐시로 구매 후에도 타인과의 교환이 제한됩니다.#"]
+        );
     }
 
     #[test]

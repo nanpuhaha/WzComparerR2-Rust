@@ -1938,6 +1938,50 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void ItemCashLines(string dataRoot, string dir)
+    {
+        var rows = new List<object>();
+        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Item", dir), "*.wz").OrderBy(x => x))
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            foreach (Wz_Node n in st.WzNode.Nodes)
+            {
+                if (n.Value is not Wz_Image img) continue;
+                if (!img.TryExtract()) continue;
+                foreach (Wz_Node item in img.Node.Nodes)
+                {
+                    if (!int.TryParse(item.Text, out int id)) continue;
+                    var info = item.Nodes["info"] ?? item;
+                    long Get(string key) => info.Nodes[key]?.Value is object v ? Convert.ToInt64(v) : 0;
+                    var lines = new List<string>();
+                    if (id / 1000 == 5533)
+                        lines.Add("\n\n#c더블 클릭 시 미리보기에서 상자 속 아이템들을 3초마다 차례로 확인할 수 있습니다.\n\n캐시 보관함에서 더블 클릭하여 사용 가능하며, 상자는 교환할 수 없습니다.\n상자에서 획득한 보상품은 타인과 교환할 수 없습니다.#");
+                    if (Get("cash") != 0)
+                    {
+                        if (Get("noMoveToLocker") > 0)
+                            lines.Add("\n#c캐시 보관함으로 이동시킬 수 없는 아이템입니다.#");
+                        if (Get("onlyCash") > 0)
+                            lines.Add("\n#c넥슨캐시로만 구매할 수 있습니다.#");
+                        if (Get("cashTradeBlock") > 0)
+                            lines.Add("\n#c이 아이템은 넥슨캐시로 구매 후에도 타인과의 교환이 제한됩니다.#");
+                        else if (Get("tradeBlock") == 0
+                            && !(id / 10000 == 501 || id / 10000 == 502 || id / 10000 == 516
+                                 || id / 1000 == 5157 || id / 1000 == 5158))
+                            lines.Add("\n#c넥슨캐시로 구매하면 사용 전 1회에 한해 타인과 교환 할 수 있습니다.#");
+                    }
+                    if (Get("flatRate") > 0) lines.Add("\n#c기간 정액제 아이템입니다.#");
+                    if (Get("noScroll") > 0) lines.Add("#c펫 스킬 주문서와 펫작명하기를 사용할 수 없습니다.#");
+                    if (Get("noRevive") > 0) lines.Add("#c생명의 물을 사용할 수 없습니다.#");
+                    if (lines.Count == 0) continue;
+                    rows.Add(new { id = item.Text, lines });
+                }
+            }
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1979,6 +2023,7 @@ class Program
         else if (args[0] == "questtooltips") QuestTooltips(args[1]);
         else if (args[0] == "pluginfiles") PluginFiles(args[1]);
         else if (args[0] == "itemextras") ItemExtras(args[1], args[2]);
+        else if (args[0] == "itemcashlines") ItemCashLines(args[1], args[2]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

@@ -603,3 +603,17 @@ connected (attempts=0)
 heartbeat echoed, then reconnect #1; packet={"$type":"4","SessionID":"after-reconnect"}
 OK: heartbeat echo + reconnect
 ```
+
+## ItemTooltip 캐시/기간 태그
+
+`ItemTooltipRender2`의 다음 라인을 순서/문구 그대로 옮겼다.
+
+- `cash`일 때: `noMoveToLocker`, `onlyCash`, `cashTradeBlock`, 그 외
+  `tradeBlock==0`이고 501/502/516·5157/5158이 아니면 기본 교환 안내
+- `flatRate` → `기간 정액제`, `noScroll` → 펫 주문서/작명 불가,
+  `noRevive` → 생명의 물 불가
+- `id/1000 == 5533` → 상자 미리보기 안내(선두 개행 포함)
+
+`Item/Cash` **2,503개**가 C# 하네스와 완전 일치.
+fixture: `crates/wz-cli/tests/fixtures/item_cash_lines.expected.json`,
+테스트: `item_cash_lines_match_csharp`, CLI: `wz item-cash-lines <Data> Cash`.

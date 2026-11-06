@@ -416,3 +416,9 @@ Verified ItemTooltip recipe lines (`itemextras <Data> Consume`):
 827 items
 ```
 `recipeValidDay`/`recipeUseCount` lines match Rust `wz item-extras` exactly.
+
+Verified ItemTooltip cash/tag lines (`itemcashlines <Data> Cash`):
+```
+2503 items
+```
+All lines match Rust `wz item-cash-lines` exactly.
