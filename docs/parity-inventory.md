@@ -764,3 +764,28 @@ CLI: `wz db2-map-part <Data> <part> --string <String_000.wz>`.
 fixture: `crates/wz-cli/tests/fixtures/db2_mob_parts.expected.json`,
 테스트: `db2_mob_parts_match_csharp`,
 CLI: `wz db2-mob-part <Data> <part> --string <String_000.wz>`.
+
+## Skill 툴팁 헤더 (`SkillTooltipRender2.RenderSkill`)
+
+`wz-db::skill_tooltip`이 `Skill.CreateFromNode`의 관련 필드와 렌더러의 헤더
+줄을 옮겼다.
+
+- 이름: `StringLinker.StringSkill[id].Name`, 없으면 `(null)`
+- `[최대 레벨 : N]` — `hyperStat != 0`
+- `[마스터 레벨 : N]` — `hyperStat == 0` 이고 `PreBBSkill == false`
+- `PreBBSkill` = `level` 자식이 1개 이상 (`levelCommon.Count > 0`)
+- `MaxLevel` = `PreBBSkill` 이면 연속된 `level/1..n` 개수, 아니면
+  `common/maxLevel`(없으면 0)
+- `reqLev` / `req/level`, `req/reqAmount`, `req/<스킬ID>` 요구 레벨
+
+검증: `Skill` 전체 **7,055개**가 C# 하네스와 9필드 + 줄 순서 완전 일치.
+`desc`는 원문 그대로 비교했고, 렌더러의 `SummaryParser` 변환은 기존
+`skill_summary` 슬라이스(20,629행)에서 이미 C#과 일치한다.
+
+데이터 현황(같은 스캔): 7,055 스킬 중 `level` 3, `common` 0, `req` 0,
+`reqLev` 0 → 7,052개가 `[마스터 레벨 : 0]`, 3개는 헤더 줄이 없다.
+
+fixture: `crates/wz-cli/tests/fixtures/skill_tooltips.expected.json`,
+테스트: `skill_tooltips_match_csharp`,
+CLI: `wz skill-tooltips <Data> --string <String_000.wz>`,
+C#: `-- skilltooltips <Data> <String_000.wz>`.

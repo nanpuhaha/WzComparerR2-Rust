@@ -291,6 +291,21 @@ enum Command {
         limit: usize,
     },
 
+    /// SkillTooltipRender2 헤더 텍스트 (이름/마스터 레벨/설명)
+    SkillTooltips {
+        /// Data 루트
+        data_root: PathBuf,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+        /// 최대 행
+        #[arg(long, default_value_t = 20000)]
+        limit: usize,
+    },
+
     /// DB2 Skill 그리드 (book/skill/icon/common/h)
     Db2Skills {
         /// Skill WZ 파일
@@ -968,6 +983,12 @@ fn main() {
             json,
             limit,
         } => cmd_db2_mobs(&wz, &string, json, limit),
+        Command::SkillTooltips {
+            data_root,
+            string,
+            json,
+            limit,
+        } => commands::cmd_skill_tooltips(&data_root, &string, json, limit),
         Command::Db2Skills {
             wz,
             string,

@@ -474,3 +474,9 @@ mobpart <Data> 1|2|3 <String_000.wz>  ->  742 / 1160 /  1585 rows
 `mappart` mirrors `LoadMap(Part)` including the `info/link` minimap second pass;
 `mobpart` mirrors the leading-digit partition filter of `LoadMob(Part)`.
 Both match Rust `wz db2-map-part` / `wz db2-mob-part` exactly.
+
+Verified Skill tooltip header (`skilltooltips <Data> <String_000.wz>`):
+```
+7055 skills
+```
+name/master-level/pre_bb/hyper/req lines all match Rust `wz skill-tooltips`.

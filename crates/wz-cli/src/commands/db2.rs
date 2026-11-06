@@ -4710,3 +4710,264 @@ mod db2_mob_part_tests {
         }
     }
 }
+
+pub fn cmd_skill_tooltips(
+    data_root: &Path,
+    string_wz: &Path,
+    json: bool,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+
+    let mut files = Vec::new();
+    fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("wz") {
+                out.push(path);
+            }
+        }
+    }
+    walk(&data_root.join("Skill"), &mut files);
+    files.sort();
+
+    let mut seen = std::collections::HashSet::new();
+    let mut rows = Vec::new();
+    for path in files {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else {
+                continue;
+            };
+            let Ok(image) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            let Some(skill_root) = image
+                .object_children()
+                .iter()
+                .find(|c| c.name.as_ref() == "skill")
+            else {
+                continue;
+            };
+            for skill in skill_root.object_children() {
+                let Ok(id) = skill.name.as_ref().parse::<i32>() else {
+                    continue;
+                };
+                if !seen.insert(id) {
+                    continue;
+                }
+                let sr = linker.string_skill.get(&id);
+                let name = sr
+                    .map(|sr| sr.name.clone())
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or_else(|| "(null)".into());
+                let desc = sr.and_then(|sr| sr.desc.clone());
+                let tooltip = wz_db::SkillTooltip::from_node(skill, id, name, desc.clone());
+                let desc_summary = desc.as_deref().map(|d| wz_db::parse_skill_summary(d, 1));
+                rows.push(serde_json::json!({
+                    "id": id,
+                    "name": tooltip.name,
+                    "max_level": tooltip.max_level,
+                    "pre_bb": tooltip.pre_bb,
+                    "hyper_stat": tooltip.hyper_stat,
+                    "req_level": tooltip.req_level,
+                    "req_skills": tooltip.req_skills,
+                    "desc": desc.clone(),
+                    "desc_summary": desc_summary,
+                    "lines": tooltip.lines,
+                }));
+            }
+        }
+    }
+    rows.sort_by_key(|r| r["id"].as_i64());
+    rows.truncate(limit);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!("{} {}", row["id"], row["name"].as_str().unwrap_or(""));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod skill_tooltip_tests {
+    struct Row {
+        id: i32,
+        name: String,
+        max_level: i32,
+        pre_bb: bool,
+        hyper_stat: bool,
+        req_level: i32,
+        req: String,
+        desc: String,
+        lines: String,
+    }
+
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("wz") {
+                out.push(path);
+            }
+        }
+    }
+
+    #[test]
+    fn skill_tooltips_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let string_wz = root.join("String/String_000.wz");
+        if !root.join("Skill").exists() || !string_wz.exists() {
+            return;
+        }
+        use wz_db::{Arena, StringLinker};
+        let string_archive = wz_core::WzArchive::open(&string_wz).unwrap();
+        let (arena, string_root) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, string_root));
+
+        let mut files = Vec::new();
+        walk(&root.join("Skill"), &mut files);
+        files.sort();
+
+        let mut seen = std::collections::HashSet::new();
+        let mut rows: Vec<Row> = Vec::new();
+        for path in files {
+            let Ok(archive) = wz_core::WzArchive::open(&path) else {
+                continue;
+            };
+            let Ok(tree) = archive.read_tree() else {
+                continue;
+            };
+            for entry in &tree.root.entries {
+                if entry.node_type != 4 {
+                    continue;
+                }
+                let Some(offset) = entry.offset else { continue };
+                let Ok(image) = archive.parse_image_at(offset) else {
+                    continue;
+                };
+                let Some(skill_root) = image
+                    .object_children()
+                    .iter()
+                    .find(|c| c.name.as_ref() == "skill")
+                else {
+                    continue;
+                };
+                for skill in skill_root.object_children() {
+                    let Ok(id) = skill.name.as_ref().parse::<i32>() else {
+                        continue;
+                    };
+                    if !seen.insert(id) {
+                        continue;
+                    }
+                    let sr = linker.string_skill.get(&id);
+                    let name = sr
+                        .map(|sr| sr.name.clone())
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or_else(|| "(null)".into());
+                    let desc = sr.and_then(|sr| sr.desc.clone());
+                    let tooltip = wz_db::SkillTooltip::from_node(skill, id, name, desc.clone());
+                    let req = tooltip
+                        .req_skills
+                        .iter()
+                        .map(|(id, level)| format!("{id}:{level}"))
+                        .collect::<Vec<_>>()
+                        .join("|");
+                    rows.push(Row {
+                        id,
+                        name: tooltip.name.clone(),
+                        max_level: tooltip.max_level,
+                        pre_bb: tooltip.pre_bb,
+                        hyper_stat: tooltip.hyper_stat,
+                        req_level: tooltip.req_level,
+                        req,
+                        desc: desc.unwrap_or_default(),
+                        lines: tooltip.lines.join("|"),
+                    });
+                }
+            }
+        }
+        rows.sort_by_key(|r| r.id);
+        let rec = char::from(0x1e);
+        let canon = rows
+            .iter()
+            .map(|r| {
+                [
+                    r.id.to_string(),
+                    r.name.clone(),
+                    r.max_level.to_string(),
+                    if r.pre_bb {
+                        "1".into()
+                    } else {
+                        "0".to_string()
+                    },
+                    if r.hyper_stat {
+                        "1".into()
+                    } else {
+                        "0".to_string()
+                    },
+                    r.req_level.to_string(),
+                    r.req.clone(),
+                    r.desc.clone(),
+                    r.lines.clone(),
+                ]
+                .join(&rec.to_string())
+            })
+            .collect::<Vec<_>>()
+            .join(&rec.to_string());
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/skill_tooltips.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(rows.len() as u64, expected["rows"].as_u64().unwrap());
+        assert_eq!(
+            rows.iter().filter(|r| r.pre_bb).count() as u64,
+            expected["pre_bb"].as_u64().unwrap()
+        );
+        assert_eq!(
+            sha256_hex(canon.as_bytes()),
+            expected["sha256"].as_str().unwrap()
+        );
+    }
+}

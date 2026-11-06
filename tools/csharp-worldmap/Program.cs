@@ -2592,6 +2592,90 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void SkillTooltips(string dataRoot, string stringWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        linker.Load(str.wz_files[0], null, null);
+
+        var files = Directory.GetFiles(Path.Combine(dataRoot, "Skill"), "*.wz", SearchOption.AllDirectories)
+            .OrderBy(x => x, StringComparer.Ordinal).ToList();
+        var seen = new HashSet<int>();
+        var rows = new List<object>();
+        foreach (var file in files)
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            foreach (Wz_Node imgNode in st.WzNode.Nodes)
+            {
+                if (imgNode.Value is not Wz_Image img) continue;
+                if (!img.TryExtract()) continue;
+                var skillRoot = img.Node.Nodes["skill"];
+                if (skillRoot == null) continue;
+                foreach (Wz_Node skill in skillRoot.Nodes)
+                {
+                    if (!int.TryParse(skill.Text, out int id)) continue;
+                    if (!seen.Add(id)) continue;
+
+                    var levelNode = skill.Nodes["level"];
+                    int levelCount = 0;
+                    if (levelNode != null)
+                    {
+                        while (levelNode.Nodes[(levelCount + 1).ToString()] != null) levelCount++;
+                    }
+                    bool preBB = levelCount > 0;
+                    bool hyper = Convert.ToInt32(skill.Nodes["hyperStat"]?.Value ?? 0) != 0;
+                    int maxLevel;
+                    if (preBB)
+                    {
+                        maxLevel = levelCount;
+                    }
+                    else
+                    {
+                        var maxNode = skill.Nodes["common"]?.Nodes["maxLevel"];
+                        maxLevel = maxNode?.Value is object mv ? Convert.ToInt32(mv) : 0;
+                    }
+
+                    int reqLevel = skill.Nodes["reqLev"]?.Value is object rv ? Convert.ToInt32(rv) : 0;
+                    int reqAmount = 0;
+                    var reqSkills = new List<object>();
+                    var reqNode = skill.Nodes["req"];
+                    if (reqNode != null)
+                    {
+                        foreach (Wz_Node entry in reqNode.Nodes)
+                        {
+                            if (entry.Text == "level") reqLevel = Convert.ToInt32(entry.Value);
+                            else if (entry.Text == "reqAmount") reqAmount = Convert.ToInt32(entry.Value);
+                            else if (int.TryParse(entry.Text, out int reqSkill))
+                                reqSkills.Add(new { id = reqSkill, level = Convert.ToInt32(entry.Value) });
+                        }
+                    }
+
+                    linker.StringSkill.TryGetValue(id, out var sr);
+                    var name = string.IsNullOrEmpty(sr?.Name) ? "(null)" : sr.Name;
+                    var lines = new List<string> { name };
+                    if (hyper) lines.Add($"[최대 레벨 : {maxLevel}]");
+                    else if (!preBB) lines.Add($"[마스터 레벨 : {maxLevel}]");
+
+                    rows.Add(new
+                    {
+                        id,
+                        name,
+                        max_level = maxLevel,
+                        pre_bb = preBB,
+                        hyper_stat = hyper,
+                        req_level = reqLevel,
+                        req_amount = reqAmount,
+                        req_skills = reqSkills,
+                        desc = sr?.Desc,
+                        lines,
+                    });
+                }
+            }
+        }
+        rows.Sort((a, b) => ((int)a.GetType().GetProperty("id").GetValue(a))
+            .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2642,6 +2726,7 @@ class Program
         else if (args[0] == "animtimeline") AnimTimeline();
         else if (args[0] == "mappart") MapPart(args[1], int.Parse(args[2]), args[3]);
         else if (args[0] == "mobpart") MobPart(args[1], int.Parse(args[2]), args[3]);
+        else if (args[0] == "skilltooltips") SkillTooltips(args[1], args[2]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

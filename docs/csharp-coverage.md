@@ -235,6 +235,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook`로 몹/NPC
   설명, `[몬스터북]`, `NPC 대사` 라인을 구성해 **1,845개 항목**
   (NPC 대사 767개)이 C#과 완전 일치.
+- `SkillTooltipRender2` 헤더 텍스트: 이름, `[마스터 레벨 : N]`/`[최대 레벨 : N]`
+  분기(`PreBBSkill`=level 자식 존재, `hyperStat`), `reqLev`/`req` 요구 스킬을
+  `Skill` 7,055개에서 C#과 일치. 이 클라이언트는 `common` 0·`req` 0·`level` 3이라
+  7,052개가 `[마스터 레벨 : 0]`, 3개는 헤더 없음(PreBBSkill)이다.
 - DB2 Map 3분할: 17,469행 일치. `info/link` 2차 패스로만 미니맵이 채워지는
   행이 **3,309개**(자체 캔버스 없이 링크가 있는 4,197행 중)다.
 - DB2 Mob 3분할: 3,487행 일치(이 클라이언트는 `info/link` 0개, `info` 노드도
