@@ -58,6 +58,60 @@ pub fn summary(source: &str) -> (usize, usize, usize) {
     (tokens.len(), colored, colors.len())
 }
 
+/// 줄 번호 거터 텍스트(`1`부터). 줄 수는 `\n` 개수 + 1.
+pub fn gutter_text(source: &str) -> String {
+    let lines = source.split('\n').count().max(1);
+    (1..=lines)
+        .map(|n| n.to_string())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// 문자 오프셋이 속한 토큰 종류. 경계(끝)는 다음 토큰 시작으로 본다.
+pub fn token_at_char(source: &str, char_index: usize) -> Option<wz_lua::HighlightKind> {
+    let tokens = wz_lua::highlight(source);
+    tokens
+        .iter()
+        .find(|t| char_index >= t.start && char_index < t.end)
+        .or_else(|| tokens.last().filter(|t| char_index == t.end))
+        .map(|t| t.kind)
+}
+
+/// `줄 L, 열 C · 토큰 Kind` (줄/열은 1부터, 열은 문자 기준).
+pub fn cursor_status(source: &str, char_index: usize) -> String {
+    let chars: Vec<char> = source.chars().collect();
+    let index = char_index.min(chars.len());
+    let line_start = chars[..index]
+        .iter()
+        .rposition(|c| *c == '\n')
+        .map(|p| p + 1)
+        .unwrap_or(0);
+    let line = chars[..index].iter().filter(|c| **c == '\n').count() + 1;
+    let column = index - line_start + 1;
+    let kind = token_at_char(source, index)
+        .map(|k| format!("{k:?}"))
+        .unwrap_or_else(|| "-".to_string());
+    format!("줄 {line}, 열 {column} · 토큰 {kind}")
+}
+
+/// 선택 구간에 포함된 토큰 종류(중복 제거).
+pub fn selection_kinds(source: &str, from: usize, to: usize) -> Vec<wz_lua::HighlightKind> {
+    let (lo, hi) = (from.min(to), from.max(to));
+    if lo == hi {
+        return Vec::new();
+    }
+    let chars: Vec<char> = source.chars().collect();
+    let hi = hi.min(chars.len());
+    let mut kinds: Vec<wz_lua::HighlightKind> = wz_lua::highlight(source)
+        .into_iter()
+        .filter(|t| t.start < hi && t.end > lo)
+        .map(|t| t.kind)
+        .collect();
+    kinds.sort_by_key(|k| format!("{k:?}"));
+    kinds.dedup();
+    kinds
+}
+
 pub fn show(ui: &mut egui::Ui) {
     let id = egui::Id::unique("lua_console_source");
     let mut source = ui
@@ -74,12 +128,51 @@ pub fn show(ui: &mut egui::Ui) {
             "토큰 {tokens} · 색 구간 {colored} · 색 {colors}종"
         ));
     });
-    ui.add(
-        egui::TextEdit::multiline(&mut source)
+    // 소스가 바뀔 때만 재토큰화한다(캐시).
+    let cache_id = egui::Id::unique("lua_console_tokens");
+    let tokens: Vec<wz_lua::Token> = ui.data_mut(|d| {
+        let cached: Option<(String, Vec<wz_lua::Token>)> = d.get_temp(cache_id);
+        match cached {
+            Some((cached_source, tokens)) if cached_source == source => tokens,
+            _ => {
+                let tokens = wz_lua::highlight(&source);
+                d.insert_temp(cache_id, (source.clone(), tokens.clone()));
+                tokens
+            }
+        }
+    });
+
+    let gutter = gutter_text(&source);
+    let mut cursor_status_line = String::from("줄 1, 열 1");
+    ui.horizontal_top(|ui| {
+        ui.add(
+            egui::Label::new(
+                egui::RichText::new(gutter)
+                    .monospace()
+                    .color(egui::Color32::from_gray(120)),
+            )
+            .selectable(false),
+        );
+        let output = egui::TextEdit::multiline(&mut source)
             .desired_rows(8)
-            .font(egui::TextStyle::Monospace),
-    );
-    ui.data_mut(|d| d.insert_temp(id, source.clone()));
+            .code_editor()
+            .show(ui);
+        if let Some(range) = output.cursor_range {
+            let primary: usize = range.primary.index.into();
+            let secondary: usize = range.secondary.index.into();
+            cursor_status_line = cursor_status(&source, primary);
+            if primary != secondary {
+                let kinds = selection_kinds(&source, primary, secondary);
+                let names: Vec<String> = kinds.iter().map(|k| format!("{k:?}")).collect();
+                cursor_status_line.push_str(&format!(" · 선택 {}", names.join("/")));
+            }
+        }
+    });
+    ui.data_mut(|d| {
+        d.insert_temp(id, source.clone());
+        d.insert_temp(cache_id, (source.clone(), tokens));
+    });
+    ui.label(egui::RichText::new(cursor_status_line).weak());
     ui.separator();
     ui.label("강조 미리보기");
     egui::ScrollArea::vertical()
@@ -100,6 +193,36 @@ mod tests {
         assert!(colored > 20, "colored {colored}");
         // 주석/문자열/숫자/구두점/키워드(+self) = 5가지 색.
         assert_eq!(colors, 5);
+    }
+
+    #[test]
+    fn gutter_counts_lines() {
+        assert_eq!(gutter_text("a"), "1");
+        assert_eq!(gutter_text("a\nb\nc"), "1\n2\n3");
+        assert_eq!(gutter_text("a\n"), "1\n2");
+        assert_eq!(gutter_text(""), "1");
+    }
+
+    #[test]
+    fn cursor_maps_to_line_column_and_token() {
+        let src = "local x\n-- hi\nreturn x";
+        assert_eq!(token_at_char(src, 0), Some(wz_lua::HighlightKind::Keyword));
+        assert_eq!(cursor_status(src, 0), "줄 1, 열 1 · 토큰 Keyword");
+        // 두 번째 줄 주석
+        assert_eq!(
+            token_at_char(src, 9),
+            Some(wz_lua::HighlightKind::Comment)
+        );
+        assert_eq!(cursor_status(src, 9), "줄 2, 열 2 · 토큰 Comment");
+    }
+
+    #[test]
+    fn selection_reports_distinct_kinds() {
+        let src = "local x = \"s\"";
+        let kinds = selection_kinds(src, 0, src.chars().count());
+        assert!(kinds.contains(&wz_lua::HighlightKind::Keyword));
+        assert!(kinds.contains(&wz_lua::HighlightKind::String));
+        assert_eq!(selection_kinds(src, 3, 3).len(), 0);
     }
 
     #[test]

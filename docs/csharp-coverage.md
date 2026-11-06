@@ -247,6 +247,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   source-over**까지 실제 클라이언트 아이콘 6개(27×30/27×27, origin `[-3,30]`)로
   비교해 캔버스 SHA-256이 완전 일치. GDI+의 premultiplied/감마 합성과 텍스트
   래스터는 macOS에서 실행 불가라 남는다.
+- LuaConsole 에디터 거터/커서: 줄 번호 거터, 커서→줄/열/토큰, 선택 토큰 종류,
+  소스 변경 시에만 재토큰화. GUI 테스트 3종 + 스모크.
+- OpenAPI 성공 파싱: 공식 스키마 fixture로 200 본문 파싱(12필드 + 아바타 코드
+  추출)을 고정. 실 200 캡처는 API 키 필요.
 - LuaConsole 에디터 패널: 검증된 토크나이저 결과를 egui `LayoutJob`으로 옮겨
   `Lua.xshd` 색(5종)으로 렌더. 색 매핑 fixture + GUI 테스트 2종 + 스모크
   (`tokens=125 colored=57 colors=5`).

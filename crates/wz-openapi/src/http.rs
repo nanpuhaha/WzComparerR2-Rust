@@ -289,6 +289,16 @@ impl<T: Transport> OpenApiClient<T> {
     }
 }
 
+/// `/v1/id` 응답 본문 파서(성공 경로).
+pub fn parse_character_id_json(body: &str) -> Result<CharacterId, ApiError> {
+    serde_json::from_str(body).map_err(|e| ApiError::Json(e.to_string()))
+}
+
+/// `/v1/character/basic` 응답 본문 파서(성공 경로).
+pub fn parse_character_basic_json(body: &str) -> Result<CharacterBasic, ApiError> {
+    serde_json::from_str(body).map_err(|e| ApiError::Json(e.to_string()))
+}
+
 /// `character_image` URL의 `look/<DATA>`에서 아바타 코드를 꺼낸다.
 pub fn avatar_code_from_image_url(url: &str) -> Option<&str> {
     let index = url.find("look/")?;

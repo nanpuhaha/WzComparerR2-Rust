@@ -1442,3 +1442,26 @@ C#: `-- spritecompose <fixture.json>`.
 
 남는 것: 실제 에디터 위젯(줄 번호, 커서 단위 토큰 재계산, 스크롤 동기화)과
 GDI+/TextEditor의 글꼴 힌팅은 UI 의존이라 미구현이다.
+
+### 에디터 거터·커서 재토큰화
+
+- `gutter_text` — `1..=줄수` 거터(줄 수는 `\n`+1)
+- `token_at_char` — 문자 오프셋 → 토큰 종류(끝 경계는 다음 토큰)
+- `cursor_status` — `줄 L, 열 C · 토큰 Kind`
+- `selection_kinds` — 선택 구간과 겹치는 토큰 종류(중복 제거)
+- 소스가 바뀔 때만 재토큰화(egui temp 캐시), 선택이 있으면 종류를 함께 표시
+
+검증: GUI 테스트 3종(거터/커서·토큰/선택) + 스모크
+`SMOKE OK: lua editor lines=18 cursor=줄 1, 열 9 · 토큰 Comment`.
+
+## OpenAPI 성공(200) 경로 파싱
+
+실제 200 응답은 Nexon API 키가 필요해 캡처하지 못했다. 공식 스키마를 따른
+fixture로 파싱을 고정했다.
+
+- `parse_character_basic_json` / `parse_character_id_json` 공개
+- fixture `nexon_character_basic_200.json`(12필드)로 값·`look/<CODE>` 추출 확인
+- malformed 본문은 `ApiError::Json`
+- 목 서버 200 왕복(`http_mock.rs`)과 함께 성공 경로 파싱이 검증됨
+
+테스트: `crates/wz-openapi/tests/success_fixture.rs` (3종).

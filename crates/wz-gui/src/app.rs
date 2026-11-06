@@ -58,9 +58,14 @@ impl eframe::App for PocApp {
                         }
                         let (tokens, colored, colors) =
                             lua_editor::summary(lua_editor::DEFAULT_SCRIPT);
+                        let lines = lua_editor::gutter_text(lua_editor::DEFAULT_SCRIPT)
+                            .split('\n')
+                            .count();
+                        let cursor = lua_editor::cursor_status(lua_editor::DEFAULT_SCRIPT, 8);
                         println!(
                             "SMOKE OK: lua highlight tokens={tokens} colored={colored} colors={colors}"
                         );
+                        println!("SMOKE OK: lua editor lines={lines} cursor={cursor}");
                         self.smoke_phase = 4;
                         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }

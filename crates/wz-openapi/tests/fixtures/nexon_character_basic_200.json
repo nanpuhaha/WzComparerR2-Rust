@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-06T00:00:00+09:00",
+  "character_name": "홍길동",
+  "world_name": "스카니아",
+  "character_gender": "남",
+  "character_class": "히어로",
+  "character_class_level": "6",
+  "character_level": 285,
+  "character_exp": 123456789012,
+  "character_exp_rate": "12.345",
+  "character_popularity": 42,
+  "character_image": "https://open.api.nexon.com/maplestory/v1/character/look/ABCDEFGHIJKLMNOPQRSTUVWXYZ?x=1&y=2"
+}
