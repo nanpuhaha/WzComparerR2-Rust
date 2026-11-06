@@ -25,6 +25,7 @@ pub mod arena;
 pub mod calc;
 pub mod chara_prop;
 pub mod chara_tooltip;
+pub mod common_controls;
 pub mod damage_skin;
 pub mod db2;
 pub mod db2_characters;
@@ -64,6 +65,10 @@ pub use arena::Arena;
 pub use calc::{evaluate_expression, CalcError};
 pub use chara_prop::CharaProp;
 pub use chara_tooltip::{npc_lines, npc_locations, reactor_from_node, NpcTooltip, ReactorTooltip};
+pub use common_controls::{
+    add_item_times, clamp_scale, create_timeline, get_process_from_timeline, gif_timeline,
+    max_length, playing_indices, should_reset, update_time_offset, KeyFrame,
+};
 pub use damage_skin::{DamageSkin, DamageSkinSection};
 pub use db2::{image_rows as db2_image_rows, Db2Row};
 pub use db2_characters::{

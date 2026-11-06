@@ -455,3 +455,13 @@ Consume 418, Cash 19, Install 2, Etc 10 = 449 rows
 `consumableFrom`/`endUseDate` formatting matches Rust `wz item-expire` exactly.
 72 malformed (<12 digit) field values exist; the original C# throws on them,
 so both sides process only valid values.
+
+Verified Common/Controls pure logic (`animtimeline`):
+```
+timelines 7, probes 30, gif_cases 90, item_times 6, max_length 4,
+time_offset 5, reset 5, scale 8
+```
+The originals (`FrameAnimator`, `AnimationRecoder`, `AnimationControl`) fail to
+load on macOS because they reference SharpDX, so the harness compiles the
+verbatim C# method bodies as a reference implementation. All cases match Rust
+`wz-db::common_controls`.

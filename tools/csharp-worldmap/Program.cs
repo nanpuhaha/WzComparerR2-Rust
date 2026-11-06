@@ -2196,6 +2196,265 @@ class Program
             .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    // 원본 `WzComparerR2.Animation.FrameAnimator` / `Controls.AnimationRecoder`는
+    // SharpDX(Texture2D) 의존 때문에 macOS에서 어셈블리 타입 로드가 실패한다.
+    // 아래는 원본 소스의 **메서드 본문을 그대로 옮긴** 참조 구현이다.
+    // (docs/parity-inventory.md 참고)
+    static class AnimReference
+    {
+        // FrameAnimator.CreateTimeline
+        public static int[] CreateTimeline(IEnumerable<int> delays)
+        {
+            var timeLine = new List<int>() { 0 };
+            foreach (var ms in delays)
+            {
+                timeLine.Add(timeLine[timeLine.Count - 1] + ms);
+            }
+            return timeLine.ToArray();
+        }
+
+        // FrameAnimator.GetProcessFromTimeline
+        public static int GetProcessFromTimeline(int[] timeline, int timeOffset, out float progress)
+        {
+            int index = Array.BinarySearch(timeline, timeOffset);
+            progress = 0;
+            if (index < 0)
+            {
+                index = ~index - 1;
+                progress = (float)(timeOffset - timeline[index]) / (timeline[index + 1] - timeline[index]);
+            }
+            return index;
+        }
+
+        // AnimationRecoder.GetGifTimeLine
+        public static int[] GetGifTimeLine(
+            IReadOnlyList<(int Length, bool Animated)> frames,
+            int preferredFrameDelay,
+            int? maxFrameDelay = null)
+        {
+            if (preferredFrameDelay <= 0)
+            {
+                preferredFrameDelay = 1;
+            }
+            if (maxFrameDelay != null && maxFrameDelay < preferredFrameDelay)
+            {
+                maxFrameDelay = preferredFrameDelay;
+            }
+
+            var timeline = new List<int>();
+            int totalLength = 0;
+            foreach (var frame in frames)
+            {
+                totalLength += frame.Length;
+                if (frame.Animated)
+                {
+                    for (int ms = frame.Length; ms > 0;)
+                    {
+                        if (ms >= preferredFrameDelay)
+                        {
+                            timeline.Add(preferredFrameDelay);
+                            ms -= preferredFrameDelay;
+                        }
+                        else
+                        {
+                            if (timeline.Count > 0)
+                            {
+                                timeline[timeline.Count - 1] += ms;
+                            }
+                            else
+                            {
+                                timeline.Add(ms);
+                            }
+                            ms = 0;
+                        }
+                    }
+                }
+                else
+                {
+                    if (maxFrameDelay != null)
+                    {
+                        for (int ms = frame.Length; ms > 0;)
+                        {
+                            if (ms >= maxFrameDelay.Value)
+                            {
+                                timeline.Add(maxFrameDelay.Value);
+                                ms -= maxFrameDelay.Value;
+                            }
+                            else
+                            {
+                                timeline.Add(ms);
+                                ms = 0;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        timeline.Add(frame.Length);
+                    }
+                }
+            }
+            _ = totalLength;
+            return timeline.ToArray();
+        }
+
+        // AnimationRecoder.GetMaxLength
+        public static int GetMaxLength(IEnumerable<(int Start, int End)> itemTimes)
+        {
+            return itemTimes.Select(item => item.End).DefaultIfEmpty(0).Max();
+        }
+
+        // AnimationControl.AddItem / AnimationRecoder item bookkeeping
+        public static (int Start, int End) AddItemTimes(int start, int length, int end)
+        {
+            return (0 + start, Math.Max(length, end) + start);
+        }
+
+        // AnimationControl.UpdateTimeOffset
+        public static int UpdateTimeOffset(
+            int ms, int lastUpdateMs, int timeOffsetMs, int maxLength, int frameInterval)
+        {
+            int currentTime = lastUpdateMs + timeOffsetMs;
+            var round = (10 - currentTime % 10) % 10;
+            double offset = ms + round + lastUpdateMs + timeOffsetMs;
+            offset = Math.Max(0, Math.Min((maxLength - frameInterval) / 10 * 10, offset));
+            return (int)offset;
+        }
+
+        // AnimationControl.Update reset condition: curTime > maxLength - margin
+        public static bool ShouldReset(int curTime, int maxLength, int margin)
+        {
+            return curTime > maxLength - margin;
+        }
+
+        // AnimationControl.GlobalScale (MathHelper.Clamp)
+        public static float ClampScale(float value)
+        {
+            return Math.Min(10f, Math.Max(0.1f, value));
+        }
+    }
+
+    static void AnimTimeline()
+    {
+        var delaySets = new List<int[]>
+        {
+            Array.Empty<int>(),
+            new[] { 1 },
+            new[] { 90 },
+            new[] { 30, 30, 30 },
+            new[] { 100, 1, 100 },
+            new[] { 255, 0, 7 },
+            new[] { 10, 20, 30, 40, 50 },
+        };
+        var timelines = new List<object>();
+        foreach (var delays in delaySets)
+        {
+            timelines.Add(new { delays, timeline = AnimReference.CreateTimeline(delays) });
+        }
+
+        var probes = new List<object>();
+        foreach (var delays in delaySets)
+        {
+            var arr = AnimReference.CreateTimeline(delays);
+            if (arr.Length < 2) continue;
+            int total = arr[arr.Length - 1];
+            foreach (var t in new[] { 0, 1, total / 2, Math.Max(0, total - 1), total })
+            {
+                var idx = AnimReference.GetProcessFromTimeline(arr, t, out float progress);
+                probes.Add(new { delays, t, index = idx, progress });
+            }
+        }
+
+        var frameSets = new (int[] Len, bool[] Ani)[]
+        {
+            (new[] { 90 }, new[] { false }),
+            (new[] { 90 }, new[] { true }),
+            (new[] { 30, 30, 30 }, new[] { true, true, true }),
+            (new[] { 100, 1, 100 }, new[] { true, true, true }),
+            (new[] { 255, 5, 7 }, new[] { false, true, false }),
+            (new[] { 10, 20, 30, 40, 50 }, new[] { true, false, true, false, true }),
+        };
+        var gifCases = new List<object>();
+        foreach (var (len, ani) in frameSets)
+        {
+            var frames = len.Select((l, i) => (l, ani[i])).ToList();
+            foreach (var preferred in new[] { 0, 1, 20, 90, 200 })
+            {
+                foreach (var max in new int?[] { null, 30, 300 })
+                {
+                    gifCases.Add(new
+                    {
+                        len,
+                        ani,
+                        preferred,
+                        max,
+                        timeline = AnimReference.GetGifTimeLine(frames, preferred, max),
+                    });
+                }
+            }
+        }
+
+        var itemTimeCases = new List<object>();
+        foreach (var (start, length, end) in new (int, int, int)[]
+        {
+            (0, 0, 0), (0, 90, 0), (0, 0, 120), (50, 30, 0), (50, 30, 200), (-5, 10, 0),
+        })
+        {
+            var pair = AnimReference.AddItemTimes(start, length, end);
+            itemTimeCases.Add(new
+            {
+                start, length, end,
+                pair = new { start = pair.Start, end = pair.End },
+            });
+        }
+        var maxLengthCases = new[]
+        {
+            Array.Empty<(int, int)>(),
+            new[] { (0, 90) },
+            new[] { (0, 90), (100, 250) },
+            new[] { (5, 5), (0, 0) },
+        }.Select(t => new
+        {
+            pairs = t.Select(p => new { start = p.Item1, end = p.Item2 }).ToList(),
+            max = AnimReference.GetMaxLength(t),
+        }).ToList();
+
+        var offsetCases = new List<object>();
+        foreach (var (ms, last, off, maxLen, interval) in new (int, int, int, int, int)[]
+        {
+            (10, 0, 0, 1000, 10), (5, 123, 7, 1000, 10), (-100, 50, 0, 1000, 10),
+            (1000, 0, 0, 500, 10), (33, 1000, 500, 1200, 10),
+        })
+        {
+            offsetCases.Add(new
+            {
+                ms, last, off, max_len = maxLen, interval,
+                value = AnimReference.UpdateTimeOffset(ms, last, off, maxLen, interval),
+            });
+        }
+
+        var resetCases = new (int Cur, int Max, int Margin)[]
+        {
+            (0, 100, 10), (90, 100, 10), (91, 100, 10), (100, 100, 10), (5, 0, 10),
+        };
+        var scaleCases = new[] { -1f, 0f, 0.05f, 0.1f, 0.5f, 1f, 10f, 42f }
+            .Select(v => new { input = v, output = AnimReference.ClampScale(v) }).ToList();
+
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            timelines,
+            probes,
+            gif_cases = gifCases,
+            item_time_cases = itemTimeCases,
+            max_length_cases = maxLengthCases,
+            time_offset_cases = offsetCases,
+            reset_cases = resetCases.Select(c => new
+            {
+                cur = c.Cur, max = c.Max, margin = c.Margin,
+                reset = AnimReference.ShouldReset(c.Cur, c.Max, c.Margin),
+            }),
+            scale_cases = scaleCases,
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2243,6 +2502,7 @@ class Program
         else if (args[0] == "pluginentries") PluginEntries(args[1]);
         else if (args[0] == "itemrecipereq") ItemRecipeReq(args[1], args[2], args[3]);
         else if (args[0] == "itemexpire") ItemExpire(args[1], args[2]);
+        else if (args[0] == "animtimeline") AnimTimeline();
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

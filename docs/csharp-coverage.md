@@ -44,7 +44,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | (root) | 15 | 2,832 | `wz-db` | 🟡 |
 | Rendering | 25 | 2,726 | `wz-render`, `wz-image` | 🟡 (light/water/sprite) |
 | Animation | 15 | 2,415 | `wz-avatar` frame loader | 🟡 |
-| Controls | 16 | 2,138 | — | ⬜ |
+| Controls | 16 | 2,138 | `wz-db::common_controls` (타임라인/GIF 지연/구간/스케일) | 🟡 |
 | OpenAPI | 4 | 2,086 | `wz-openapi` helpers + AvatarCodeStructure v26–44/Unpack, HTTP는 API 키 필요 | 🟡 |
 | Text | 4 | 707 | `wz-core::text` | ✅ |
 | Encoders | 6 | 534 | `wz-image` | ✅ (PNG/BC7) |
@@ -88,7 +88,12 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
    ArcaneForce(7), AuthenticForce(8), Bits(79), EquipBag(2) 스물한 카테고리를
    실데이터 비교했고, DB2 전체 화면 이미지 뷰어(GUI)도 구현했다. 나머지 8개
    전용 그리드는 미구현.
-6. `WzComparerR2.Common/Controls` (2,138 LOC) — 미구현.
+6. `WzComparerR2.Common/Controls` (2,138 LOC) — GDI/SharpDX 비의존 순수 로직을
+   `wz-db::common_controls`로 옮겼다. `FrameAnimator.CreateTimeline`/
+   `GetProcessFromTimeline`, `AnimationRecoder.GetGifTimeLine`/`GetMaxLength`,
+   `AnimationControl.AddItem`/`UpdateTimeOffset`/재생 리셋/`GlobalScale`.
+   나머지(그래픽 장치, 스프라이트 배치, 마우스 드래그, XNA `Timer`,
+   `AnimationRecoder` 렌더 타깃/GIF 인코딩)는 Device/Texture2D 의존이다.
    `OpenAPI` (2,086 LOC) 중 네트워크 없이 검증 가능한 `Decrypt`,
    `CheckVer`, `GetItemID`를 `wz-openapi`로 옮겨 C# 실행 결과와 비교했다.
    추가로 `AvatarCodeStructure` v26–44 구조를 C#에서 덤프해
@@ -226,6 +231,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook`로 몹/NPC
   설명, `[몬스터북]`, `NPC 대사` 라인을 구성해 **1,845개 항목**
   (NPC 대사 767개)이 C#과 완전 일치.
+- `Common/Controls` 순수 로직: 타임라인 누적, 구간 진행률, GIF 지연 분해,
+  구간 최대 길이/재생 판정, 시간 오프셋 클램프, 스케일 클램프가 C# 참조
+  구현과 완전 일치(7 타임라인, 30 프로브, 90 GIF, 6 구간, 4 최대길이,
+  5 오프셋, 5 리셋, 8 스케일 케이스).
 - `AchievementTooltipRenderer` 텍스트: `Achievement.CreateFromNode` +
   툴팁 라인을 옮겨 `AchievementData_000.wz` **1,579개 업적**의 13개 필드와
   라인 순서가 C#과 완전 일치.
@@ -255,7 +264,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 ## 남은 작업
 
 - DB2/CharaSimControl/Comparer HTML/EasyComparer 등 UI·리포팅 모듈.
-- Common Controls, LuaConsole.
+- Common Controls의 그래픽 장치/스프라이트/마우스 드래그(GDI·SharpDX),
+  LuaConsole.
 - PluginBase의 플러그인 로딩/메뉴 주입(WinForms 호스트 필요).
 - Network TCP/재접속/로그인 상태 머신(서버 필요).
 - OpenAPI HTTP 호출(Nexon API 키 필요).

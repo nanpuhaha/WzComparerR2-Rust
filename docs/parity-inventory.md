@@ -692,3 +692,35 @@ CLI: `wz item-expire <Data> <dir>`.
 `Substring(0, 4)`…를 호출하므로 이런 아이템은 원본에서도 예외가 난다.
 Rust는 유효한 12자리 이상 숫자만 포맷하고, C# 하네스도 같은 가드를 두어
 비교 가능한 450개 필드(449행)로 맞췄다.
+
+## Common/Controls + Animation 순수 로직 (`wz-db::common_controls`)
+
+원본 `FrameAnimator`/`AnimationRecoder`/`AnimationControl` 타입은
+`Microsoft.Xna.Framework`/SharpDX(`Texture2D`, `GraphicsDevice`)에 묶여 있어
+macOS에서 어셈블리 타입 로드가 실패한다(하네스에서 `GetTypes()` →
+`ReflectionTypeLoadException`, `Could not load file or assembly
+'SharpDX.Direct2D1'`). 따라서 아래는 원본 소스의 **메서드 본문을 그대로 옮긴
+C# 참조 구현**을 하네스에서 컴파일해 기준값으로 썼다.
+
+| 원본 | Rust | 규칙 |
+|---|---|---|
+| `FrameAnimator.CreateTimeline` | `create_timeline` | `0`으로 시작하는 지연 누적 |
+| `FrameAnimator.GetProcessFromTimeline` | `get_process_from_timeline` | `Array.BinarySearch`, 미발견 시 `~index-1`과 구간 비율 |
+| `AnimationRecoder.GetGifTimeLine` | `gif_timeline` | animated는 `preferred`로 분할 후 나머지를 직전 항목에 합산, 비animated는 `max`로 분할(없으면 원본 길이) |
+| `AnimationRecoder.GetMaxLength` | `max_length` | 구간 끝 최댓값, 비면 0 |
+| `AnimationControl.AddItem` | `add_item_times` | `(start, max(length,end)+start)` |
+| `AnimationControl.GetPlayingAni` | `playing_indices` | `max==0`이면 전체, 아니면 `start<=t<end` |
+| `AnimationControl.UpdateTimeOffset` | `update_time_offset` | 10ms 격자 반올림, `[0, (max-interval)/10*10]` 클램프 |
+| `AnimationControl.Update` | `should_reset` | `cur > max - margin` |
+| `AnimationControl.GlobalScale` | `clamp_scale` | `MathHelper.Clamp(v, 0.1, 10)` |
+
+검증: 위 표의 경계/중복/음수 케이스 **160개**(7 + 30 + 90 + 6 + 4 + 5 + 5
++ 8 + 5)가 참조 구현과 완전 일치.
+fixture: `crates/wz-db/tests/fixtures/anim_timeline.json`,
+테스트: `crates/wz-db/tests/common_controls_parity.rs`,
+C# 하네스: `tools/csharp-worldmap ... -- animtimeline`.
+
+구현 불가로 남긴 부분: `GraphicsDeviceService`, `GraphicsDeviceControl`,
+`SpriteBatchEx` 배치, 마우스 드래그 컨텍스트, `Timer`/`Stopwatch` 실시간 루프,
+`AnimationRecoder` 렌더 타깃·GIF/PNG 인코딩, `AlphaForm`(WinForms 레이어드
+윈도우). 모두 장치/윈도우 핸들 의존이다.
