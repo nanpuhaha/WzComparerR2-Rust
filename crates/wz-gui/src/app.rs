@@ -1,5 +1,5 @@
 use crate::async_io;
-use crate::panels::{catalog, inspector, lua_editor, tree_panel, viewport};
+use crate::panels::{catalog, inspector, lua_console, lua_editor, tree_panel, viewport};
 use crate::state::AppState;
 
 #[derive(Default)]
@@ -66,6 +66,20 @@ impl eframe::App for PocApp {
                             "SMOKE OK: lua highlight tokens={tokens} colored={colored} colors={colors}"
                         );
                         println!("SMOKE OK: lua editor lines={lines} cursor={cursor}");
+                        // 콘솔 실행 모델(검증된 wz_lua 샌드박스) 스모크.
+                        if let Some(mut sb) = lua_console::new_sandbox() {
+                            let outcome = lua_console::execute(&mut sb, "return 1+2, 'lua'");
+                            match outcome {
+                                lua_console::ExecutionOutcome::Values(values) => println!(
+                                    "SMOKE OK: lua console values={} [{}]",
+                                    values.len(),
+                                    values.join(", ")
+                                ),
+                                lua_console::ExecutionOutcome::Error(e) => {
+                                    println!("SMOKE FAIL: lua console {e}")
+                                }
+                            }
+                        }
                         // 오프스크린 wgpu 업로드/샘플링/블렌드 해시.
                         let sprite = crate::offscreen::test_sprite();
                         for (mode, name) in [
@@ -124,6 +138,9 @@ impl eframe::App for PocApp {
             egui::CollapsingHeader::new("LuaConsole (문법 강조)")
                 .default_open(false)
                 .show(ui, lua_editor::show);
+            egui::CollapsingHeader::new("LuaConsole (실행)")
+                .default_open(false)
+                .show(ui, lua_console::show);
             ui.separator();
             ui.heading("맵 뷰포트");
             viewport::show(ui, &mut self.state);

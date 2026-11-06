@@ -1600,3 +1600,25 @@ C#: `-- mainwindow <PluginBase.dll> <plugin.dll> <fixture.json>`.
 
 가정: 첫 탭 자동 선택과 부분 선택 해제 시의 재선택은 컨트롤 없이 확인할 수
 없어 모델에서 명시한 규칙을 따른다(문서화).
+
+## LuaConsole 콘솔 패널 (실행 이력/입력/Run)
+
+원본 `FrmConsole`은 WinForms 콘솔이다. egui 패널로 출력 이력/입력/Run을
+재현하고, 실행은 **검증된 `wz_lua::Sandbox`**에 위임한다
+(`wz-gui::panels::lua_console`).
+
+- `ExecutionOutcome::{Values, Error}` — 청크 반환값(문자열화) 또는 오류
+- `ConsoleModel::submit` — 명령 이력 + 반환값별 출력(없으면 `(반환값 없음)`),
+  오류는 오류 항목, 제출 후 입력 비움. 빈 입력은 무시
+- `thread_local` 샌드박스로 프레임 간 전역 상태 유지
+- 반환값/오류/명령/시스템 항목을 모노스페이스 + 색으로 렌더
+
+검증(GUI 73개 테스트):
+- `return 1+2, 'lua'` → `["3","lua"]`
+- `error('boom')` → 오류 메시지에 `boom`
+- 이력 순서(Command→Output)/입력 초기화/빈 입력 무시/오류 기록
+- `host_call`이 콘솔 샌드박스에서도 동작
+- 스모크: `SMOKE OK: lua console values=2 [3, lua]`
+
+남는 것: 원본 콘솔의 `print` 리다이렉트, 명령 히스토리(↑/↓), 자동완성,
+`DoStringAsync` 취소 훅은 UI 의존이라 미구현이다.
