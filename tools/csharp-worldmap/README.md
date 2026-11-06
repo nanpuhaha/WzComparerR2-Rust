@@ -589,3 +589,10 @@ Verified ItemTooltip vertical layout (`itemlayout <fixture.json>`):
 ```
 `pic_h`/`icon_y`/`splitter_h` match Rust `wz_db::item_tooltip_layout`.
 Text heights are injected deterministically (18 per wrapped line, 40 cols).
+
+Verified format parser (`formatparse <fixture.json>`):
+```
+151 real strings from String_000.wz -> 882 runs
+```
+Calls the **original** `WzComparerR2.Text.Parser.Parse`; run kinds/text/colors/
+fonts/image ids/sizes/line breaks match Rust `wz_db::format_parser`.

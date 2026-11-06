@@ -5586,3 +5586,55 @@ pub fn cmd_item_layout_fixture(
     println!("{}", serde_json::to_string_pretty(&rows)?);
     Ok(())
 }
+
+/// 실제 아이템 문자열에서 `#` 토큰이 있는 `desc`/`desc_leftalign`을 모은다.
+pub fn cmd_item_format_strings(
+    data_root: &Path,
+    string_wz: &Path,
+    dir: &str,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+
+    let mut rows = Vec::new();
+    let mut ids: Vec<i32> = linker.string_item.keys().copied().collect();
+    ids.sort_unstable();
+    for id in ids {
+        let Some(sr) = linker.string_item.get(&id) else {
+            continue;
+        };
+        for (field, text) in [
+            ("desc", sr.desc.clone()),
+            ("desc_leftalign", sr.values.get("desc_leftalign").cloned()),
+            ("auto_desc", sr.auto_desc.clone()),
+        ] {
+            let Some(text) = text else { continue };
+            if !text.contains('#') {
+                continue;
+            }
+            rows.push(serde_json::json!({ "id": id, "field": field, "text": text }));
+            if rows.len() >= limit {
+                break;
+            }
+        }
+        if rows.len() >= limit {
+            break;
+        }
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "dir": dir,
+            "data_root": data_root.display().to_string(),
+            "rows": rows,
+        }))?
+    );
+    Ok(())
+}

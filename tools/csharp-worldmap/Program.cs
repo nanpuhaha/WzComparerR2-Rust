@@ -3636,6 +3636,39 @@ return tostring(ok) .. '|' .. tostring(acc)
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // **원본** `WzComparerR2.Text.Parser.Parse`를 그대로 호출한다(GDI 비의존).
+    static void FormatParse(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            string text = item.GetProperty("text").GetString()!;
+            var runs = new List<object>();
+            foreach (var element in WzComparerR2.Text.Parser.Parse(text))
+            {
+                if (element is WzComparerR2.Text.Span sp)
+                {
+                    runs.Add(new
+                    {
+                        kind = "span",
+                        text = sp.Text,
+                        color = sp.ColorID,
+                        font = sp.FontID,
+                        image_id = sp.ImageID,
+                        image_width = sp.ImageWidth,
+                        image_height = sp.ImageHeight,
+                    });
+                }
+                else
+                {
+                    runs.Add(new { kind = "break" });
+                }
+            }
+            rows.Add(new { path = item.GetProperty("path").GetString(), runs });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -3698,6 +3731,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "drawmath") DrawMath();
         else if (args[0] == "luadelegate") LuaDelegate(args[1]);
         else if (args[0] == "itemlayout") ItemLayout(args[1]);
+        else if (args[0] == "formatparse") FormatParse(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

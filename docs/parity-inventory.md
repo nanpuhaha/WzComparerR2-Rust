@@ -1257,3 +1257,40 @@ CLI: `wz item-layout-fixture <Data> --string <String_000.wz> --dir Consume`.
 
 호스트는 응답하지만(거부 응답) 어떤 포트에서도 서비스가 열려 있지 않다.
 실서버 검증은 **올바른 주소/포트**가 있어야 진행할 수 있다.
+
+## 서식 문자열 파서 (`Text.Parser.Parse`)
+
+툴팁/스킬 설명의 `#c`, `#fcAARRGGBB#`, `#$r`, `#$^f`/`#$$`, `#k`,
+`#@id/w/h@`, `\n` 토큰을 run 목록으로 분해한다. GDI와 무관하므로 C# **원본
+`Parser.Parse`를 직접 실행**해 비교했다(`WzComparerR2.Common`은 macOS에서 로드
+가능).
+
+| 토큰 | 원본 동작(그대로 유지) |
+|---|---|
+| `#c` | flush 후 색 스택에 `c` push(이미 `c`면 push 안 함) |
+| `#fc…` | `0x`는 건너뛰고 `8자리 + #`일 때만 색 push. 형식이 틀리면 `break`만 하고 **strPos를 되돌리지 않아 토큰 글자가 본문에 남는다** |
+| `#k` | 색 pop |
+| `#$xx` | 색 스택 push(`$x` 등) |
+| `#$^f` / `#$$` | 폰트 스택 push/pop |
+| `#@id/w/h@` | `id`/`w`/`h` 중 파싱되는 값만 사용, 실패 시 이미지 버림 |
+| `#` (그 외) | 스택이 1개면 `c` push, 아니면 pop |
+| `\r` | **무시**(개행 아님) |
+| `\n` | `LineBreak` 요소 |
+| `\` + 그 외 | 문자 자체를 버림(`\0`) |
+| 끝의 단독 `\` | `#`로 바뀌어 색 토글로 처리 |
+| 빈 run | 만들지 않음(`sb.Length > offset`일 때만) |
+
+검증:
+- 입력은 `Data/String/String_000.wz`에서 `#`가 있는 실제 문자열 **151개**
+  (`#t` 12, `#fc` 12, `#$` 4, `#@` 1, `#k` 12, `#c` 90, 무작위 20)
+- C# 하네스가 원본 `Parser.Parse`를 호출해 **882개 run**을 덤프
+- `crates/wz-db/tests/format_parser_parity.rs` — run 종류/텍스트/색/폰트/
+  이미지 id·크기/개행이 모두 일치
+- 단위 테스트 7종으로 위 표의 특이점 고정
+
+fixture: `format_parser_input.json`, `format_parser_expected.json`;
+C#: `-- formatparse <fixture.json>`.
+
+이로써 ItemTooltip 파이프라인에서 **남은 미검증部分是 글리프 래스터라이제이션과
+GDI+ premultiplied/감마 합성뿐**이다(파서 → run → 레이아웃 기하 → 아이콘
+확대/배치/불투명 blit/정수 source-over → 세로 배치가 모두 실행 비교됨).

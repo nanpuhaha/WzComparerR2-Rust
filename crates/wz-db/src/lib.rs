@@ -46,6 +46,7 @@ pub mod db2_skills;
 pub mod db2_taming_mobs;
 pub mod dotnet_metadata;
 pub mod draw_math;
+pub mod format_parser;
 pub mod gear_stats;
 pub mod item_tooltip;
 pub mod item_tooltip_extra;
@@ -121,6 +122,7 @@ pub use draw_math::{
     border_path, gear_detail_number_glyphs, icon_border_path, path_rects, sprite_destination,
     GlyphDraw,
 };
+pub use format_parser::{parse as parse_format, DocElement, Span};
 pub use gear_stats::extract_gear_props;
 pub use item_tooltip::{
     build_item_tooltip, item_attribute_lines, item_core_spec_string, ItemTooltipView,

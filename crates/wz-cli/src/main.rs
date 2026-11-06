@@ -352,6 +352,21 @@ enum Command {
         json: bool,
     },
 
+    /// 서식 문자열(`Parser.Parse`) fixture 생성 (실제 아이템 desc/desc_leftalign)
+    ItemFormatStrings {
+        /// Data 루트
+        data_root: PathBuf,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// Item 하위 디렉터리
+        #[arg(long, default_value = "Consume")]
+        dir: String,
+        /// 최대 문자열 수
+        #[arg(long, default_value_t = 3000)]
+        limit: usize,
+    },
+
     /// ItemTooltip 세로 배치 fixture 생성 (실제 아이템 데이터)
     ItemLayoutFixture {
         /// Data 루트
@@ -1090,6 +1105,12 @@ fn main() {
             env,
             json,
         } => commands::cmd_lua_run(&script, base_dir.as_deref(), env.as_deref(), json),
+        Command::ItemFormatStrings {
+            data_root,
+            string,
+            dir,
+            limit,
+        } => commands::cmd_item_format_strings(&data_root, &string, &dir, limit),
         Command::ItemLayoutFixture {
             data_root,
             string,

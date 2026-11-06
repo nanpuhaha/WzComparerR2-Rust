@@ -247,6 +247,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   source-over**까지 실제 클라이언트 아이콘 6개(27×30/27×27, origin `[-3,30]`)로
   비교해 캔버스 SHA-256이 완전 일치. GDI+의 premultiplied/감마 합성과 텍스트
   래스터는 macOS에서 실행 불가라 남는다.
+- 서식 문자열 파서: `Text.Parser.Parse`를 이식하고 실제 `String_000.wz`의
+  태그 포함 문자열 151개(882 run)를 **원본 C# `Parser.Parse` 실행 결과**와
+  비교해 완전 일치. `#fc` 오류 시 토큰 글자가 남는 동작, `\r` 무시, 끝 `\`
+  처리 같은 특이점까지 고정.
 - ItemTooltip 세로 배치: `RenderItem`의 `picH`/`splitterH` 누적을 주입 높이로
   옮기고, 실제 Consume 18,376개에서 뽑은 320개로 C# 하네스와 `pic_h/icon_y/
   splitter_h` 완전 일치.
