@@ -4325,6 +4325,36 @@ return tostring(ok) .. '|' .. tostring(acc)
             on_load = new { ran, failures },
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
+    // `ReplaceDescTags`의 `#t` 정규식 치환을 실제 C# StringLinker로 실행한다.
+    static void DescTags(string stringWzPath, string fixturePath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        linker.Load(str.wz_files[0], null, null);
+
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        var regex = new System.Text.RegularExpressions.Regex(@"#(t)\s*(\d{1,9}).*?#");
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            string text = item.GetProperty("text").GetString()!;
+            var replaced = regex.Replace(text, match =>
+            {
+                if (!int.TryParse(match.Groups[2].Value, out int id)) id = -1;
+                StringResult sr = null;
+                linker.StringItem.TryGetValue(id, out sr);
+                sr ??= linker.StringEqp.TryGetValue(id, out var eqp) ? eqp : null;
+                return sr?.Name ?? id.ToString();
+            });
+            rows.Add(new
+            {
+                id = item.GetProperty("id").GetInt32(),
+                field = item.GetProperty("field").GetString(),
+                replaced,
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4395,6 +4425,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "pluginmodel") PluginModel(args[1]);
         else if (args[0] == "mainwindow") MainWindow(args[1], args[2], args[3]);
         else if (args[0] == "framebake") FrameBake(args[1]);
+        else if (args[0] == "desctags") DescTags(args[1], args[2]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

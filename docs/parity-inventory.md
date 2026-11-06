@@ -1680,3 +1680,26 @@ C#: `-- mainwindow <PluginBase.dll> <plugin.dll> <fixture.json>`.
   `RibbonBar`/`SuperTabControl`은 Windows 전용이라 macOS에서 로드/생성할 수
   없다. 그래서 리본 배치·이벤트/무효화·탭/명령 수명주기는 **모델 + C# 참조
   하네스**로 검증했고, 실제 컨트롤 인스턴스화/`Invalidate()` 호출은 미실행이다.
+
+## ItemTooltip `#t` 링크 치환 (`ReplaceDescTags`)
+
+원본은 `Regex.Replace(@$"#(t)\s*(\d{{1,9}}).*?#", ...)`로 `#t<id>…#`를
+아이템/장비 이름으로 바꾼다.
+
+- `#t` 뒤 공백 허용, 숫자는 **최대 9자리**만 id로 사용(나머지는 닫는 `#`까지 폐기)
+- 닫는 `#`이 없으면 매치하지 않아 원문 유지
+- 이름 조회: `StringItem` → `StringEqp` → `id.toString()`
+- `replace_desc_tags_full`은 `#cosmetic_EULO#` 치환 후 `#t`를 처리
+
+이 과정에서 기존 포팅의 **버그를 발견·수정**했다: 이전 구현은 숫자를 전부 읽고
+`len <= 9`일 때만 치환해서, 10자리 이상이면 원본과 달리 치환하지 않았다.
+
+검증:
+- 입력은 실제 `String/Item.img`에서 `#t`가 있는 40개(desc/desc_leftalign)
+  + 경계 4개(10자리 id, 공백 변형, 닫는 `#` 없음, 링크 아님)
+- C# 하네스가 **실제 `StringLinker`와 .NET `Regex`**로 같은 치환 수행
+- `crates/wz-db/tests/desc_tag_parity.rs` 44케이스 완전 일치
+- 단위 테스트 8종(item_tooltip_extra) 통과
+
+fixture: `desc_tag_cases.json`, `desc_tag_expected.json`,
+C#: `-- desctags <String_000.wz> <fixture.json>`.

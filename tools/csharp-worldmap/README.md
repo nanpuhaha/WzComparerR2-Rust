@@ -655,3 +655,10 @@ context_created=true; activation order [AlphaPlugin, DerivedPlugin]
 3 tabs, 3 selections, 3 commands, 4 dispatches, 3 OnLoad entries (one failure)
 ```
 Matches Rust `wz_db::main_window` (TabHost/CommandRegistry/plugin_on_load).
+
+Verified ItemTooltip `#t` links (`desctags <String_000.wz> <fixture.json>`):
+```
+44 cases (40 real item strings + 4 edge cases)
+```
+Uses real `StringLinker` + .NET `Regex`; matches Rust
+`wz_db::replace_desc_tags` (9-digit id limit, requires closing `#`).

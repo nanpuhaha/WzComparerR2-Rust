@@ -270,36 +270,55 @@ pub fn cant_account_sharable_tooltip(item: &Node) -> Option<String> {
 
 /// `ReplaceDescTags` — `#t<id>...#`를 아이템/장비 이름으로 치환한다.
 ///
-/// `#cosmetic_EULO#`는 이 클라이언트의 `desc_leftalign`에 등장하지 않아
-/// 구현하지 않았다(스캔 근거는 문서 참고).
+/// 원본 정규식은 `#(t)\s*(\d{1,9}).*?#`이다. 즉 숫자는 **최대 9자리**만 id로
+/// 읽고 나머지는 닫는 `#`까지 버린다. 닫는 `#`이 없으면 매치하지 않는다.
 pub fn replace_desc_tags(text: &str, name_of: &dyn Fn(i32) -> Option<String>) -> String {
-    let bytes: Vec<char> = text.chars().collect();
+    let chars: Vec<char> = text.chars().collect();
+    let len = chars.len();
     let mut out = String::new();
     let mut i = 0usize;
-    while i < bytes.len() {
-        if bytes[i] == '#' && i + 1 < bytes.len() && bytes[i + 1] == 't' {
+    while i < len {
+        if chars[i] == '#' && i + 1 < len && chars[i + 1] == 't' {
             let mut cursor = i + 2;
-            while cursor < bytes.len() && bytes[cursor].is_whitespace() {
+            while cursor < len && chars[cursor].is_whitespace() {
                 cursor += 1;
             }
             let start = cursor;
-            while cursor < bytes.len() && bytes[cursor].is_ascii_digit() {
+            while cursor < len && chars[cursor].is_ascii_digit() && cursor - start < 9 {
                 cursor += 1;
             }
-            let digits: String = bytes[start..cursor].iter().collect();
-            if !digits.is_empty() && digits.len() <= 9 {
-                if let Some(end) = bytes[cursor..].iter().position(|c| *c == '#') {
-                    let id: i32 = digits.parse().unwrap_or(-1);
+            if cursor > start {
+                let mut end = cursor;
+                while end < len && chars[end] != '#' {
+                    end += 1;
+                }
+                if end < len {
+                    let id: i32 = chars[start..cursor]
+                        .iter()
+                        .collect::<String>()
+                        .parse()
+                        .unwrap();
                     out.push_str(&name_of(id).unwrap_or_else(|| id.to_string()));
-                    i = cursor + end + 1;
+                    i = end + 1;
                     continue;
                 }
             }
         }
-        out.push(bytes[i]);
+        out.push(chars[i]);
         i += 1;
     }
     out
+}
+
+/// `ReplaceDescTags` 전체 — `#cosmetic_EULO#` 후 `#t` 링크를 치환한다.
+pub fn replace_desc_tags_full(
+    text: &str,
+    name_of: &dyn Fn(i32) -> Option<String>,
+    cosmetic_id: i32,
+    cosmetic_name: Option<&str>,
+) -> String {
+    let text = crate::cosmetic_eulo::replace_cosmetic_eulo(text, cosmetic_name, cosmetic_id);
+    replace_desc_tags(&text, name_of)
 }
 
 /// 원본 `Character.ExpToNextLevel`.

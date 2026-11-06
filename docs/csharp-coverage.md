@@ -273,6 +273,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - ItemTooltip 오프스크린 렌더: 파서→배치→아이콘 픽셀 연산→게임 폰트를 합쳐
   300×153 RGBA를 만들고 SHA-256을 fixture로 고정. GUI 인스펙터가 이 경로를
   사용한다. GDI+ 감마/힌팅과의 픽셀 동일성은 주장하지 않는다.
+- ItemTooltip `#t` 링크: 원본 정규식의 9자리 제한/닫는 `#` 조건을 옮기고 실제
+  아이템 문자열 40개 + 경계 4개를 실제 .NET Regex/StringLinker 결과와 비교.
+  기존 포팅이 10자리 id에서 어긋나던 버그도 수정.
 - ItemTooltip 세로 배치: `RenderItem`의 `picH`/`splitterH` 누적을 주입 높이로
   옮기고, 실제 Consume 18,376개에서 뽑은 320개로 C# 하네스와 `pic_h/icon_y/
   splitter_h` 완전 일치.

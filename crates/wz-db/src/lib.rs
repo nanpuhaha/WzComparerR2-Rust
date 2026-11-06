@@ -136,7 +136,7 @@ pub use item_tooltip::{
 pub use item_tooltip_extra::{
     cant_account_sharable_tooltip, cash_tag_lines, exp_restriction_lines, exp_to_next_level,
     expire_date_lines, incline_line, item_int_props, pet_command_lines, point_cost_line,
-    replace_desc_tags, trade_available_line, RecipeRequirement, RecipeSpec,
+    replace_desc_tags, replace_desc_tags_full, trade_available_line, RecipeRequirement, RecipeSpec,
 };
 pub use item_tooltip_layout::{
     layout_item, line_height, wrapped_lines, ItemLayout, ItemLayoutInput,
