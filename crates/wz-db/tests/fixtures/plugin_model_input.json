@@ -1,0 +1,35 @@
+{
+  "subscriptions": [
+    { "event": "SelectedNode1Changed", "handler": "1" },
+    { "event": "SelectedNode1Changed", "handler": "2" },
+    { "event": "SelectedNode1Changed", "handler": "1" },
+    { "event": "WzOpened", "handler": "3" },
+    { "event": "WzClosing", "handler": "4" },
+    { "event": "MainStyleChanged", "handler": "5" },
+    { "event": "MainStyleChanged", "handler": "5" }
+  ],
+  "unsubscriptions": [
+    { "event": "SelectedNode1Changed", "handler": "1" },
+    { "event": "MainStyleChanged", "handler": "5" },
+    { "event": "SelectedNode2Changed", "handler": "9" }
+  ],
+  "emits": [
+    "SelectedNode1Changed",
+    "WzOpened",
+    "WzClosing",
+    "MainStyleChanged",
+    "SelectedNode2Changed"
+  ],
+  "ops": [
+    { "op": "invalidate", "rect": [0, 0, 10, 10] },
+    { "op": "invalidate", "rect": [5, 5, 10, 10] },
+    { "op": "update" },
+    { "op": "update" },
+    { "op": "invalidate", "rect": [1, 2, 3, 4] },
+    { "op": "invalidate_all" },
+    { "op": "update" },
+    { "op": "invalidate_all" },
+    { "op": "invalidate", "rect": [1, 2, 3, 4] },
+    { "op": "update" }
+  ]
+}

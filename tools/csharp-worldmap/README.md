@@ -634,3 +634,10 @@ context_created=true; 6 AddRibbonBar calls; 3 panels
 ```
 Matches Rust `wz_db::plugin_ribbon` including `max(1, width)` clamping and
 `Controls[0]` right-append ordering.
+
+Verified plugin event/invalidate model (`pluginmodel <fixture.json>`):
+```
+7 subscriptions, 5 emits, 10 invalidate steps -> 3 paints
+```
+Uses real .NET multicast delegates and `System.Drawing.Rectangle.Union`; matches
+Rust `wz_db::plugin_events`.

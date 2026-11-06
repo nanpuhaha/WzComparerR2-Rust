@@ -4052,6 +4052,90 @@ return tostring(ok) .. '|' .. tostring(acc)
             panels = panelsOut,
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
+    // `PluginContext` 이벤트(멀티캐스트 델리게이트)와 WinForms Invalidate 병합.
+    // WinForms 컨트롤 없이 .NET 델리게이트/System.Drawing.Rectangle만 사용한다.
+    static void PluginModel(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+
+        // 핸들러 id마다 고유 델리게이트 인스턴스 하나를 만들어, 같은 id 구독은
+        // 동일 인스턴스의 중복 등록이 되게 한다.
+        var calls = new List<ulong>();
+        var handlers = new Dictionary<string, Action>();
+        var events = new Dictionary<string, Action>();
+        foreach (var ev in new[] { "SelectedNode1Changed", "SelectedNode2Changed", "SelectedNode3Changed", "WzOpened", "WzClosing", "MainStyleChanged" })
+            events[ev] = null!;
+
+        Action A(string id)
+        {
+            if (!handlers.TryGetValue(id, out var act))
+            {
+                ulong value = ulong.Parse(id);
+                act = () => calls.Add(value);
+                handlers[id] = act;
+            }
+            return act;
+        }
+
+        foreach (var sub in doc.RootElement.GetProperty("subscriptions").EnumerateArray())
+        {
+            string ev = sub.GetProperty("event").GetString()!;
+            string id = sub.GetProperty("handler").GetString()!;
+            events[ev] += A(id);
+        }
+        foreach (var unsub in doc.RootElement.GetProperty("unsubscriptions").EnumerateArray())
+        {
+            string ev = unsub.GetProperty("event").GetString()!;
+            string id = unsub.GetProperty("handler").GetString()!;
+            events[ev] -= A(id);
+        }
+
+        var emissions = new List<object>();
+        foreach (var emit in doc.RootElement.GetProperty("emits").EnumerateArray())
+        {
+            calls.Clear();
+            events[emit.GetString()!]?.Invoke();
+            emissions.Add(new { @event = emit.GetString(), handlers = calls.ToArray() });
+        }
+
+        // Invalidate/Update 상태 머신
+        var pending = (System.Drawing.Rectangle?)null;
+        bool whole = false;
+        var paints = new List<object>();
+        foreach (var op in doc.RootElement.GetProperty("ops").EnumerateArray())
+        {
+            string kind = op.GetProperty("op").GetString()!;
+            switch (kind)
+            {
+                case "invalidate":
+                    if (whole) break; // 전체 무효화가 부분 영역을 흡수한다.
+                    var rect = op.GetProperty("rect");
+                    var r = new System.Drawing.Rectangle(rect[0].GetInt32(), rect[1].GetInt32(),
+                        rect[2].GetInt32(), rect[3].GetInt32());
+                    pending = pending == null ? r : System.Drawing.Rectangle.Union(pending.Value, r);
+                    break;
+                case "invalidate_all":
+                    whole = true;
+                    pending = null;
+                    break;
+                case "update":
+                    // 무효 영역이 없으면 `Update()`는 Paint를 발생시키지 않는다.
+                    if (!whole && pending == null) break;
+                    if (whole) paints.Add(new { whole = true });
+                    else
+                    {
+                        var p = pending!.Value;
+                        paints.Add(new { whole = false, x = p.X, y = p.Y, w = p.Width, h = p.Height });
+                    }
+                    whole = false;
+                    pending = null;
+                    break;
+            }
+        }
+
+        Console.WriteLine(JsonSerializer.Serialize(new { emissions, paints },
+            new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4119,6 +4203,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "spritegeometry") SpriteGeometry(args[1]);
         else if (args[0] == "spritecompose") SpriteCompose(args[1]);
         else if (args[0] == "pluginribbon") PluginRibbon(args[1], args[2]);
+        else if (args[0] == "pluginmodel") PluginModel(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

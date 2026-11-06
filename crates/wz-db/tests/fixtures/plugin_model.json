@@ -1,0 +1,48 @@
+{
+  "emissions": [
+    {
+      "event": "SelectedNode1Changed",
+      "handlers": [
+        1,
+        2
+      ]
+    },
+    {
+      "event": "WzOpened",
+      "handlers": [
+        3
+      ]
+    },
+    {
+      "event": "WzClosing",
+      "handlers": [
+        4
+      ]
+    },
+    {
+      "event": "MainStyleChanged",
+      "handlers": [
+        5
+      ]
+    },
+    {
+      "event": "SelectedNode2Changed",
+      "handlers": []
+    }
+  ],
+  "paints": [
+    {
+      "whole": false,
+      "x": 0,
+      "y": 0,
+      "w": 15,
+      "h": 15
+    },
+    {
+      "whole": true
+    },
+    {
+      "whole": true
+    }
+  ]
+}

@@ -1519,3 +1519,30 @@ GUI가 쓰는 것과 같은 `wgpu` 30으로, CPU에서 만든 RGBA 스프라이�
 fixture: `crates/wz-gui/tests/fixtures/offscreen_sprite.json`,
 테스트: `offscreen::tests`, `offscreen_hash_tests` (GUI 68개에 포함),
 스모크: `SMOKE OK: gpu sprite nearest 8x8 sha256=…` / `linear 8x8 …`.
+
+## 플러그인 이벤트/무효화 모델 (`PluginContext` 이벤트, `Invalidate`)
+
+WinForms 없이 관찰 가능한 규칙만 옮겼다(`wz-db::plugin_events`).
+
+- **이벤트**: `SelectedNode1/2/3Changed`, `WzOpened`, `WzClosing`,
+  `MainStyleChanged`. 구독 순서대로 호출되고, `-=`는 **마지막 일치 핸들러**를
+  제거한다(`Delegate.Remove`). 없는 핸들러 제거는 무시.
+- **무효화**: `Invalidate(rect)`는 대기 영역과 **합집합**, `Invalidate()`는
+  전체 무효화로 부분 영역을 흡수한다. `Update()`가 대기 영역을 **한 번의
+  페인트**로 소비하며, 무효 영역이 없으면 Paint를 발생시키지 않는다.
+  `Refresh()` = Invalidate + Update.
+
+검증:
+- C# 하네스가 **실제 .NET 멀티캐스트 델리게이트**와
+  `System.Drawing.Rectangle.Union`으로 같은 시나리오를 실행
+- 구독 7건(중복 포함)/해제 3건/발생 5건, 무효화 10단계
+- `SelectedNode1Changed`는 `[1,2,1]` → `-=1` 후 `[1,2]`
+- `MainStyleChanged` `[5,5]` → `-=5` 후 `[5]` (마지막만 제거)
+- Paint: `(0,0,15,15)`, `Whole`, `Whole` (전체 무효화가 이후 부분 무효화를 흡수)
+- `crates/wz-db/tests/plugin_model_parity.rs` 완전 일치, 단위 테스트 5종
+
+fixture: `plugin_model_input.json`, `plugin_model.json`,
+C#: `-- pluginmodel <fixture.json>`.
+
+남는 것: 실제 컨트롤의 WM_PAINT 큐/스레드 선점과 `BeginInvoke` 순서는
+WinForms 메시지 루프 의존이라 모델링하지 않았다.
