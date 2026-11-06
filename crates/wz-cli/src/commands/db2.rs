@@ -3947,3 +3947,152 @@ mod item_text_extra_tests {
         }
     }
 }
+
+pub fn cmd_item_incline(
+    data_root: &Path,
+    dir: &str,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut paths: Vec<_> = std::fs::read_dir(data_root.join("Item").join(dir))
+        .ok()
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+        .collect();
+    paths.sort();
+    let mut rows = Vec::new();
+    for path in paths {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else {
+                continue;
+            };
+            let Ok(image) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            for item in image.object_children() {
+                let Ok(id) = item.name.as_ref().parse::<i32>() else {
+                    continue;
+                };
+                let props = wz_db::item_int_props(item);
+                let incline = wz_db::incline_line(&props);
+                let trade = wz_db::trade_available_line(&props);
+                if incline.is_none() && trade.is_none() {
+                    continue;
+                }
+                rows.push(serde_json::json!({
+                    "id": id,
+                    "incline": incline,
+                    "trade_available": trade,
+                }));
+            }
+        }
+    }
+    rows.sort_by_key(|r| r["id"].as_i64());
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!("{}", row["id"]);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod item_incline_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn item_incline_lines_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/item_incline.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        for dir in ["Consume", "Install"] {
+            let item_dir = root.join("Item").join(dir);
+            if !item_dir.exists() {
+                continue;
+            }
+            let mut paths: Vec<_> = std::fs::read_dir(&item_dir)
+                .unwrap()
+                .flatten()
+                .map(|e| e.path())
+                .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+                .collect();
+            paths.sort();
+            let mut rows: Vec<(i32, String, String)> = Vec::new();
+            for path in paths {
+                let Ok(archive) = wz_core::WzArchive::open(&path) else {
+                    continue;
+                };
+                let Ok(tree) = archive.read_tree() else {
+                    continue;
+                };
+                for entry in &tree.root.entries {
+                    if entry.node_type != 4 {
+                        continue;
+                    }
+                    let Some(offset) = entry.offset else { continue };
+                    let Ok(image) = archive.parse_image_at(offset) else {
+                        continue;
+                    };
+                    for item in image.object_children() {
+                        let Ok(id) = item.name.as_ref().parse::<i32>() else {
+                            continue;
+                        };
+                        let props = wz_db::item_int_props(item);
+                        let incline = wz_db::incline_line(&props);
+                        let trade = wz_db::trade_available_line(&props);
+                        if incline.is_none() && trade.is_none() {
+                            continue;
+                        }
+                        rows.push((id, incline.unwrap_or_default(), trade.unwrap_or_default()));
+                    }
+                }
+            }
+            rows.sort_by_key(|r| r.0);
+            let rec = char::from(0x1e);
+            let canon = rows
+                .iter()
+                .map(|(id, incline, trade)| {
+                    [id.to_string(), incline.clone(), trade.clone()].join(&rec.to_string())
+                })
+                .collect::<Vec<_>>()
+                .join(&rec.to_string());
+            let want = &expected[dir];
+            assert_eq!(
+                rows.len() as u64,
+                want["rows"].as_u64().unwrap(),
+                "{dir} rows"
+            );
+            assert_eq!(
+                sha256_hex(canon.as_bytes()),
+                want["sha256"].as_str().unwrap(),
+                "{dir} hash"
+            );
+        }
+    }
+}

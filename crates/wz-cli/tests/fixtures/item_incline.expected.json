@@ -1,0 +1,10 @@
+{
+  "Consume": {
+    "rows": 26,
+    "sha256": "f57ed1a5440c00afd66b8cc72c3148fdd6c20b038a5a32ca2deaf2c1f2b2bef3"
+  },
+  "Install": {
+    "rows": 23,
+    "sha256": "b26634b1f54385ea14df6bfda1c38a0cd02c9632fcb7cdb77f83741625f3ed65"
+  }
+}

@@ -428,3 +428,9 @@ Verified ItemTooltip text extras (`itemtextextras <Data> <dir> <String_000.wz>`)
 Cash 91, Consume 1151
 ```
 desc_leftalign(`#t` 치환)/pointCost/cantAccountSharable all match Rust.
+
+Verified ItemTooltip incline/trade lines (`itemincline <Data> <dir>`):
+```
+Consume 26, Install 23
+```
+Incline and tradeAvailable lines match Rust `wz item-incline` exactly.

@@ -630,3 +630,14 @@ fixture: `crates/wz-cli/tests/fixtures/item_cash_lines.expected.json`,
 fixture: `crates/wz-cli/tests/fixtures/item_text_extras.expected.json`,
 테스트: `item_text_extras_match_csharp`,
 CLI: `wz item-text-extras <Data> <dir> --string <String_000.wz>`.
+
+## ItemTooltip 성향/tradeAvailable
+
+- 성향 순서: 카리스마/통찰력/의지/손재주/감성/매력, 값 >0만 `, 이름 N`으로
+  합쳐 `장착 시 1회에 한해 …의 경험치를 얻을 수 있습니다.(일일제한, 최대치
+  초과 시 제외)` 한 줄
+- `tradeAvailable` 1/2 → 카르마 안내 문자열을 원본처럼 `"#c"+…+"#"`로 감쌈
+
+검증: Consume **26** + Install **23** = 49개가 C# 하네스와 완전 일치.
+fixture: `crates/wz-cli/tests/fixtures/item_incline.expected.json`,
+테스트: `item_incline_lines_match_csharp`, CLI: `wz item-incline <Data> <dir>`.

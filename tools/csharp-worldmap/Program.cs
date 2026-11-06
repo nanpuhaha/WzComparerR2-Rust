@@ -2034,6 +2034,50 @@ class Program
             .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void ItemIncline(string dataRoot, string dir)
+    {
+        var rows = new List<object>();
+        var types = new (string key, string label)[]
+        {
+            ("charismaEXP", "카리스마"), ("insightEXP", "통찰력"), ("willEXP", "의지"),
+            ("craftEXP", "손재주"), ("senseEXP", "감성"), ("charmEXP", "매력"),
+        };
+        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Item", dir), "*.wz").OrderBy(x => x))
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            foreach (Wz_Node n in st.WzNode.Nodes)
+            {
+                if (n.Value is not Wz_Image img) continue;
+                if (!img.TryExtract()) continue;
+                foreach (Wz_Node item in img.Node.Nodes)
+                {
+                    if (!int.TryParse(item.Text, out int id)) continue;
+                    var info = item.Nodes["info"] ?? item;
+                    long Get(string key) => info.Nodes[key]?.Value is object v ? Convert.ToInt64(v) : 0;
+                    string incline = null;
+                    var joined = "";
+                    foreach (var (key, label) in types)
+                    {
+                        var value = Get(key);
+                        if (value > 0) joined += $", {label} {value}";
+                    }
+                    if (joined.Length > 0)
+                        incline = "#c장착 시 1회에 한해 " + joined.Substring(2) + "의 경험치를 얻을 수 있습니다.(일일제한, 최대치 초과 시 제외)#";
+                    string trade = null;
+                    var tradeValue = Get("tradeAvailable");
+                    if (tradeValue == 1)
+                        trade = "#c" + "#c카르마의 가위 또는 실버 카르마의 가위를 사용하면 1회 교환이 가능하게 할 수 있습니다.#" + "#";
+                    else if (tradeValue == 2)
+                        trade = "#c" + "#c플래티넘 카르마의 가위를 사용하면 1회 교환이 가능하게 할 수 있습니다.#" + "#";
+                    if (incline == null && trade == null) continue;
+                    rows.Add(new { id, incline, trade_available = trade });
+                }
+            }
+        }
+        rows.Sort((a, b) => ((int)a.GetType().GetProperty("id").GetValue(a))
+            .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2077,6 +2121,7 @@ class Program
         else if (args[0] == "itemextras") ItemExtras(args[1], args[2]);
         else if (args[0] == "itemcashlines") ItemCashLines(args[1], args[2]);
         else if (args[0] == "itemtextextras") ItemTextExtras(args[1], args[2], args[3]);
+        else if (args[0] == "itemincline") ItemIncline(args[1], args[2]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

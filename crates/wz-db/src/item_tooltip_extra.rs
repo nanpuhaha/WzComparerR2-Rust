@@ -125,6 +125,45 @@ pub fn item_int_props(item: &Node) -> std::collections::BTreeMap<String, i64> {
     props
 }
 
+/// 성향 경험치 라인.
+///
+/// 순서: 카리스마/통찰력/의지/손재주/감성/매력. 하나라도 >0이면 한 줄로 합친다.
+pub fn incline_line(props: &std::collections::BTreeMap<String, i64>) -> Option<String> {
+    const TYPES: [(&str, &str); 6] = [
+        ("charismaEXP", "카리스마"),
+        ("insightEXP", "통찰력"),
+        ("willEXP", "의지"),
+        ("craftEXP", "손재주"),
+        ("senseEXP", "감성"),
+        ("charmEXP", "매력"),
+    ];
+    let mut joined = String::new();
+    for (key, label) in TYPES {
+        let value = props.get(key).copied().unwrap_or(0);
+        if value > 0 {
+            joined.push_str(&format!(", {label} {value}"));
+        }
+    }
+    if joined.is_empty() {
+        return None;
+    }
+    Some(format!(
+        "#c장착 시 1회에 한해 {}의 경험치를 얻을 수 있습니다.(일일제한, 최대치 초과 시 제외)#",
+        &joined[2..]
+    ))
+}
+
+/// `tradeAvailable > 0`일 때의 라인. 원본은 `"#c" + prop + "#"`로 감싼다.
+pub fn trade_available_line(props: &std::collections::BTreeMap<String, i64>) -> Option<String> {
+    let value = props.get("tradeAvailable").copied().unwrap_or(0);
+    let text = match value {
+        1 => "#c카르마의 가위 또는 실버 카르마의 가위를 사용하면 1회 교환이 가능하게 할 수 있습니다.#",
+        2 => "#c플래티넘 카르마의 가위를 사용하면 1회 교환이 가능하게 할 수 있습니다.#",
+        _ => return None,
+    };
+    Some(format!("#c{text}#"))
+}
+
 /// `pointCost > 0`일 때의 라인.
 pub fn point_cost_line(value: i64) -> Option<String> {
     (value > 0).then(|| format!("· {value} 포인트"))
@@ -462,6 +501,21 @@ mod tests {
             cash_tag_lines(5000000, &props),
             vec!["\n#c이 아이템은 넥슨캐시로 구매 후에도 타인과의 교환이 제한됩니다.#"]
         );
+    }
+
+    #[test]
+    fn incline_and_trade_lines() {
+        let mut props = std::collections::BTreeMap::new();
+        props.insert("senseEXP".to_string(), 5);
+        props.insert("charmEXP".to_string(), 3);
+        assert_eq!(
+            incline_line(&props).as_deref(),
+            Some("#c장착 시 1회에 한해 감성 5, 매력 3의 경험치를 얻을 수 있습니다.(일일제한, 최대치 초과 시 제외)#")
+        );
+        props.insert("tradeAvailable".to_string(), 1);
+        let line = trade_available_line(&props).unwrap();
+        assert!(line.starts_with("#c#c카르마"));
+        assert!(line.ends_with("##"));
     }
 
     #[test]
