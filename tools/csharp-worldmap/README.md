@@ -715,3 +715,11 @@ Verified price shortening (`thousands <fixture.json>`) and mob skill names
 ```
 Both call the real `ItemStringHelper` methods; match Rust
 `to_thousands_number_expr` / `get_mob_skill_name`.
+
+Verified small formatters (`smallformatters <fixture-dir>`):
+```
+12 mob categories, 13 attack speeds, 7 gear grades, 45 diff strings
+```
+Calls the real `ItemStringHelper` methods; matches Rust
+`get_mob_category_name` / `get_attack_speed_string` / `get_gear_grade_string`
+and `wz_avatar::gear_prop_diff_string`.

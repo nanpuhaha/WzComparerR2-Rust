@@ -1887,3 +1887,21 @@ C#: `-- cjknumber <fixture.json>`.
 fixture: `thousands_cases.json`, `thousands_expected.json`,
 `mob_skill_cases.json`, `mob_skill_expected.json`,
 C#: `-- thousands <fixture.json>`, `-- mobskill <fixture.json>`.
+
+## 소형 포맷터 (`GetMobCategoryName`/`GetAttackSpeedString`/`GetGearGradeString`/`GetGearPropDiffString`)
+
+| 함수 | 규칙 |
+|---|---|
+| `get_mob_category_name` | 0→无形态, 1~8 동물/식물/어류/파충류/정령/악마/불사/무형, 그 외 None |
+| `get_attack_speed_string` | 2·3 매우빠름, 4·5 빠름, 6 보통, 7·8 느림, 9 매우느림, 그 외 숫자 |
+| `get_gear_grade_string` | B/A/S/SS/Special 라벨, `C`는 원본 주석이라 None |
+| `gear_prop_diff_string` | 값 > 기준이면 `#$y{문자열}# ({기준} #$e+N#)`(또는 `%` 변형), 목록에 없는 속성은 공백 접미사 |
+
+검증(실제 C# 실행):
+- 몹 분류 12케이스(-1~10), 공격속도 13케이스(0~12), 등급 7케이스
+- 비교 문자열 **45케이스**(9키 × 값/기준 5조합)
+- `crates/wz-avatar/tests/small_formatters_parity.rs` 완전 일치, 단위 테스트 3종
+
+fixture: `mob_category_cases.json`, `attack_speed_cases.json`,
+`gear_grade_cases.json`, `gear_diff_cases.json`, `small_formatters_expected.json`,
+C#: `-- smallformatters <fixture-dir>`.

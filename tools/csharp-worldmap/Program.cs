@@ -4526,6 +4526,52 @@ return tostring(ok) .. '|' .. tostring(acc)
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // 실제 `GetMobCategoryName` / `GetAttackSpeedString` / `GetGearGradeString` / `GetGearPropDiffString`.
+    static void SmallFormatters(string fixtureDir)
+    {
+        List<T> Load<T>(string name) =>
+            JsonSerializer.Deserialize<List<T>>(File.ReadAllText(Path.Combine(fixtureDir, name)))!;
+
+        var categories = Load<int>("mob_category_cases.json")
+            .Select(id => new { id, name = WzComparerR2.CharaSim.ItemStringHelper.GetMobCategoryName(id) })
+            .ToList();
+        var speeds = Load<int>("attack_speed_cases.json")
+            .Select(id => new { id, name = WzComparerR2.CharaSim.ItemStringHelper.GetAttackSpeedString(id) })
+            .ToList();
+        var grades = Load<string>("gear_grade_cases.json")
+            .Select(name => new
+            {
+                name,
+                text = Enum.TryParse<WzComparerR2.CharaSim.GearGrade>(name, out var g)
+                    ? WzComparerR2.CharaSim.ItemStringHelper.GetGearGradeString(g)
+                    : null,
+            })
+            .ToList();
+        var diffs = System.Text.Json.JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(fixtureDir, "gear_diff_cases.json")))
+            .RootElement.EnumerateArray().Select(x =>
+            {
+                string key = x.GetProperty("key").GetString()!;
+                int value = x.GetProperty("value").GetInt32();
+                int standard = x.GetProperty("standard").GetInt32();
+                var prop = Enum.Parse<WzComparerR2.CharaSim.GearPropType>(key);
+                return new
+                {
+                    key,
+                    value,
+                    standard,
+                    text = WzComparerR2.CharaSim.ItemStringHelper.GetGearPropDiffString(prop, value, standard),
+                };
+            }).ToList();
+
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            categories,
+            speeds,
+            grades,
+            diffs,
+        }, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4557,6 +4603,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "cjknumber") CjkNumber(args[1]);
         else if (args[0] == "thousands") Thousands(args[1]);
         else if (args[0] == "mobskill") MobSkill(args[1]);
+        else if (args[0] == "smallformatters") SmallFormatters(args[1]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));

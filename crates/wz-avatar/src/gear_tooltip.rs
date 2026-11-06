@@ -806,3 +806,68 @@ mod tests {
         assert!(rgba.chunks(4).any(|p| p[3] != 0));
     }
 }
+
+/// `ItemStringHelper.GetGearPropDiffString` — 비교 모드에서 기준값과의 차이 표시.
+///
+/// 값이 기준보다 크면 `#$y<문자열># (<기준> #$e+N#)` 형태가 된다. 접미사 목록에
+/// 없는 속성은 빈 접미사가 붙어 `#$y... # `처럼 끝난다(원본과 동일).
+pub fn gear_prop_diff_string(key: &str, value: i64, standard_value: i64) -> Option<String> {
+    let prop = gear_prop_line(key, value)?;
+    if value <= standard_value {
+        return Some(prop);
+    }
+    let diff = value - standard_value;
+    let suffix = match key {
+        "incSTR" | "incDEX" | "incINT" | "incLUK" | "incMHP" | "incMMP" | "incMDF" | "incARC"
+        | "incAUT" | "incPAD" | "incMAD" | "incPDD" | "incMDD" | "incSpeed" | "incJump" => {
+            format!("({standard_value} #$e+{diff}#)")
+        }
+        "bdR" | "incBDR" | "imdR" | "incIMDR" | "damR" | "incDAMr" | "incEXPr" | "statR" => {
+            format!("({standard_value}% #$y+{diff}%#)")
+        }
+        _ => String::new(),
+    };
+    Some(format!("#$y{prop}# {suffix}"))
+}
+
+#[cfg(test)]
+mod small_formatter_tests {
+    use super::gear_prop_diff_string;
+    use wz_db::{get_attack_speed_string, get_gear_grade_string, get_mob_category_name};
+
+    #[test]
+    fn mob_category_and_grade() {
+        assert_eq!(get_mob_category_name(0), Some("无形态"));
+        assert_eq!(get_mob_category_name(8), Some("무형"));
+        assert_eq!(get_mob_category_name(9), None);
+        assert_eq!(get_gear_grade_string("SS"), Some("(레전드리 아이템)"));
+        assert_eq!(get_gear_grade_string("C"), None);
+    }
+
+    #[test]
+    fn attack_speed_labels() {
+        assert_eq!(get_attack_speed_string(3), "매우빠름");
+        assert_eq!(get_attack_speed_string(6), "보통");
+        assert_eq!(get_attack_speed_string(8), "느림");
+        assert_eq!(get_attack_speed_string(10), "10");
+    }
+
+    #[test]
+    fn diff_string_suffixes() {
+        assert_eq!(
+            gear_prop_diff_string("incSTR", 10, 5).unwrap(),
+            "#$ySTR : +10# (5 #$e+5#)"
+        );
+        assert_eq!(
+            gear_prop_diff_string("bdR", 10, 5).unwrap(),
+            "#$y보스 몬스터 공격 시 데미지 +10%# (5% #$y+5%#)"
+        );
+        // 기준 이하이면 원본 문자열 그대로.
+        assert_eq!(gear_prop_diff_string("incSTR", 5, 5).unwrap(), "STR : +5");
+        // 접미사 목록에 없는 속성은 빈 접미사가 붙어 공백으로 끝난다.
+        assert_eq!(
+            gear_prop_diff_string("only", 1, 0).unwrap(),
+            "#$y중복 소지 불가# "
+        );
+    }
+}

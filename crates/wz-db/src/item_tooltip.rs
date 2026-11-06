@@ -469,3 +469,47 @@ mod thousands_mobskill_tests {
         assert_eq!(get_mob_skill_name(999), None);
     }
 }
+
+/// `ItemStringHelper.GetMobCategoryName` — 몹 분류명.
+pub fn get_mob_category_name(category: i32) -> Option<&'static str> {
+    Some(match category {
+        0 => "无形态",
+        1 => "동물형",
+        2 => "식물형",
+        3 => "어류형",
+        4 => "파충류형",
+        5 => "정령형",
+        6 => "악마형",
+        7 => "불사형",
+        8 => "무형",
+        _ => return None,
+    })
+}
+
+/// `ItemStringHelper.GetAttackSpeedString` — 공격속도 표기.
+///
+/// 2~9는 한글 라벨, 그 외는 숫자 문자열 그대로.
+pub fn get_attack_speed_string(attack_speed: i32) -> String {
+    match attack_speed {
+        2 | 3 => "매우빠름".to_string(),
+        4 | 5 => "빠름".to_string(),
+        6 => "보통".to_string(),
+        7 | 8 => "느림".to_string(),
+        9 => "매우느림".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// `ItemStringHelper.GetGearGradeString` — 잠재능력 등급 라벨.
+///
+/// `C`는 원본에서 주석 처리되어 `None`이다.
+pub fn get_gear_grade_string(grade: &str) -> Option<&'static str> {
+    Some(match grade {
+        "B" => "(레어 아이템)",
+        "A" => "(에픽 아이템)",
+        "S" => "(유니크 아이템)",
+        "SS" => "(레전드리 아이템)",
+        "Special" => "(스페셜 아이템)",
+        _ => return None,
+    })
+}
