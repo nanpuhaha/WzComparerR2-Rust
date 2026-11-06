@@ -1,0 +1,7 @@
+{
+  "note": "2x2 합성 스프라이트(불투명 빨강/초록, 반투명 파랑, 투명)를 wgpu로 업로드·샘플링·알파 블렌드한 readback SHA-256. Rgba8Unorm, straight-alpha SrcAlpha/OneMinusSrcAlpha.",
+  "nearest_4x4": "6231e73b9a30e6211870b958da52e6f9d215c5da48ec9b316353bd9f79b6d891",
+  "nearest_8x8": "9b503e6ea3422788cb876b5c5fece05e29bf4576d217ab994e53361c9299302c",
+  "linear_8x8": "42a03bc3d94c99cee6ff2124de720a42ccf42965311a50361052af93bdca2644",
+  "premultiplied_expectation": "반투명 파랑(0,0,255,128)은 GPU에서 (0,0,128,128)로 기록된다."
+}

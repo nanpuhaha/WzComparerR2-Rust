@@ -66,6 +66,19 @@ impl eframe::App for PocApp {
                             "SMOKE OK: lua highlight tokens={tokens} colored={colored} colors={colors}"
                         );
                         println!("SMOKE OK: lua editor lines={lines} cursor={cursor}");
+                        // 오프스크린 wgpu 업로드/샘플링/블렌드 해시.
+                        let sprite = crate::offscreen::test_sprite();
+                        for (mode, name) in [
+                            (crate::offscreen::SampleMode::Nearest, "nearest"),
+                            (crate::offscreen::SampleMode::Linear, "linear"),
+                        ] {
+                            match crate::offscreen::render_sprite_sha256(&sprite, 8, 8, mode) {
+                                Some(hash) => println!(
+                                    "SMOKE OK: gpu sprite {name} 8x8 sha256={hash}"
+                                ),
+                                None => println!("SMOKE SKIP: no wgpu adapter ({name})"),
+                            }
+                        }
                         self.smoke_phase = 4;
                         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }

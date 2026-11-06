@@ -14,6 +14,8 @@ mod camera_input;
 mod compose;
 mod illuminant;
 mod life;
+mod offscreen;
+mod offscreen_hash_tests;
 mod panels;
 mod particles;
 mod portal;

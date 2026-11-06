@@ -1493,3 +1493,29 @@ C#: `-- pluginribbon <PluginBase.dll> <fixture.json>`.
 
 남는 것: 실제 `RibbonBar`/`RibbonPanel` 위젯 생성과 `OnLoad()` 안에서의
 호출 순서(플러그인별)는 WinForms 호스트 의존이다.
+
+## 오프스크린 wgpu 업로드/샘플링/블렌드 (`wz-gui::offscreen`)
+
+GUI가 쓰는 것과 같은 `wgpu` 30으로, CPU에서 만든 RGBA 스프라이트를 텍스처로
+업로드하고 화면 크기 쿼드에 그린 뒤 readback 한다. 창/서피스가 필요 없다.
+
+- 업로드: `Rgba8Unorm`, `TEXTURE_BINDING | COPY_DST`
+- 샘플러: `Nearest` / `Linear`(ClampToEdge)
+- 블렌드: straight-alpha source-over
+  (`color: SrcAlpha/OneMinusSrcAlpha`, `alpha: One/OneMinusSrcAlpha`)
+- 렌더 타깃: `Rgba8Unorm` + `COPY_SRC`, row padding 256 정렬
+- readback SHA-256 고정
+
+검증(실제 GPU 실행):
+- 2×2 스프라이트(불투명 빨강/초록, 반투명 파랑, 투명) → 4×4·8×8 렌더
+- `nearest_4x4` `6231e73b…d891`, `nearest_8x8` `9b503e6e…302c`,
+  `linear_8x8` `42a03bc3…2644`를 fixture로 고정
+- Nearest와 Linear 해시가 다름을 확인
+- **premultiplied 관찰**: 반투명 파랑 `(0,0,255,128)`이 GPU 블렌드 후
+  `(0,0,128,128)`로 기록된다. 즉 이 경로는 GDI+의 premultiplied와 같은
+  계열이며, CPU `sprite_compose`(straight-alpha)와 값이 다르다.
+- GPU 어댑터가 없으면 테스트는 skip
+
+fixture: `crates/wz-gui/tests/fixtures/offscreen_sprite.json`,
+테스트: `offscreen::tests`, `offscreen_hash_tests` (GUI 68개에 포함),
+스모크: `SMOKE OK: gpu sprite nearest 8x8 sha256=…` / `linear 8x8 …`.

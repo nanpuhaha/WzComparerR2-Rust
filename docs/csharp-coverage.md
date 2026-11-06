@@ -298,6 +298,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   구간 최대 길이/재생 판정, 시간 오프셋 클램프, 스케일 클램프가 C# 참조
   구현과 완전 일치(7 타임라인, 30 프로브, 90 GIF, 6 구간, 4 최대길이,
   5 오프셋, 5 리셋, 8 스케일 케이스).
+- 오프스크린 wgpu: CPU 스프라이트를 실제 GPU 텍스처로 업로드해 nearest/linear
+  샘플링과 straight-alpha 블렌드를 수행하고 readback SHA-256을 고정. GPU
+  블렌드가 premultiplied로 기록됨(`(0,0,255,128)→(0,0,128,128)`)을 확인.
 - CPU 스프라이트 샘플링/합성: 실제 Character 캔버스 6개의 픽셀에 AtlasRect
   추출·flip·알파 스케일·straight-alpha/opaque 블렌드를 적용해 36케이스
   SHA-256이 C#과 완전 일치.
