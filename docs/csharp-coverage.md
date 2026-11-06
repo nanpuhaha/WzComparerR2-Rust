@@ -45,7 +45,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | Rendering | 25 | 2,726 | `wz-render`, `wz-image` | 🟡 (light/water/sprite) |
 | Animation | 15 | 2,415 | `wz-avatar` frame loader | 🟡 |
 | Controls | 16 | 2,138 | `wz-db::common_controls` (타임라인/GIF 지연/구간/스케일) | 🟡 |
-| OpenAPI | 4 | 2,086 | `wz-openapi` helpers + AvatarCodeStructure v26–44/Unpack, HTTP는 API 키 필요 | 🟡 |
+| OpenAPI | 4 | 2,086 | `wz-openapi` helpers + AvatarCodeStructure/Unpack + HTTP 계층(목 서버 검증) | 🟡 |
 | Text | 4 | 707 | `wz-core::text` | ✅ |
 | Encoders | 6 | 534 | `wz-image` | ✅ (PNG/BC7) |
 | Config | 6 | 355 | — | ⬜ |
@@ -288,7 +288,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   LuaConsole의 NLua CLR 브리지·콘솔 UI.
 - PluginBase의 메뉴 주입(`OnLoad` → WinForms RibbonBar).
 - Network TCP/재접속/로그인 상태 머신(서버 필요).
-- OpenAPI HTTP 호출(Nexon API 키 필요).
+- OpenAPI 실제 엔드포인트 호출(Nexon API 키 필요). 요청/파싱 계층은 목 서버로 검증됨.
 - WorldMap 실제 QuestLimit/Fog 데이터는 클라이언트에 없음.
 - weather는 원본 C# 로더/에셋에 없음.
 

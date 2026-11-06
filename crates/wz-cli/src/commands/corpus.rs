@@ -8,7 +8,7 @@ pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
          ItemTooltip 비트맵 레이아웃"
     );
     println!(
-        "일부: OpenAPI 오프라인 helpers(HTTP는 API 키 필요), Network \
+        "일부: OpenAPI helpers/HTTP(목 서버 검증, 실 키 필요), Network \
          RC4/프레임/패킷 JSON/로그인·재접속 루프백, PluginBase FindWz/파일 탐색/PE 메타데이터/인스턴스화, \
          LuaConsole 샌드박스"
     );

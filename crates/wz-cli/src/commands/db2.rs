@@ -5239,3 +5239,50 @@ mod item_cosmetic_eulo_tests {
         );
     }
 }
+
+pub fn cmd_openapi_fetch(
+    key: Option<&str>,
+    name: Option<&str>,
+    ocid: Option<&str>,
+    region: &str,
+    base_url: &str,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_openapi::http::{OpenApiClient, OpenApiConfig, Region, TcpTransport};
+
+    let key = key
+        .map(str::to_string)
+        .or_else(|| std::env::var("OPENAPI_KEY").ok())
+        .ok_or("API 키가 필요합니다 (--key 또는 OPENAPI_KEY)")?;
+    let region = match region.to_ascii_uppercase().as_str() {
+        "KMS" => Region::Kms,
+        "MSEA" => Region::Msea,
+        "TMS" => Region::Tms,
+        other => return Err(format!("알 수 없는 리전: {other}").into()),
+    };
+    let mut config = OpenApiConfig::new(key, region);
+    config.base_url = base_url.to_string();
+    let mut client = OpenApiClient::new(config, TcpTransport);
+
+    let ocid = match ocid {
+        Some(ocid) => ocid.to_string(),
+        None => {
+            let name = name.ok_or("--name 또는 --ocid 가 필요합니다")?;
+            client.character_ocid(name)?
+        }
+    };
+    let basic = client.character_basic(&ocid)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&basic)?);
+    } else {
+        println!("ocid={ocid}");
+        println!(
+            "{} Lv.{} {} ({})",
+            basic.character_name.clone().unwrap_or_default(),
+            basic.character_level.unwrap_or(0),
+            basic.character_class.clone().unwrap_or_default(),
+            basic.world_name.clone().unwrap_or_default()
+        );
+    }
+    Ok(())
+}

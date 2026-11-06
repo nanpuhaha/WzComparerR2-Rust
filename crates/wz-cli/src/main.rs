@@ -291,6 +291,28 @@ enum Command {
         limit: usize,
     },
 
+    /// Nexon OpenAPI HTTP 요청 (OCID → character/basic)
+    OpenApiFetch {
+        /// API 키 (없으면 OPENAPI_KEY 환경변수)
+        #[arg(long)]
+        key: Option<String>,
+        /// 캐릭터 이름
+        #[arg(long)]
+        name: Option<String>,
+        /// OCID (지정 시 바로 basic 조회)
+        #[arg(long)]
+        ocid: Option<String>,
+        /// 리전 (KMS/MSEA/TMS)
+        #[arg(long, default_value = "KMS")]
+        region: String,
+        /// 기본 URL (목 서버 테스트용)
+        #[arg(long, default_value = "https://open.api.nexon.com")]
+        base_url: String,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// ItemTooltip `#cosmetic_EULO#` 치환 결과
     ItemCosmeticEulo {
         /// Data 루트
@@ -1010,6 +1032,21 @@ fn main() {
             json,
             limit,
         } => cmd_db2_mobs(&wz, &string, json, limit),
+        Command::OpenApiFetch {
+            key,
+            name,
+            ocid,
+            region,
+            base_url,
+            json,
+        } => commands::cmd_openapi_fetch(
+            key.as_deref(),
+            name.as_deref(),
+            ocid.as_deref(),
+            &region,
+            &base_url,
+            json,
+        ),
         Command::ItemCosmeticEulo {
             data_root,
             string,

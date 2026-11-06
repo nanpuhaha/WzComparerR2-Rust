@@ -857,3 +857,38 @@ fixture: `crates/wz-db/tests/fixtures/plugin_entries_activated.json`,
 C#: `-- pluginactivate <plugin.dll> <PluginBase.dll>`.
 
 남은 것: `OnLoad()`가 호출하는 `Context.AddRibbonBar`(DevComponents/WinForms).
+
+## OpenAPI HTTP 계층 (`NexonOpenAPI` / `MapleStory.OpenAPI`)
+
+원본의 실제 HTTP는 `MapleStory.OpenAPI` 3.8.1 NuGet 패키지가 수행한다.
+패키지 DLL에서 상수를 추출해 계약을 고정했다
+(`crates/wz-openapi/tests/fixtures/nexon_api_paths.json`).
+
+| 항목 | 값 |
+|---|---|
+| base URL | `https://open.api.nexon.com` |
+| 인증 헤더 | `x-nxopen-api-key` |
+| 리전 세그먼트 | `maplestory`(KMS) / `maplestorysea`(MSEA) / `maplestorytw`(TMS) |
+| 경로 | 패키지에서 38개 추출, 사용하는 것은 `/v1/id`, `/v1/character/basic` |
+
+구현 (`wz-openapi::http`):
+- `OpenApiConfig::url` — `{base}/{segment}{path}?{query}`, 쿼리는 UTF-8 퍼센트 인코딩
+- `OpenApiConfig::headers` — `x-nxopen-api-key`
+- `Transport` 트레이트 + `TcpTransport`(`http://` 한정, 목 서버/테스트용)
+- `ApiError` — `error` 봉투(`OPENAPI00004` 등) / 상태코드 / JSON / 전송 오류
+- `CharacterBasic`/`CharacterId` DTO(snake_case 그대로)
+- `avatar_code_from_image_url` — `look/<CODE>` 추출(아바타 Unpack 입력)
+
+검증(실제 요청/응답):
+- `crates/wz-openapi/tests/http_mock.rs` — 로컬 목 HTTP 서버 2종
+  - `GET /maplestory/v1/id?character_name=%ED%99%8D%EA%B8%B8%EB%8F%99`
+  - `GET /maplestory/v1/character/basic?ocid=ocid-123`
+  - 두 요청 모두 `x-nxopen-api-key` 헤더 포함, 12개 필드 매핑 일치
+  - 400 + `OPENAPI00004` 봉투 → `ApiError::Api`로 표면화, MSEA 세그먼트 확인
+- `crates/wz-openapi/tests/api_constants.rs` — 경로/헤더/세그먼트가 패키지 상수와 일치
+- CLI 데모: 목 서버에 대해 `wz open-api-fetch --base-url http://127.0.0.1:PORT --name 홍길동 --key mock-key --json` 실행,
+  서버 로그에 위 두 요청과 헤더가 찍히고 12개 필드가 파싱됨
+
+한계: 실제 엔드포인트 호출은 Nexon API 키가 필요하다. HTTPS 전송은
+`Transport` 구현 주입으로 대체하며, 저장소에는 목 서버 검증용 `TcpTransport`만
+있다(순수 Rust 원칙상 TLS 클라이언트를 새로 들이지 않았다).
