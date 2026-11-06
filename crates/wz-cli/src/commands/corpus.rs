@@ -8,8 +8,8 @@ pub fn cmd_version() -> Result<(), Box<dyn std::error::Error>> {
          레이아웃"
     );
     println!(
-        "일부: OpenAPI 오프라인 helpers(HTTP는 API 키 필요), Network RC4/프레임, \
-         PluginBase FindWz 경로 조회"
+        "일부: OpenAPI 오프라인 helpers(HTTP는 API 키 필요), Network \
+         RC4/프레임/패킷 JSON/로그인 루프백, PluginBase FindWz 경로 조회"
     );
     println!("데이터 없음: Skill common, WorldMap QuestLimit/Fog, Familiar, BIN");
     println!("원본 없음: weather (원본 C# 소스에 구현 없음)");

@@ -20,6 +20,7 @@ wz-image.workspace = true
 wz-db.workspace = true
 wz-diff.workspace = true
 wz-avatar.workspace = true
+wz-network.workspace = true
 wz-render.workspace = true
 clap.workspace = true
 serde.workspace = true

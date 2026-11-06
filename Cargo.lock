@@ -1827,6 +1827,7 @@ dependencies = [
  "wz-diff",
  "wz-error",
  "wz-image",
+ "wz-network",
  "wz-pool",
  "wz-render",
 ]

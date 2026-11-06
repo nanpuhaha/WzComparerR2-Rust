@@ -417,6 +417,9 @@ enum Command {
         json: bool,
     },
 
+    /// Network 루프백 핸드셰이크/로그인 데모
+    NetLoopback,
+
     /// DamageSkin 모델 (툴팁/아이템 연결 필드)
     DamageSkinModel {
         /// Etc_000.wz (DamageSkin.img 포함)
@@ -850,6 +853,7 @@ fn main() {
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
+        Command::NetLoopback => commands::cmd_net_loopback(),
         Command::DamageSkinModel { wz, image, json } => {
             commands::cmd_damage_skin_model(&wz, &image, json)
         }

@@ -2860,3 +2860,103 @@ mod damage_skin_model_tests {
         );
     }
 }
+
+pub fn cmd_net_loopback() -> Result<(), Box<dyn std::error::Error>> {
+    use std::io::Write;
+    use std::net::{TcpListener, TcpStream};
+    use wz_network::pack::Packet;
+    use wz_network::session::{read_frame, write_frame, ClientSession, ClientState};
+    use wz_network::Rc4;
+
+    fn b64(data: &[u8]) -> String {
+        const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut out = String::new();
+        for c in data.chunks(3) {
+            let n = (u32::from(c[0]) << 16)
+                | (u32::from(*c.get(1).unwrap_or(&0)) << 8)
+                | u32::from(*c.get(2).unwrap_or(&0));
+            out.push(T[(n >> 18) as usize & 63] as char);
+            out.push(T[(n >> 12) as usize & 63] as char);
+            out.push(if c.len() > 1 {
+                T[(n >> 6) as usize & 63] as char
+            } else {
+                '='
+            });
+            out.push(if c.len() > 2 {
+                T[n as usize & 63] as char
+            } else {
+                '='
+            });
+        }
+        out
+    }
+
+    let listener = TcpListener::bind("127.0.0.1:0")?;
+    let addr = listener.local_addr()?;
+    let server = std::thread::spawn(move || -> Result<(), String> {
+        let (mut stream, _) = listener.accept().map_err(|e| e.to_string())?;
+        let mut read = None;
+        let mut write = None;
+        let req = read_frame(&mut stream, &mut read).map_err(|e| e.to_string())?;
+        let req = req.ok_or("no CryptReq")?;
+        if !String::from_utf8_lossy(&req).contains("\"$type\":\"1\"") {
+            return Err("expected CryptReq".into());
+        }
+        let resp = format!(
+            "{{\"$type\":\"2\",\"KeyEncryptedS2C\":\"{}\",\"KeyEncryptedC2S\":\"{}\"}}",
+            b64(b"s2c-key"),
+            b64(b"c2s-key")
+        );
+        write_frame(&mut stream, &mut write, resp.as_bytes()).map_err(|e| e.to_string())?;
+        read = Rc4::new(b"c2s-key");
+        write = Rc4::new(b"s2c-key");
+        let login = read_frame(&mut stream, &mut read).map_err(|e| e.to_string())?;
+        let login = login.ok_or("no LoginReq")?;
+        if !String::from_utf8_lossy(&login).contains("\"WcID\":\"wc-01\"") {
+            return Err("login mismatch".into());
+        }
+        write_frame(
+            &mut stream,
+            &mut write,
+            br#"{"$type":"4","SessionID":"sess-42"}"#,
+        )
+        .map_err(|e| e.to_string())?;
+        stream.flush().map_err(|e| e.to_string())?;
+        Ok(())
+    });
+
+    let stream = TcpStream::connect(addr)?;
+    let mut client = ClientSession::new(stream);
+    println!("state {:?}", client.state);
+    client.send_crypt_req(&[1, 0, 1], &[9, 9])?;
+    println!("send PackCryptReq -> {:?}", client.state);
+    let body = client.recv_packet()?.ok_or("no CryptResp")?;
+    let identity = |data: &[u8]| Some(data.to_vec());
+    if !client.handle_crypt_resp(&body, &identity)? {
+        return Err("CryptResp handling failed".into());
+    }
+    println!(
+        "recv PackCryptResp: s2c={:?} c2s={:?} -> {:?}",
+        String::from_utf8_lossy(client.server_key.as_deref().unwrap_or_default()),
+        String::from_utf8_lossy(client.client_key.as_deref().unwrap_or_default()),
+        client.state
+    );
+    client.send_login("wc-01", "테스터")?;
+    println!("send PackLoginReq -> {:?}", client.state);
+    let body = client.recv_packet()?.ok_or("no LoginResp")?;
+    if !client.handle_login_resp(&body) {
+        return Err("LoginResp handling failed".into());
+    }
+    println!("recv PackLoginResp -> {:?}", client.state);
+    server.join().map_err(|_| "server panicked")??;
+    println!(
+        "OK: {}",
+        if client.state == ClientState::LoggedIn {
+            "login flow complete"
+        } else {
+            "unexpected state"
+        }
+    );
+    let _ = Packet::Heartbeat;
+    Ok(())
+}

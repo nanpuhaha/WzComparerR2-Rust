@@ -484,3 +484,32 @@ C# `StringLinker` + 동일 필드 추출 하네스와 비교:
 `Etc_000.wz/DamageSkin.img` **402개**가 C# 추출과 완전 일치.
 fixture: `crates/wz-cli/tests/fixtures/damage_skins.expected.json`,
 테스트: `damage_skin_models_match_csharp`, CLI: `wz damage-skin-model`.
+
+## Network TCP 프레이밍/로그인 상태 머신
+
+`WzComparerR2.Network.WcClient`의 세션 흐름을 `wz-network::session`으로 옮겼다.
+
+- 프레임: `uint16 LE 길이 + 본문`. RC4가 켜지면 **길이까지** 암호화
+  (`CryptoStream`이 길이를 포함해 감싸는 원본과 동일).
+- 상태: `Connected → CryptoRequested → Ready → LoginSent → LoggedIn`
+- `handle_crypt_resp`: `$type=="2"` 확인 → Base64 키 복호화(주입된
+  `KeyDecryptor`) → `Rc4` 두 방향 시작
+- `send_login`/`handle_login_resp`: `$type 3/4`
+
+검증:
+- `crates/wz-network/tests/loopback.rs` — 실제 TCP 루프백에서 CryptReq →
+  CryptResp → RC4 LoginReq → LoginResp 전 구간
+- `wz net-loopback` 실행 출력:
+```
+state Connected
+send PackCryptReq -> CryptoRequested
+recv PackCryptResp: s2c="s2c-key" c2s="c2s-key" -> Ready
+send PackLoginReq -> LoginSent
+recv PackLoginResp -> LoggedIn
+OK: login flow complete
+```
+- 패킷 바이트는 앞 절의 C# `EncodePack` 7계약과 일치하므로, 루프백에서
+  사용하는 코덱은 C# 검증을 공유한다.
+- RSA 복호화는 `KeyDecryptor`로 주입한다(원본은 `RSACryptoServiceProvider`).
+- C# `WcClient`는 WinForms/PluginBase 의존으로 macOS에서 실행할 수 없어
+  동일 하네스 비교 대신 루프백 검증을 사용했다.

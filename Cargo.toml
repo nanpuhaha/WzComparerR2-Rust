@@ -48,6 +48,7 @@ wz-render = { path = "crates/wz-render", version = "0.2.0" }
 wz-db = { path = "crates/wz-db", version = "0.2.0" }
 wz-diff = { path = "crates/wz-diff", version = "0.2.0" }
 wz-avatar = { path = "crates/wz-avatar", version = "0.2.0" }
+wz-network = { path = "crates/wz-network", version = "0.2.0" }
 
 
 memmap2 = "0.9"

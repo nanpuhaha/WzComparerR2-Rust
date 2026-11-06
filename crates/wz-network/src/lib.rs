@@ -6,6 +6,7 @@
 //! TCP 연결/재접속/로그인 상태 머신은 서버가 필요해 제외한다.
 
 pub mod pack;
+pub mod session;
 
 /// 상태를 유지하는 RC4 스트림. 원본 `RC4CryptoTransform`과 동일하다.
 #[derive(Clone)]
