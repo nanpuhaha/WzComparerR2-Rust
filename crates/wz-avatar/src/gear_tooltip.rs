@@ -40,7 +40,26 @@ fn int(node: &Node, key: &str) -> Option<i64> {
 /// `reqLevel`/`tuc`/`incACC`/`incEVA`/`incMDD`는 원본에서 주석 처리되어
 /// `null`을 돌려준다. 툴팁 전용 라벨은 [`tooltip_stat_line`]이 담당한다.
 pub fn gear_prop_line(key: &str, value: i64) -> Option<String> {
-    let sign = if value > 0 { "+" } else { "" };
+    gear_prop_line_with_sign(key, value, 0)
+}
+
+/// `GetGearPropString(propType, value, signFlag)`의 signFlag 변형.
+///
+/// - 0: 양수에만 `+`
+/// - 1: 항상 `+` (음수면 `+-5`처럼 된다 — 원본 그대로)
+/// - 2: 부호 없음
+pub fn gear_prop_line_with_sign(key: &str, value: i64, sign_flag: i32) -> Option<String> {
+    let sign = match sign_flag {
+        1 => "+",
+        2 => "",
+        _ => {
+            if value > 0 {
+                "+"
+            } else {
+                ""
+            }
+        }
+    };
     let plain = |label: &str| Some(format!("{label} : {sign}{value}"));
     let percent = |label: &str| Some(format!("{label} : {sign}{value}%"));
     Some(match key {

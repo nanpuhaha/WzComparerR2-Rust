@@ -669,3 +669,10 @@ Verified item prop strings (`itemprops <fixture.json>`):
 ```
 Calls the real `ItemStringHelper.GetItemPropString`; matches Rust
 `wz_avatar::item_prop_string`.
+
+Verified gear prop sign flags (`gearpropsigns <fixture.json>`):
+```
+54 real/edge (key,value) cases x 3 signFlags = 162 rows
+```
+Calls the real `ItemStringHelper.GetGearPropString(propType, value, signFlag)`;
+matches Rust `gear_prop_line_with_sign`.

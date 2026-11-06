@@ -1,0 +1,974 @@
+[
+ {
+  "key": "cash",
+  "value": 0,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "cash",
+  "value": 0,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "cash",
+  "value": 0,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "charmEXP",
+  "value": 100,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "charmEXP",
+  "value": 100,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "charmEXP",
+  "value": 100,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "incDEX",
+  "value": 15,
+  "flag": 0,
+  "text": "DEX : +15"
+ },
+ {
+  "key": "incDEX",
+  "value": 15,
+  "flag": 1,
+  "text": "DEX : +15"
+ },
+ {
+  "key": "incDEX",
+  "value": 15,
+  "flag": 2,
+  "text": "DEX : 15"
+ },
+ {
+  "key": "incINT",
+  "value": 15,
+  "flag": 0,
+  "text": "INT : +15"
+ },
+ {
+  "key": "incINT",
+  "value": 15,
+  "flag": 1,
+  "text": "INT : +15"
+ },
+ {
+  "key": "incINT",
+  "value": 15,
+  "flag": 2,
+  "text": "INT : 15"
+ },
+ {
+  "key": "incJump",
+  "value": 8,
+  "flag": 0,
+  "text": "점프력 : +8"
+ },
+ {
+  "key": "incJump",
+  "value": 8,
+  "flag": 1,
+  "text": "점프력 : +8"
+ },
+ {
+  "key": "incJump",
+  "value": 8,
+  "flag": 2,
+  "text": "점프력 : 8"
+ },
+ {
+  "key": "incLUK",
+  "value": 2,
+  "flag": 0,
+  "text": "LUK : +2"
+ },
+ {
+  "key": "incLUK",
+  "value": 2,
+  "flag": 1,
+  "text": "LUK : +2"
+ },
+ {
+  "key": "incLUK",
+  "value": 2,
+  "flag": 2,
+  "text": "LUK : 2"
+ },
+ {
+  "key": "incLUK",
+  "value": 15,
+  "flag": 0,
+  "text": "LUK : +15"
+ },
+ {
+  "key": "incLUK",
+  "value": 15,
+  "flag": 1,
+  "text": "LUK : +15"
+ },
+ {
+  "key": "incLUK",
+  "value": 15,
+  "flag": 2,
+  "text": "LUK : 15"
+ },
+ {
+  "key": "incMAD",
+  "value": 8,
+  "flag": 0,
+  "text": "마력 : +8"
+ },
+ {
+  "key": "incMAD",
+  "value": 8,
+  "flag": 1,
+  "text": "마력 : +8"
+ },
+ {
+  "key": "incMAD",
+  "value": 8,
+  "flag": 2,
+  "text": "마력 : 8"
+ },
+ {
+  "key": "incMDD",
+  "value": 70,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "incMDD",
+  "value": 70,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "incMDD",
+  "value": 70,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "incMMP",
+  "value": 5,
+  "flag": 0,
+  "text": "최대 MP : +5"
+ },
+ {
+  "key": "incMMP",
+  "value": 5,
+  "flag": 1,
+  "text": "최대 MP : +5"
+ },
+ {
+  "key": "incMMP",
+  "value": 5,
+  "flag": 2,
+  "text": "최대 MP : 5"
+ },
+ {
+  "key": "incPAD",
+  "value": 8,
+  "flag": 0,
+  "text": "공격력 : +8"
+ },
+ {
+  "key": "incPAD",
+  "value": 8,
+  "flag": 1,
+  "text": "공격력 : +8"
+ },
+ {
+  "key": "incPAD",
+  "value": 8,
+  "flag": 2,
+  "text": "공격력 : 8"
+ },
+ {
+  "key": "incPDD",
+  "value": 22,
+  "flag": 0,
+  "text": "방어력 : +22"
+ },
+ {
+  "key": "incPDD",
+  "value": 22,
+  "flag": 1,
+  "text": "방어력 : +22"
+ },
+ {
+  "key": "incPDD",
+  "value": 22,
+  "flag": 2,
+  "text": "방어력 : 22"
+ },
+ {
+  "key": "incPDD",
+  "value": 70,
+  "flag": 0,
+  "text": "방어력 : +70"
+ },
+ {
+  "key": "incPDD",
+  "value": 70,
+  "flag": 1,
+  "text": "방어력 : +70"
+ },
+ {
+  "key": "incPDD",
+  "value": 70,
+  "flag": 2,
+  "text": "방어력 : 70"
+ },
+ {
+  "key": "incSTR",
+  "value": 15,
+  "flag": 0,
+  "text": "STR : +15"
+ },
+ {
+  "key": "incSTR",
+  "value": 15,
+  "flag": 1,
+  "text": "STR : +15"
+ },
+ {
+  "key": "incSTR",
+  "value": 15,
+  "flag": 2,
+  "text": "STR : 15"
+ },
+ {
+  "key": "incSpeed",
+  "value": 10,
+  "flag": 0,
+  "text": "이동속도 : +10"
+ },
+ {
+  "key": "incSpeed",
+  "value": 10,
+  "flag": 1,
+  "text": "이동속도 : +10"
+ },
+ {
+  "key": "incSpeed",
+  "value": 10,
+  "flag": 2,
+  "text": "이동속도 : 10"
+ },
+ {
+  "key": "notExtend",
+  "value": 1,
+  "flag": 0,
+  "text": "유효기간 연장 불가"
+ },
+ {
+  "key": "notExtend",
+  "value": 1,
+  "flag": 1,
+  "text": "유효기간 연장 불가"
+ },
+ {
+  "key": "notExtend",
+  "value": 1,
+  "flag": 2,
+  "text": "유효기간 연장 불가"
+ },
+ {
+  "key": "reqDEX",
+  "value": 0,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "reqDEX",
+  "value": 0,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "reqDEX",
+  "value": 0,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "reqINT",
+  "value": 0,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "reqINT",
+  "value": 0,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "reqINT",
+  "value": 0,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "reqJob",
+  "value": 0,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "reqJob",
+  "value": 0,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "reqJob",
+  "value": 0,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "reqJob",
+  "value": 8,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "reqJob",
+  "value": 8,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "reqJob",
+  "value": 8,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "reqLUK",
+  "value": 0,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "reqLUK",
+  "value": 0,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "reqLUK",
+  "value": 0,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "reqLUK",
+  "value": 110,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "reqLUK",
+  "value": 110,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "reqLUK",
+  "value": 110,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "reqLevel",
+  "value": 40,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "reqLevel",
+  "value": 40,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "reqLevel",
+  "value": 40,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "reqLevel",
+  "value": 50,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "reqLevel",
+  "value": 50,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "reqLevel",
+  "value": 50,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "reqSTR",
+  "value": 0,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "reqSTR",
+  "value": 0,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "reqSTR",
+  "value": 0,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "setItemID",
+  "value": 355,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "setItemID",
+  "value": 355,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "setItemID",
+  "value": 355,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "timeLimited",
+  "value": 1,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "timeLimited",
+  "value": 1,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "timeLimited",
+  "value": 1,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "tradeBlock",
+  "value": 1,
+  "flag": 0,
+  "text": "교환 불가"
+ },
+ {
+  "key": "tradeBlock",
+  "value": 1,
+  "flag": 1,
+  "text": "교환 불가"
+ },
+ {
+  "key": "tradeBlock",
+  "value": 1,
+  "flag": 2,
+  "text": "교환 불가"
+ },
+ {
+  "key": "tuc",
+  "value": 2,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "tuc",
+  "value": 2,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "tuc",
+  "value": 2,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "tuc",
+  "value": 5,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "tuc",
+  "value": 5,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "tuc",
+  "value": 5,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "incSTR",
+  "value": -5,
+  "flag": 0,
+  "text": "STR : -5"
+ },
+ {
+  "key": "incSTR",
+  "value": -5,
+  "flag": 1,
+  "text": "STR : +-5"
+ },
+ {
+  "key": "incSTR",
+  "value": -5,
+  "flag": 2,
+  "text": "STR : -5"
+ },
+ {
+  "key": "incSTR",
+  "value": 0,
+  "flag": 0,
+  "text": "STR : 0"
+ },
+ {
+  "key": "incSTR",
+  "value": 0,
+  "flag": 1,
+  "text": "STR : +0"
+ },
+ {
+  "key": "incSTR",
+  "value": 0,
+  "flag": 2,
+  "text": "STR : 0"
+ },
+ {
+  "key": "incSTR",
+  "value": 5,
+  "flag": 0,
+  "text": "STR : +5"
+ },
+ {
+  "key": "incSTR",
+  "value": 5,
+  "flag": 1,
+  "text": "STR : +5"
+ },
+ {
+  "key": "incSTR",
+  "value": 5,
+  "flag": 2,
+  "text": "STR : 5"
+ },
+ {
+  "key": "incSTR",
+  "value": 12,
+  "flag": 0,
+  "text": "STR : +12"
+ },
+ {
+  "key": "incSTR",
+  "value": 12,
+  "flag": 1,
+  "text": "STR : +12"
+ },
+ {
+  "key": "incSTR",
+  "value": 12,
+  "flag": 2,
+  "text": "STR : 12"
+ },
+ {
+  "key": "incPAD",
+  "value": -5,
+  "flag": 0,
+  "text": "공격력 : -5"
+ },
+ {
+  "key": "incPAD",
+  "value": -5,
+  "flag": 1,
+  "text": "공격력 : +-5"
+ },
+ {
+  "key": "incPAD",
+  "value": -5,
+  "flag": 2,
+  "text": "공격력 : -5"
+ },
+ {
+  "key": "incPAD",
+  "value": 0,
+  "flag": 0,
+  "text": "공격력 : 0"
+ },
+ {
+  "key": "incPAD",
+  "value": 0,
+  "flag": 1,
+  "text": "공격력 : +0"
+ },
+ {
+  "key": "incPAD",
+  "value": 0,
+  "flag": 2,
+  "text": "공격력 : 0"
+ },
+ {
+  "key": "incPAD",
+  "value": 5,
+  "flag": 0,
+  "text": "공격력 : +5"
+ },
+ {
+  "key": "incPAD",
+  "value": 5,
+  "flag": 1,
+  "text": "공격력 : +5"
+ },
+ {
+  "key": "incPAD",
+  "value": 5,
+  "flag": 2,
+  "text": "공격력 : 5"
+ },
+ {
+  "key": "incPAD",
+  "value": 12,
+  "flag": 0,
+  "text": "공격력 : +12"
+ },
+ {
+  "key": "incPAD",
+  "value": 12,
+  "flag": 1,
+  "text": "공격력 : +12"
+ },
+ {
+  "key": "incPAD",
+  "value": 12,
+  "flag": 2,
+  "text": "공격력 : 12"
+ },
+ {
+  "key": "incMHPr",
+  "value": -5,
+  "flag": 0,
+  "text": "최대 HP : -5%"
+ },
+ {
+  "key": "incMHPr",
+  "value": -5,
+  "flag": 1,
+  "text": "최대 HP : +-5%"
+ },
+ {
+  "key": "incMHPr",
+  "value": -5,
+  "flag": 2,
+  "text": "최대 HP : -5%"
+ },
+ {
+  "key": "incMHPr",
+  "value": 0,
+  "flag": 0,
+  "text": "최대 HP : 0%"
+ },
+ {
+  "key": "incMHPr",
+  "value": 0,
+  "flag": 1,
+  "text": "최대 HP : +0%"
+ },
+ {
+  "key": "incMHPr",
+  "value": 0,
+  "flag": 2,
+  "text": "최대 HP : 0%"
+ },
+ {
+  "key": "incMHPr",
+  "value": 5,
+  "flag": 0,
+  "text": "최대 HP : +5%"
+ },
+ {
+  "key": "incMHPr",
+  "value": 5,
+  "flag": 1,
+  "text": "최대 HP : +5%"
+ },
+ {
+  "key": "incMHPr",
+  "value": 5,
+  "flag": 2,
+  "text": "최대 HP : 5%"
+ },
+ {
+  "key": "incMHPr",
+  "value": 12,
+  "flag": 0,
+  "text": "최대 HP : +12%"
+ },
+ {
+  "key": "incMHPr",
+  "value": 12,
+  "flag": 1,
+  "text": "최대 HP : +12%"
+ },
+ {
+  "key": "incMHPr",
+  "value": 12,
+  "flag": 2,
+  "text": "최대 HP : 12%"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": -5,
+  "flag": 0,
+  "text": "올스탯: -5, 최대 HP : -125"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": -5,
+  "flag": 1,
+  "text": "올스탯: +-5, 최대 HP : +-125"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": -5,
+  "flag": 2,
+  "text": "올스탯: -5, 최대 HP : -125"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 0,
+  "flag": 0,
+  "text": "올스탯: 0, 최대 HP : 0"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 0,
+  "flag": 1,
+  "text": "올스탯: +0, 최대 HP : +0"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 0,
+  "flag": 2,
+  "text": "올스탯: 0, 최대 HP : 0"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 5,
+  "flag": 0,
+  "text": "올스탯: +5, 최대 HP : +125"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 5,
+  "flag": 1,
+  "text": "올스탯: +5, 최대 HP : +125"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 5,
+  "flag": 2,
+  "text": "올스탯: 5, 최대 HP : 125"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 12,
+  "flag": 0,
+  "text": "올스탯: +12, 최대 HP : +300"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 12,
+  "flag": 1,
+  "text": "올스탯: +12, 최대 HP : +300"
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 12,
+  "flag": 2,
+  "text": "올스탯: 12, 최대 HP : 300"
+ },
+ {
+  "key": "only",
+  "value": -5,
+  "flag": 0,
+  "text": "중복 소지 불가"
+ },
+ {
+  "key": "only",
+  "value": -5,
+  "flag": 1,
+  "text": "중복 소지 불가"
+ },
+ {
+  "key": "only",
+  "value": -5,
+  "flag": 2,
+  "text": "중복 소지 불가"
+ },
+ {
+  "key": "only",
+  "value": 0,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "only",
+  "value": 0,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "only",
+  "value": 0,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "only",
+  "value": 5,
+  "flag": 0,
+  "text": "중복 소지 불가"
+ },
+ {
+  "key": "only",
+  "value": 5,
+  "flag": 1,
+  "text": "중복 소지 불가"
+ },
+ {
+  "key": "only",
+  "value": 5,
+  "flag": 2,
+  "text": "중복 소지 불가"
+ },
+ {
+  "key": "only",
+  "value": 12,
+  "flag": 0,
+  "text": "중복 소지 불가"
+ },
+ {
+  "key": "only",
+  "value": 12,
+  "flag": 1,
+  "text": "중복 소지 불가"
+ },
+ {
+  "key": "only",
+  "value": 12,
+  "flag": 2,
+  "text": "중복 소지 불가"
+ },
+ {
+  "key": "tradeAvailable",
+  "value": -5,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": -5,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": -5,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 0,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 0,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 0,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 5,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 5,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 5,
+  "flag": 2,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 12,
+  "flag": 0,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 12,
+  "flag": 1,
+  "text": null
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 12,
+  "flag": 2,
+  "text": null
+ }
+]

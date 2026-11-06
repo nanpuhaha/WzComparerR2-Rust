@@ -4374,6 +4374,28 @@ return tostring(ok) .. '|' .. tostring(acc)
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // `GetGearPropString(propType, value, signFlag)` signFlag 0/1/2 실행.
+    static void GearPropSigns(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            string key = item.GetProperty("key").GetString()!;
+            long value = item.GetProperty("value").GetInt64();
+            if (!Enum.TryParse<WzComparerR2.CharaSim.GearPropType>(key, out var propType))
+            {
+                rows.Add(new { key, value, flag = -1, error = "unknown" });
+                continue;
+            }
+            for (int flag = 0; flag <= 2; flag++)
+            {
+                string text = WzComparerR2.CharaSim.ItemStringHelper.GetGearPropString(propType, value, flag);
+                rows.Add(new { key, value, flag, text });
+            }
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4397,7 +4419,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "itemtooltip") ItemTooltip(args[1], args[2], args[3], args[4]);
         else if (args[0] == "itemtab") ItemTab(args[1], args[2], args[3]);
         else if (args[0] == "itemtooltips") ItemTooltips(args[1], args[2], args[3]);
-        else if (args[0] == "gearprops") GearProps(args[1]);
+        else if (args[0] == "gearpropsigns") GearPropSigns(args[1]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));
@@ -4446,6 +4468,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "framebake") FrameBake(args[1]);
         else if (args[0] == "desctags") DescTags(args[1], args[2]);
         else if (args[0] == "itemprops") ItemProps(args[1]);
+        else if (args[0] == "gearprops") GearProps(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

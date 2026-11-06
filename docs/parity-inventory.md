@@ -1735,3 +1735,30 @@ C#: `-- itemprops <fixture.json>`.
 `RenderHelper.DrawV6SkillDotline`은 `Resource.UIToolTip*_img_Skill_Frame_dotline_c`
 비트맵을 `TextureBrush`로 타일링하는 GDI+ 코드라 **미이식**이다(리소스 비트맵
 부재 + 브러시 타일링이 GDI+ 의존).
+
+## `GetGearPropString` signFlag 변형
+
+`gear_prop_line`은 signFlag=0으로 고정돼 있었다. 원본은 signFlag를 받아
+부호 처리를 바꾼다.
+
+| signFlag | 부호 |
+|---|---|
+| 0 (기본) | `value > 0`일 때만 `+` |
+| 1 | **항상 `+`** — 음수면 `STR : +-5`처럼 된다(원본 그대로) |
+| 2 | 항상 없음 |
+
+`gear_prop_line_with_sign(key, value, sign_flag)`로 분리했고, 기존
+`gear_prop_line`은 0으로 위임한다.
+
+검증:
+- 입력은 실제 `Data/Character` 장비 `info`의 서로 다른 (키, 값) 33개 +
+  경계 24개(6키 × 값 -5/0/5/12), GearPropType이 아닌 3키(`notSale`/`pieced`/`price`) 제외
+- C# 하네스가 **실제 `ItemStringHelper.GetGearPropString(..., signFlag)`** 를
+  0/1/2로 호출
+- `crates/wz-avatar/tests/gear_prop_parity.rs` — 54케이스 × 3 flag = **162행**
+  완전 일치 (예: `incSTR -5` → `STR : -5` / `STR : +-5` / `STR : -5`)
+
+fixture: `gear_prop_cases.json`, `gear_prop_expected.json`,
+C#: `-- gearpropsigns <fixture.json>`.
+
+남는 것: `GetGearPropString22`(2열 포맷)는 별도 함수라 미이식이다.

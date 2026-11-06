@@ -1,0 +1,218 @@
+[
+ {
+  "key": "cash",
+  "value": 0
+ },
+ {
+  "key": "charmEXP",
+  "value": 100
+ },
+ {
+  "key": "incDEX",
+  "value": 15
+ },
+ {
+  "key": "incINT",
+  "value": 15
+ },
+ {
+  "key": "incJump",
+  "value": 8
+ },
+ {
+  "key": "incLUK",
+  "value": 2
+ },
+ {
+  "key": "incLUK",
+  "value": 15
+ },
+ {
+  "key": "incMAD",
+  "value": 8
+ },
+ {
+  "key": "incMDD",
+  "value": 70
+ },
+ {
+  "key": "incMMP",
+  "value": 5
+ },
+ {
+  "key": "incPAD",
+  "value": 8
+ },
+ {
+  "key": "incPDD",
+  "value": 22
+ },
+ {
+  "key": "incPDD",
+  "value": 70
+ },
+ {
+  "key": "incSTR",
+  "value": 15
+ },
+ {
+  "key": "incSpeed",
+  "value": 10
+ },
+ {
+  "key": "notExtend",
+  "value": 1
+ },
+ {
+  "key": "reqDEX",
+  "value": 0
+ },
+ {
+  "key": "reqINT",
+  "value": 0
+ },
+ {
+  "key": "reqJob",
+  "value": 0
+ },
+ {
+  "key": "reqJob",
+  "value": 8
+ },
+ {
+  "key": "reqLUK",
+  "value": 0
+ },
+ {
+  "key": "reqLUK",
+  "value": 110
+ },
+ {
+  "key": "reqLevel",
+  "value": 40
+ },
+ {
+  "key": "reqLevel",
+  "value": 50
+ },
+ {
+  "key": "reqSTR",
+  "value": 0
+ },
+ {
+  "key": "setItemID",
+  "value": 355
+ },
+ {
+  "key": "timeLimited",
+  "value": 1
+ },
+ {
+  "key": "tradeBlock",
+  "value": 1
+ },
+ {
+  "key": "tuc",
+  "value": 2
+ },
+ {
+  "key": "tuc",
+  "value": 5
+ },
+ {
+  "key": "incSTR",
+  "value": -5
+ },
+ {
+  "key": "incSTR",
+  "value": 0
+ },
+ {
+  "key": "incSTR",
+  "value": 5
+ },
+ {
+  "key": "incSTR",
+  "value": 12
+ },
+ {
+  "key": "incPAD",
+  "value": -5
+ },
+ {
+  "key": "incPAD",
+  "value": 0
+ },
+ {
+  "key": "incPAD",
+  "value": 5
+ },
+ {
+  "key": "incPAD",
+  "value": 12
+ },
+ {
+  "key": "incMHPr",
+  "value": -5
+ },
+ {
+  "key": "incMHPr",
+  "value": 0
+ },
+ {
+  "key": "incMHPr",
+  "value": 5
+ },
+ {
+  "key": "incMHPr",
+  "value": 12
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": -5
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 0
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 5
+ },
+ {
+  "key": "incAllStat_incMHP25",
+  "value": 12
+ },
+ {
+  "key": "only",
+  "value": -5
+ },
+ {
+  "key": "only",
+  "value": 0
+ },
+ {
+  "key": "only",
+  "value": 5
+ },
+ {
+  "key": "only",
+  "value": 12
+ },
+ {
+  "key": "tradeAvailable",
+  "value": -5
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 0
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 5
+ },
+ {
+  "key": "tradeAvailable",
+  "value": 12
+ }
+]
