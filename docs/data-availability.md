@@ -33,6 +33,7 @@ weather: 원본 C# 소스에 weather 구현 없음
 | weather | 원본 `WzComparerR2`, `WzComparerR2.Common`, `WzComparerR2.WzLib`에 `weather` 문자열 없음 | 원본 기능 아님 |
 | MobTooltip 스탯 | Mob 3,524 이미지 중 info 227개, `level`/`elemAttr` 0개 | 스탯/속성 라인은 데이터 없음. 이름/ID는 StringMob으로 검증 가능 |
 | RecipeTooltip | `Recipe.img` 0개 | 데이터 없음 |
+| ItemTooltip exp/펫 명령어 | `Item` 71,249개 중 `exp_minLev` 0, `interact` 0, `spec/recipe*` 827 | 레시피만 실데이터 비교, 나머지는 규칙 구현 |
 | WorldArchiveTooltip | `Etc_002.wz/worldArchive.img` 894KB, 1,845 항목 (NPC 대사 767) | 구현·검증 완료 (`wz world-archive`) |
 | AchievementTooltip | Achievement 파일 6개 | 구현·검증 완료 (1,579개, `wz achievements`) |
 

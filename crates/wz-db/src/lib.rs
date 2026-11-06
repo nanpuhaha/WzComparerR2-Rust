@@ -41,6 +41,7 @@ pub mod db2_skills;
 pub mod db2_taming_mobs;
 pub mod gear_stats;
 pub mod item_tooltip;
+pub mod item_tooltip_extra;
 pub mod linker;
 pub mod map;
 pub mod map_tooltip;
@@ -85,6 +86,9 @@ pub use db2_taming_mobs::{taming_mob_grid_rows as db2_taming_mob_grid_rows, Db2T
 pub use gear_stats::extract_gear_props;
 pub use item_tooltip::{
     build_item_tooltip, item_attribute_lines, item_core_spec_string, ItemTooltipView,
+};
+pub use item_tooltip_extra::{
+    exp_restriction_lines, exp_to_next_level, pet_command_lines, RecipeSpec,
 };
 pub use linker::{
     extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,

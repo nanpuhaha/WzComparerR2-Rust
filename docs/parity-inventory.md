@@ -571,3 +571,17 @@ fixture: `crates/wz-cli/tests/fixtures/quest_tooltips.expected.json`,
   `PluginContext` 메뉴 주입도 WinForms 호스트 의존이다.
 
 CLI: `wz plugin-files <dir>`, C# 하네스: `pluginfiles <dir>`.
+
+## ItemTooltip 추가 텍스트
+
+- `spec/recipeValidDay > 0` → `( 제작 가능 기간 : N일 )`
+- `spec/recipeUseCount > 0` → `( 제작 가능 횟수 : N회 )`
+- `info/exp_minLev`+`exp_maxLev` → `Character.ExpToNextLevel` 합계로
+  `총  경험치량 :N` / `잔여 경험치량:N` (+ `cantAccountSharable/tooltip`)
+- 펫 명령어: `interact` + `String/PetDialog.img` → `[사용 가능한 명령어]`,
+  `Lv. n 이상 : …`, Tip 2줄
+
+검증: `Item/Consume` 레시피 라인 **827개**가 C# `ItemTooltipRender2`
+문구와 완전 일치. `exp_minLev`/펫 `interact`는 데이터 0개로 규칙만 구현.
+fixture: `crates/wz-cli/tests/fixtures/item_extras.expected.json`,
+테스트: `item_recipe_lines_match_csharp`, CLI: `wz item-extras <Data> <dir>`.

@@ -417,6 +417,17 @@ enum Command {
         json: bool,
     },
 
+    /// ItemTooltip 추가 텍스트 (레시피 유효일/사용횟수)
+    ItemExtras {
+        /// Data 루트
+        data_root: PathBuf,
+        /// Item 하위 디렉터리
+        dir: String,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// PluginBase 플러그인 파일 탐색 (WzComparerR2.*.dll)
     PluginFiles {
         /// Plugin 디렉터리
@@ -897,6 +908,11 @@ fn main() {
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
+        Command::ItemExtras {
+            data_root,
+            dir,
+            json,
+        } => commands::cmd_item_extras(&data_root, &dir, json),
         Command::PluginFiles { dir, json } => commands::cmd_plugin_files(&dir, json),
         Command::QuestTooltips { wz, json, limit } => {
             commands::cmd_quest_tooltips(&wz, json, limit)

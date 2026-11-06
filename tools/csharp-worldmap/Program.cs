@@ -1909,6 +1909,35 @@ class Program
             : new List<string>();
         Console.WriteLine(JsonSerializer.Serialize(files, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void ItemExtras(string dataRoot, string dir)
+    {
+        var rows = new List<object>();
+        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Item", dir), "*.wz").OrderBy(x => x))
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            foreach (Wz_Node n in st.WzNode.Nodes)
+            {
+                if (n.Value is not Wz_Image img) continue;
+                if (!img.TryExtract()) continue;
+                foreach (Wz_Node item in img.Node.Nodes)
+                {
+                    var spec = item.Nodes["spec"];
+                    if (spec == null) continue;
+                    long? validDay = spec.Nodes["recipeValidDay"]?.Value is object v1 ? Convert.ToInt64(v1) : null;
+                    long? useCount = spec.Nodes["recipeUseCount"]?.Value is object v2 ? Convert.ToInt64(v2) : null;
+                    var lines = new List<string>();
+                    if (validDay > 0) lines.Add($"( 제작 가능 기간 : {validDay}일 )");
+                    if (useCount > 0) lines.Add($"( 제작 가능 횟수 : {useCount}회 )");
+                    if (lines.Count == 0) continue;
+                    rows.Add(new { id = item.Text, valid_day = validDay, use_count = useCount, lines });
+                }
+            }
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1949,6 +1978,7 @@ class Program
         else if (args[0] == "maptooltips") MapTooltips(args[1], args[2]);
         else if (args[0] == "questtooltips") QuestTooltips(args[1]);
         else if (args[0] == "pluginfiles") PluginFiles(args[1]);
+        else if (args[0] == "itemextras") ItemExtras(args[1], args[2]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

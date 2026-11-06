@@ -28,7 +28,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | 디렉터리 | 파일 | LOC | 대응 | 상태 |
 |---|---:|---:|---|---|
 | (root) WinForms 메인/비교 창 | 48 | 26,281 | `wz-gui` 최소 PoC | ⬜/🟡 |
-| CharaSimControl | 40 | 21,299 | gear tooltip(base/set/potential/starforce), `GetGearPropString`/`GetJobName`/`GetFifthJobName`/`GetItemCoreSpecString` 전수 비교, Skill `SummaryParser` 요약, ItemTooltip 6탭 32,843개 속성, AchievementTooltip 1,579개, WorldArchiveTooltip 1,845개(NPC 대사 767), NPC/Reactor 툴팁 12,629개, DamageSkin 모델 402개, Map 툴팁 87개, Quest 모델 18,964개, bitmap | 🟡 |
+| CharaSimControl | 40 | 21,299 | gear tooltip(base/set/potential/starforce), `GetGearPropString`/`GetJobName`/`GetFifthJobName`/`GetItemCoreSpecString` 전수 비교, Skill `SummaryParser` 요약, ItemTooltip 6탭 32,843개 속성, AchievementTooltip 1,579개, WorldArchiveTooltip 1,845개(NPC 대사 767), NPC/Reactor 툴팁 12,629개, DamageSkin 모델 402개, Map 툴팁 87개, Quest 모델 18,964개, 레시피 라인 827개, bitmap | 🟡 |
 | AvatarCommon | 12 | 4,086 | `wz-avatar` | ✅ |
 | Comparer | 6 | 3,080 | `wz-diff` + `virtual_node` | 🟡 |
 | Patcher | 16 | 2,547 | `wz-core::patch`, `wz patch` | ✅ core/CLI, UI ⬜ |
@@ -187,6 +187,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - OpenAPI 아바타 비트팩: v26–44 38케이스 C# 일치.
 - OpenAPI 오프라인 helpers: C# `Utils.Decrypt`/`CheckVer`/`GetItemID`를
   16/32/64바이트 벡터에서 비교해 완전 일치(`wz-openapi` 통합 테스트).
+- ItemTooltip 추가 텍스트: `spec/recipeValidDay`·`recipeUseCount` 라인을
+  Consume **827개**에서 C#과 일치. `exp_minLev`와 펫 `interact` 명령어는
+  규칙을 구현했지만 클라이언트에 데이터가 0개다(`wz parity-scan`).
 - `QuestTooltipRenderer` 모델: 이름/설명 0~2/차단/추천 레벨/수요/Check1
   몹·아이템·infoex/Act1 보상(exp·meso·pop·친밀도·성향·아이템·SP)을
   `Quest.CreateFromNode`·`QuestReward.CreateFromAct1Node`에서 아이콘만 제외해

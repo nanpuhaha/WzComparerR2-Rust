@@ -410,3 +410,9 @@ WzComparerR2*.dll recursive, case-insensitive
 Matches Rust `wz plugin-files` on a fixture tree (4 files).
 Assembly type enumeration (`LoadPlugin`) is not implemented: it requires a
 .NET metadata reader.
+
+Verified ItemTooltip recipe lines (`itemextras <Data> Consume`):
+```
+827 items
+```
+`recipeValidDay`/`recipeUseCount` lines match Rust `wz item-extras` exactly.

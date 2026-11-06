@@ -3401,3 +3401,146 @@ pub fn cmd_plugin_files(dir: &Path, json: bool) -> Result<(), Box<dyn std::error
     }
     Ok(())
 }
+
+pub fn cmd_item_extras(
+    data_root: &Path,
+    dir: &str,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut paths: Vec<_> = std::fs::read_dir(data_root.join("Item").join(dir))
+        .ok()
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+        .collect();
+    paths.sort();
+    let mut rows = Vec::new();
+    for path in paths {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else {
+                continue;
+            };
+            let Ok(image) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            for item in image.object_children() {
+                if let Some(spec) = wz_db::RecipeSpec::from_item(item) {
+                    let lines = spec.lines();
+                    if lines.is_empty() {
+                        continue;
+                    }
+                    rows.push(serde_json::json!({
+                        "id": item.name.to_string(),
+                        "valid_day": spec.valid_day,
+                        "use_count": spec.use_count,
+                        "lines": lines,
+                    }));
+                }
+            }
+        }
+    }
+    rows.sort_by(|a, b| a["id"].as_str().cmp(&b["id"].as_str()));
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!("{} {:?}", row["id"], row["lines"]);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod item_extra_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn item_recipe_lines_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let dir = root.join("Item/Consume");
+        if !dir.exists() {
+            return;
+        }
+        let mut paths: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+            .collect();
+        paths.sort();
+        let mut rows = Vec::new();
+        for path in paths {
+            let Ok(archive) = wz_core::WzArchive::open(&path) else {
+                continue;
+            };
+            let Ok(tree) = archive.read_tree() else {
+                continue;
+            };
+            for entry in &tree.root.entries {
+                if entry.node_type != 4 {
+                    continue;
+                }
+                let Some(offset) = entry.offset else { continue };
+                let Ok(image) = archive.parse_image_at(offset) else {
+                    continue;
+                };
+                for item in image.object_children() {
+                    let Some(spec) = wz_db::RecipeSpec::from_item(item) else {
+                        continue;
+                    };
+                    let lines = spec.lines();
+                    if lines.is_empty() {
+                        continue;
+                    }
+                    rows.push((item.name.to_string(), spec, lines));
+                }
+            }
+        }
+        rows.sort_by(|a, b| a.0.cmp(&b.0));
+        let rec = char::from(0x1e);
+        let canon = rows
+            .iter()
+            .map(|(id, spec, lines)| {
+                [
+                    id.clone(),
+                    spec.valid_day.map(|v| v.to_string()).unwrap_or_default(),
+                    spec.use_count.map(|v| v.to_string()).unwrap_or_default(),
+                    lines.join("|"),
+                ]
+                .join(&rec.to_string())
+            })
+            .collect::<Vec<_>>()
+            .join(&rec.to_string());
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/item_extras.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(rows.len() as u64, expected["rows"].as_u64().unwrap());
+        assert_eq!(
+            sha256_hex(canon.as_bytes()),
+            expected["sha256"].as_str().unwrap()
+        );
+    }
+}

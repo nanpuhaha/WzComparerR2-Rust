@@ -140,6 +140,46 @@ fn scan_mob(root: &Path) -> (u64, u64, u64, u64) {
     stats
 }
 
+fn scan_item_extra(root: &Path) -> (u64, u64, u64, u64) {
+    // (items, recipe spec, exp_minLev, pet interact)
+    let mut stats = (0, 0, 0, 0);
+    let Ok(dirs) = std::fs::read_dir(root.join("Item")) else {
+        return stats;
+    };
+    for dir in dirs.flatten() {
+        let dir = dir.path();
+        if !dir.is_dir() {
+            continue;
+        }
+        for path in wz_files(&dir) {
+            let Ok(archive) = WzArchive::open(&path) else {
+                continue;
+            };
+            for image in image_nodes(&archive) {
+                for item in image.object_children() {
+                    stats.0 += 1;
+                    if let Some(spec) = child(item, "spec") {
+                        if child(spec, "recipeValidDay").is_some()
+                            || child(spec, "recipeUseCount").is_some()
+                        {
+                            stats.1 += 1;
+                        }
+                    }
+                    if let Some(info) = child(item, "info") {
+                        if child(info, "exp_minLev").is_some() {
+                            stats.2 += 1;
+                        }
+                    }
+                    if child(item, "interact").is_some() {
+                        stats.3 += 1;
+                    }
+                }
+            }
+        }
+    }
+    stats
+}
+
 fn scan_worldmap(root: &Path) -> (u64, BTreeMap<String, u64>) {
     let mut images = 0;
     let mut counts = BTreeMap::new();
@@ -174,6 +214,11 @@ pub fn cmd_parity_scan(data_root: &Path) -> Result<(), Box<dyn Error>> {
     let (mob_images, mob_info, mob_level, mob_elem) = scan_mob(&data_root.join("Mob"));
     println!(
         "Mob: {mob_images} images, {mob_info} info nodes, {mob_level} level, {mob_elem} elemAttr"
+    );
+
+    let (items, recipes, exp_limits, pet_interacts) = scan_item_extra(data_root);
+    println!(
+        "Item: {items} items, {recipes} recipe specs, {exp_limits} exp_minLev, {pet_interacts} pet interact"
     );
 
     let achievement = find_files(data_root, |name| {
