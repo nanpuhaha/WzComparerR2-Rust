@@ -5940,3 +5940,98 @@ pub fn cmd_sprite_compose_fixture(
     );
     Ok(())
 }
+
+/// 실제 아이템 `info`에서 `GetItemPropString` 대상 키를 모은다.
+pub fn cmd_item_prop_cases(
+    data_root: &Path,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    const KEYS: [&str; 11] = [
+        "tradeBlock",
+        "useTradeBlock",
+        "tradeAvailable",
+        "only",
+        "accountSharable",
+        "sharableOnce",
+        "exchangeableOnce",
+        "accountSharableAfterExchange",
+        "quest",
+        "pquest",
+        "mintable",
+    ];
+    let mut files = Vec::new();
+    for dir in ["Consume", "Cash", "Etc", "Install", "Special", "Pet"] {
+        let Ok(entries) = std::fs::read_dir(data_root.join("Item").join(dir)) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("wz") {
+                files.push(path);
+            }
+        }
+    }
+    files.sort();
+
+    let mut rows: Vec<serde_json::Value> = Vec::new();
+    'outer: for path in files {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else { continue };
+            let Ok(image) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            for item in image.object_children() {
+                let Ok(id) = item.name.as_ref().parse::<i32>() else {
+                    continue;
+                };
+                let Some(info) = item
+                    .object_children()
+                    .iter()
+                    .find(|c| c.name.as_ref() == "info")
+                else {
+                    continue;
+                };
+                for key in KEYS {
+                    let Some(child) = info
+                        .object_children()
+                        .iter()
+                        .find(|c| c.name.as_ref() == key)
+                    else {
+                        continue;
+                    };
+                    let value = match &child.value {
+                        Some(wz_core::image::ImageValue::Int(v)) => i64::from(*v),
+                        Some(wz_core::image::ImageValue::Short(v)) => i64::from(*v),
+                        Some(wz_core::image::ImageValue::Long(v)) => *v,
+                        Some(wz_core::image::ImageValue::Uint(v)) => i64::from(*v),
+                        Some(wz_core::image::ImageValue::Str(s))
+                        | Some(wz_core::image::ImageValue::Uol(s)) => match s.parse() {
+                            Ok(v) => v,
+                            Err(_) => continue,
+                        },
+                        _ => continue,
+                    };
+                    rows.push(serde_json::json!({ "id": id, "key": key, "value": value }));
+                    if rows.len() >= limit {
+                        break 'outer;
+                    }
+                }
+            }
+        }
+    }
+    // 원본이 값 0에서도 문자열을 돌려주는 항목의 경계.
+    for (key, value) in [("multiPet", 0), ("multiPet", 1), ("permanent", 1)] {
+        rows.push(serde_json::json!({ "id": 0, "key": key, "value": value }));
+    }
+    println!("{}", serde_json::to_string_pretty(&rows)?);
+    Ok(())
+}

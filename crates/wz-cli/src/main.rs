@@ -387,6 +387,15 @@ enum Command {
         out: Option<PathBuf>,
     },
 
+    /// 아이템 공통 속성(`GetItemPropString`) fixture 생성
+    ItemPropCases {
+        /// Data 루트
+        data_root: PathBuf,
+        /// 최대 케이스
+        #[arg(long, default_value_t = 300)]
+        limit: usize,
+    },
+
     /// 서식 문자열(`Parser.Parse`) fixture 생성 (실제 아이템 desc/desc_leftalign)
     ItemFormatStrings {
         /// Data 루트
@@ -1155,6 +1164,9 @@ fn main() {
             fixture,
             out,
         } => commands::cmd_item_tooltip_render(&data_root, &fixture, out.as_deref()),
+        Command::ItemPropCases { data_root, limit } => {
+            commands::cmd_item_prop_cases(&data_root, limit)
+        }
         Command::ItemFormatStrings {
             data_root,
             string,

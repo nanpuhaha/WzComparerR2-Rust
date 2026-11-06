@@ -481,6 +481,131 @@ pub fn render_gear_tooltip(
     )
 }
 
+/// 원본 `ItemStringHelper.GetItemPropString` — 아이템 공통 속성 문자열.
+///
+/// `GetGearPropString`을 쓰는 항목은 [`gear_prop_line`]에 위임한다.
+/// 값이 0일 때 `null`을 돌려주는 항목이 많으므로 `Option`을 반환한다.
+pub fn item_prop_string(key: &str, value: i64) -> Option<String> {
+    Some(match key {
+        "tradeBlock" => gear_prop_line("tradeBlock", value)?,
+        "useTradeBlock" => {
+            if value == 0 {
+                return None;
+            }
+            "사용시 교환 불가".to_string()
+        }
+        "tradeAvailable" => gear_prop_line("tradeAvailable", value)?,
+        "only" => gear_prop_line("only", value)?,
+        "accountSharable" => gear_prop_line("accountSharable", value)?,
+        "sharableOnce" => gear_prop_line("sharableOnce", value)?,
+        "exchangeableOnce" => {
+            if value == 0 {
+                return None;
+            }
+            "1회 교환가능 (사용 또는 거래 후 교환불가)".to_string()
+        }
+        "accountSharableAfterExchange" => gear_prop_line("accountSharableAfterExchange", value)?,
+        "quest" => {
+            if value == 0 {
+                return None;
+            }
+            "퀘스트 아이템".to_string()
+        }
+        "pquest" => {
+            if value == 0 {
+                return None;
+            }
+            "파티 퀘스트 아이템".to_string()
+        }
+        // 원본은 이 항목만 값이 0/1 모두 문자열을 돌려준다.
+        "multiPet" => {
+            if value == 0 {
+                "일반펫 (다른 일반펫과 중복 사용불가)".to_string()
+            } else {
+                "멀티펫 (다른 펫과 최대 3개 중복 사용가능)".to_string()
+            }
+        }
+        "permanent" => {
+            if value == 0 {
+                return None;
+            }
+            "마법의 시간이 끝나지 않는 미라클 펫입니다.".to_string()
+        }
+        "mintable" => gear_prop_line("mintable", value)?,
+        _ => return None,
+    })
+}
+
+/// `ItemTooltipRender22.GetItemTopAttributeString`의 항목 순서대로 태그를 만든다.
+///
+/// `props`는 `(키, 값)` 목록이고, `item_id`/`is_pet`은 원본의 특수 분기에 쓴다.
+pub fn item_top_attribute_lines(
+    props: &std::collections::BTreeMap<String, i64>,
+    item_id: i32,
+    is_pet: bool,
+) -> Vec<String> {
+    let get = |key: &str| props.get(key).copied().unwrap_or(0);
+    let mut tags = Vec::new();
+    for key in ["quest", "pquest", "tradeBlock"] {
+        if get(key) != 0 {
+            if let Some(text) = item_prop_string(key, get(key)) {
+                tags.push(text);
+            }
+        }
+    }
+    if get("useTradeBlock") != 0 {
+        if let Some(text) = item_prop_string("useTradeBlock", get("useTradeBlock")) {
+            tags.push(text);
+        }
+    } else if matches!(item_id / 10000, 501 | 502 | 516) {
+        if let Some(text) = item_prop_string("tradeBlock", 1) {
+            tags.push(text);
+        }
+    }
+    if get("accountSharable") != 0 {
+        if get("exp_minLev") != 0 {
+            if let Some(text) = item_prop_string("useTradeBlock", 1) {
+                tags.push(text);
+            }
+        }
+        if get("sharableOnce") != 0 {
+            if let Some(text) = item_prop_string("sharableOnce", get("sharableOnce")) {
+                tags.push(text);
+            }
+        } else if let Some(text) = item_prop_string("accountSharable", get("accountSharable")) {
+            tags.push(text);
+        }
+    }
+    if get("exchangeableOnce") != 0 {
+        if let Some(text) = item_prop_string("exchangeableOnce", get("exchangeableOnce")) {
+            tags.push(text);
+        }
+    }
+    if props.contains_key("multiPet") {
+        if let Some(text) = item_prop_string("multiPet", get("multiPet")) {
+            tags.push(text);
+        }
+    } else if is_pet {
+        if let Some(text) = item_prop_string("multiPet", 0) {
+            tags.push(text);
+        }
+    }
+    if get("accountSharableAfterExchange") != 0 {
+        if let Some(text) = item_prop_string(
+            "accountSharableAfterExchange",
+            get("accountSharableAfterExchange"),
+        ) {
+            tags.push(text);
+        }
+    }
+    if props.contains_key("mintable") {
+        if let Some(text) = item_prop_string("mintable", get("mintable")) {
+            tags.push(text);
+        }
+    }
+    tags
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

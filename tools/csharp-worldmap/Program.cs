@@ -4355,6 +4355,25 @@ return tostring(ok) .. '|' .. tostring(acc)
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // 실제 C# `ItemStringHelper.GetItemPropString` 실행.
+    static void ItemProps(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            string key = item.GetProperty("key").GetString()!;
+            long value = item.GetProperty("value").GetInt64();
+            if (!Enum.TryParse<WzComparerR2.CharaSim.ItemPropType>(key, out var propType))
+            {
+                rows.Add(new { id = item.GetProperty("id").GetInt32(), key, value, error = "unknown prop" });
+                continue;
+            }
+            string text = WzComparerR2.CharaSim.ItemStringHelper.GetItemPropString(propType, value);
+            rows.Add(new { id = item.GetProperty("id").GetInt32(), key, value, text });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4426,6 +4445,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "mainwindow") MainWindow(args[1], args[2], args[3]);
         else if (args[0] == "framebake") FrameBake(args[1]);
         else if (args[0] == "desctags") DescTags(args[1], args[2]);
+        else if (args[0] == "itemprops") ItemProps(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

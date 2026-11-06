@@ -1703,3 +1703,35 @@ C#: `-- mainwindow <PluginBase.dll> <plugin.dll> <fixture.json>`.
 
 fixture: `desc_tag_cases.json`, `desc_tag_expected.json`,
 C#: `-- desctags <String_000.wz> <fixture.json>`.
+
+## ItemTooltip 공통 속성 문자열 (`GetItemPropString`)
+
+`ItemStringHelper.GetItemPropString`을 `wz-avatar::gear_tooltip`에 옮겼다.
+`GetGearPropString` 위임 항목은 기존 `gear_prop_line`을 그대로 쓴다.
+
+| 키 | 규칙 |
+|---|---|
+| `tradeBlock` / `tradeAvailable` / `only` / `accountSharable` / `sharableOnce` / `accountSharableAfterExchange` / `mintable` | `gear_prop_line` 위임 |
+| `useTradeBlock` | 0이면 없음, 아니면 `사용시 교환 불가` |
+| `exchangeableOnce` | 0이면 없음, 아니면 `1회 교환가능 (사용 또는 거래 후 교환불가)` |
+| `quest` / `pquest` | 0이면 없음 |
+| `multiPet` | 0/1 **모두** 문자열(일반펫/멀티펫) |
+| `permanent` | 0이면 없음, 아니면 `마법의 시간이 끝나지 않는 미라클 펫입니다.` |
+
+추가로 `GetItemTopAttributeString`의 순서/분기(501·502·516 특례,
+`exp_minLev`+`accountSharable`, `sharableOnce` 우선, 펫 기본 `multiPet 0`,
+`mintable`은 키 존재 여부)를 `item_top_attribute_lines`로 옮겼다.
+
+검증:
+- 입력은 실제 아이템 `info`에서 뽑은 **300개**(tradeBlock 277, accountSharable 11,
+  quest 9, only 2, pquest 1) + 경계 3개(`multiPet` 0/1, `permanent` 1)
+- C# 하네스가 **실제 `ItemStringHelper.GetItemPropString`** 을 호출
+- `crates/wz-avatar/tests/item_prop_parity.rs` 303케이스 완전 일치
+
+fixture: `item_prop_cases.json`, `item_prop_expected.json`,
+CLI: `wz item-prop-cases <Data> --limit N`,
+C#: `-- itemprops <fixture.json>`.
+
+`RenderHelper.DrawV6SkillDotline`은 `Resource.UIToolTip*_img_Skill_Frame_dotline_c`
+비트맵을 `TextureBrush`로 타일링하는 GDI+ 코드라 **미이식**이다(리소스 비트맵
+부재 + 브러시 타일링이 GDI+ 의존).

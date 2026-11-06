@@ -662,3 +662,10 @@ Verified ItemTooltip `#t` links (`desctags <String_000.wz> <fixture.json>`):
 ```
 Uses real `StringLinker` + .NET `Regex`; matches Rust
 `wz_db::replace_desc_tags` (9-digit id limit, requires closing `#`).
+
+Verified item prop strings (`itemprops <fixture.json>`):
+```
+303 cases from real item info + multiPet/permanent edges
+```
+Calls the real `ItemStringHelper.GetItemPropString`; matches Rust
+`wz_avatar::item_prop_string`.

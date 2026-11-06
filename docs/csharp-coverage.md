@@ -273,6 +273,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - ItemTooltip 오프스크린 렌더: 파서→배치→아이콘 픽셀 연산→게임 폰트를 합쳐
   300×153 RGBA를 만들고 SHA-256을 fixture로 고정. GUI 인스펙터가 이 경로를
   사용한다. GDI+ 감마/힌팅과의 픽셀 동일성은 주장하지 않는다.
+- ItemTooltip 공통 속성: `GetItemPropString` 11종과 상단 속성 순서/특례를
+  옮기고, 실제 아이템 속성 303케이스에서 실제 C# 메서드 호출과 완전 일치.
+  `DrawV6SkillDotline`은 리소스 비트맵/GDI+ 브러시 의존이라 미이식.
 - ItemTooltip `#t` 링크: 원본 정규식의 9자리 제한/닫는 `#` 조건을 옮기고 실제
   아이템 문자열 40개 + 경계 4개를 실제 .NET Regex/StringLinker 결과와 비교.
   기존 포팅이 10자리 id에서 어긋나던 버그도 수정.

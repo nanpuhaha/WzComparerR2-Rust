@@ -29,6 +29,7 @@ pub use gear_tooltip::{
     build_gear_tooltip, build_gear_tooltip_full, gear_prop_line, render_gear_tooltip,
     tooltip_stat_line, GearTooltip,
 };
+pub use gear_tooltip::{item_prop_string, item_top_attribute_lines};
 pub use item_tooltip_canvas::{render_item_tooltip, ItemTooltipSpec};
 pub use job_name::{get_fifth_job_name, get_job_name};
 pub use loader::{
