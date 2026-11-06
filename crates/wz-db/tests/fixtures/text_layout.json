@@ -1,0 +1,271 @@
+[
+  {
+    "text": "hello world",
+    "width": 50,
+    "start_y": 0,
+    "line_height": 16,
+    "alignment": "Left",
+    "rects": [
+      {
+        "start": 0,
+        "len": 8,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "start": 8,
+        "len": 3,
+        "x": 0,
+        "y": 16
+      }
+    ],
+    "end_y": 32
+  },
+  {
+    "text": "\uB3D9\uD574\uBB3C\uACFC \uBC31\uB450\uC0B0\uC774 \uB9C8\uB974\uACE0 \uB2F3\uB3C4\uB85D",
+    "width": 60,
+    "start_y": 0,
+    "line_height": 16,
+    "alignment": "Left",
+    "rects": [
+      {
+        "start": 0,
+        "len": 9,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "start": 9,
+        "len": 8,
+        "x": 0,
+        "y": 16
+      }
+    ],
+    "end_y": 32
+  },
+  {
+    "text": "abcdefghij",
+    "width": 21,
+    "start_y": 0,
+    "line_height": 16,
+    "alignment": "Left",
+    "rects": [
+      {
+        "start": 0,
+        "len": 3,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "start": 3,
+        "len": 3,
+        "x": 0,
+        "y": 16
+      },
+      {
+        "start": 6,
+        "len": 3,
+        "x": 0,
+        "y": 32
+      },
+      {
+        "start": 9,
+        "len": 1,
+        "x": 0,
+        "y": 48
+      }
+    ],
+    "end_y": 64
+  },
+  {
+    "text": "ab\ncd",
+    "width": 1000,
+    "start_y": 5,
+    "line_height": 16,
+    "alignment": "Left",
+    "rects": [
+      {
+        "start": 0,
+        "len": 2,
+        "x": 0,
+        "y": 5
+      },
+      {
+        "start": 2,
+        "len": 2,
+        "x": 0,
+        "y": 21
+      }
+    ],
+    "end_y": 37
+  },
+  {
+    "text": "\uAC00\uB098\uB2E4\uB77C\uB9C8\uBC14\uC0AC\uC544\uC790\uCC28",
+    "width": 35,
+    "start_y": 3,
+    "line_height": 18,
+    "alignment": "Center",
+    "rects": [
+      {
+        "start": 0,
+        "len": 5,
+        "x": 0,
+        "y": 3
+      },
+      {
+        "start": 5,
+        "len": 5,
+        "x": 0,
+        "y": 21
+      }
+    ],
+    "end_y": 39
+  },
+  {
+    "text": "\uAC00\uB098\uB2E4\uB77C\uB9C8\uBC14\uC0AC\uC544\uC790\uCC28",
+    "width": 35,
+    "start_y": 3,
+    "line_height": 18,
+    "alignment": "Right",
+    "rects": [
+      {
+        "start": 0,
+        "len": 5,
+        "x": 0,
+        "y": 3
+      },
+      {
+        "start": 5,
+        "len": 5,
+        "x": 0,
+        "y": 21
+      }
+    ],
+    "end_y": 39
+  },
+  {
+    "text": "a,b,c,d,e",
+    "width": 20,
+    "start_y": 0,
+    "line_height": 16,
+    "alignment": "Left",
+    "rects": [
+      {
+        "start": 0,
+        "len": 4,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "start": 4,
+        "len": 4,
+        "x": 0,
+        "y": 16
+      },
+      {
+        "start": 8,
+        "len": 1,
+        "x": 0,
+        "y": 32
+      }
+    ],
+    "end_y": 48
+  },
+  {
+    "text": "  spaced  ",
+    "width": 30,
+    "start_y": 0,
+    "line_height": 16,
+    "alignment": "Left",
+    "rects": [
+      {
+        "start": 0,
+        "len": 5,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "start": 5,
+        "len": 5,
+        "x": 0,
+        "y": 16
+      }
+    ],
+    "end_y": 32
+  },
+  {
+    "text": "",
+    "width": 40,
+    "start_y": 0,
+    "line_height": 16,
+    "alignment": "Left",
+    "rects": [],
+    "end_y": 16
+  },
+  {
+    "text": "\uC9041\r\n\uC9042\r\uC9043\n\uC9044",
+    "width": 1000,
+    "start_y": 0,
+    "line_height": 16,
+    "alignment": "Left",
+    "rects": [
+      {
+        "start": 0,
+        "len": 2,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "start": 2,
+        "len": 2,
+        "x": 0,
+        "y": 16
+      },
+      {
+        "start": 4,
+        "len": 2,
+        "x": 0,
+        "y": 32
+      },
+      {
+        "start": 6,
+        "len": 2,
+        "x": 0,
+        "y": 48
+      }
+    ],
+    "end_y": 64
+  },
+  {
+    "text": "\uAC00\uB098",
+    "width": 100,
+    "start_y": 0,
+    "line_height": 16,
+    "alignment": "Center",
+    "rects": [
+      {
+        "start": 0,
+        "len": 2,
+        "x": 43,
+        "y": 0
+      }
+    ],
+    "end_y": 16
+  },
+  {
+    "text": "\uAC00\uB098",
+    "width": 100,
+    "start_y": 0,
+    "line_height": 16,
+    "alignment": "Right",
+    "rects": [
+      {
+        "start": 0,
+        "len": 2,
+        "x": 86,
+        "y": 0
+      }
+    ],
+    "end_y": 16
+  }
+]

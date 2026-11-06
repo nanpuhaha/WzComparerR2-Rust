@@ -238,6 +238,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook`로 몹/NPC
   설명, `[몬스터북]`, `NPC 대사` 라인을 구성해 **1,845개 항목**
   (NPC 대사 767개)이 C#과 완전 일치.
+- ItemTooltip 텍스트 레이아웃: `TextRenderer.DrawPlainText` 코어를 옮기고,
+  C# 하네스가 원본 `TextRenderer<string>`를 상속해 12케이스의 줄 사각형/최종
+  y를 비교했다. 픽셀 비교는 `Graphics.MeasureString`(GDI+) 의존이라 여전히
+  불가하고, 색상 태그 파서는 미포팅이다.
 - ItemTooltip `#cosmetic_EULO#`: `desc`에 실제로 **1,133건** 존재한다
   (이전 조사는 `desc_leftalign`만 봐서 0건으로 오판). `Gear.GetGearType`/
   `IsSubWeapon`/`GetGender`/`GetCosmeticGender`, 조사(으로/로) 판정,

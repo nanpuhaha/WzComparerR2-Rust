@@ -941,3 +941,43 @@ rows × columns:
 
 검증: 합성 노드 fixture 단위 테스트 2종
 (`info/MobID` 우선순위, FamiliarInfo 기본값, 이전 MobID 유지).
+
+## ItemTooltip 텍스트 레이아웃 (`TextRenderer.DrawPlainText`)
+
+`GearGraphics.DrawString`은 `FormattedTextRenderer`(= `TextRenderer<Font>`의
+파생)에 위임하고, `WordWrapEnabled = false`로 `DrawRunsInner`를 호출한다.
+그 코어(`SplitWords` → `MeasureRuns` → `LayoutRuns` → `Flush`)를 그대로 옮겼다.
+
+- 측정 함수를 **주입**받아 순수 계산만 수행(`measure(&str) -> i32`)
+- 인덱스는 원본과 같이 UTF-16 코드 유닛 기준
+- `PrepareRuns`(StringReader.ReadLine 의미), `SplitWords`(공백/탭//
+),
+  `MeasureRuns`, `MeasureChars`, 정렬 보정(`Center`/`Right`), 줄 끝 `,.` 병합
+  규칙까지 이식
+
+검증 방법이 이전 슬라이스와 다르다: C# 하네스가
+**`WzComparerR2.Text.TextRenderer<string>`를 직접 상속**해 추상 메서드
+(`MeasureRuns`/`MeasureChars`/`Flush`)만 결정적 측정(`7 × UTF-16 길이`)으로
+바꾸고 `DrawPlainText`를 호출한다. 즉 **줄바꿈/오프셋 누적/정렬은 원본 코드
+그 자체**이며 전사(transcription)가 아니다.
+
+검증: 12개 케이스(줄바꿈, 문자 단위 분할, 명시적 `
+`/``/`
+`,
+Center/Right 정렬, 줄 끝 `,.` 병합, 공백만, 빈 문자열)에서 `(start,len,x,y)`
+목록과 최종 `y`가 완전 일치.
+
+fixture: `crates/wz-db/tests/fixtures/text_layout.json`,
+테스트: `crates/wz-db/tests/text_layout_parity.rs`,
+C#: `-- textlayout`.
+
+이식 중 잡은 실제 버그: `flush()`가 `start = end = -1`로 인덱스를 초기화하는
+줄을 빠뜨려 다음 줄 조각이 이전 줄 시작 인덱스를 물고 늘어졌다. 원본과
+비교하면서 수정했다.
+
+범위 한계(정직하게):
+- 픽셀 비교는 여전히 불가능하다. 실제 `GearGraphics`는 폰트 메트릭을
+  `Graphics.MeasureString`에서 얻고, macOS에는 GDI+가 없다.
+- 색상 태그 파서(`Parser.Parse`, `#c`/`#fc`/`#t`/이미지 토큰)는 이번 슬라이스에
+  포함하지 않았다. `DrawFormatString` 경로도 같은 `LayoutRuns` 코어를 쓰므로
+  줄바꿈/오프셋 계산은 공유되지만, 태그별 run 분할은 미검증이다.

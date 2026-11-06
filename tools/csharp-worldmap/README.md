@@ -512,3 +512,12 @@ Byte-identical to Rust `Db2BinGrid::write_bin`; `read_bin` reproduces
 `LoadBin`'s dropped last row. PNG payload length uses the exact byte count
 (the original writes `MemoryStream.GetBuffer()` capacity, which is
 platform-dependent).
+
+Verified text layout (`textlayout`):
+```
+12 cases: wrap, char split, CRLF/CR/LF, Center/Right, trailing punctuation
+```
+The harness subclasses the real `WzComparerR2.Text.TextRenderer<string>` and
+injects a deterministic measure (`7 x UTF-16 length`), so the line-breaking
+loop is original code. `(start,len,x,y)` + final y match Rust
+`wz_db::text_layout`.

@@ -2872,6 +2872,97 @@ class Program
             parsed_row_count = parsed.Count,
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
+    // 원본 `WzComparerR2.Text.TextRenderer<TFont>`를 **그대로 상속**해
+    // 측정 함수만 결정적으로 바꾼다. 즉 레이아웃 루프는 실제 원본 코드다.
+    sealed class TextLayoutProbe : WzComparerR2.Text.TextRenderer<string>
+    {
+        public List<(int start, int len, int x, int y)> Rects = new();
+        public int EndY;
+        public static int Measure(string s) => s.Length * 7;
+
+        protected override void MeasureRuns(List<WzComparerR2.Text.Run> runs)
+        {
+            int x = 0;
+            foreach (var run in runs)
+            {
+                if (run.IsBreakLine)
+                {
+                    run.X = x;
+                    run.Length = 0;
+                }
+                else
+                {
+                    run.X = x;
+                    run.Width = Measure(this.sb.ToString(run.StartIndex, run.Length));
+                    x += run.Width;
+                }
+            }
+        }
+
+        protected override System.Drawing.Rectangle[] MeasureChars(int startIndex, int length)
+        {
+            var regions = new System.Drawing.Rectangle[length];
+            int x = 0;
+            for (int i = 0; i < length; i++)
+            {
+                int w = Measure(this.sb[startIndex + i].ToString());
+                regions[i] = new System.Drawing.Rectangle(x, 0, w, 16);
+                x += w;
+            }
+            return regions;
+        }
+
+        protected override void Flush(System.Text.StringBuilder sb, int startIndex, int length,
+            int x, int y, string ColorID, string FontID, string ImageID, int imageWidth, int imageHeight)
+        {
+            Rects.Add((startIndex, length, x, y));
+        }
+
+        public void Run(string text, int width, int y, int height, WzComparerR2.Text.TextAlignment align)
+        {
+            Rects.Clear();
+            int yy = y;
+            this.WordWrapEnabled = false;
+            this.DrawPlainText(text, "", width, ref yy, height, align);
+            EndY = yy;
+        }
+    }
+
+    static void TextLayout()
+    {
+        var cases = new (string text, int width, int y, int height, WzComparerR2.Text.TextAlignment align)[]
+        {
+            ("hello world", 50, 0, 16, WzComparerR2.Text.TextAlignment.Left),
+            ("동해물과 백두산이 마르고 닳도록", 60, 0, 16, WzComparerR2.Text.TextAlignment.Left),
+            ("abcdefghij", 21, 0, 16, WzComparerR2.Text.TextAlignment.Left),
+            ("ab\ncd", 1000, 5, 16, WzComparerR2.Text.TextAlignment.Left),
+            ("가나다라마바사아자차", 35, 3, 18, WzComparerR2.Text.TextAlignment.Center),
+            ("가나다라마바사아자차", 35, 3, 18, WzComparerR2.Text.TextAlignment.Right),
+            ("a,b,c,d,e", 20, 0, 16, WzComparerR2.Text.TextAlignment.Left),
+            ("  spaced  ", 30, 0, 16, WzComparerR2.Text.TextAlignment.Left),
+            ("", 40, 0, 16, WzComparerR2.Text.TextAlignment.Left),
+            ("줄1\r\n줄2\r줄3\n줄4", 1000, 0, 16, WzComparerR2.Text.TextAlignment.Left),
+            ("가나", 100, 0, 16, WzComparerR2.Text.TextAlignment.Center),
+            ("가나", 100, 0, 16, WzComparerR2.Text.TextAlignment.Right),
+        };
+        var probe = new TextLayoutProbe();
+        var rows = new List<object>();
+        foreach (var (text, width, y, height, align) in cases)
+        {
+            probe.Run(text, width, y, height, align);
+            rows.Add(new
+            {
+                text,
+                width,
+                start_y = y,
+                line_height = height,
+                alignment = align.ToString(),
+                rects = probe.Rects.Select(r => new { start = r.start, len = r.len, x = r.x, y = r.y }).ToList(),
+                end_y = probe.EndY,
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2927,6 +3018,7 @@ class Program
         else if (args[0] == "pluginactivate") PluginActivate(args[1], args[2]);
         else if (args[0] == "itemcosmetic") ItemCosmeticEulo(args[1], args[2]);
         else if (args[0] == "db2bin") Db2Bin();
+        else if (args[0] == "textlayout") TextLayout();
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();
