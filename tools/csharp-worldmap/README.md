@@ -365,3 +365,9 @@ Verified PluginBase `FindWz` path lookup (`findwz Mob=<wz> ... -- <paths>`):
 57 paths across Mob/Npc/Skill/Reactor/String
 ```
 found/name/value/children all match Rust `wz find-wz`.
+
+Verified Network packet serialization (`netpack <WzComparerR2.Network.dll>`):
+```
+heartbeat, loginreq, loginresp, sendchat, sendchat-null, cryptreq, cryptresp
+```
+JSON + framed bytes match Rust `wz-network::pack` exactly.

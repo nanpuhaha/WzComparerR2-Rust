@@ -4,6 +4,7 @@ using WzComparerR2.WzLib;
 using WzComparerR2.Common;
 using WzComparerR2.CharaSim;
 using System.Globalization;
+using System.Text;
 
 class Program
 {
@@ -1499,6 +1500,64 @@ class Program
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    sealed class NetBinder : Newtonsoft.Json.Serialization.ISerializationBinder
+    {
+        public void BindToName(Type serializedType, out string assemblyName, out string typeName)
+        {
+            var attr = (Newtonsoft.Json.JsonObjectAttribute)Attribute.GetCustomAttribute(serializedType, typeof(Newtonsoft.Json.JsonObjectAttribute));
+            typeName = attr?.Id ?? serializedType.FullName;
+            assemblyName = null;
+        }
+        public Type BindToType(string assemblyName, string typeName) => null;
+    }
+    static void NetPack(string networkDllPath)
+    {
+        var asm = System.Reflection.Assembly.LoadFrom(networkDllPath);
+        var settings = new Newtonsoft.Json.JsonSerializerSettings
+        {
+            TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Objects,
+            SerializationBinder = new NetBinder(),
+            Converters = new Newtonsoft.Json.JsonConverter[] { new NetByteArrayConverter() },
+        };
+        object Make(string name, params (string prop, object value)[] props)
+        {
+            var t = asm.GetType("WzComparerR2.Network.Contracts." + name);
+            var o = Activator.CreateInstance(t);
+            foreach (var (prop, value) in props) t.GetProperty(prop).SetValue(o, value);
+            return o;
+        }
+        var chatGroupPublic = Enum.Parse(asm.GetType("WzComparerR2.Network.Contracts.ChatGroup"), "Public");
+        var packets = new (string label, object pack)[]
+        {
+            ("heartbeat", Make("PackHeartBeat")),
+            ("loginreq", Make("PackLoginReq", ("WcID", "wc-01"), ("NickName", "테스터"))),
+            ("loginresp", Make("PackLoginResp", ("SessionID", "sess-42"))),
+            ("sendchat", Make("PackSendChat", ("Message", "안녕"), ("Group", chatGroupPublic))),
+            ("sendchat-null", Make("PackSendChat", ("Message", null), ("Group", chatGroupPublic))),
+            ("cryptreq", Make("PackCryptReq", ("Exponent", new byte[] { 1, 2, 3 }), ("Modulus", new byte[] { 9, 8, 7, 6 }))),
+            ("cryptresp", Make("PackCryptResp", ("KeyEncryptedS2C", new byte[] { 1, 2 }), ("KeyEncryptedC2S", new byte[] { 3, 4 }))),
+        };
+        var rows = new List<object>();
+        foreach (var (label, pack) in packets)
+        {
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(pack, settings);
+            var body = Encoding.UTF8.GetBytes(json);
+            var buffer = new byte[body.Length + 2];
+            buffer[0] = (byte)body.Length;
+            buffer[1] = (byte)(body.Length >> 8);
+            body.CopyTo(buffer, 2);
+            rows.Add(new { label, hex = Convert.ToHexString(buffer).ToLowerInvariant(), len = buffer.Length, json });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    sealed class NetByteArrayConverter : Newtonsoft.Json.JsonConverter
+    {
+        public override bool CanConvert(Type objectType) => objectType == typeof(byte[]);
+        public override object ReadJson(Newtonsoft.Json.JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)
+            => null;
+        public override void WriteJson(Newtonsoft.Json.JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer)
+            => writer.WriteValue(Convert.ToBase64String((byte[])value));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1531,6 +1590,7 @@ class Program
         else if (args[0] == "achievements") AchievementTooltip(args[1]);
         else if (args[0] == "worldarchive") WorldArchive(args[1], args[2]);
         else if (args[0] == "findwz") FindWz(args, 1);
+        else if (args[0] == "netpack") NetPack(args[1]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

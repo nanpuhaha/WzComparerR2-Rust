@@ -435,3 +435,22 @@ fixture: `crates/wz-cli/tests/fixtures/findwz.expected.json`,
 테스트: `findwz_matches_csharp`, CLI:
 `wz find-wz --map Mob=<wz> ... -- <path>`.
 플러그인 DLL 로딩/메뉴 주입은 WinForms 호스트가 필요해 제외한다.
+
+## Network 패킷 계약 직렬화 (`WcClient.EncodePack`)
+
+Newtonsoft `TypeNameHandling.Objects` + `[JsonObject("id")]` +
+`byte[]`→Base64 컨버터 조합을 그대로 재현했다.
+
+| 패킷 | `$type` | 결과 |
+|---|---|---|
+| `PackHeartBeat` | 0 | `{"$type":"0"}` |
+| `PackLoginReq` | 3 | `WcID`, `NickName` |
+| `PackLoginResp` | 4 | `SessionID` |
+| `PackSendChat` | 9 | `Message`(null 포함), `Group` |
+| `PackCryptReq` | 1 | Base64 `Exponent`/`Modulus` |
+| `PackCryptResp` | 2 | Base64 두 키 |
+
+7개 계약의 JSON 문자열과 `uint16 LE 길이 + UTF-8` 프레임 바이트가 C#
+`EncodePack` 실행 결과와 완전 일치.
+fixture: `crates/wz-network/tests/packets.json`,
+테스트: `pack_csharp_parity.rs`.

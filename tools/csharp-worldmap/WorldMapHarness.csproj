@@ -9,9 +9,14 @@
     <Reference Include="WzComparerR2.WzLib">
       <HintPath>$(WzLibPath)</HintPath>
     </Reference>
+    <Reference Include="WzComparerR2.Network">
+      <HintPath>$(NetworkPath)</HintPath>
+    </Reference>
     <Reference Include="WzComparerR2.Common">
       <HintPath>$(CommonPath)</HintPath>
     </Reference>
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 </Project>

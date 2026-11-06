@@ -16,7 +16,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | WzComparerR2 (main) | 150 | 61,035 | `wz-cli`, `wz-gui` | 🟡 |
 | WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-item-tab`, `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`, `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`, `wz db2-characters`, GUI 표/이미지 뷰어 | 🟢 |
 | CharaSimResource | 2 | 7,490 | — (WinForms 리소스) | ⬜ |
-| WzComparerR2.Network | 28 | 1,954 | `wz-network` RC4/프레임 | 🟡 |
+| WzComparerR2.Network | 28 | 1,954 | `wz-network` RC4/프레임/계약 JSON | 🟡 |
 | WzComparerR2.LuaConsole | 10 | 1,451 | — | ⬜ |
 | WzComparerR2.PluginBase | 10 | 693 | `wz find-wz` (FindWz 경로 조회) | 🟡 |
 | WzComparerR2.Updater | 3 | 276 | `wz patch` (부분) | 🟡 |
@@ -97,9 +97,11 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
    옮겼다. 타입별 WZ 등록 후 세그먼트를 따라가며 `.img`를 추출하는 원본
    동작과 57개 실제 경로가 C# WzLib `FindNodeByPath(true, ...)`와 일치한다.
    플러그인 DLL 로딩/메뉴 주입은 WinForms 호스트가 필요해 제외한다.
-   `Network` (1,954) 중 RC4 스트림과 `EncodePack` 프레이밍을 `wz-network`로
-   옮겼다. RC4는 C# `RC4CryptoServiceProvider` 실행 결과와 12개 벡터에서
-   일치한다. TCP/재접속/로그인 상태 머신은 서버가 필요해 제외한다.
+   `Network` (1,954) 중 RC4 스트림, `EncodePack` 프레이밍, 패킷 계약 JSON
+   직렬화를 `wz-network`로 옮겼다. RC4는 C# `RC4CryptoServiceProvider`와
+   12개 벡터, 패킷은 `WcClient.EncodePack`과 7개 계약(하트비트/로그인/채팅/
+   암호화 키)에서 바이트 단위로 일치한다. TCP/재접속/로그인 상태 머신은
+   서버가 필요해 제외한다.
 
 ## 이번 턴 추가 구현
 
