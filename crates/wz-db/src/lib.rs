@@ -91,8 +91,8 @@ pub use item_tooltip::{
 };
 pub use item_tooltip_extra::{
     cant_account_sharable_tooltip, cash_tag_lines, exp_restriction_lines, exp_to_next_level,
-    incline_line, item_int_props, pet_command_lines, point_cost_line, replace_desc_tags,
-    trade_available_line, RecipeRequirement, RecipeSpec,
+    expire_date_lines, incline_line, item_int_props, pet_command_lines, point_cost_line,
+    replace_desc_tags, trade_available_line, RecipeRequirement, RecipeSpec,
 };
 pub use linker::{
     extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,

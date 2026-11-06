@@ -672,3 +672,23 @@ fixture: `crates/wz-db/tests/fixtures/plugin_*.json|dll`,
 fixture: `crates/wz-cli/tests/fixtures/item_recipe_req.expected.json`,
 테스트: `item_recipe_requirements_match_csharp`,
 CLI: `wz item-recipe-req <Data> Consume --string <String_000.wz>`.
+
+## ItemTooltip 사용기간 (`consumableFrom`/`endUseDate`)
+
+- `info/consumableFrom` → `yyyy년 M월 d일 HH시 mm분부터 사용가능`
+- `info/endUseDate` → `yyyy년 M월 d일 HH시 mm분까지 사용가능`
+- 두 값이 모두 있으면 각각 한 줄씩(선두 개행 없이 라인 단위로 비교)
+- `timeLimited`/`life`는 원본이 `DateTime.Now` 기준 7일/만료일을 쓰므로
+  결정적 비교 대상에서 제외
+
+검증: Consume **418** + Cash **19** + Install **2** + Etc **10** = 449개가
+C# 하네스와 완전 일치.
+fixture: `crates/wz-cli/tests/fixtures/item_expire.expected.json`,
+테스트: `item_expire_lines_match_csharp`,
+CLI: `wz item-expire <Data> <dir>`.
+
+데이터 주의: `consumableFrom`/`endUseDate` 값 중 **72개가 12자리 미만**
+(`yyyyMMddHH` 10자리)이다. 원본 `ItemTooltipRender2`는 길이 검증 없이
+`Substring(0, 4)`…를 호출하므로 이런 아이템은 원본에서도 예외가 난다.
+Rust는 유효한 12자리 이상 숫자만 포맷하고, C# 하네스도 같은 가드를 두어
+비교 가능한 450개 필드(449행)로 맞췄다.

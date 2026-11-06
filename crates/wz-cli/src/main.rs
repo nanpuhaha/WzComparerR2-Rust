@@ -464,6 +464,17 @@ enum Command {
         json: bool,
     },
 
+    /// ItemTooltip 사용기간(consumableFrom/endUseDate)
+    ItemExpire {
+        /// Data 루트
+        data_root: PathBuf,
+        /// Item 하위 디렉터리
+        dir: String,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// ItemTooltip 레시피 사용 제한조건
     ItemRecipeReq {
         /// Data 루트
@@ -991,6 +1002,11 @@ fn main() {
             dir,
             json,
         } => commands::cmd_item_incline(&data_root, &dir, json),
+        Command::ItemExpire {
+            data_root,
+            dir,
+            json,
+        } => commands::cmd_item_expire(&data_root, &dir, json),
         Command::ItemRecipeReq {
             data_root,
             dir,

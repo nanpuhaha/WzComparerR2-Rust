@@ -447,3 +447,11 @@ Verified ItemTooltip recipe requirements (`itemrecipereq <Data> Consume <String_
 1039 items
 ```
 `< 사용 제한조건 >` skill/level lines match Rust `wz item-recipe-req` exactly.
+
+Verified ItemTooltip expire lines (`itemexpire <Data> <dir>`):
+```
+Consume 418, Cash 19, Install 2, Etc 10 = 449 rows
+```
+`consumableFrom`/`endUseDate` formatting matches Rust `wz item-expire` exactly.
+72 malformed (<12 digit) field values exist; the original C# throws on them,
+so both sides process only valid values.

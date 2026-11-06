@@ -2163,6 +2163,39 @@ class Program
             .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void ItemExpire(string dataRoot, string dir)
+    {
+        var rows = new List<object>();
+        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Item", dir), "*.wz").OrderBy(x => x))
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            foreach (Wz_Node n in st.WzNode.Nodes)
+            {
+                if (n.Value is not Wz_Image img) continue;
+                if (!img.TryExtract()) continue;
+                foreach (Wz_Node item in img.Node.Nodes)
+                {
+                    if (!int.TryParse(item.Text, out int id)) continue;
+                    var info = item.Nodes["info"];
+                    if (info == null) continue;
+                    var from = info.Nodes["consumableFrom"]?.Value?.ToString();
+                    var end = info.Nodes["endUseDate"]?.Value?.ToString();
+                    var lines = new List<string>();
+                    // 원본은 길이 검증이 없어 12자 미만에서 예외가 난다.
+                    // 결정적 비교를 위해 유효한 값만 처리한다.
+                    if (!string.IsNullOrEmpty(from) && from.Length >= 12 && from.All(char.IsDigit))
+                        lines.Add($"{Convert.ToInt32(from.Substring(0, 4))}년 {Convert.ToInt32(from.Substring(4, 2))}월 {Convert.ToInt32(from.Substring(6, 2))}일 {Convert.ToInt32(from.Substring(8, 2)):D2}시 {Convert.ToInt32(from.Substring(10, 2)):D2}분부터 사용가능");
+                    if (!string.IsNullOrEmpty(end) && end.Length >= 12 && end.All(char.IsDigit))
+                        lines.Add($"{Convert.ToInt32(end.Substring(0, 4))}년 {Convert.ToInt32(end.Substring(4, 2))}월 {Convert.ToInt32(end.Substring(6, 2))}일 {Convert.ToInt32(end.Substring(8, 2)):D2}시 {Convert.ToInt32(end.Substring(10, 2)):D2}분까지 사용가능");
+                    if (lines.Count == 0) continue;
+                    rows.Add(new { id, consumable_from = string.IsNullOrEmpty(from) ? null : from, end_use_date = string.IsNullOrEmpty(end) ? null : end, lines });
+                }
+            }
+        }
+        rows.Sort((a, b) => ((int)a.GetType().GetProperty("id").GetValue(a))
+            .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2209,6 +2242,7 @@ class Program
         else if (args[0] == "itemincline") ItemIncline(args[1], args[2]);
         else if (args[0] == "pluginentries") PluginEntries(args[1]);
         else if (args[0] == "itemrecipereq") ItemRecipeReq(args[1], args[2], args[3]);
+        else if (args[0] == "itemexpire") ItemExpire(args[1], args[2]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

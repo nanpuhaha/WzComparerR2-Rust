@@ -1,0 +1,18 @@
+{
+  "Consume": {
+    "rows": 418,
+    "sha256": "16d7a6bb259e968b1bf50f0c3d84b4a3dd44bd175d5b8313062a8342fbd7d3f2"
+  },
+  "Cash": {
+    "rows": 19,
+    "sha256": "7a5228d7d8938cc5f1ec49889a6d3ddee454b6c187b17315772887f569b1b9b1"
+  },
+  "Install": {
+    "rows": 2,
+    "sha256": "6809d8e65e10828487e87282229a21ca19808ff405a74139871db543ed7f1f54"
+  },
+  "Etc": {
+    "rows": 10,
+    "sha256": "0e77414c038ca2e24744f069178fcbb3515b12a0d871dc5b30bdf85eb7d7cb61"
+  }
+}

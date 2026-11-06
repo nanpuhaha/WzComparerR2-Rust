@@ -125,6 +125,42 @@ pub fn item_int_props(item: &Node) -> std::collections::BTreeMap<String, i64> {
     props
 }
 
+// `timeLimited`/`life`는 원본이 `DateTime.Now`를 쓰므로 결정적 비교에서 제외한다.
+
+/// `consumableFrom`/`endUseDate` 문자열에서 만든 사용기간 라인.
+pub fn expire_date_lines(consumable_from: Option<&str>, end_use_date: Option<&str>) -> Vec<String> {
+    let mut lines = Vec::new();
+    if let Some(text) = consumable_from.and_then(format_from) {
+        lines.push(format!("{text}부터 사용가능"));
+    }
+    if let Some(text) = end_use_date.and_then(format_until) {
+        lines.push(format!("{text}까지 사용가능"));
+    }
+    lines
+}
+
+fn date_parts(text: &str) -> Option<(i32, i32, i32, i32, i32)> {
+    if text.len() < 12 || !text.as_bytes().iter().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    Some((
+        text[0..4].parse().ok()?,
+        text[4..6].parse().ok()?,
+        text[6..8].parse().ok()?,
+        text[8..10].parse().ok()?,
+        text[10..12].parse().ok()?,
+    ))
+}
+
+fn format_from(text: &str) -> Option<String> {
+    let (y, m, d, h, mi) = date_parts(text)?;
+    Some(format!("{y}년 {m}월 {d}일 {h:02}시 {mi:02}분"))
+}
+
+fn format_until(text: &str) -> Option<String> {
+    format_from(text)
+}
+
 /// `spec/recipe` + `spec/reqSkill`/`reqSkillLevel` 모델.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RecipeRequirement {
@@ -554,6 +590,19 @@ mod tests {
             cash_tag_lines(5000000, &props),
             vec!["\n#c이 아이템은 넥슨캐시로 구매 후에도 타인과의 교환이 제한됩니다.#"]
         );
+    }
+
+    #[test]
+    fn expire_dates_format() {
+        assert_eq!(
+            expire_date_lines(Some("202401020304"), None),
+            vec!["2024년 1월 2일 03시 04분부터 사용가능"]
+        );
+        assert_eq!(
+            expire_date_lines(None, Some("202512312359")),
+            vec!["2025년 12월 31일 23시 59분까지 사용가능"]
+        );
+        assert!(expire_date_lines(None, None).is_empty());
     }
 
     #[test]
