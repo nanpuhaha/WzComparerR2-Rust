@@ -659,3 +659,16 @@ fixture: `crates/wz-cli/tests/fixtures/item_incline.expected.json`,
 fixture: `crates/wz-db/tests/fixtures/plugin_*.json|dll`,
 테스트: `plugin_metadata_parity.rs`, CLI: `wz plugin-metadata <dll>`.
 인스턴스화/메뉴 주입은 WinForms 의존으로 미구현.
+
+## ItemTooltip 레시피 사용 제한조건
+
+- `spec/recipe`(단일 값/자식 목록)가 있을 때
+  - `reqSkill` 없으면 `recipe/10000*10000`
+  - `reqSkillLevel` 없으면 1
+  - `StringSkill` 이름, `장비제작`/`장신구제작`은 띄어쓰기 보정
+  - `< 사용 제한조건 >`, `· {이름} {레벨}레벨 이상`
+
+`Item/Consume` **1,039개**가 C# 하네스와 완전 일치.
+fixture: `crates/wz-cli/tests/fixtures/item_recipe_req.expected.json`,
+테스트: `item_recipe_requirements_match_csharp`,
+CLI: `wz item-recipe-req <Data> Consume --string <String_000.wz>`.

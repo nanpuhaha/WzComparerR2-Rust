@@ -4121,3 +4121,195 @@ pub fn cmd_plugin_metadata(dll: &Path, json: bool) -> Result<(), Box<dyn std::er
     }
     Ok(())
 }
+
+pub fn cmd_item_recipe_req(
+    data_root: &Path,
+    dir: &str,
+    string_wz: &Path,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (string_arena, string_root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&string_arena, string_root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let mut paths: Vec<_> = std::fs::read_dir(data_root.join("Item").join(dir))
+        .ok()
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+        .collect();
+    paths.sort();
+    let mut rows = Vec::new();
+    for path in paths {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else {
+                continue;
+            };
+            let Ok(image) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            for item in image.object_children() {
+                let Ok(id) = item.name.as_ref().parse::<i32>() else {
+                    continue;
+                };
+                let Some(req) = wz_db::RecipeRequirement::from_item(item) else {
+                    continue;
+                };
+                let req_skill = req
+                    .req_skill
+                    .unwrap_or_else(|| req.recipes[0] / 10000 * 10000);
+                let skill_name = linker
+                    .string_skill
+                    .get(&(req_skill as i32))
+                    .map(|sr| sr.name.clone());
+                rows.push(serde_json::json!({
+                    "id": id,
+                    "recipes": req.recipes,
+                    "req_skill": req.req_skill,
+                    "req_skill_level": req.req_skill_level,
+                    "skill_name": skill_name,
+                    "lines": req.lines(skill_name.as_deref()),
+                }));
+            }
+        }
+    }
+    rows.sort_by_key(|r| r["id"].as_i64());
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!("{}", row["id"]);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod item_recipe_req_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn item_recipe_requirements_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let string_wz = root.join("String/String_000.wz");
+        if !string_wz.exists() {
+            return;
+        }
+        use wz_db::{Arena, StringLinker};
+        let string_archive = wz_core::WzArchive::open(&string_wz).unwrap();
+        let (string_arena, string_root) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&string_arena, string_root));
+
+        let item_dir = root.join("Item/Consume");
+        if !item_dir.exists() {
+            return;
+        }
+        let mut paths: Vec<_> = std::fs::read_dir(&item_dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+            .collect();
+        paths.sort();
+        let mut rows: Vec<(i32, Vec<i64>, String, String, String, String)> = Vec::new();
+        for path in paths {
+            let Ok(archive) = wz_core::WzArchive::open(&path) else {
+                continue;
+            };
+            let Ok(tree) = archive.read_tree() else {
+                continue;
+            };
+            for entry in &tree.root.entries {
+                if entry.node_type != 4 {
+                    continue;
+                }
+                let Some(offset) = entry.offset else { continue };
+                let Ok(image) = archive.parse_image_at(offset) else {
+                    continue;
+                };
+                for item in image.object_children() {
+                    let Ok(id) = item.name.as_ref().parse::<i32>() else {
+                        continue;
+                    };
+                    let Some(req) = wz_db::RecipeRequirement::from_item(item) else {
+                        continue;
+                    };
+                    let req_skill = req
+                        .req_skill
+                        .unwrap_or_else(|| req.recipes[0] / 10000 * 10000);
+                    let skill_name = linker
+                        .string_skill
+                        .get(&(req_skill as i32))
+                        .map(|sr| sr.name.clone());
+                    rows.push((
+                        id,
+                        req.recipes.clone(),
+                        req.req_skill.map(|v| v.to_string()).unwrap_or_default(),
+                        req.req_skill_level
+                            .map(|v| v.to_string())
+                            .unwrap_or_default(),
+                        skill_name.clone().unwrap_or_default(),
+                        req.lines(skill_name.as_deref()).join("|"),
+                    ));
+                }
+            }
+        }
+        rows.sort_by_key(|r| r.0);
+        let rec = char::from(0x1e);
+        let canon = rows
+            .iter()
+            .map(|(id, recipes, req_skill, level, skill, lines)| {
+                [
+                    id.to_string(),
+                    recipes
+                        .iter()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<_>>()
+                        .join(","),
+                    req_skill.clone(),
+                    level.clone(),
+                    skill.clone(),
+                    lines.clone(),
+                ]
+                .join(&rec.to_string())
+            })
+            .collect::<Vec<_>>()
+            .join(&rec.to_string());
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/item_recipe_req.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(rows.len() as u64, expected["rows"].as_u64().unwrap());
+        assert_eq!(
+            sha256_hex(canon.as_bytes()),
+            expected["sha256"].as_str().unwrap()
+        );
+    }
+}

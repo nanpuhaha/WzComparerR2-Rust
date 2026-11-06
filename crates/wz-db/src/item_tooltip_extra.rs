@@ -125,6 +125,59 @@ pub fn item_int_props(item: &Node) -> std::collections::BTreeMap<String, i64> {
     props
 }
 
+/// `spec/recipe` + `spec/reqSkill`/`reqSkillLevel` 모델.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecipeRequirement {
+    pub recipes: Vec<i64>,
+    pub req_skill: Option<i64>,
+    pub req_skill_level: Option<i64>,
+}
+
+impl RecipeRequirement {
+    pub fn from_item(item: &Node) -> Option<Self> {
+        let spec = child(item, "spec")?;
+        let recipe_node = child(spec, "recipe")?;
+        let mut recipes = Vec::new();
+        if recipe_node.object_children().is_empty() {
+            if let Some(v) = as_int(Some(recipe_node)) {
+                recipes.push(v);
+            }
+        } else {
+            for r in recipe_node.object_children() {
+                if let Some(v) = as_int(Some(r)) {
+                    recipes.push(v);
+                }
+            }
+        }
+        if recipes.is_empty() {
+            return None;
+        }
+        Some(Self {
+            recipes,
+            req_skill: as_int(child(spec, "reqSkill")),
+            req_skill_level: as_int(child(spec, "reqSkillLevel")),
+        })
+    }
+
+    /// 렌더러의 `사용 제한조건` 블록(스킬 이름은 `StringSkill`에서 온다).
+    pub fn lines(&self, skill_name: Option<&str>) -> Vec<String> {
+        let req_level = self.req_skill_level.unwrap_or(1);
+        let mut name = skill_name
+            .filter(|s| !s.is_empty())
+            .unwrap_or("(null)")
+            .to_string();
+        name = match name.as_str() {
+            "장비제작" => "장비 제작".to_string(),
+            "장신구제작" => "장신구 제작".to_string(),
+            other => other.to_string(),
+        };
+        vec![
+            "< 사용 제한조건 >".to_string(),
+            format!("· {name} {req_level}레벨 이상"),
+        ]
+    }
+}
+
 /// 성향 경험치 라인.
 ///
 /// 순서: 카리스마/통찰력/의지/손재주/감성/매력. 하나라도 >0이면 한 줄로 합친다.
@@ -501,6 +554,22 @@ mod tests {
             cash_tag_lines(5000000, &props),
             vec!["\n#c이 아이템은 넥슨캐시로 구매 후에도 타인과의 교환이 제한됩니다.#"]
         );
+    }
+
+    #[test]
+    fn recipe_requirement_lines() {
+        let mut item = Node::new("02510000");
+        let mut spec = Node::new("spec");
+        let mut recipe = Node::new("recipe");
+        recipe.value = Some(ImageValue::Int(92030000));
+        spec.children.push(recipe);
+        item.children.push(spec);
+        let req = RecipeRequirement::from_item(&item).unwrap();
+        assert_eq!(
+            req.lines(Some("장비제작")),
+            vec!["< 사용 제한조건 >", "· 장비 제작 1레벨 이상"]
+        );
+        assert_eq!(req.recipes, vec![92030000]);
     }
 
     #[test]

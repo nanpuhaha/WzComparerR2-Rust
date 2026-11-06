@@ -2110,6 +2110,59 @@ class Program
             plugin_types = types,
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void ItemRecipeReq(string dataRoot, string dir, string stringWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        linker.Load(str.wz_files[0], null, null);
+        var rows = new List<object>();
+        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Item", dir), "*.wz").OrderBy(x => x))
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            foreach (Wz_Node n in st.WzNode.Nodes)
+            {
+                if (n.Value is not Wz_Image img) continue;
+                if (!img.TryExtract()) continue;
+                foreach (Wz_Node item in img.Node.Nodes)
+                {
+                    if (!int.TryParse(item.Text, out int id)) continue;
+                    var spec = item.Nodes["spec"];
+                    var recipeNode = spec?.Nodes["recipe"];
+                    if (recipeNode == null) continue;
+                    var recipes = new List<long>();
+                    if (recipeNode.Nodes.Count == 0)
+                    {
+                        if (recipeNode.Value != null) recipes.Add(Convert.ToInt64(recipeNode.Value));
+                    }
+                    else
+                    {
+                        foreach (Wz_Node r in recipeNode.Nodes)
+                            if (r.Value != null) recipes.Add(Convert.ToInt64(r.Value));
+                    }
+                    if (recipes.Count == 0) continue;
+                    long? reqSkill = spec.Nodes["reqSkill"]?.Value is object v1 ? Convert.ToInt64(v1) : null;
+                    long? reqLevel = spec.Nodes["reqSkillLevel"]?.Value is object v2 ? Convert.ToInt64(v2) : null;
+                    var effectiveSkill = reqSkill ?? (recipes[0] / 10000 * 10000);
+                    linker.StringSkill.TryGetValue((int)effectiveSkill, out var skr);
+                    var name = string.IsNullOrEmpty(skr?.Name) ? "(null)" : skr.Name;
+                    if (name == "장비제작") name = "장비 제작";
+                    else if (name == "장신구제작") name = "장신구 제작";
+                    var lines = new List<string> { "< 사용 제한조건 >", $"· {name} {reqLevel ?? 1}레벨 이상" };
+                    rows.Add(new {
+                        id,
+                        recipes,
+                        req_skill = reqSkill,
+                        req_skill_level = reqLevel,
+                        skill_name = skr?.Name,
+                        lines,
+                    });
+                }
+            }
+        }
+        rows.Sort((a, b) => ((int)a.GetType().GetProperty("id").GetValue(a))
+            .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2155,6 +2208,7 @@ class Program
         else if (args[0] == "itemtextextras") ItemTextExtras(args[1], args[2], args[3]);
         else if (args[0] == "itemincline") ItemIncline(args[1], args[2]);
         else if (args[0] == "pluginentries") PluginEntries(args[1]);
+        else if (args[0] == "itemrecipereq") ItemRecipeReq(args[1], args[2], args[3]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

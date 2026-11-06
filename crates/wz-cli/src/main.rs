@@ -464,6 +464,20 @@ enum Command {
         json: bool,
     },
 
+    /// ItemTooltip 레시피 사용 제한조건
+    ItemRecipeReq {
+        /// Data 루트
+        data_root: PathBuf,
+        /// Item 하위 디렉터리
+        dir: String,
+        /// String_000.wz
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// PluginBase 어셈블리 메타데이터/엔트리 타입
     PluginMetadata {
         /// 어셈블리 DLL 경로
@@ -977,6 +991,12 @@ fn main() {
             dir,
             json,
         } => commands::cmd_item_incline(&data_root, &dir, json),
+        Command::ItemRecipeReq {
+            data_root,
+            dir,
+            string,
+            json,
+        } => commands::cmd_item_recipe_req(&data_root, &dir, &string, json),
         Command::PluginMetadata { dll, json } => commands::cmd_plugin_metadata(&dll, json),
         Command::PluginFiles { dir, json } => commands::cmd_plugin_files(&dir, json),
         Command::QuestTooltips { wz, json, limit } => {

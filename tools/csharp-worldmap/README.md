@@ -441,3 +441,9 @@ WzComparerR2.FixturePlugin 1.2.3.4
 AlphaPlugin, DerivedPlugin (abstract/internal excluded)
 ```
 Matches Rust `wz plugin-metadata` exactly via the minimal PE/CLI reader.
+
+Verified ItemTooltip recipe requirements (`itemrecipereq <Data> Consume <String_000.wz>`):
+```
+1039 items
+```
+`< 사용 제한조건 >` skill/level lines match Rust `wz item-recipe-req` exactly.
