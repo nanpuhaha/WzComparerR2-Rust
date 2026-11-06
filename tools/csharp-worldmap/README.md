@@ -356,6 +356,6 @@ and rendered text lines match Rust `wz achievements` exactly.
 
 Verified WorldArchive tooltip text (`worldarchive <String_000.wz> <Etc_002.wz>`):
 ```
-1845 mob/npc entries (world archive desc + monster book sections)
+1845 mob/npc entries (world archive desc + monster book + NPC quotes)
 ```
 All lines match Rust `wz world-archive` exactly.

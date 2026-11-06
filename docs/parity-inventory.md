@@ -409,8 +409,12 @@ SHA-256), 테스트: `achievements_match_csharp`.
 - 몹: 월드 아카이브 설명 → `[몬스터북]` → 도감 설명
 - NPC: 월드 아카이브 설명, 대사만 있으면 `(정보 없음)`
 
-C# `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook`을 사용한
-하네스와 비교: `String_000.wz` + `Etc_002.wz` **1,845개** 항목 완전 일치.
+- NPC 대사: `NpcQuote.CreateFromNode`(n/f/w/d 0..99, `dialogue`/`dialog`,
+  `bubble`), `#p/#o/#m/#t/#q/#i/#v/#y/#illu` 치환, 태그 제거, HashSet 중복 제거
+  후 `\r\n` 연결 → `NPC 대사` + ` - ` 라인
+
+C# `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook` +
+`NpcQuote.CreateFromNode`을 사용한 하네스와 비교:
+`String_000.wz` + `Etc_002.wz` **1,845개** 항목(NPC 대사 767개) 완전 일치.
 fixture: `crates/wz-cli/tests/fixtures/world_archive.expected.json`,
 테스트: `world_archive_matches_csharp`, CLI: `wz world-archive`.
-NPC 대사(`NpcQuote`) 섹션은 대화/버블 노드 탐색이 필요해 제외한다.

@@ -62,14 +62,26 @@ pub fn mob_lines(world_archive: Option<&str>, monster_book: Option<&str>) -> Vec
     lines
 }
 
-/// NPC 툴팁의 월드 아카이브 설명. 대사 섹션이 있으면 설명이 없을 때
-/// 원본은 `"(정보 없음)"`을 쓴다.
-pub fn npc_lines(world_archive: Option<&str>, has_quote: bool) -> Vec<String> {
-    match world_archive.filter(|d| !d.is_empty()) {
+/// NPC 툴팁: 월드 아카이브 설명 + `NPC 대사` 섹션.
+///
+/// 설명이 없고 대사만 있으면 원본은 `"(정보 없음)"`을 쓴다.
+pub fn npc_lines(world_archive: Option<&str>, quote: Option<&str>) -> Vec<String> {
+    let quote = quote.filter(|q| !q.is_empty());
+    let mut lines = match world_archive.filter(|d| !d.is_empty()) {
         Some(desc) => split_lines(desc),
-        None if has_quote => vec!["(정보 없음)".to_string()],
+        None if quote.is_some() => vec!["(정보 없음)".to_string()],
         None => Vec::new(),
+    };
+    if let Some(quote) = quote {
+        lines.push("NPC 대사".to_string());
+        for raw in split_lines(quote) {
+            let trimmed = raw.trim();
+            if !trimmed.is_empty() {
+                lines.push(format!(" - {trimmed}"));
+            }
+        }
     }
+    lines
 }
 
 #[cfg(test)]
@@ -93,7 +105,14 @@ mod tests {
 
     #[test]
     fn npc_fallback() {
-        assert_eq!(npc_lines(None, true), vec!["(정보 없음)"]);
-        assert!(npc_lines(None, false).is_empty());
+        assert_eq!(
+            npc_lines(None, Some("안녕")),
+            vec!["(정보 없음)", "NPC 대사", " - 안녕"]
+        );
+        assert!(npc_lines(None, None).is_empty());
+        assert_eq!(
+            npc_lines(Some("설명"), Some("안녕\r\n\r\n잘 가")),
+            vec!["설명", "NPC 대사", " - 안녕", " - 잘 가"]
+        );
     }
 }

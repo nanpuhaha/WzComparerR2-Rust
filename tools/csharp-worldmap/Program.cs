@@ -1414,9 +1414,33 @@ class Program
         foreach (var kv in linker.StringWorldArchiveNpc.OrderBy(k => k.Key))
         {
             var desc = kv.Value.Desc;
+            var quote = WzComparerR2.CharaSim.NpcQuote.CreateFromNode(kv.Key, linker);
+            string message = null;
+            if (quote != null)
+            {
+                var set = new HashSet<string>();
+                foreach (var q in quote.NQuote) set.Add(q.Value);
+                foreach (var q in quote.FQuote) set.Add(q.Value);
+                foreach (var q in quote.WQuote) set.Add(q.Value);
+                foreach (var q in quote.DQuote) set.Add(q.Value);
+                foreach (var q in quote.SpecialQuote) set.Add(q.Value);
+                message = string.Join("\r\n", set);
+                if (message.Length == 0) message = null;
+            }
             var lines = new List<string>();
+            var hasQuote = !string.IsNullOrEmpty(message);
             if (!string.IsNullOrEmpty(desc)) lines.AddRange(SplitWorldArchive(desc));
-            rows.Add(new { kind = "npc", id = kv.Key, desc, lines });
+            else if (hasQuote) lines.Add("(정보 없음)");
+            if (hasQuote)
+            {
+                lines.Add("NPC 대사");
+                foreach (var line in SplitWorldArchive(message))
+                {
+                    var trimmed = line.Trim();
+                    if (trimmed.Length != 0) lines.Add(" - " + trimmed);
+                }
+            }
+            rows.Add(new { kind = "npc", id = kv.Key, desc, quote = message, lines });
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }

@@ -2285,13 +2285,40 @@ pub fn cmd_world_archive(
             "lines": wz_db::world_archive_mob_lines(sr.desc.as_deref(), monster_book.as_deref()),
         }));
     }
+    let npc_image = string_arena
+        .children(string_root)
+        .iter()
+        .copied()
+        .find(|&c| string_arena.name(c) == Some("Npc.img"))
+        .map(|c| string_arena.descend_image(c));
+    let mut npc_quotes = Vec::new();
     for (id, sr) in &linker.string_world_archive_npc {
+        let quote = npc_image
+            .and_then(|root| {
+                string_arena
+                    .children(root)
+                    .iter()
+                    .copied()
+                    .find(|&c| string_arena.name(c) == Some(id.to_string().as_str()))
+            })
+            .map(|node| wz_db::npc_quote_parse(&string_arena, node, &linker))
+            .filter(|q| {
+                !q.n.is_empty()
+                    || !q.f.is_empty()
+                    || !q.w.is_empty()
+                    || !q.d.is_empty()
+                    || !q.special.is_empty()
+            })
+            .map(|q| wz_db::npc_quote_message(&q))
+            .filter(|m| !m.is_empty());
         rows.push(serde_json::json!({
             "kind": "npc",
             "id": id,
             "desc": sr.desc,
-            "lines": wz_db::world_archive_npc_lines(sr.desc.as_deref(), false),
+            "quote": quote,
+            "lines": wz_db::world_archive_npc_lines(sr.desc.as_deref(), quote.as_deref()),
         }));
+        npc_quotes.push(quote);
     }
     if json {
         println!("{}", serde_json::to_string_pretty(&rows)?);
@@ -2348,6 +2375,7 @@ mod world_archive_tests {
                     "mob".to_string(),
                     id.to_string(),
                     sr.desc.clone().unwrap_or_default(),
+                    String::new(),
                     book.unwrap_or_default(),
                     lines.join("|"),
                 ]
@@ -2355,13 +2383,38 @@ mod world_archive_tests {
             );
             count += 1;
         }
+        let npc_image = string_arena
+            .children(string_root)
+            .iter()
+            .copied()
+            .find(|&c| string_arena.name(c) == Some("Npc.img"))
+            .map(|c| string_arena.descend_image(c));
         for (id, sr) in &linker.string_world_archive_npc {
-            let lines = wz_db::world_archive_npc_lines(sr.desc.as_deref(), false);
+            let quote = npc_image
+                .and_then(|root| {
+                    string_arena
+                        .children(root)
+                        .iter()
+                        .copied()
+                        .find(|&c| string_arena.name(c) == Some(id.to_string().as_str()))
+                })
+                .map(|node| wz_db::npc_quote_parse(&string_arena, node, &linker))
+                .filter(|q| {
+                    !q.n.is_empty()
+                        || !q.f.is_empty()
+                        || !q.w.is_empty()
+                        || !q.d.is_empty()
+                        || !q.special.is_empty()
+                })
+                .map(|q| wz_db::npc_quote_message(&q))
+                .filter(|m| !m.is_empty());
+            let lines = wz_db::world_archive_npc_lines(sr.desc.as_deref(), quote.as_deref());
             rows.push(
                 [
                     "npc".to_string(),
                     id.to_string(),
                     sr.desc.clone().unwrap_or_default(),
+                    quote.unwrap_or_default(),
                     String::new(),
                     lines.join("|"),
                 ]
