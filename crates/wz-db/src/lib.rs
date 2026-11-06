@@ -81,8 +81,14 @@ pub use db2_item_tabs::{
     load_string_image as db2_item_tab_string_image, Db2ItemTabRow,
 };
 pub use db2_items::{item_grid_rows as db2_item_grid_rows, Db2ItemRow};
-pub use db2_maps::{map_grid_rows as db2_map_grid_rows, Db2MapRow};
-pub use db2_mobs::{mob_grid_rows as db2_mob_grid_rows, Db2MobRow};
+pub use db2_maps::{
+    map_grid_rows as db2_map_grid_rows, map_partition_rows as db2_map_partition_rows, Db2MapRow,
+    MAP_PARTITIONS,
+};
+pub use db2_mobs::{
+    mob_grid_rows as db2_mob_grid_rows, mob_partition_accepts,
+    mob_partition_rows as db2_mob_partition_rows, Db2MobRow,
+};
 pub use db2_morphs::{morph_grid_rows as db2_morph_grid_rows, Db2MorphRow};
 pub use db2_music::{music_grid_rows as db2_music_grid_rows, Db2MusicRow};
 pub use db2_npcs::{npc_grid_rows as db2_npc_grid_rows, Db2NpcRow};

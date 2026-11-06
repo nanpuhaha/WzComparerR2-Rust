@@ -248,6 +248,34 @@ enum Command {
         limit: usize,
     },
 
+    /// DB2 Map 탭 분할(1=Map0-3, 2=Map4-8, 3=Map9) 그리드
+    Db2MapPart {
+        /// Data 루트
+        data_root: PathBuf,
+        /// 분할 번호 (1~3)
+        part: usize,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// DB2 Mob 탭 분할(1=8/9 제외, 2=8, 3=9) 그리드
+    Db2MobPart {
+        /// Data 루트
+        data_root: PathBuf,
+        /// 분할 번호 (1~3)
+        part: usize,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// DB2 Mob 그리드 (id/name/stand/fly/move/hit/die/link)
     Db2Mobs {
         /// Mob WZ 파일
@@ -922,6 +950,18 @@ fn main() {
             json,
             limit,
         } => cmd_db2_maps(&wz, &string, json, limit),
+        Command::Db2MapPart {
+            data_root,
+            part,
+            string,
+            json,
+        } => commands::cmd_db2_map_part(&data_root, part, &string, json),
+        Command::Db2MobPart {
+            data_root,
+            part,
+            string,
+            json,
+        } => commands::cmd_db2_mob_part(&data_root, part, &string, json),
         Command::Db2Mobs {
             wz,
             string,

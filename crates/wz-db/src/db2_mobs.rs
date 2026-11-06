@@ -111,3 +111,123 @@ mod tests {
         );
     }
 }
+
+/// 원본 `LoadMob(Part)`의 선행 숫자 필터.
+///
+/// 탭 20(`Mob`) = 8/9로 시작하지 않는 ID, 탭 21(`Mob001`) = `8`,
+/// 탭 22(`Mob2`) = `9`.
+pub fn mob_partition_accepts(part: usize, id: i32) -> bool {
+    let first = (id / 1_000_000) % 10;
+    match part {
+        1 => first != 8 && first != 9,
+        2 => first == 8,
+        3 => first == 9,
+        _ => false,
+    }
+}
+
+fn all_wz_files(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            all_wz_files(&path, out);
+        } else if path.extension().and_then(|s| s.to_str()) == Some("wz") {
+            out.push(path);
+        }
+    }
+}
+
+/// 원본 `LoadMob(Part)` 의미 그대로 한 탭의 행을 만든다.
+///
+/// `String/Mob.img`를 순회하며 `Mob/<id>.img`가 있고 선행 숫자 필터를
+/// 통과하는 항목만 남긴다.
+pub fn mob_partition_rows(
+    data_root: &std::path::Path,
+    part: usize,
+    linker: &StringLinker,
+) -> Vec<Db2MobRow> {
+    let mut files = Vec::new();
+    all_wz_files(&data_root.join("Mob"), &mut files);
+    files.sort();
+
+    let mut found: HashMap<i32, Db2MobRow> = HashMap::new();
+    for path in files {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(name) = entry.name.as_deref() else {
+                continue;
+            };
+            let Some(id_text) = name.strip_suffix(".img") else {
+                continue;
+            };
+            let Ok(id) = id_text.parse::<i32>() else {
+                continue;
+            };
+            if found.contains_key(&id) {
+                continue;
+            }
+            let Some(offset) = entry.offset else {
+                continue;
+            };
+            let Ok(node) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            found.insert(
+                id,
+                Db2MobRow {
+                    id: format!("{id:07}"),
+                    name: linker
+                        .string_mob
+                        .get(&id)
+                        .map(|s| s.name.clone())
+                        .unwrap_or_default(),
+                    has_stand: child(&node, "stand").is_some(),
+                    has_fly: child(&node, "fly").is_some(),
+                    has_move: child(&node, "move").is_some(),
+                    has_hit: child(&node, "hit1").is_some() || child(&node, "hit").is_some(),
+                    has_die: child(&node, "die1").is_some() || child(&node, "die").is_some(),
+                    has_thumbnail: child(&node, "info")
+                        .and_then(|info| child(info, "thumbnail"))
+                        .is_some(),
+                    link: child(&node, "info").and_then(|info| int(info, "link")),
+                },
+            );
+        }
+    }
+
+    let mut rows: Vec<Db2MobRow> = linker
+        .string_mob
+        .keys()
+        .filter(|id| found.contains_key(id))
+        .filter(|id| mob_partition_accepts(part, **id))
+        .filter_map(|id| found.get(id).cloned())
+        .collect();
+    rows.sort_by(|a, b| a.id.cmp(&b.id));
+    rows
+}
+
+#[cfg(test)]
+mod partition_tests {
+    use super::*;
+
+    #[test]
+    fn partition_uses_leading_digit() {
+        assert!(mob_partition_accepts(1, 100100));
+        assert!(!mob_partition_accepts(1, 8645262));
+        assert!(mob_partition_accepts(2, 8645262));
+        assert!(mob_partition_accepts(3, 9832023));
+        assert!(!mob_partition_accepts(3, 8645262));
+        assert!(!mob_partition_accepts(0, 100100));
+    }
+}

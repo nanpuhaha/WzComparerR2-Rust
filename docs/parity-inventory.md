@@ -724,3 +724,43 @@ C# 하네스: `tools/csharp-worldmap ... -- animtimeline`.
 `SpriteBatchEx` 배치, 마우스 드래그 컨텍스트, `Timer`/`Stopwatch` 실시간 루프,
 `AnimationRecoder` 렌더 타깃·GIF/PNG 인코딩, `AlphaForm`(WinForms 레이어드
 윈도우). 모두 장치/윈도우 핸들 의존이다.
+
+## DB2 Map 탭 3분할 + 링크 미니맵
+
+원본 `LoadMap(Part)`는 `Map/Map` 아래 디렉터리를 파티션별로 고르고, 1패스에서
+행을 만든 뒤 2패스에서 `info/link` 대상의 `miniMap/canvas`로 아이콘을 보완한다.
+
+| 탭 | 대상 디렉터리 | 행 수 | 미니맵 보유 |
+|---|---|---:|---:|
+| 17 `Map1` | Map0–Map3 | 4,382 | 3,847 |
+| 18 `Map2` | Map4–Map8 | 1,946 | 1,838 |
+| 19 `Map3` | Map9 | 11,141 | 9,684 |
+| 합계 | | **17,469** | 15,369 |
+
+- 링크 해석은 원본과 같이 `"Map" + LeftStr(link,1)` 디렉터리일 때만 채택한다.
+- 자체 캔버스가 없고 링크가 있는 행 4,197개 중 **3,309개**가 2차 패스로만
+  미니맵을 얻는다. 단일 파일만 처리하던 기존 구현이 놓치던 부분이다.
+- 이 클라이언트에 `Map7` 디렉터리는 비어 있다(파일 0개) — 빈 파티션도 처리.
+
+fixture: `crates/wz-cli/tests/fixtures/db2_map_parts.expected.json`,
+테스트: `db2_map_parts_match_csharp`,
+CLI: `wz db2-map-part <Data> <part> --string <String_000.wz>`.
+
+## DB2 Mob 탭 3분할
+
+원본 `LoadMob(Part)`는 `String/Mob.img`를 순회하며 `Mob/<id>.img` 존재와
+선행 숫자를 검사한다(탭20: 8·9 제외, 탭21: 8, 탭22: 9).
+
+| 탭 | 필터 | 행 수 |
+|---|---|---:|
+| 20 `Mob` | 선행 숫자 ≠ 8,9 | 742 |
+| 21 `Mob001` | 선행 숫자 = 8 | 1,160 |
+| 22 `Mob2` | 선행 숫자 = 9 | 1,585 |
+| 합계 | | **3,487** |
+
+`id/name/stand/fly/move/hit/die/thumbnail/link` 9필드가 C#과 완전 일치.
+이 데이터에서 `info/link`는 0개다(정보 노드 자체가 3,524 이미지 중 227개).
+
+fixture: `crates/wz-cli/tests/fixtures/db2_mob_parts.expected.json`,
+테스트: `db2_mob_parts_match_csharp`,
+CLI: `wz db2-mob-part <Data> <part> --string <String_000.wz>`.

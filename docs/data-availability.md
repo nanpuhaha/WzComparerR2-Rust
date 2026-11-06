@@ -33,6 +33,8 @@ weather: 원본 C# 소스에 weather 구현 없음
 | weather | 원본 `WzComparerR2`, `WzComparerR2.Common`, `WzComparerR2.WzLib`에 `weather` 문자열 없음 | 원본 기능 아님 |
 | MobTooltip 스탯 | Mob 3,524 이미지 중 info 227개, `level`/`elemAttr` 0개 | 스탯/속성 라인은 데이터 없음. 이름/ID는 StringMob으로 검증 가능 |
 | RecipeTooltip | `Recipe.img` 0개 | 데이터 없음 |
+| DB2 Map7 파티션 | `Map/Map/Map7` WZ 파일 0개 | 빈 파티션 (빈 결과가 정상) |
+| DB2 Mob `info/link` | Mob 3,524 이미지 중 `info` 227, `link` 0 | 링크 컬럼 전부 null |
 | ItemTooltip exp/펫 명령어 | `Item` 71,249개 중 `exp_minLev` 0, `interact` 0, `spec/recipe*` 827 | 레시피만 실데이터 비교, 나머지는 규칙 구현 |
 | ItemTooltip 사용기간 | `consumableFrom` 76, `endUseDate` 446 (유효 450필드/449행, 12자 미만 72필드) | 구현·C# 비교 완료 |
 | ItemTooltip desc_leftalign/pointCost/cant | desc_leftalign 1,359(`#t` 25, cosmetic 0), pointCost 20, cant 5 | 구현·C# 비교 완료 (1,242행) |

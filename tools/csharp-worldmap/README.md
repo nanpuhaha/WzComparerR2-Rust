@@ -465,3 +465,12 @@ The originals (`FrameAnimator`, `AnimationRecoder`, `AnimationControl`) fail to
 load on macOS because they reference SharpDX, so the harness compiles the
 verbatim C# method bodies as a reference implementation. All cases match Rust
 `wz-db::common_controls`.
+
+Verified DB2 partitioned grids:
+```
+mappart <Data> 1|2|3 <String_000.wz>  -> 4382 / 1946 / 11141 rows
+mobpart <Data> 1|2|3 <String_000.wz>  ->  742 / 1160 /  1585 rows
+```
+`mappart` mirrors `LoadMap(Part)` including the `info/link` minimap second pass;
+`mobpart` mirrors the leading-digit partition filter of `LoadMob(Part)`.
+Both match Rust `wz db2-map-part` / `wz db2-mob-part` exactly.

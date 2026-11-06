@@ -1,0 +1,17 @@
+{
+  "1": {
+    "rows": 4382,
+    "minimap": 3847,
+    "sha256": "c01108b4e44d09ea5b9c16b7b45ab83fd41ac27ba615d9c7a74c46e84fe36884"
+  },
+  "2": {
+    "rows": 1946,
+    "minimap": 1838,
+    "sha256": "32b95313dea79a8fc8954e831ea19e1dd5f229714a3014da94cc43f5acf6922f"
+  },
+  "3": {
+    "rows": 11141,
+    "minimap": 9684,
+    "sha256": "586d7bd9ebacbe1ae1b545ba1d9b50cd684b4e7209b4689bde66c051a5894dbf"
+  }
+}

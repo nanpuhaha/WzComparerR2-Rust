@@ -14,7 +14,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | WzComparerR2.MapRender | 124 | 29,291 | `wz-db::map`, `wz-gui`, `wz-render` | 🟡 |
 | WzComparerR2.Avatar | 13 | 7,055 | `wz-avatar` | ✅ |
 | WzComparerR2 (main) | 150 | 61,035 | `wz-cli`, `wz-gui` | 🟡 |
-| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-item-tab`, `wz db2-maps`, `wz db2-mobs`, `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`, `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`, `wz db2-characters`, GUI 표/이미지 뷰어 | 🟢 |
+| WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-item-tab`, `wz db2-maps`, `wz db2-map-part`, `wz db2-mobs`, `wz db2-mob-part`, `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`, `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`, `wz db2-characters`, GUI 표/이미지 뷰어 | 🟢 |
 | CharaSimResource | 2 | 7,490 | — (WinForms 리소스) | ⬜ |
 | WzComparerR2.Network | 28 | 1,954 | `wz-network` RC4/프레임/계약 JSON/TCP 로그인 루프백 | 🟡 |
 | WzComparerR2.LuaConsole | 10 | 1,451 | — | ⬜ |
@@ -86,8 +86,12 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
    Shield(142), Cape(1139), PetEquip(511), Weapon(5655), Hair(9004),
    Face(7424), Mechanic(23), Dragon(16), Ring(1127), Android(215),
    ArcaneForce(7), AuthenticForce(8), Bits(79), EquipBag(2) 스물한 카테고리를
-   실데이터 비교했고, DB2 전체 화면 이미지 뷰어(GUI)도 구현했다. 나머지 8개
-   전용 그리드는 미구현.
+   실데이터 비교했고, DB2 전체 화면 이미지 뷰어(GUI)도 구현했다.
+   Map 탭 3분할(탭17 Map0–3, 탭18 Map4–8, 탭19 Map9)과 `info/link` 기반
+   미니맵 2차 패스를 구현해 **17,469행**(4,382 / 1,946 / 11,141)을 C#과
+   비교했고, Mob 탭 3분할(선행 숫자 8/9 제외·8·9)로 **3,487행**
+   (742 / 1,160 / 1,585)을 비교했다.
+   남은 탭은 Familiar(`Character/Familiar` 0개)·BIN(`.BIN` 0개)뿐이다.
 6. `WzComparerR2.Common/Controls` (2,138 LOC) — GDI/SharpDX 비의존 순수 로직을
    `wz-db::common_controls`로 옮겼다. `FrameAnimator.CreateTimeline`/
    `GetProcessFromTimeline`, `AnimationRecoder.GetGifTimeLine`/`GetMaxLength`,
@@ -231,6 +235,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook`로 몹/NPC
   설명, `[몬스터북]`, `NPC 대사` 라인을 구성해 **1,845개 항목**
   (NPC 대사 767개)이 C#과 완전 일치.
+- DB2 Map 3분할: 17,469행 일치. `info/link` 2차 패스로만 미니맵이 채워지는
+  행이 **3,309개**(자체 캔버스 없이 링크가 있는 4,197행 중)다.
+- DB2 Mob 3분할: 3,487행 일치(이 클라이언트는 `info/link` 0개, `info` 노드도
+  227개만 존재).
 - `Common/Controls` 순수 로직: 타임라인 누적, 구간 진행률, GIF 지연 분해,
   구간 최대 길이/재생 판정, 시간 오프셋 클램프, 스케일 클램프가 C# 참조
   구현과 완전 일치(7 타임라인, 30 프로브, 90 GIF, 6 구간, 4 최대길이,

@@ -4505,3 +4505,208 @@ mod item_expire_tests {
         }
     }
 }
+
+pub fn cmd_db2_map_part(
+    data_root: &Path,
+    part: usize,
+    string_wz: &Path,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let rows = wz_db::db2_map_partition_rows(data_root, part, &linker);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!(
+                "{}\t{}\t{}\t{}",
+                row.id,
+                row.street_name,
+                row.map_name,
+                if row.has_minimap { "Y" } else { "" }
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod db2_map_part_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn db2_map_parts_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let string_wz = root.join("String/String_000.wz");
+        if !root.join("Map/Map/Map0").exists() || !string_wz.exists() {
+            return;
+        }
+        use wz_db::{Arena, StringLinker};
+        let string_archive = wz_core::WzArchive::open(&string_wz).unwrap();
+        let (arena, string_root) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, string_root));
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/db2_map_parts.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        let rec = char::from(0x1e);
+        for part in [1usize, 2, 3] {
+            let rows = wz_db::db2_map_partition_rows(&root, part, &linker);
+            let canon = rows
+                .iter()
+                .map(|r| {
+                    [
+                        r.id.clone(),
+                        r.street_name.clone(),
+                        r.map_name.clone(),
+                        if r.has_minimap {
+                            "1".into()
+                        } else {
+                            "0".to_string()
+                        },
+                        r.link.map(|v| v.to_string()).unwrap_or_default(),
+                    ]
+                    .join(&rec.to_string())
+                })
+                .collect::<Vec<_>>()
+                .join(&rec.to_string());
+            let want = &expected[part.to_string()];
+            assert_eq!(
+                rows.len() as u64,
+                want["rows"].as_u64().unwrap(),
+                "part {part} rows"
+            );
+            assert_eq!(
+                rows.iter().filter(|r| r.has_minimap).count() as u64,
+                want["minimap"].as_u64().unwrap(),
+                "part {part} minimap"
+            );
+            assert_eq!(
+                sha256_hex(canon.as_bytes()),
+                want["sha256"].as_str().unwrap(),
+                "part {part} hash"
+            );
+        }
+    }
+}
+
+pub fn cmd_db2_mob_part(
+    data_root: &Path,
+    part: usize,
+    string_wz: &Path,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let rows = wz_db::db2_mob_partition_rows(data_root, part, &linker);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!("{}\t{}", row.id, row.name);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod db2_mob_part_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    fn bit(v: bool) -> String {
+        if v {
+            "1".into()
+        } else {
+            "0".to_string()
+        }
+    }
+
+    #[test]
+    fn db2_mob_parts_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let string_wz = root.join("String/String_000.wz");
+        if !root.join("Mob").exists() || !string_wz.exists() {
+            return;
+        }
+        use wz_db::{Arena, StringLinker};
+        let string_archive = wz_core::WzArchive::open(&string_wz).unwrap();
+        let (arena, string_root) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, string_root));
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/db2_mob_parts.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        let rec = char::from(0x1e);
+        for part in [1usize, 2, 3] {
+            let rows = wz_db::db2_mob_partition_rows(&root, part, &linker);
+            let canon = rows
+                .iter()
+                .map(|r| {
+                    [
+                        r.id.clone(),
+                        r.name.clone(),
+                        bit(r.has_stand),
+                        bit(r.has_fly),
+                        bit(r.has_move),
+                        bit(r.has_hit),
+                        bit(r.has_die),
+                        bit(r.has_thumbnail),
+                        r.link.map(|v| v.to_string()).unwrap_or_default(),
+                    ]
+                    .join(&rec.to_string())
+                })
+                .collect::<Vec<_>>()
+                .join(&rec.to_string());
+            let want = &expected[part.to_string()];
+            assert_eq!(
+                rows.len() as u64,
+                want["rows"].as_u64().unwrap(),
+                "part {part} rows"
+            );
+            assert_eq!(
+                sha256_hex(canon.as_bytes()),
+                want["sha256"].as_str().unwrap(),
+                "part {part} hash"
+            );
+        }
+    }
+}

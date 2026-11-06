@@ -2455,6 +2455,143 @@ class Program
             scale_cases = scaleCases,
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void MapPart(string dataRoot, int part, string stringWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        linker.Load(str.wz_files[0], null, null);
+
+        var parts = new string[][]
+        {
+            new[] { "Map0", "Map1", "Map2", "Map3" },
+            new[] { "Map4", "Map5", "Map6", "Map7", "Map8" },
+            new[] { "Map9" },
+        };
+        // own minimap + link per map id, across all partitions (원본은 Map/Map 전체를 연다)
+        var entries = new Dictionary<int, (string dir, bool own, int? link)>();
+        foreach (var dir in parts.SelectMany(x => x))
+        {
+            var dirPath = Path.Combine(dataRoot, "Map", "Map", dir);
+            if (!Directory.Exists(dirPath)) continue;
+            foreach (var file in Directory.GetFiles(dirPath, "*.wz").OrderBy(x => x))
+            {
+                var st = new Wz_Structure(); st.Load(file);
+                foreach (Wz_Node n in st.WzNode.Nodes)
+                {
+                    if (n.Value is not Wz_Image img) continue;
+                    var idText = n.Text.Replace(".img", "");
+                    if (!int.TryParse(idText, out int id)) continue;
+                    if (!img.TryExtract()) continue;
+                    var own = img.Node.FindNodeByPath(@"miniMap\canvas") != null;
+                    var linkNode = img.Node.FindNodeByPath(@"info\link");
+                    int? link = linkNode?.Value is object v ? Convert.ToInt32(v) : null;
+                    entries[id] = (dir, own, link);
+                }
+            }
+        }
+
+        var rows = new List<object>();
+        foreach (var dir in parts[part - 1])
+        {
+            var dirPath = Path.Combine(dataRoot, "Map", "Map", dir);
+            if (!Directory.Exists(dirPath)) continue;
+            foreach (var file in Directory.GetFiles(dirPath, "*.wz").OrderBy(x => x))
+            {
+                var st = new Wz_Structure(); st.Load(file);
+                foreach (Wz_Node n in st.WzNode.Nodes)
+                {
+                    if (n.Value is not Wz_Image img) continue;
+                    var idText = n.Text.Replace(".img", "");
+                    if (idText.Length == 0 || !idText.All(char.IsDigit)) continue;
+                    if (!int.TryParse(idText, out int id)) continue;
+                    if (!entries.TryGetValue(id, out var entry)) continue;
+                    if (!img.TryExtract()) continue;
+                    linker.StringMap.TryGetValue(id, out var sr);
+                    string street = sr?.StreetName ?? "";
+                    string mapName = sr?.MapName ?? "";
+                    bool hasMini = entry.own;
+                    if (!hasMini && entry.link != null)
+                    {
+                        var first = entry.link.Value.ToString();
+                        var targetDir = "Map" + first.Substring(0, 1);
+                        if (entries.TryGetValue(entry.link.Value, out var target))
+                            hasMini = target.dir == targetDir && target.own;
+                    }
+                    rows.Add(new
+                    {
+                        id = idText,
+                        street_name = street,
+                        map_name = mapName,
+                        has_minimap = hasMini,
+                        link = entry.link,
+                    });
+                }
+            }
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    static void MobPart(string dataRoot, int part, string stringWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        linker.Load(str.wz_files[0], null, null);
+
+        // Mob/<id>.img 존재 여부 + 필드 (원본은 열린 Mob 구조 전체를 검색)
+        var found = new Dictionary<int, Wz_Node>();
+        var files = Directory.GetFiles(Path.Combine(dataRoot, "Mob"), "*.wz", SearchOption.AllDirectories)
+            .OrderBy(x => x, StringComparer.Ordinal).ToList();
+        foreach (var file in files)
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            foreach (Wz_Node n in st.WzNode.Nodes)
+            {
+                if (n.Value is not Wz_Image img) continue;
+                if (!int.TryParse(n.Text.Replace(".img", ""), out int id)) continue;
+                if (found.ContainsKey(id)) continue;
+                if (!img.TryExtract()) continue;
+                found[id] = img.Node;
+            }
+        }
+
+        bool Accept(int id)
+        {
+            int first = (id / 1000000) % 10;
+            return part switch
+            {
+                1 => first != 8 && first != 9,
+                2 => first == 8,
+                3 => first == 9,
+                _ => false,
+            };
+        }
+
+        var rows = new List<object>();
+        foreach (var kv in linker.StringMob)
+        {
+            int id = kv.Key;
+            if (!found.TryGetValue(id, out var node)) continue;
+            if (!Accept(id)) continue;
+            rows.Add(new
+            {
+                id = id.ToString("D7"),
+                name = kv.Value.Name ?? "",
+                has_stand = node.Nodes["stand"] != null,
+                has_fly = node.Nodes["fly"] != null,
+                has_move = node.Nodes["move"] != null,
+                has_hit = node.Nodes["hit1"] != null || node.Nodes["hit"] != null,
+                has_die = node.Nodes["die1"] != null || node.Nodes["die"] != null,
+                has_thumbnail = node.FindNodeByPath(@"info\thumbnail") != null,
+                link = node.FindNodeByPath(@"info\link")?.Value is object lv ? Convert.ToInt32(lv) : (int?)null,
+            });
+        }
+        rows.Sort((a, b) => string.CompareOrdinal(
+            (string)a.GetType().GetProperty("id").GetValue(a),
+            (string)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2503,6 +2640,8 @@ class Program
         else if (args[0] == "itemrecipereq") ItemRecipeReq(args[1], args[2], args[3]);
         else if (args[0] == "itemexpire") ItemExpire(args[1], args[2]);
         else if (args[0] == "animtimeline") AnimTimeline();
+        else if (args[0] == "mappart") MapPart(args[1], int.Parse(args[2]), args[3]);
+        else if (args[0] == "mobpart") MobPart(args[1], int.Parse(args[2]), args[3]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();
