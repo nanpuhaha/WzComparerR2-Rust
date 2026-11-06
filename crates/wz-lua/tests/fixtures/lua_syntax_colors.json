@@ -1,0 +1,12 @@
+{
+  "note": "WzComparerR2.LuaConsole/Resources/Lua.xshd 의 색상 이름을 표준 RGB로 옮긴 값.",
+  "source": "WzComparerR2.LuaConsole/Resources/Lua.xshd",
+  "colors": {
+    "Comment": "008000",
+    "String": "FF0000",
+    "Number": "00008B",
+    "Punctuation": "006400",
+    "Keyword": "0000FF",
+    "AccessKeyword": "0000FF"
+  }
+}

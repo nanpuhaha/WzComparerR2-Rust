@@ -1,5 +1,5 @@
 use crate::async_io;
-use crate::panels::{catalog, inspector, tree_panel, viewport};
+use crate::panels::{catalog, inspector, lua_editor, tree_panel, viewport};
 use crate::state::AppState;
 
 #[derive(Default)]
@@ -56,6 +56,11 @@ impl eframe::App for PocApp {
                         if self.state.avatar_rendered.is_some() {
                             println!("SMOKE OK: avatar rendered");
                         }
+                        let (tokens, colored, colors) =
+                            lua_editor::summary(lua_editor::DEFAULT_SCRIPT);
+                        println!(
+                            "SMOKE OK: lua highlight tokens={tokens} colored={colored} colors={colors}"
+                        );
                         self.smoke_phase = 4;
                         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }
@@ -97,6 +102,10 @@ impl eframe::App for PocApp {
             inspector::show(ui, &mut self.state);
             ui.separator();
             catalog::show(ui, &mut self.state);
+            ui.separator();
+            egui::CollapsingHeader::new("LuaConsole (문법 강조)")
+                .default_open(false)
+                .show(ui, lua_editor::show);
             ui.separator();
             ui.heading("맵 뷰포트");
             viewport::show(ui, &mut self.state);

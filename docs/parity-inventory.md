@@ -1414,3 +1414,31 @@ C#: `-- spritecompose <fixture.json>`.
 
 남는 것: 실제 GPU 텍스처 업로드/샘플러(선형 보간)·sRGB 변환은 호스트 의존이며,
 여기서는 최근접 샘플링 + straight-alpha 규칙만 검증했다.
+
+## LuaConsole 에디터 패널 (egui 색상 렌더)
+
+원본 `FrmLuaEditor`는 ICSharpCode.TextEditor(WinForms)를 쓴다. 여기서는 검증된
+토크나이저 결과를 **egui `LayoutJob`**으로 옮겨, 같은 `Lua.xshd` 색으로
+표시한다(`wz-gui::panels::lua_editor`).
+
+색 매핑(`Resources/Lua.xshd`):
+
+| 토큰 | 색 |
+|---|---|
+| Comment | Green `#008000` |
+| String/Char/긴 문자열 | Red `#FF0000` |
+| Digits | DarkBlue `#00008B` |
+| Punctuation | DarkGreen `#006400` |
+| LanguageKeywords / AccessKeywords | Blue `#0000FF` |
+
+검증:
+- `crates/wz-lua/tests/fixtures/lua_syntax_colors.json` + `lua_syntax_colors`
+  테스트로 매핑 고정
+- GUI 단위 테스트 2종: 합성 스크립트(토큰 125, 색 5종)와 텍스트 왕복
+- 스모크 출력: `SMOKE OK: lua highlight tokens=125 colored=57 colors=5`
+
+패널은 소스 편집 + 강조 미리보기를 제공하며, 기본 소스는 모든 토큰 종류를
+포함하는 합성 스크립트다(원본 예제 파일은 저장소에 넣지 않는다).
+
+남는 것: 실제 에디터 위젯(줄 번호, 커서 단위 토큰 재계산, 스크롤 동기화)과
+GDI+/TextEditor의 글꼴 힌팅은 UI 의존이라 미구현이다.

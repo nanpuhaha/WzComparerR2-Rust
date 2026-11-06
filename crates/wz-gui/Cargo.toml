@@ -21,6 +21,7 @@ wz-pool = { path = "../../crates/wz-pool" }
 wz-render = { path = "../../crates/wz-render" }
 wz-db = { path = "../../crates/wz-db" }
 wz-avatar = { path = "../../crates/wz-avatar" }
+wz-lua = { path = "../../crates/wz-lua" }
 eframe = { version = "0.37", features = ["wgpu"] }
 egui = "0.37"
 glam = "0.29"

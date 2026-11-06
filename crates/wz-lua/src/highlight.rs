@@ -57,6 +57,26 @@ pub fn strip_bom(source: &str) -> &str {
     source.strip_prefix('\u{feff}').unwrap_or(source)
 }
 
+/// `Lua.xshd`가 지정한 색(이름 → RGB). 색이 없는 종류는 `None`.
+///
+/// - `Comment` Green `#008000`
+/// - `String`/`Char`/`MultiLineString` Red `#FF0000`
+/// - `Digits` DarkBlue `#00008B`
+/// - `Punctuation` DarkGreen `#006400`
+/// - `LanguageKeywords`/`AccessKeywords` Blue `#0000FF`
+pub fn color_rgb(kind: HighlightKind) -> Option<(u8, u8, u8)> {
+    Some(match kind {
+        HighlightKind::Comment => (0x00, 0x80, 0x00),
+        HighlightKind::String => (0xFF, 0x00, 0x00),
+        HighlightKind::Number => (0x00, 0x00, 0x8B),
+        HighlightKind::Punctuation => (0x00, 0x64, 0x00),
+        HighlightKind::Keyword | HighlightKind::AccessKeyword => (0x00, 0x00, 0xFF),
+        HighlightKind::Identifier | HighlightKind::Whitespace | HighlightKind::Other => {
+            return None
+        }
+    })
+}
+
 fn is_ident_start(c: char) -> bool {
     c == '_' || c.is_ascii_alphabetic()
 }

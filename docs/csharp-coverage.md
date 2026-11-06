@@ -247,6 +247,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   source-over**까지 실제 클라이언트 아이콘 6개(27×30/27×27, origin `[-3,30]`)로
   비교해 캔버스 SHA-256이 완전 일치. GDI+의 premultiplied/감마 합성과 텍스트
   래스터는 macOS에서 실행 불가라 남는다.
+- LuaConsole 에디터 패널: 검증된 토크나이저 결과를 egui `LayoutJob`으로 옮겨
+  `Lua.xshd` 색(5종)으로 렌더. 색 매핑 fixture + GUI 테스트 2종 + 스모크
+  (`tokens=125 colored=57 colors=5`).
 - LuaConsole 문법 강조: `Lua.xshd`의 주석/문자열/키워드/구두점/숫자 규칙을
   토크나이저로 옮기고, 원본 xshd를 파싱한 C# 스캐너와 원본 예제 5개의
   토큰 스트림(수 + SHA-256)이 완전 일치. 에디터 UI/색 렌더링은 남는다.

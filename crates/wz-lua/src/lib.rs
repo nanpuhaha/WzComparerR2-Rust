@@ -14,7 +14,7 @@
 //! 테이블**을 받아 같은 `(index, value)` 계약을 돌려준다.
 
 pub mod highlight;
-pub use highlight::{highlight, strip_bom, token_texts, HighlightKind, Token};
+pub use highlight::{color_rgb, highlight, strip_bom, token_texts, HighlightKind, Token};
 
 use mlua::{Lua, MultiValue, Table, Value};
 use std::path::{Path, PathBuf};
