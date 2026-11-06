@@ -731,3 +731,10 @@ Verified 3-column diff and job requirements (`diff22jobreq ...`):
 Calls the real `GetGearPropDiffString22` / `GetExtraJobReqString` /
 `GetExtraJobReqStringList`; matches Rust `gear_prop_diff_pair` and
 `wz_db::extra_job_req_string*`.
+
+Verified gear type names (`geartypenames`):
+```
+161 GearType enum names via real GetGearTypeString
+```
+Matches Rust `wz_db::gear_type_string` (139 switch groups; `body` is commented
+out in the original and returns null).

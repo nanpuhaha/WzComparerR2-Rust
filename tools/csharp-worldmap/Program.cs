@@ -4610,6 +4610,22 @@ return tostring(ok) .. '|' .. tostring(acc)
         Console.WriteLine(JsonSerializer.Serialize(new { diffs = diffRows, ids, lists },
             new JsonSerializerOptions { WriteIndented = false }));
     }
+    // 실제 `ItemStringHelper.GetGearTypeString` — 모든 GearType 이름.
+    static void GearTypeNames()
+    {
+        var rows = Enum.GetNames(typeof(WzComparerR2.CharaSim.GearType))
+            .Select(name =>
+            {
+                var type = (WzComparerR2.CharaSim.GearType)Enum.Parse(
+                    typeof(WzComparerR2.CharaSim.GearType), name);
+                return new
+                {
+                    name,
+                    text = WzComparerR2.CharaSim.ItemStringHelper.GetGearTypeString(type),
+                };
+            }).ToList();
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4643,6 +4659,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "mobskill") MobSkill(args[1]);
         else if (args[0] == "smallformatters") SmallFormatters(args[1]);
         else if (args[0] == "diff22jobreq") Diff22JobReq(args[1], args[2], args[3], args[4]);
+        else if (args[0] == "geartypenames") GearTypeNames();
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));

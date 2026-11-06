@@ -1928,3 +1928,16 @@ C#: `-- smallformatters <fixture-dir>`.
 fixture: `gear_diff_cases.json`, `job_req_cases.json`, `job_req_lists.json`,
 `diff22_jobreq_expected.json`,
 C#: `-- diff22jobreq <fixture-dir> <gear_diff_cases.json> <job_ids> <job_lists>`.
+
+## 장비 타입명 (`GetGearTypeString`)
+
+`gear_type_string(name)` — `GearType` 이름 → 한글 라벨. 원본 switch의 139개
+그룹(156개 이름)을 그대로 옮겼고, 그 외는 `None`이다. `body`는 원본에서
+주석 처리되어 `None`이다.
+
+검증: C# 하네스가 `Enum.GetNames(typeof(GearType))` **161개 전체**에 대해 실제
+`ItemStringHelper.GetGearTypeString` 을 호출한 결과와 완전 일치
+(`crates/wz-db/tests/gear_type_names_parity.rs`), 단위 테스트 1종.
+
+fixture: `gear_type_names_expected.json`,
+C#: `-- geartypenames`.

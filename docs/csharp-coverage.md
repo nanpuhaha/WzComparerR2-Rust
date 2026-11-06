@@ -277,6 +277,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   옮기고 실제 장비 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
 - `GetGearPropString` signFlag: 0/1/2 부호 규칙(음수에서 `+-5`)을 옮기고 실제
   장비 속성 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
+- 장비 타입명: `GetGearTypeString`의 139그룹/156이름을 옮기고 GearType 전체
+  161개 이름에 대해 실제 C# 호출과 비교.
 - 3열 비교/직업 제한: `GetGearPropDiffString22`, `GetExtraJobReqString(int)`,
   `GetExtraJobReqStringList`(일반/MSN)을 옮기고 실제 C# 호출과 45+35+12케이스 비교.
   빈 MSN 목록은 원본이 DivideByZero지만 Rust는 None으로 처리함을 문서화.

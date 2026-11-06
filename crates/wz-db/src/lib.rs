@@ -48,6 +48,7 @@ pub mod dotnet_metadata;
 pub mod draw_math;
 pub mod format_parser;
 pub mod gear_stats;
+pub mod gear_type_names;
 pub mod item_tooltip;
 pub mod item_tooltip_extra;
 pub mod item_tooltip_layout;
@@ -130,6 +131,7 @@ pub use draw_math::{
 };
 pub use format_parser::{parse as parse_format, DocElement, Span};
 pub use gear_stats::extract_gear_props;
+pub use gear_type_names::gear_type_string;
 pub use item_tooltip::{
     build_item_tooltip, extra_job_req_string, extra_job_req_string_list, get_attack_speed_string,
     get_gear_grade_string, get_mob_category_name, get_mob_skill_name, item_attribute_lines,
