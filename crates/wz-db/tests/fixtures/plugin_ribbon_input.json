@@ -1,0 +1,15 @@
+{
+  "panels": [
+    { "tab": "Plugin", "bars": [ { "text": "Base", "x": 0, "y": 5, "width": 120, "height": 24 } ] },
+    { "tab": "Tools", "bars": [ { "text": "T0", "x": 10, "y": 2, "width": 40, "height": 18 } ] },
+    { "tab": "Empty", "bars": [] }
+  ],
+  "calls": [
+    { "tab": "Plugin", "text": "A", "width": 90 },
+    { "tab": "plugin", "text": "B", "width": 0 },
+    { "tab": "Tools", "text": "C", "width": 33 },
+    { "tab": "Missing", "text": "D", "width": 50 },
+    { "tab": "Plugin", "text": "E", "width": -7 },
+    { "tab": "Empty", "text": "F", "width": 10 }
+  ]
+}

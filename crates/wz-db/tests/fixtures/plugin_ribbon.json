@@ -1,0 +1,109 @@
+{
+  "context_created": true,
+  "results": [
+    {
+      "tab": "Plugin",
+      "text": "A",
+      "error": null,
+      "x": 120,
+      "y": 5,
+      "width": 90,
+      "height": 24
+    },
+    {
+      "tab": "plugin",
+      "text": "B",
+      "error": null,
+      "x": 210,
+      "y": 5,
+      "width": 1,
+      "height": 24
+    },
+    {
+      "tab": "Tools",
+      "text": "C",
+      "error": null,
+      "x": 50,
+      "y": 2,
+      "width": 33,
+      "height": 18
+    },
+    {
+      "tab": "Missing",
+      "text": "D",
+      "error": "\u65E0\u6CD5\u627E\u5230RibbonPanel\u3002(Missing)"
+    },
+    {
+      "tab": "Plugin",
+      "text": "E",
+      "error": null,
+      "x": 211,
+      "y": 5,
+      "width": 1,
+      "height": 24
+    },
+    {
+      "tab": "Empty",
+      "text": "F",
+      "error": "empty panel (Empty)"
+    }
+  ],
+  "panels": [
+    {
+      "tab": "Plugin",
+      "bars": [
+        {
+          "text": "E",
+          "x": 211,
+          "y": 5,
+          "width": 1,
+          "height": 24
+        },
+        {
+          "text": "B",
+          "x": 210,
+          "y": 5,
+          "width": 1,
+          "height": 24
+        },
+        {
+          "text": "A",
+          "x": 120,
+          "y": 5,
+          "width": 90,
+          "height": 24
+        },
+        {
+          "text": "Base",
+          "x": 0,
+          "y": 5,
+          "width": 120,
+          "height": 24
+        }
+      ]
+    },
+    {
+      "tab": "Tools",
+      "bars": [
+        {
+          "text": "C",
+          "x": 50,
+          "y": 2,
+          "width": 33,
+          "height": 18
+        },
+        {
+          "text": "T0",
+          "x": 10,
+          "y": 2,
+          "width": 40,
+          "height": 18
+        }
+      ]
+    },
+    {
+      "tab": "Empty",
+      "bars": []
+    }
+  ]
+}

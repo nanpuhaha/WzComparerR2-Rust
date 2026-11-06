@@ -59,6 +59,7 @@ pub mod npc_quote;
 pub mod particle;
 pub mod pixel_ops;
 pub mod plugin_find;
+pub mod plugin_ribbon;
 pub mod query;
 pub mod quest_tooltip;
 pub mod resolve;
@@ -152,6 +153,7 @@ pub use npc_quote::{message as npc_quote_message, parse as npc_quote_parse, NpcQ
 pub use particle::{parse_particle_desc, ParticleDesc, ParticleTexture};
 pub use pixel_ops::{blit_opaque_argb, compose_icon_block, enlarge_2x, IconBlock};
 pub use plugin_find::{plugin_files, FoundNode, PluginMetadata, PluginWzSet};
+pub use plugin_ribbon::{RibbonBar, RibbonError, RibbonModel, RibbonPanel};
 pub use query::{
     execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,
     QueryRule, QueryRuleKind, QueryValueType, StringComparisonMode, ValueRule, DEFAULT_MAX_RESULTS,

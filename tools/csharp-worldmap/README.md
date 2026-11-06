@@ -627,3 +627,10 @@ Verified CPU sprite compose (`spritecompose <fixture.json>`):
 ```
 Atlas-rect extraction, flip, alpha scaling and straight-alpha/opaque blending
 match Rust `wz_db::sprite_compose` by SHA-256.
+
+Verified plugin ribbon model (`pluginribbon <PluginBase.dll> <fixture.json>`):
+```
+context_created=true; 6 AddRibbonBar calls; 3 panels
+```
+Matches Rust `wz_db::plugin_ribbon` including `max(1, width)` clamping and
+`Controls[0]` right-append ordering.

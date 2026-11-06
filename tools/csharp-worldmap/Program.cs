@@ -3981,6 +3981,77 @@ return tostring(ok) .. '|' .. tostring(acc)
         Console.WriteLine(JsonSerializer.Serialize(new { canvas = new[] { CanvasW, CanvasH }, rows },
             new JsonSerializerOptions { WriteIndented = false }));
     }
+    // `PluginContext.AddRibbonBar`의 배치 규칙을 좌표만으로 재현한다.
+    // RibbonBar(WinForms/DevComponents)는 만들 수 없으므로 순서/좌표 규칙만
+    // 옮기고, PluginContext는 실제로 생성해 사용 가능함을 함께 기록한다.
+    static void PluginRibbon(string pluginBasePath, string fixturePath)
+    {
+        var pluginAsm = System.Reflection.Assembly.LoadFrom(pluginBasePath);
+        var contextType = pluginAsm.GetType("WzComparerR2.PluginBase.PluginContext")!;
+        object context = Activator.CreateInstance(contextType,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+            null, new object[] { null }, null)!;
+
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var panels = new List<(string tab, List<(string text, int x, int y, int w, int h)> bars)>();
+        foreach (var panel in doc.RootElement.GetProperty("panels").EnumerateArray())
+        {
+            var bars = new List<(string, int, int, int, int)>();
+            foreach (var bar in panel.GetProperty("bars").EnumerateArray())
+            {
+                bars.Add((bar.GetProperty("text").GetString()!,
+                    bar.GetProperty("x").GetInt32(), bar.GetProperty("y").GetInt32(),
+                    bar.GetProperty("width").GetInt32(), bar.GetProperty("height").GetInt32()));
+            }
+            panels.Add((panel.GetProperty("tab").GetString()!, bars));
+        }
+
+        var results = new List<object>();
+        foreach (var call in doc.RootElement.GetProperty("calls").EnumerateArray())
+        {
+            string tab = call.GetProperty("tab").GetString()!;
+            string text = call.GetProperty("text").GetString()!;
+            int width = call.GetProperty("width").GetInt32();
+
+            var index = panels.FindIndex(p => string.Equals(p.tab, tab, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+            {
+                results.Add(new { tab, text, error = "无法找到RibbonPanel。(" + tab + ")" });
+                continue;
+            }
+            var bars = panels[index].bars;
+            if (bars.Count == 0)
+            {
+                results.Add(new { tab, text, error = "empty panel (" + tab + ")" });
+                continue;
+            }
+            var last = bars[0];
+            var added = (text, last.x + last.w, last.y, Math.Max(1, width), last.h);
+            bars.Insert(0, added);
+            results.Add(new
+            {
+                tab,
+                text,
+                error = (string)null!,
+                x = added.Item2,
+                y = added.Item3,
+                width = added.Item4,
+                height = added.Item5,
+            });
+        }
+
+        var panelsOut = panels.Select(p => new
+        {
+            tab = p.tab,
+            bars = p.bars.Select(b => new { text = b.text, x = b.x, y = b.y, width = b.w, height = b.h }).ToList(),
+        }).ToList();
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            context_created = context != null,
+            results,
+            panels = panelsOut,
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4047,6 +4118,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "luasyntax") LuaSyntax(args[1], args[2..]);
         else if (args[0] == "spritegeometry") SpriteGeometry(args[1]);
         else if (args[0] == "spritecompose") SpriteCompose(args[1]);
+        else if (args[0] == "pluginribbon") PluginRibbon(args[1], args[2]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

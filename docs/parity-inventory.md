@@ -1465,3 +1465,31 @@ fixture로 파싱을 고정했다.
 - 목 서버 200 왕복(`http_mock.rs`)과 함께 성공 경로 파싱이 검증됨
 
 테스트: `crates/wz-openapi/tests/success_fixture.rs` (3종).
+
+## 플러그인 리본 주입 모델 (`PluginContext.AddRibbonBar`)
+
+원본은 DevComponents `RibbonBar`를 만들어 패널에 넣는다. 컨트롤을 만들 수 없어
+**배치 규칙**을 `wz-db::plugin_ribbon`으로 옮겼다.
+
+1. 탭 이름을 `OrdinalIgnoreCase`로 찾는다(없으면 `无法找到RibbonPanel。`)
+2. 기준은 `ribbonPanel.Controls[0]`(가장 최근 추가된 바)
+3. 새 바 `Location = (last.X + last.Width, last.Y)`,
+   `Size = (max(1, width), last.Height)`
+4. `Controls.Add` 후 `SetChildIndex(bar, 0)` → 새 바가 인덱스 0
+
+따라서 같은 탭에 연속 추가하면 오른쪽으로 이어 붙고, 폭 0/음수는 1로
+클램프되어 다음 바 위치에 영향을 준다.
+
+검증:
+- C# 하네스가 실제 `PluginContext`(provider=null)를 생성해 사용 가능함을
+  확인(`context_created=true`)하고, 같은 규칙으로 6개 호출을 계산
+- 탭 3개(초기 바 포함), 호출 6개(대소문자 혼용·폭 0·음수·없는 탭·빈 패널)
+- `crates/wz-db/tests/plugin_ribbon_parity.rs` — 호출별 좌표/오류와 최종
+  패널 바 순서가 완전 일치(예: 폭 0→1이라 다음 바 x가 211)
+- 단위 테스트 4종
+
+fixture: `plugin_ribbon_input.json`, `plugin_ribbon.json`,
+C#: `-- pluginribbon <PluginBase.dll> <fixture.json>`.
+
+남는 것: 실제 `RibbonBar`/`RibbonPanel` 위젯 생성과 `OnLoad()` 안에서의
+호출 순서(플러그인별)는 WinForms 호스트 의존이다.
