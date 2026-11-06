@@ -557,3 +557,17 @@ fixture: `crates/wz-cli/tests/fixtures/map_tooltips.expected.json`,
 fixture: `crates/wz-cli/tests/fixtures/quest_tooltips.expected.json`,
 테스트: `quest_tooltips_match_csharp`, CLI: `wz quest-tooltips`.
 렌더러의 태그 치환/줄바꿈/GDI 레이아웃은 범위 밖이다.
+
+## PluginBase 파일 탐색/메타데이터
+
+- `GetPluginFiles`: `Plugin/` 아래 `WzComparerR2.*.dll` 재귀 수집.
+  macOS의 C# `Directory.GetFiles`와 동일하게 대소문자를 구분하지 않고
+  매칭한다. fixture 트리(하위 2단계 포함)에서 4개 파일이 C#과 일치.
+- `PluginEntry` 메타데이터 규칙:
+  `Name=AssemblyTitle`, `Author=AssemblyCompany`,
+  `FileVersion=InformationalVersion(비어있지 않을 때) 또는 AssemblyFileVersion`.
+- **미구현**: 어셈블리 로드 후 `PluginEntry` 서브클래스 열거/생성
+  (`PluginManager.LoadPlugin`)은 .NET 메타데이터(PE/CLI) 리더가 필요하다.
+  `PluginContext` 메뉴 주입도 WinForms 호스트 의존이다.
+
+CLI: `wz plugin-files <dir>`, C# 하네스: `pluginfiles <dir>`.

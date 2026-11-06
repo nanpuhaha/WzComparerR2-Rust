@@ -18,7 +18,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | CharaSimResource | 2 | 7,490 | — (WinForms 리소스) | ⬜ |
 | WzComparerR2.Network | 28 | 1,954 | `wz-network` RC4/프레임/계약 JSON/TCP 로그인 루프백 | 🟡 |
 | WzComparerR2.LuaConsole | 10 | 1,451 | — | ⬜ |
-| WzComparerR2.PluginBase | 10 | 693 | `wz find-wz` (FindWz 경로 조회) | 🟡 |
+| WzComparerR2.PluginBase | 10 | 693 | `wz find-wz`, `wz plugin-files`, 메타데이터 규칙 | 🟡 |
 | WzComparerR2.Updater | 3 | 276 | `wz patch` (부분) | 🟡 |
 
 ## 디렉터리별
@@ -99,7 +99,11 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
    `PluginBase` (693) 중 `PluginManager.FindWz` 경로 조회를 `wz find-wz`로
    옮겼다. 타입별 WZ 등록 후 세그먼트를 따라가며 `.img`를 추출하는 원본
    동작과 57개 실제 경로가 C# WzLib `FindNodeByPath(true, ...)`와 일치한다.
-   플러그인 DLL 로딩/메뉴 주입은 WinForms 호스트가 필요해 제외한다.
+   추가로 `PluginManager.GetPluginFiles`(`Plugin/**/WzComparerR2.*.dll`)와
+   `PluginEntry` 메타데이터 파생 규칙(Title/Company/Version/Informational→File)을
+   구현해 C# 탐색 결과와 4개 fixture에서 일치했다.
+   실제 어셈블리에서 타입을 열거해 인스턴스화하는 `LoadPlugin`은 CLR
+   메타데이터 리더가 필요해 미구현이며, 메뉴 주입도 WinForms 호스트가 필요하다.
    `Network` (1,954) 중 RC4 스트림, `EncodePack` 프레이밍, 패킷 계약 JSON
    직렬화를 `wz-network`로 옮겼다. RC4는 C# `RC4CryptoServiceProvider`와
    12개 벡터, 패킷은 `WcClient.EncodePack`과 7개 계약(하트비트/로그인/채팅/

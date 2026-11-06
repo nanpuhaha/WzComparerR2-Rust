@@ -3386,3 +3386,18 @@ mod quest_tooltip_tests {
         );
     }
 }
+
+pub fn cmd_plugin_files(dir: &Path, json: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let files: Vec<String> = wz_db::plugin_files(dir)
+        .iter()
+        .filter_map(|p| p.file_name().and_then(|n| n.to_str()).map(str::to_string))
+        .collect();
+    if json {
+        println!("{}", serde_json::to_string_pretty(&files)?);
+    } else {
+        for f in files {
+            println!("{f}");
+        }
+    }
+    Ok(())
+}

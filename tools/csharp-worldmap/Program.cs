@@ -1901,6 +1901,14 @@ class Program
             .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void PluginFiles(string dir)
+    {
+        var files = Directory.Exists(dir)
+            ? Directory.GetFiles(dir, "WzComparerR2.*.dll", SearchOption.AllDirectories)
+                .Select(Path.GetFileName).OrderBy(x => x, StringComparer.Ordinal).ToList()
+            : new List<string>();
+        Console.WriteLine(JsonSerializer.Serialize(files, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1940,6 +1948,7 @@ class Program
         else if (args[0] == "avatarunpack") AvatarUnpack(int.Parse(args[1]), args[2]);
         else if (args[0] == "maptooltips") MapTooltips(args[1], args[2]);
         else if (args[0] == "questtooltips") QuestTooltips(args[1]);
+        else if (args[0] == "pluginfiles") PluginFiles(args[1]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

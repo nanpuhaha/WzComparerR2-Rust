@@ -417,6 +417,15 @@ enum Command {
         json: bool,
     },
 
+    /// PluginBase 플러그인 파일 탐색 (WzComparerR2.*.dll)
+    PluginFiles {
+        /// Plugin 디렉터리
+        dir: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Quest 툴팁 모델 (이름/설명/수요/보상)
     QuestTooltips {
         /// Quest/QuestData WZ 파일
@@ -888,6 +897,7 @@ fn main() {
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
+        Command::PluginFiles { dir, json } => commands::cmd_plugin_files(&dir, json),
         Command::QuestTooltips { wz, json, limit } => {
             commands::cmd_quest_tooltips(&wz, json, limit)
         }

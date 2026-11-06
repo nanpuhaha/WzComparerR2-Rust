@@ -402,3 +402,11 @@ Verified Quest tooltip model (`questtooltips <QuestData_000.wz>`):
 18964 quests
 ```
 Info/Check/Act1 reward fields match Rust `wz quest-tooltips` exactly.
+
+Verified PluginBase file discovery (`pluginfiles <plugin-dir>`):
+```
+WzComparerR2*.dll recursive, case-insensitive
+```
+Matches Rust `wz plugin-files` on a fixture tree (4 files).
+Assembly type enumeration (`LoadPlugin`) is not implemented: it requires a
+.NET metadata reader.

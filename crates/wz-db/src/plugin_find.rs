@@ -136,6 +136,80 @@ fn classify(node: &Node) -> String {
     }
 }
 
+/// `PluginManager.GetPluginFiles` — `Plugin/` 아래 `WzComparerR2.*.dll`.
+///
+/// 원본은 `Directory.GetFiles(dir, "WzComparerR2.*.dll", AllDirectories)`를
+/// 쓰므로 하위 디렉터리까지 포함한다. 순서는 OS 열거 순서라 보장이 없어
+/// 여기서는 정렬해 돌려준다.
+pub fn plugin_files(plugin_dir: &Path) -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    let mut stack = vec![plugin_dir.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|s| s.to_str()) else {
+                continue;
+            };
+            let lower = name.to_ascii_lowercase();
+            if lower.starts_with("wzcomparerr2.") && lower.ends_with(".dll") {
+                out.push(path);
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// 플러그인 메타데이터 (`PluginEntry`의 기본 프로퍼티).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PluginMetadata {
+    pub file_name: String,
+    /// `AssemblyTitleAttribute.Title`
+    pub name: Option<String>,
+    /// `AssemblyCompanyAttribute.Company`
+    pub author: Option<String>,
+    /// `AssemblyName.Version`
+    pub version: Option<String>,
+    /// `AssemblyInformationalVersionAttribute` 우선, 없으면 `AssemblyFileVersion`
+    pub file_version: Option<String>,
+}
+
+impl PluginMetadata {
+    /// `PluginEntry`의 기본 프로퍼티 규칙.
+    ///
+    /// - `Name`  = `AssemblyTitle`
+    /// - `Author` = `AssemblyCompany`
+    /// - `FileVersion` = `InformationalVersion`이 비어있지 않으면 그 값,
+    ///   아니면 `AssemblyFileVersion`
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_attributes(
+        file_name: impl Into<String>,
+        title: Option<String>,
+        company: Option<String>,
+        version: Option<String>,
+        informational_version: Option<String>,
+        file_version: Option<String>,
+    ) -> Self {
+        let file_version = informational_version
+            .filter(|s| !s.is_empty())
+            .or(file_version);
+        Self {
+            file_name: file_name.into(),
+            name: title,
+            author: company,
+            version,
+            file_version,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,5 +222,56 @@ mod tests {
         node.value = Some(ImageValue::Str("a".into()));
         assert_eq!(classify(&node), "string:a");
         assert_eq!(classify(&Node::new("y")), "null");
+    }
+}
+
+#[cfg(test)]
+mod plugin_file_tests {
+    use super::*;
+
+    fn touch(dir: &std::path::Path, rel: &str) {
+        let path = dir.join(rel);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(path, b"x").unwrap();
+    }
+
+    #[test]
+    fn metadata_prefers_informational_version() {
+        let meta = PluginMetadata::from_attributes(
+            "WzComparerR2.X.dll",
+            Some("플러그인".into()),
+            Some("작성자".into()),
+            Some("1.2.3.4".into()),
+            Some("1.2.3-beta".into()),
+            Some("1.2.3.0".into()),
+        );
+        assert_eq!(meta.name.as_deref(), Some("플러그인"));
+        assert_eq!(meta.author.as_deref(), Some("작성자"));
+        assert_eq!(meta.file_version.as_deref(), Some("1.2.3-beta"));
+        let meta = PluginMetadata::from_attributes(
+            "x.dll",
+            None,
+            None,
+            None,
+            Some(String::new()),
+            Some("9.9.9.9".into()),
+        );
+        assert_eq!(meta.file_version.as_deref(), Some("9.9.9.9"));
+    }
+
+    #[test]
+    fn finds_pattern_recursively() {
+        let base = std::env::temp_dir().join(format!("wz-plugin-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        touch(&base, "WzComparerR2.A.dll");
+        touch(&base, "sub/WzComparerR2.B.dll");
+        touch(&base, "Other.dll");
+        touch(&base, "WzComparerR2.C.txt");
+        let found = plugin_files(&base);
+        assert_eq!(found.len(), 2, "{found:?}");
+        let _ = std::fs::remove_dir_all(&base);
     }
 }
