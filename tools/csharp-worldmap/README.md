@@ -480,3 +480,11 @@ Verified Skill tooltip header (`skilltooltips <Data> <String_000.wz>`):
 7055 skills
 ```
 name/master-level/pre_bb/hyper/req lines all match Rust `wz skill-tooltips`.
+
+Verified LuaConsole `package.path` (`luapath <script> <plugin> <wcr2> <cwd>`):
+```
+5 input combinations -> entries / joined path
+```
+`LuaSandbox.InitLuaEnv` needs NLua + WinForms, so the harness compiles the
+verbatim path-building block. Rust `wz_lua::package_path` matches all cases;
+script execution is verified separately with real Lua fixtures.

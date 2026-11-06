@@ -789,3 +789,33 @@ fixture: `crates/wz-cli/tests/fixtures/skill_tooltips.expected.json`,
 테스트: `skill_tooltips_match_csharp`,
 CLI: `wz skill-tooltips <Data> --string <String_000.wz>`,
 C#: `-- skilltooltips <Data> <String_000.wz>`.
+
+## LuaConsole 샌드박스 (`LuaSandbox.InitLuaEnv`)
+
+원본 `LuaSandbox`는 NLua(Lua 5.1 + CLR 브리지)와 WinForms
+(`Application.StartupPath`, `FrmConsole`)에 묶여 macOS에서 실행할 수 없다.
+이식 가능한 결정적 부분을 `crates/wz-lua`(mlua, vendored Lua 5.4)로 옮겼다.
+
+| 원본 | Rust | 비고 |
+|---|---|---|
+| `package.path` 구성(스크립트→플러그인→WCR2→현재, `Distinct`) | `package_path_entries`/`package_path` | 5조합 C# 참조 구현과 일치 |
+| `lua["env"] = Env` | `Sandbox::init(env, ...)` | JSON → Lua 테이블 |
+| `each(userData)` (IEnumerable) | Lua 배열 테이블용 `each` | CLR이 없어 테이블을 받는다 |
+| `DoString` | `Sandbox::do_string` | 반환값/오류 전파 |
+| `DoStringAsync` 취소 훅 | 미구현 | Lua debug hook + CancellationToken |
+
+검증(실제 실행):
+- `crates/wz-lua/tests/sandbox_parity.rs` 5종 — `package.path` 5조합,
+  `require`가 스크립트 폴더의 `lua/<mod>/init.lua`·`<mod>.lua`에서 해석,
+  다중 반환값, 런타임 오류 전파, non-table `each`가 0개 값을 돌려주는 계약.
+- `crates/wz-lua/src/lib.rs` 단위 테스트 4종.
+- CLI `wz lua-run <script>` 로 `env`/`each`/`require` 데모 실행 확인.
+
+C# 대조는 `package.path` 부분만 가능하다. `LuaSandbox.InitLuaEnv`가 NLua
+네이티브(5.1)와 WinForms를 요구하므로, 하네스는 원본 소스의 path 구성
+블록을 **그대로 옮긴 참조 구현**을 컴파일해 쓴다
+(`tools/csharp-worldmap ... -- luapath <script> <plugin> <wcr2> <cwd>`).
+
+NLua `luanet.import_type` 기반 CLR 타입 브리지, `RegisterLuaDelegateType`,
+WinForms 콘솔/에디터(`FrmConsole`, `FrmLuaEditor`), 문법 강조
+(`AppSyntaxModeProvider`)는 재현하지 않는다.

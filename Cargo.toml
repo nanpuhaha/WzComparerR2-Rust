@@ -11,6 +11,7 @@ members = [
     "crates/wz-avatar",
     "crates/wz-openapi",
     "crates/wz-network",
+    "crates/wz-lua",
     "crates/wz-cli",
     "tools/corpus-builder",
     "tools/oracle-diff",
@@ -50,6 +51,10 @@ wz-diff = { path = "crates/wz-diff", version = "0.2.0" }
 wz-avatar = { path = "crates/wz-avatar", version = "0.2.0" }
 wz-network = { path = "crates/wz-network", version = "0.2.0" }
 wz-openapi = { path = "crates/wz-openapi", version = "0.2.0" }
+# LuaConsole 샌드박스용 Lua 5.4 VM. vendored 로 C 소스를 함께 빌드한다.
+# 프로젝트의 "순수 Rust" 원칙에 대한 **명시적 예외**다 (docs/csharp-coverage.md).
+wz-lua = { path = "crates/wz-lua", version = "0.2.0" }
+mlua = { version = "0.9", features = ["lua54", "vendored"] }
 
 
 memmap2 = "0.9"

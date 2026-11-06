@@ -17,7 +17,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | WzComparerR2.DB2 | 12 | 6,292 | `wz db2`, `wz db2-icons`, `wz db2-items`, `wz db2-item-tab`, `wz db2-maps`, `wz db2-map-part`, `wz db2-mobs`, `wz db2-mob-part`, `wz db2-skills`, `wz db2-npcs`, `wz db2-reactors`, `wz db2-music`, `wz db2-damage-skins`, `wz db2-morphs`, `wz db2-taming-mobs`, `wz db2-characters`, GUI 표/이미지 뷰어 | 🟢 |
 | CharaSimResource | 2 | 7,490 | — (WinForms 리소스) | ⬜ |
 | WzComparerR2.Network | 28 | 1,954 | `wz-network` RC4/프레임/계약 JSON/TCP 로그인 루프백 | 🟡 |
-| WzComparerR2.LuaConsole | 10 | 1,451 | — | ⬜ |
+| WzComparerR2.LuaConsole | 10 | 1,451 | `wz-lua` 샌드박스(package.path/env/each/실행) | 🟡 |
 | WzComparerR2.PluginBase | 10 | 693 | `wz find-wz`, `wz plugin-files`, PE/CLI 메타데이터 리더 | 🟡 |
 | WzComparerR2.Updater | 3 | 276 | `wz patch` (부분) | 🟡 |
 
@@ -243,6 +243,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   행이 **3,309개**(자체 캔버스 없이 링크가 있는 4,197행 중)다.
 - DB2 Mob 3분할: 3,487행 일치(이 클라이언트는 `info/link` 0개, `info` 노드도
   227개만 존재).
+- `LuaConsole` 샌드박스: `LuaSandbox.InitLuaEnv`의 결정적 부분을
+  `wz-lua`(mlua 5.4)로 옮겼다. `package.path` 5조합이 원본 로직과 일치하고,
+  `env` 주입·`each()`·`require`·반환값/오류 전파를 실제 Lua 스크립트 9종으로
+  검증했다. NLua의 `luanet` CLR 브리지와 WinForms 콘솔 창은 재현하지 않는다.
 - `Common/Controls` 순수 로직: 타임라인 누적, 구간 진행률, GIF 지연 분해,
   구간 최대 길이/재생 판정, 시간 오프셋 클램프, 스케일 클램프가 C# 참조
   구현과 완전 일치(7 타임라인, 30 프로브, 90 GIF, 6 구간, 4 최대길이,
@@ -277,7 +281,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 
 - DB2/CharaSimControl/Comparer HTML/EasyComparer 등 UI·리포팅 모듈.
 - Common Controls의 그래픽 장치/스프라이트/마우스 드래그(GDI·SharpDX),
-  LuaConsole.
+  LuaConsole의 NLua CLR 브리지·콘솔 UI.
 - PluginBase의 플러그인 로딩/메뉴 주입(WinForms 호스트 필요).
 - Network TCP/재접속/로그인 상태 머신(서버 필요).
 - OpenAPI HTTP 호출(Nexon API 키 필요).

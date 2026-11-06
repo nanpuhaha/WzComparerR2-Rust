@@ -1,0 +1,17 @@
+[package]
+name = "wz-lua"
+description = "WzComparerR2 LuaConsole 샌드박스 API (mlua 기반)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+mlua = { workspace = true }
+serde.workspace = true
+serde_json.workspace = true
+
+[lints.rust]
+unsafe_code = "deny"

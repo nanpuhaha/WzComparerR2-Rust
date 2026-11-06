@@ -13,6 +13,10 @@ all-features = true
 # fontdue 의 전이 의존성이며, fontdue 가 파서를 교체하면 제거한다.
 ignore = ["RUSTSEC-2026-0192"]
 
+# FFI 예외 (명시적): LuaConsole 샌드박스는 Lua VM이 필요하다.
+# `crates/wz-lua` 가 `mlua`(vendored Lua 5.4, MIT)를 쓰며, 이 크레이트만
+# C 소스를 함께 빌드한다. 프로젝트의 "순수 Rust" 원칙에 대한 유일한 예외로
+# 여기 기록한다. 자세한 근거는 docs/csharp-coverage.md 참고.
 [bans]
 # 여러 버전이 공존하면 WZ 포맷 버전에 따라 동작이 갈릴 수 있다.
 multiple-versions = "warn"

@@ -2676,6 +2676,35 @@ class Program
             .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    // 원본 `LuaSandbox.InitLuaEnv`의 package.path 구성 부분을 그대로 옮긴
+    // 참조 구현. 원본 타입은 NLua(Lua 5.1 네이티브) + WinForms
+    // (`Application.StartupPath`)에 묶여 macOS에서 로드할 수 없다.
+    static string[] LuaPackagePath(string scriptBaseDir, string pluginBaseDir, string wcR2Folder, string cwd)
+    {
+        var packagePath = new List<string>(16);
+        foreach (var baseDir in new[] { scriptBaseDir, pluginBaseDir, wcR2Folder })
+        {
+            if (!string.IsNullOrEmpty(baseDir))
+            {
+                packagePath.Add(Path.Combine(baseDir, "?.lua"));
+                packagePath.Add(Path.Combine(baseDir, "?", "init.lua"));
+                packagePath.Add(Path.Combine(baseDir, "lua", "?.lua"));
+                packagePath.Add(Path.Combine(baseDir, "lua", "?", "init.lua"));
+            }
+        }
+        packagePath.Add(Path.Combine(cwd, "?.lua"));
+        packagePath.Add(Path.Combine(cwd, "?", "init.lua"));
+        return packagePath.Distinct().ToArray();
+    }
+    static void LuaPath(string scriptBaseDir, string pluginBaseDir, string wcR2Folder, string cwd)
+    {
+        var entries = LuaPackagePath(scriptBaseDir, pluginBaseDir, wcR2Folder, cwd);
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            entries,
+            joined = string.Join(";", entries),
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2727,6 +2756,7 @@ class Program
         else if (args[0] == "mappart") MapPart(args[1], int.Parse(args[2]), args[3]);
         else if (args[0] == "mobpart") MobPart(args[1], int.Parse(args[2]), args[3]);
         else if (args[0] == "skilltooltips") SkillTooltips(args[1], args[2]);
+        else if (args[0] == "luapath") LuaPath(args[1], args[2], args[3], args[4]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

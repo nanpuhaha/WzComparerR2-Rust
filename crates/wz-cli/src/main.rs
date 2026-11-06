@@ -291,6 +291,21 @@ enum Command {
         limit: usize,
     },
 
+    /// LuaConsole 샌드박스에서 스크립트 실행
+    LuaRun {
+        /// 실행할 Lua 스크립트
+        script: PathBuf,
+        /// `package.path`에 추가할 스크립트 기준 디렉터리 (기본: 스크립트 폴더)
+        #[arg(long)]
+        base_dir: Option<PathBuf>,
+        /// `env` 전역으로 주입할 JSON 파일
+        #[arg(long)]
+        env: Option<PathBuf>,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// SkillTooltipRender2 헤더 텍스트 (이름/마스터 레벨/설명)
     SkillTooltips {
         /// Data 루트
@@ -983,6 +998,12 @@ fn main() {
             json,
             limit,
         } => cmd_db2_mobs(&wz, &string, json, limit),
+        Command::LuaRun {
+            script,
+            base_dir,
+            env,
+            json,
+        } => commands::cmd_lua_run(&script, base_dir.as_deref(), env.as_deref(), json),
         Command::SkillTooltips {
             data_root,
             string,

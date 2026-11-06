@@ -4971,3 +4971,35 @@ mod skill_tooltip_tests {
         );
     }
 }
+
+pub fn cmd_lua_run(
+    script: &Path,
+    base_dir: Option<&Path>,
+    env_path: Option<&Path>,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let source = std::fs::read_to_string(script)?;
+    let env = match env_path {
+        Some(path) => Some(serde_json::from_str(&std::fs::read_to_string(path)?)?),
+        None => None,
+    };
+    let script_dir = base_dir
+        .map(Path::to_path_buf)
+        .or_else(|| script.parent().map(Path::to_path_buf));
+    let cwd = std::env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+
+    let mut sandbox = wz_lua::Sandbox::new()?;
+    sandbox.init(env, script_dir.as_deref(), None, None, &cwd)?;
+    if !json {
+        println!("package.path={}", sandbox.resolved_package_path()?);
+    }
+    let values = sandbox.do_string(&source)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&values)?);
+    } else {
+        for value in &values {
+            println!("{value}");
+        }
+    }
+    Ok(())
+}

@@ -1,0 +1,85 @@
+[
+  {
+    "script_base_dir": "/scripts",
+    "plugin_base_dir": "/plugin",
+    "wc_r2_dir": "/wcr2",
+    "cwd": ".",
+    "entries": [
+      "/scripts/?.lua",
+      "/scripts/?/init.lua",
+      "/scripts/lua/?.lua",
+      "/scripts/lua/?/init.lua",
+      "/plugin/?.lua",
+      "/plugin/?/init.lua",
+      "/plugin/lua/?.lua",
+      "/plugin/lua/?/init.lua",
+      "/wcr2/?.lua",
+      "/wcr2/?/init.lua",
+      "/wcr2/lua/?.lua",
+      "/wcr2/lua/?/init.lua",
+      "./?.lua",
+      "./?/init.lua"
+    ],
+    "joined": "/scripts/?.lua;/scripts/?/init.lua;/scripts/lua/?.lua;/scripts/lua/?/init.lua;/plugin/?.lua;/plugin/?/init.lua;/plugin/lua/?.lua;/plugin/lua/?/init.lua;/wcr2/?.lua;/wcr2/?/init.lua;/wcr2/lua/?.lua;/wcr2/lua/?/init.lua;./?.lua;./?/init.lua"
+  },
+  {
+    "script_base_dir": "",
+    "plugin_base_dir": "/plugin",
+    "wc_r2_dir": "/wcr2",
+    "cwd": "/cwd",
+    "entries": [
+      "/plugin/?.lua",
+      "/plugin/?/init.lua",
+      "/plugin/lua/?.lua",
+      "/plugin/lua/?/init.lua",
+      "/wcr2/?.lua",
+      "/wcr2/?/init.lua",
+      "/wcr2/lua/?.lua",
+      "/wcr2/lua/?/init.lua",
+      "/cwd/?.lua",
+      "/cwd/?/init.lua"
+    ],
+    "joined": "/plugin/?.lua;/plugin/?/init.lua;/plugin/lua/?.lua;/plugin/lua/?/init.lua;/wcr2/?.lua;/wcr2/?/init.lua;/wcr2/lua/?.lua;/wcr2/lua/?/init.lua;/cwd/?.lua;/cwd/?/init.lua"
+  },
+  {
+    "script_base_dir": "",
+    "plugin_base_dir": "",
+    "wc_r2_dir": "",
+    "cwd": ".",
+    "entries": [
+      "./?.lua",
+      "./?/init.lua"
+    ],
+    "joined": "./?.lua;./?/init.lua"
+  },
+  {
+    "script_base_dir": "/same",
+    "plugin_base_dir": "/same",
+    "wc_r2_dir": "/same",
+    "cwd": ".",
+    "entries": [
+      "/same/?.lua",
+      "/same/?/init.lua",
+      "/same/lua/?.lua",
+      "/same/lua/?/init.lua",
+      "./?.lua",
+      "./?/init.lua"
+    ],
+    "joined": "/same/?.lua;/same/?/init.lua;/same/lua/?.lua;/same/lua/?/init.lua;./?.lua;./?/init.lua"
+  },
+  {
+    "script_base_dir": "/scripts/lua",
+    "plugin_base_dir": "",
+    "wc_r2_dir": "",
+    "cwd": "./rel",
+    "entries": [
+      "/scripts/lua/?.lua",
+      "/scripts/lua/?/init.lua",
+      "/scripts/lua/lua/?.lua",
+      "/scripts/lua/lua/?/init.lua",
+      "./rel/?.lua",
+      "./rel/?/init.lua"
+    ],
+    "joined": "/scripts/lua/?.lua;/scripts/lua/?/init.lua;/scripts/lua/lua/?.lua;/scripts/lua/lua/?/init.lua;./rel/?.lua;./rel/?/init.lua"
+  }
+]
