@@ -3447,6 +3447,116 @@ return tostring(ok) .. '|' .. tostring(acc)
             icon_borders = iconBorders,
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
+    // 원본 `LuaSandbox.LuaGlobalFindNodeFunctionHandler`와 **완전히 같은** 형태.
+    // delegate는 `(string, Wz_File = null)`인데 핸들러는 1-파라미터다.
+    sealed class OriginalFindNodeHandler : NLua.Method.LuaDelegate
+    {
+        public WzComparerR2.WzLib.Wz_Node CallFunction(string wzPath)
+        {
+            object[] args = { wzPath };
+            object[] inArgs = { wzPath };
+            int[] outArgs = { };
+            object ret = CallFunction(args, inArgs, outArgs);
+            return (WzComparerR2.WzLib.Wz_Node)ret;
+        }
+    }
+
+    // 델리게이트 시그니처를 정확히 맞춘 핸들러(2-파라미터).
+    sealed class ExactFindNodeHandler : NLua.Method.LuaDelegate
+    {
+        public WzComparerR2.WzLib.Wz_Node CallFunction(
+            string wzPath, WzComparerR2.WzLib.Wz_File sourceWzFile)
+        {
+            object[] args = { wzPath, sourceWzFile };
+            object[] inArgs = { wzPath, sourceWzFile };
+            int[] outArgs = { };
+            object ret = CallFunction(args, inArgs, outArgs);
+            return (WzComparerR2.WzLib.Wz_Node)ret;
+        }
+    }
+
+    // 여러 인자를 넘기는 계약(inArgs 순서) 검증용.
+    public delegate string TwoArgDelegate(string a, int b);
+    sealed class TwoArgHandler : NLua.Method.LuaDelegate
+    {
+        public string CallFunction(string a, int b)
+        {
+            object[] args = { a, b };
+            object[] inArgs = { a, b };
+            int[] outArgs = { };
+            object ret = CallFunction(args, inArgs, outArgs);
+            return (string)ret;
+        }
+    }
+
+    public sealed class DelegateHost
+    {
+        public string Find(WzComparerR2.GlobalFindNodeFunction f, string path)
+        {
+            var node = f(path);
+            return node == null ? "(null)" : node.Text + "|" + node.FullPath;
+        }
+        public string Two(TwoArgDelegate f, string a, int b) => f(a, b);
+    }
+
+    // 케이스별로 프로세스를 분리한다. out-param 델리게이트처럼 NLua가
+    // 프로세스를 abort 시키는 경우가 있어 try/catch로는 잡히지 않는다.
+    static void LuaDelegate(string caseName)
+    {
+        var result = new Dictionary<string, object> { ["case"] = caseName };
+
+        void RunFind(Type handlerType)
+        {
+            using var lua = new NLua.Lua();
+            lua.State.Encoding = System.Text.Encoding.UTF8;
+            lua.LoadCLRPackage();
+            lua.RegisterLuaDelegateType(typeof(WzComparerR2.GlobalFindNodeFunction), handlerType);
+            lua["host"] = new DelegateHost();
+            result["value"] = lua.DoString(
+                "return host:Find(function(path) return nil end, 'Mob/2.img')")[0]?.ToString();
+        }
+
+        void RunTwoArg(string script)
+        {
+            using var lua = new NLua.Lua();
+            lua.State.Encoding = System.Text.Encoding.UTF8;
+            lua.LoadCLRPackage();
+            lua.RegisterLuaDelegateType(typeof(TwoArgDelegate), typeof(TwoArgHandler));
+            lua["host"] = new DelegateHost();
+            result["value"] = lua.DoString(script)[0]?.ToString();
+        }
+
+        try
+        {
+            switch (caseName)
+            {
+                case "find_null":
+                    RunFind(typeof(ExactFindNodeHandler));
+                    break;
+                case "find_null_original_handler":
+                    RunFind(typeof(OriginalFindNodeHandler));
+                    break;
+                case "two_arg":
+                    RunTwoArg("return host:Two(function(a, b) return a .. ':' .. tostring(b) end, 'x', 7)");
+                    break;
+                case "two_arg_neg":
+                    RunTwoArg("return host:Two(function(a, b) return a .. ':' .. tostring(b) end, '', -3)");
+                    break;
+                case "two_arg_arity":
+                    RunTwoArg("return host:Two(function(a, b, c) return tostring(a) .. tostring(b) .. tostring(c) end, 'x', 7)");
+                    break;
+                default:
+                    result["error"] = "unknown case";
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            result["error"] = ex.GetType().Name + ": " + ex.Message.Split('\n')[0];
+        }
+
+        Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -3507,6 +3617,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "iconblock") IconBlock(args[1]);
         else if (args[0] == "iconblend") IconBlend(args[1]);
         else if (args[0] == "drawmath") DrawMath();
+        else if (args[0] == "luadelegate") LuaDelegate(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

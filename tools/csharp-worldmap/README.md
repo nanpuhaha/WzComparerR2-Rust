@@ -570,3 +570,15 @@ Verified GDI-free drawing math (`drawmath`):
 `DrawGearDetailNumber` advance rules, `AnimationGraphics.Draw` destination,
 `SpriteBatchEx.DrawPath` rectangles and the baked border paths match Rust
 `wz_db::draw_math`.
+
+Verified Lua delegate marshalling (`luadelegate <case>`, NLua 1.7.3):
+```
+find_null                     -> (null)        (exact 2-param handler)
+find_null_original_handler    -> ArgumentException: Cannot bind ...
+two_arg                       -> x:7
+two_arg_neg                   -> :-3
+two_arg_arity                 -> x7nil
+out-param delegate            -> process abort (exit 134)
+```
+Handlers must match the delegate signature exactly; the original 1-parameter
+`LuaGlobalFindNodeFunctionHandler` does not bind under NLua 1.7.3.

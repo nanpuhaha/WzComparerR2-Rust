@@ -1166,3 +1166,45 @@ fixture: `crates/wz-openapi/tests/fixtures/nexon_error_no_key.json`,
 | weather 이미지 | `Data` 전체 이미지 엔트리 | 0 (원본 C#에도 기능 없음) |
 
 즉 `#cosmetic_EULO#` 때와 달리, 이 항목들은 스캔 범위를 넓혀도 데이터가 없다.
+
+## LuaConsole 델리게이트 마샬링 (`RegisterLuaDelegateType`)
+
+원본 `LuaConsole`는 WzLib 노드 조회를 Lua 함수로 넘기기 위해
+`lua.RegisterLuaDelegateType(typeof(GlobalFindNodeFunction), typeof(LuaGlobalFindNodeFunctionHandler))`
+를 쓴다. macOS에서 NLua **1.7.3**(원본과 동일 버전)이 동작하므로 실제로
+등록·호출해 계약을 확인했다.
+
+### 확인된 바인딩 규칙
+
+핸들러의 `CallFunction` 시그니처는 **델리게이트 시그니처와 정확히 같아야**
+NLua가 바인딩한다.
+
+| 케이스 | 결과 |
+|---|---|
+| `GlobalFindNodeFunction`(=`(string, Wz_File=null)`) + **1-파라미터** 핸들러(원본 형태) | `System.ArgumentException: Cannot bind to the target method because its signature is not compatible with that of the delegate type.` |
+| 같은 델리게이트 + **2-파라미터** 핸들러 | 정상 호출, `nil` 반환 시 `(null)` |
+| `delegate string TwoArg(string, int)` + 동일 시그니처 핸들러 | `x:7`, `:-3` |
+| 같지만 Lua 함수가 3-파라미터인 경우 | `x7nil` (세 번째는 `nil`) |
+| `delegate int Calc(int a, out int b)` | **프로세스 abort(exit 134)** — try/catch 불가 |
+
+즉 **원본 `LuaGlobalFindNodeFunctionHandler`(1-파라미터)는 NLua 1.7.3에서
+바인딩되지 않는다**. 실제로 동작시키려면 핸들러가 `(string, Wz_File)`을 받아야
+한다. 이 사실은 코드만 보고는 알 수 없고 실행으로만 확인된다.
+
+### Rust 재현
+
+`wz-lua`에 호스트가 Lua 콜백을 호출하고 **첫 반환값만** 쓰는 계약을 넣었다.
+
+- `Sandbox::call_first_return(callback, args)` — `MultiValue` 중 첫 값만 반환
+- 전역 `host_call(callback, ...)` — 같은 규칙의 Lua 노출 함수
+
+검증: fixture(`crates/wz-lua/tests/fixtures/lua_delegate.json`)의 실행 가능한
+4케이스(`(null)`, `x:7`, `:-3`, `x7nil`)가 완전 일치하고, 1-파라미터 핸들러
+바인딩 실패 메시지와 out-param abort(134)를 fixture로 고정했다
+(`crates/wz-lua/tests/host_callback.rs`, 3 테스트).
+
+C# 하네스: `-- luadelegate <case>` (케이스별 프로세스 분리 — abort를 기록하기 위해).
+
+남는 한계: 실제 WzLib `Wz_Node` 반환 마샬링은 이 저장소에 노드 어셈블리
+의존이 커서 값(`nil`/문자열) 수준에서만 확인했다. WinForms 콘솔/에디터 UI와
+문법 강조는 여전히 호스트 의존이다.

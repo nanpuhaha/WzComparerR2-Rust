@@ -1,0 +1,15 @@
+{
+  "note": "NLua 1.7.3 (원본 LuaConsole와 동일 버전) 실측. out-param 델리게이트는 프로세스 abort라 별도 기록.",
+  "cases": [
+    { "case": "find_null", "value": "(null)", "error": null },
+    { "case": "find_null_original_handler", "value": null, "error": "System.ArgumentException: Cannot bind to the target method because its signature is not compatible with that of the delegate type." },
+    { "case": "two_arg", "value": "x:7", "error": null },
+    { "case": "two_arg_neg", "value": ":-3", "error": null },
+    { "case": "two_arg_arity", "value": "x7nil", "error": null }
+  ],
+  "out_param": {
+    "case": "out_param",
+    "exit_code": 134,
+    "note": "delegate int CalcDelegate(int a, out int b) 는 try/catch로 잡히지 않고 프로세스가 abort 된다."
+  }
+}

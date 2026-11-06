@@ -269,8 +269,11 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   검증했다. 추가로 **NLua가 macOS arm64에서 동작함을 확인**해, 원본
   프렐류드(`luanet.import_type`/`get_method_bysig`)를 그대로 실행하고
   `each()`가 CLR `IEnumerable`을 순회하는 계약(4개 컬렉션 + 테이블/nil)을
-  대조했다. WinForms 콘솔 창/에디터와 CLR 델리게이트 등록은 여전히 호스트
-  의존이다.
+  대조했다. 이어서 `RegisterLuaDelegateType`도 NLua 1.7.3으로 실제 검증해,
+  핸들러 시그니처가 델리게이트와 **정확히 일치해야** 바인딩됨을 확인했다
+  (원본 1-파라미터 `LuaGlobalFindNodeFunctionHandler`는 바인딩 실패, out-param
+  델리게이트는 프로세스 abort). Rust는 `host_call`/`call_first_return`로 같은
+  계약을 재현했다. WinForms 콘솔 창/에디터와 문법 강조는 여전히 호스트 의존이다.
 - `Common/Controls` 순수 로직: 타임라인 누적, 구간 진행률, GIF 지연 분해,
   구간 최대 길이/재생 판정, 시간 오프셋 클램프, 스케일 클램프가 C# 참조
   구현과 완전 일치(7 타임라인, 30 프로브, 90 GIF, 6 구간, 4 최대길이,

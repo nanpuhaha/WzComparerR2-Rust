@@ -153,6 +153,16 @@ impl Sandbox {
             None => Value::Nil,
         };
         self.lua.globals().set("env", env_value)?;
+        // 호스트가 Lua 콜백을 호출하고 **첫 반환값만** 쓰는 계약.
+        // 원본 NLua 경로(`RegisterLuaDelegateType` + `LuaDelegate.CallFunction`)를
+        // Lua 함수 인자에 대해 같은 의미로 재현한 것이다.
+        let host_call =
+            self.lua
+                .create_function(|_, (callback, args): (mlua::Function, MultiValue)| {
+                    let values: MultiValue = callback.call(args)?;
+                    Ok(values.into_iter().next().unwrap_or(Value::Nil))
+                })?;
+        self.lua.globals().set("host_call", host_call)?;
         self.lua.load(PRELUDE).exec()?;
         let path = package_path(script_base_dir, plugin_base_dir, wc_r2_dir, cwd);
         self.lua
@@ -167,6 +177,16 @@ impl Sandbox {
     pub fn do_string(&self, chunk: &str) -> mlua::Result<Vec<String>> {
         let values: MultiValue = self.lua.load(chunk).eval()?;
         Ok(values.into_iter().map(describe).collect::<Vec<_>>())
+    }
+
+    /// Lua 콜백을 호출하고 첫 반환값만 돌려준다(NLua 델리게이트 계약).
+    pub fn call_first_return<'lua>(
+        &'lua self,
+        callback: &mlua::Function<'lua>,
+        args: MultiValue<'lua>,
+    ) -> mlua::Result<Value<'lua>> {
+        let values: MultiValue = callback.call(args)?;
+        Ok(values.into_iter().next().unwrap_or(Value::Nil))
     }
 
     /// 호스트 컬렉션을 userdata로 만들어 반환한다(`each` 대상).
