@@ -1385,3 +1385,32 @@ C#: `-- spritegeometry <fixture.json>`.
 
 남는 것: 실제 GPU 드로우(텍스처 업로드/샘플러/블렌드 적용)는 wgpu 호스트
 의존이며, 여기서는 **호출 인자**만 검증했다.
+
+## CPU 스프라이트 샘플링/합성 (`SpriteBatch.Draw` 등가)
+
+`AnimationGraphics.Draw`가 만든 호출 인자를 **실제 픽셀**에 적용한다.
+
+- `extract_rect` — `AtlasRect` 만큼 소스에서 잘라낸다(경계 검사 포함)
+- `compose_sprite` — 목적 사각형으로 이동, 크기가 다르면 최근접 샘플링,
+  `flip_h`/`flip_v`, `frame.A0` 알파 스케일
+- 블렌드
+  - `NonPremultiplied_Hidef`: straight-alpha source-over
+    (`outC=(Cs*As+Cd*Ad*(255-As)/255)/outA`, `outA=As+Ad*(255-As)/255`,
+    각 나눗셈 `+d/2` 반올림)
+  - `Opaque`: 소스 복사
+  - 그 외(`MultiplyRGB` 등): `ComposeError::UnsupportedBlend`
+
+검증:
+- 입력은 실제 `Data/Character` 캔버스 **6개**의 RGBA 픽셀
+- 케이스는 AtlasRect 3종(전체/1·4분면/중앙) × flip 2조합 = **36개**
+  (블렌드는 케이스 인덱스로 교대, 알파 200/255 혼합)
+- C# 하네스가 같은 추출/합성을 120×120 투명 캔버스에 수행
+- `crates/wz-db/tests/sprite_compose_parity.rs` — 36개 SHA-256 완전 일치
+- 단위 테스트 5종(추출/불투명 flip/클리핑/알파/미지원 블렌드)
+
+fixture: `sprite_compose_input.json`, `sprite_compose.json`,
+CLI: `wz sprite-compose-fixture <Data> --dir Character --limit 6`,
+C#: `-- spritecompose <fixture.json>`.
+
+남는 것: 실제 GPU 텍스처 업로드/샘플러(선형 보간)·sRGB 변환은 호스트 의존이며,
+여기서는 최근접 샘플링 + straight-alpha 규칙만 검증했다.

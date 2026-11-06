@@ -3902,6 +3902,85 @@ return tostring(ok) .. '|' .. tostring(acc)
         Console.WriteLine(JsonSerializer.Serialize(new { rows, blends, sprite_call = spriteCall },
             new JsonSerializerOptions { WriteIndented = false }));
     }
+    // CPU 스프라이트 샘플링/합성: AtlasRect 추출 + flip + straight-alpha/opaque.
+    static void SpriteCompose(string fixturePath)
+    {
+        const int CanvasW = 120, CanvasH = 120;
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var canvases = doc.RootElement.GetProperty("canvases").EnumerateArray().Select(c => new
+        {
+            W = c.GetProperty("width").GetInt32(),
+            H = c.GetProperty("height").GetInt32(),
+            Rgba = Convert.FromBase64String(c.GetProperty("rgba_b64").GetString()!),
+        }).ToList();
+
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.GetProperty("cases").EnumerateArray())
+        {
+            int ci = item.GetProperty("canvas").GetInt32();
+            var src = canvases[ci];
+            var rect = item.GetProperty("rect");
+            int rx = rect[0].GetInt32(), ry = rect[1].GetInt32();
+            int rw = rect[2].GetInt32(), rh = rect[3].GetInt32();
+            var dest = item.GetProperty("dest");
+            int dx = dest[0].GetInt32(), dy = dest[1].GetInt32();
+            int dw = dest[2].GetInt32(), dh = dest[3].GetInt32();
+            bool flipH = item.GetProperty("flip_h").GetBoolean();
+            bool flipV = item.GetProperty("flip_v").GetBoolean();
+            int alpha = item.GetProperty("alpha").GetInt32();
+            bool opaque = item.GetProperty("blend").GetString() == "opaque";
+
+            // AtlasRect 추출
+            var sprite = new byte[rw * rh * 4];
+            for (int y = 0; y < rh; y++)
+                Array.Copy(src.Rgba, ((ry + y) * src.W + rx) * 4, sprite, y * rw * 4, rw * 4);
+
+            var canvas = new byte[CanvasW * CanvasH * 4];
+            for (int oy = 0; oy < dh; oy++)
+            {
+                int ty = dy + oy;
+                if (ty < 0 || ty >= CanvasH) continue;
+                int sy = oy * rh / dh;
+                if (flipV) sy = rh - 1 - sy;
+                for (int ox = 0; ox < dw; ox++)
+                {
+                    int tx = dx + ox;
+                    if (tx < 0 || tx >= CanvasW) continue;
+                    int sx = ox * rw / dw;
+                    if (flipH) sx = rw - 1 - sx;
+                    int si = (sy * rw + sx) * 4;
+                    var sp = new[] { sprite[si], sprite[si + 1], sprite[si + 2], sprite[si + 3] };
+                    if (sp[3] == 0) continue;
+                    int di = (ty * CanvasW + tx) * 4;
+                    if (opaque)
+                    {
+                        Array.Copy(sp, 0, canvas, di, 4);
+                        continue;
+                    }
+                    int sa = (sp[3] * alpha + 127) / 255;
+                    int da = canvas[di + 3];
+                    int inv = 255 - sa;
+                    int outA = Math.Min(255, sa + (da * inv + 127) / 255);
+                    for (int c = 0; c < 3; c++)
+                    {
+                        int num = sp[c] * sa + (canvas[di + c] * da * inv + 127) / 255;
+                        canvas[di + c] = (byte)Math.Min(255, (num + outA / 2) / Math.Max(1, outA));
+                    }
+                    canvas[di + 3] = (byte)outA;
+                }
+            }
+
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            rows.Add(new
+            {
+                canvas = ci,
+                rect = new[] { rx, ry, rw, rh },
+                sha256 = Convert.ToHexString(sha.ComputeHash(canvas)).ToLowerInvariant(),
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(new { canvas = new[] { CanvasW, CanvasH }, rows },
+            new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -3967,6 +4046,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "formatparse") FormatParse(args[1]);
         else if (args[0] == "luasyntax") LuaSyntax(args[1], args[2..]);
         else if (args[0] == "spritegeometry") SpriteGeometry(args[1]);
+        else if (args[0] == "spritecompose") SpriteCompose(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

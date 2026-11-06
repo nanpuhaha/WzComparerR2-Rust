@@ -620,3 +620,10 @@ Verified sprite-call geometry (`spritegeometry <fixture.json>`):
 Matches Rust `wz_db::draw_math` (`sprite_destination_scaled`, `frame_sprite_call`,
 `flipped_origin`, `rotation_bound`). Note `MathHelper.ToRadians(90)` keeps a
 tiny cosine, so rotated bounds round up by 1px — the original does the same.
+
+Verified CPU sprite compose (`spritecompose <fixture.json>`):
+```
+6 real Character canvases, 36 cases (3 atlas rects x 2 flips, opaque/alpha)
+```
+Atlas-rect extraction, flip, alpha scaling and straight-alpha/opaque blending
+match Rust `wz_db::sprite_compose` by SHA-256.

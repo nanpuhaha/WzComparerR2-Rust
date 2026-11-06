@@ -5797,3 +5797,142 @@ pub fn cmd_frame_geometry_fixture(
     );
     Ok(())
 }
+
+/// 실제 캔버스 픽셀 + 결정적 AtlasRect/dest/flip/blend 케이스.
+pub fn cmd_sprite_compose_fixture(
+    data_root: &Path,
+    dir: &str,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut files = Vec::new();
+    fn walk(d: &Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(d) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("wz") {
+                out.push(path);
+            }
+        }
+    }
+    walk(&data_root.join(dir), &mut files);
+    files.sort();
+
+    let mut canvases: Vec<serde_json::Value> = Vec::new();
+    for path in files {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let source = archive.source().clone();
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else { continue };
+            let Ok(image) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            fn walk_node(
+                node: &wz_core::image::Node,
+                path: &str,
+                source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+                canvases: &mut Vec<serde_json::Value>,
+                limit: usize,
+            ) {
+                if canvases.len() >= limit {
+                    return;
+                }
+                let here = format!("{path}/{}", node.name);
+                if let Some(wz_core::image::ImageValue::Png(png)) = &node.value {
+                    if png.width >= 16 && png.height >= 16 {
+                        let has_origin = png
+                            .sub_property
+                            .as_ref()
+                            .and_then(|sub| {
+                                sub.object_children()
+                                    .iter()
+                                    .find(|c| c.name.as_ref() == "origin")
+                            })
+                            .or_else(|| {
+                                node.object_children()
+                                    .iter()
+                                    .find(|c| c.name.as_ref() == "origin")
+                            })
+                            .is_some();
+                        if has_origin {
+                            if let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(png, source)
+                            {
+                                canvases.push(serde_json::json!({
+                                    "path": here,
+                                    "width": w,
+                                    "height": h,
+                                    "rgba_b64": b64_encode(&rgba),
+                                }));
+                            }
+                        }
+                    }
+                }
+                for child in node.object_children() {
+                    walk_node(child, &here, source, canvases, limit);
+                }
+            }
+            let name = entry.name.as_deref().unwrap_or("");
+            walk_node(&image, name, &source, &mut canvases, limit);
+            if canvases.len() >= limit {
+                break;
+            }
+        }
+        if canvases.len() >= limit {
+            break;
+        }
+    }
+
+    let mut cases = Vec::new();
+    for (index, canvas) in canvases.iter().enumerate() {
+        let w = canvas["width"].as_u64().unwrap() as i32;
+        let h = canvas["height"].as_u64().unwrap() as i32;
+        let rects = [
+            (0, 0, w, h),
+            (0, 0, (w / 2).max(1), (h / 2).max(1)),
+            (
+                (w / 4).max(0),
+                (h / 4).max(0),
+                (w / 2).max(1),
+                (h / 2).max(1),
+            ),
+        ];
+        for (ri, rect) in rects.into_iter().enumerate() {
+            for (fi, flip_h) in [false, true].into_iter().enumerate() {
+                let blend = if (ri + fi + index) % 2 == 0 {
+                    "non_premultiplied_hidef"
+                } else {
+                    "opaque"
+                };
+                cases.push(serde_json::json!({
+                    "canvas": index,
+                    "rect": [rect.0, rect.1, rect.2, rect.3],
+                    "dest": [20 + ri * 7, 15 + fi * 5, rect.2, rect.3],
+                    "flip_h": flip_h,
+                    "flip_v": fi == 1,
+                    "alpha": if blend == "opaque" { 255 } else { 200 },
+                    "blend": blend,
+                }));
+            }
+        }
+    }
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "canvases": canvases,
+            "cases": cases,
+        }))?
+    );
+    Ok(())
+}

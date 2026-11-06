@@ -352,6 +352,18 @@ enum Command {
         json: bool,
     },
 
+    /// 스프라이트 샘플링/합성 fixture 생성 (실제 Character 캔버스 픽셀)
+    SpriteComposeFixture {
+        /// Data 루트
+        data_root: PathBuf,
+        /// Data 기준 하위 디렉터리
+        #[arg(long, default_value = "Character")]
+        dir: String,
+        /// 캔버스 수
+        #[arg(long, default_value_t = 6)]
+        limit: usize,
+    },
+
     /// 스프라이트 호출 기하 fixture 생성 (실제 Mob/Character 캔버스)
     FrameGeometryFixture {
         /// Data 루트
@@ -1128,6 +1140,11 @@ fn main() {
             env,
             json,
         } => commands::cmd_lua_run(&script, base_dir.as_deref(), env.as_deref(), json),
+        Command::SpriteComposeFixture {
+            data_root,
+            dir,
+            limit,
+        } => commands::cmd_sprite_compose_fixture(&data_root, &dir, limit),
         Command::FrameGeometryFixture {
             data_root,
             dir,

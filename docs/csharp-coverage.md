@@ -291,6 +291,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   구간 최대 길이/재생 판정, 시간 오프셋 클램프, 스케일 클램프가 C# 참조
   구현과 완전 일치(7 타임라인, 30 프로브, 90 GIF, 6 구간, 4 최대길이,
   5 오프셋, 5 리셋, 8 스케일 케이스).
+- CPU 스프라이트 샘플링/합성: 실제 Character 캔버스 6개의 픽셀에 AtlasRect
+  추출·flip·알파 스케일·straight-alpha/opaque 블렌드를 적용해 36케이스
+  SHA-256이 C#과 완전 일치.
 - 스프라이트 호출 기하: `AnimationGraphics.Draw`/`ApplyFlip`/`ApplyRotation`의
   목적 사각형·origin·회전 경계·블렌드 상태를 실제 Character 캔버스 120개로
   C#과 완전 일치(위치 5×배율 4, flip 4조합, 회전 6각도, 블렌드 4종).

@@ -64,6 +64,7 @@ pub mod quest_tooltip;
 pub mod resolve;
 pub mod skill_summary;
 pub mod skill_tooltip;
+pub mod sprite_compose;
 pub mod text_layout;
 pub mod world_archive;
 
@@ -159,6 +160,7 @@ pub use quest_tooltip::{QuestReward, QuestTooltip};
 pub use resolve::{find_path, handle_uol, resolve_uol, resolve_uol_lossy, ResolveError};
 pub use skill_summary::parse_skill_summary;
 pub use skill_tooltip::SkillTooltip;
+pub use sprite_compose::{compose_sprite, extract_rect, ComposeError};
 pub use text_layout::{draw_plain_text, Align, LineRect};
 pub use world_archive::{
     mob_lines as world_archive_mob_lines, npc_lines as world_archive_npc_lines,
