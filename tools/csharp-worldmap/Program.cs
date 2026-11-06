@@ -1797,6 +1797,110 @@ class Program
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void QuestTooltips(string questWzPath)
+    {
+        var st = new Wz_Structure(); st.Load(questWzPath);
+        var rows = new List<object>();
+        foreach (Wz_Node n in st.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            if (!int.TryParse(n.Text.Replace(".img", ""), out int id)) continue;
+            if (!img.TryExtract()) continue;
+            var node = img.Node;
+            string name = null;
+            var desc = new string[] { null, null, null };
+            bool blocked = false;
+            string demandBase = null;
+            Wz_Node recommendNode = null;
+            var info = node.Nodes["QuestInfo"];
+            if (info != null)
+            {
+                name = info.Nodes["name"]?.Value?.ToString();
+                for (int i = 0; i < 3; i++) desc[i] = info.Nodes[i.ToString()]?.Value?.ToString();
+                blocked = Convert.ToInt32(info.Nodes["blocked"]?.Value ?? 0) == 1;
+                demandBase = info.Nodes["demand"]?.Nodes["base"]?.Value?.ToString();
+                recommendNode = info.Nodes["recommend"];
+            }
+            int lvmin = 0, lvmax = 0;
+            bool lvLimit = false;
+            int check1Npc = 0;
+            var check1Items = new List<object>();
+            var infoex = new List<object>();
+            var check = node.Nodes["Check"];
+            if (check?.Nodes["0"] is Wz_Node c0)
+            {
+                lvmin = Convert.ToInt32(c0.Nodes["lvmin"]?.Value ?? 0);
+                lvmax = Convert.ToInt32(c0.Nodes["lvmax"]?.Value ?? 0);
+            }
+            if (check?.Nodes["1"] is Wz_Node c1)
+            {
+                check1Npc = Convert.ToInt32(c1.Nodes["npc"]?.Value ?? 0);
+                foreach (var kind in new[] { "mob", "item" })
+                {
+                    var group = c1.Nodes[kind];
+                    if (group == null) continue;
+                    foreach (Wz_Node sub in group.Nodes)
+                    {
+                        check1Items.Add(new {
+                            key = kind + sub.Text,
+                            id = Convert.ToInt32(sub.Nodes["id"]?.Value ?? 0),
+                            count = Convert.ToInt32(sub.Nodes["count"]?.Value ?? 0),
+                        });
+                    }
+                }
+                var ie = c1.Nodes["infoex"];
+                if (ie != null)
+                {
+                    var seen = new HashSet<string>();
+                    foreach (Wz_Node sub in ie.Nodes)
+                    {
+                        var v = sub.Nodes["exVariable"]?.Value?.ToString() ?? "";
+                        if (!seen.Add(v)) continue;
+                        var cond = Convert.ToInt32(sub.Nodes["cond"]?.Value ?? 0);
+                        infoex.Add(new object[] { v, cond > 0 });
+                    }
+                }
+            }
+            if (recommendNode != null)
+            {
+                lvmin = Convert.ToInt32(recommendNode.Nodes["lvmin"]?.Value ?? 0);
+                var lvmaxNode = recommendNode.Nodes["lvmax"];
+                if (lvmaxNode != null)
+                {
+                    lvmax = Convert.ToInt32(lvmaxNode.Value);
+                    lvLimit = true;
+                }
+            }
+            bool recommendExcept = recommendNode?.Nodes["except"] != null;
+            var reward = WzComparerR2.CharaSim.QuestReward.CreateFromAct1Node(node.Nodes["Act"]?.Nodes["1"]);
+            rows.Add(new {
+                id,
+                name,
+                desc,
+                blocked,
+                lvmin,
+                lvmax,
+                lv_limit = lvLimit,
+                recommend_except = recommendExcept,
+                demand_base = demandBase,
+                check1_npc = check1Npc,
+                check1_items = check1Items,
+                check1_infoex = infoex,
+                act1_reward = new {
+                    exp = reward.Exp,
+                    meso = reward.Meso,
+                    pop = reward.Pop,
+                    pet_tameness = reward.PetTameness,
+                    attr_exps = reward.AttrExps.Select(kv => new object[] { kv.Key, kv.Value }).ToList(),
+                    items = reward.Items.Select(i => new { id = i.ID, count = i.Count, prob = i.Prob, job = i.Job, gender = i.Gender }).ToList(),
+                    sps = reward.Sps.Select(s => new { sp = s.SP, jobs = s.Jobs }).ToList(),
+                },
+            });
+        }
+        rows.Sort((a, b) => ((int)a.GetType().GetProperty("id").GetValue(a))
+            .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1835,6 +1939,7 @@ class Program
         else if (args[0] == "avatarstructure") AvatarStructure(int.Parse(args[1]));
         else if (args[0] == "avatarunpack") AvatarUnpack(int.Parse(args[1]), args[2]);
         else if (args[0] == "maptooltips") MapTooltips(args[1], args[2]);
+        else if (args[0] == "questtooltips") QuestTooltips(args[1]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

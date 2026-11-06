@@ -396,3 +396,9 @@ Verified Map tooltip text (`maptooltips <Map0_000.wz> <String_000.wz>`):
 87 maps
 ```
 street/map name/desc/bgm/mobs/npcs match Rust `wz map-tooltips` exactly.
+
+Verified Quest tooltip model (`questtooltips <QuestData_000.wz>`):
+```
+18964 quests
+```
+Info/Check/Act1 reward fields match Rust `wz quest-tooltips` exactly.

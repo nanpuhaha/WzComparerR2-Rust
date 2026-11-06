@@ -541,3 +541,19 @@ fixture: `crates/wz-openapi/tests/avatar_vectors.json`,
 `Map0_000.wz` **87개**가 C# 하네스와 완전 일치.
 fixture: `crates/wz-cli/tests/fixtures/map_tooltips.expected.json`,
 테스트: `map_tooltips_match_csharp`, CLI: `wz map-tooltips`.
+
+## Quest 툴팁 모델 (`QuestTooltipRenderer`)
+
+- `Quest.CreateFromNode`의 비트맵 제외 필드
+  - `QuestInfo`: name, desc 0/1/2, blocked, demand/base, recommend
+  - `Check/0`: lvmin/lvmax
+  - `Check/1`: npc, mob/item(`key=id:count`), infoex(`exVariable`:cond>0)
+  - `Act/1`: `QuestReward.CreateFromAct1Node`(exp/money/pop/pettameness,
+    성향 6종, item(id/count/prop/job/gender), sp)
+- 원본과 같이 recommend는 check0/act1 **이후** 적용해 lvmin/lvmax를 덮어쓰고
+  lvmax가 있으면 `LvLimit`을 세운다.
+
+`QuestData_000.wz` **18,964개**가 C# 하네스와 완전 일치.
+fixture: `crates/wz-cli/tests/fixtures/quest_tooltips.expected.json`,
+테스트: `quest_tooltips_match_csharp`, CLI: `wz quest-tooltips`.
+렌더러의 태그 치환/줄바꿈/GDI 레이아웃은 범위 밖이다.

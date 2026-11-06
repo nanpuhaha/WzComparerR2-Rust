@@ -417,6 +417,18 @@ enum Command {
         json: bool,
     },
 
+    /// Quest 툴팁 모델 (이름/설명/수요/보상)
+    QuestTooltips {
+        /// Quest/QuestData WZ 파일
+        wz: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+        /// 최대 행
+        #[arg(long, default_value_t = 20000)]
+        limit: usize,
+    },
+
     /// Map 툴팁 텍스트 (마을/맵 이름, 설명, BGM, 몹/NPC)
     MapTooltips {
         /// Map WZ 파일
@@ -876,6 +888,9 @@ fn main() {
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
+        Command::QuestTooltips { wz, json, limit } => {
+            commands::cmd_quest_tooltips(&wz, json, limit)
+        }
         Command::MapTooltips { wz, string, json } => commands::cmd_map_tooltips(&wz, &string, json),
         Command::AvatarUnpack {
             version,

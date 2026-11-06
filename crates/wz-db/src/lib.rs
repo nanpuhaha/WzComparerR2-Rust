@@ -49,6 +49,7 @@ pub mod npc_quote;
 pub mod particle;
 pub mod plugin_find;
 pub mod query;
+pub mod quest_tooltip;
 pub mod resolve;
 pub mod skill_summary;
 pub mod world_archive;
@@ -102,6 +103,7 @@ pub use query::{
     execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,
     QueryRule, QueryRuleKind, QueryValueType, StringComparisonMode, ValueRule, DEFAULT_MAX_RESULTS,
 };
+pub use quest_tooltip::{QuestReward, QuestTooltip};
 pub use resolve::{find_path, handle_uol, resolve_uol, resolve_uol_lossy, ResolveError};
 pub use skill_summary::parse_skill_summary;
 pub use world_archive::{

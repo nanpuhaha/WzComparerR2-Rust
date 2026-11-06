@@ -3179,3 +3179,210 @@ mod map_tooltip_tests {
         );
     }
 }
+
+pub fn cmd_quest_tooltips(
+    wz_path: &Path,
+    json: bool,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let mut rows = Vec::new();
+    for entry in &tree.root.entries {
+        if entry.node_type != 4 {
+            continue;
+        }
+        let Some(offset) = entry.offset else {
+            continue;
+        };
+        let Ok(mut node) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let Some(name) = entry.name.as_deref() else {
+            continue;
+        };
+        node.name = std::sync::Arc::from(name);
+        if let Some(quest) = wz_db::QuestTooltip::from_node(&node) {
+            rows.push(quest);
+        }
+    }
+    rows.sort_by_key(|q| q.id);
+    rows.truncate(limit);
+    if json {
+        let rows: Vec<_> = rows
+            .into_iter()
+            .map(|q| {
+                let lines = q.summary_lines();
+                serde_json::json!({
+                    "id": q.id,
+                    "name": q.name,
+                    "desc": q.desc,
+                    "blocked": q.blocked,
+                    "lvmin": q.lvmin,
+                    "lvmax": q.lvmax,
+                    "lv_limit": q.lv_limit,
+                    "recommend_except": q.recommend_except,
+                    "demand_base": q.demand_base,
+                    "check1_npc": q.check1_npc,
+                    "check1_items": q.check1_items,
+                    "check1_infoex": q.check1_infoex,
+                    "act1_reward": q.act1_reward,
+                    "lines": lines,
+                })
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for q in &rows {
+            println!("{} {}", q.id, q.name.clone().unwrap_or_default());
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod quest_tooltip_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn quest_tooltips_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let wz = root.join("Quest/QuestData/QuestData_000.wz");
+        if !wz.exists() {
+            return;
+        }
+        let archive = wz_core::WzArchive::open(&wz).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let mut quests = Vec::new();
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else { continue };
+            let Ok(mut node) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            let Some(name) = entry.name.as_deref() else {
+                continue;
+            };
+            node.name = std::sync::Arc::from(name);
+            if let Some(q) = wz_db::QuestTooltip::from_node(&node) {
+                quests.push(q);
+            }
+        }
+        quests.sort_by_key(|q| q.id);
+
+        let rec = char::from(0x1e);
+        let field = char::from(0x1f);
+        let canon = quests
+            .iter()
+            .map(|q| {
+                let aw = &q.act1_reward;
+                let reward = [
+                    aw.exp.to_string(),
+                    aw.meso.to_string(),
+                    aw.pop.to_string(),
+                    aw.pet_tameness.to_string(),
+                    aw.attr_exps
+                        .iter()
+                        .map(|(k, v)| format!("{k}:{v}"))
+                        .collect::<Vec<_>>()
+                        .join(";"),
+                    aw.items
+                        .iter()
+                        .map(|i| {
+                            format!(
+                                "{}:{}:{}:{}:{}",
+                                i.id,
+                                i.count,
+                                i.prob
+                                    .map(|p| p.to_string())
+                                    .unwrap_or_else(|| "None".into()),
+                                i.job,
+                                i.gender
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join(";"),
+                    aw.sps
+                        .iter()
+                        .map(|s| {
+                            format!(
+                                "{}:{}",
+                                s.sp,
+                                s.jobs
+                                    .iter()
+                                    .map(|j| j.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(",")
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join(";"),
+                ]
+                .join(&field.to_string());
+                [
+                    q.id.to_string(),
+                    q.name.clone().unwrap_or_default(),
+                    q.desc
+                        .iter()
+                        .map(|d| d.clone().unwrap_or_default())
+                        .collect::<Vec<_>>()
+                        .join("|"),
+                    if q.blocked {
+                        "1".into()
+                    } else {
+                        "0".to_string()
+                    },
+                    q.lvmin.to_string(),
+                    q.lvmax.to_string(),
+                    if q.lv_limit {
+                        "1".into()
+                    } else {
+                        "0".to_string()
+                    },
+                    if q.recommend_except {
+                        "1".into()
+                    } else {
+                        "0".to_string()
+                    },
+                    q.demand_base.clone().unwrap_or_default(),
+                    q.check1_npc.to_string(),
+                    q.check1_items
+                        .iter()
+                        .map(|i| format!("{}:{}:{}", i.key, i.id, i.count))
+                        .collect::<Vec<_>>()
+                        .join(";"),
+                    q.check1_infoex
+                        .iter()
+                        .map(|(k, v)| format!("{k}:{}", if *v { 1 } else { 0 }))
+                        .collect::<Vec<_>>()
+                        .join(";"),
+                    reward,
+                ]
+                .join(&rec.to_string())
+            })
+            .collect::<Vec<_>>()
+            .join(&rec.to_string());
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/quest_tooltips.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(quests.len() as u64, expected["rows"].as_u64().unwrap());
+        assert_eq!(
+            sha256_hex(canon.as_bytes()),
+            expected["sha256"].as_str().unwrap()
+        );
+    }
+}
