@@ -1787,3 +1787,32 @@ C#: `-- gearpropsigns <fixture.json>`.
 
 fixture: `gear_prop_cases.json`, `gear_prop_pairs_expected.json`,
 C#: `-- gearproppairs <fixture.json>`.
+
+## 스킬 점선 타일 기하 (`RenderHelper.DrawV6SkillDotline`)
+
+원본은 `TextureBrush(picCenter)`를 `(x1, y)`로 이동한 뒤
+`FillRectangle(x1, y, x2 - x1, picCenter.Height)`를 채운다. 즉 점선은 `x1`에서
+비트맵 폭 간격으로 타일링되고 오른쪽은 `x2`에서 잘린다.
+
+`skill_dotline_tiles(x1, x2, y, dot_width, dot_height)`가 타일 사각형 목록을
+돌려준다. 점 비트맵은 GDI+ 리소스라 폭/높이는 호출자가 준다(이번 검증은
+`4×1`, `4×2`, `3×2` 등 fixture 값).
+
+검증:
+- 케이스 7개(부분 타일, 정확히 나누어떨어짐, `x2 <= x1`, 폭/높이 0, 음수 x1)
+- C# 참조 구현(타일링 전사)과 **모든 사각형 완전 일치**
+- 단위 테스트 3종
+
+fixture: `dotline_cases.json`, `dotline_expected.json`,
+C#: `-- dotline <fixture.json>`.
+
+한계: 브러시 자체(비트맵 픽셀·보간)는 GDI+ 의존이라 미이식이다.
+
+## 아이템 분류명 (`GetItemCategoryName`)
+
+`item_category_name(kind)` — `Consume`/`Install`/`Etc`/`Cash`/`Pet` →
+소비/설치/기타/캐시/펫, 그 외(`Unknown`)는 `None`.
+
+검증: C# 하네스가 **실제 `ItemStringHelper.GetItemCategoryName`** 을
+`Item.ItemType` 6개 값에 대해 호출해 완전 일치
+(`item_category_cases.json`, `item_category_expected.json`).

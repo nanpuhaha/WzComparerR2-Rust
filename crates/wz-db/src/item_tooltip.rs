@@ -142,6 +142,21 @@ pub fn item_attribute_lines(item: &Node, item_id: i32) -> Vec<String> {
     tags
 }
 
+/// `ItemStringHelper.GetItemCategoryName` — 아이템 분류 한글명.
+///
+/// 원본 `Item.ItemType` 이름을 그대로 받는다(`Consume`, `Install`, `Etc`,
+/// `Cash`, `Pet`). 그 외는 `None`.
+pub fn item_category_name(kind: &str) -> Option<&'static str> {
+    Some(match kind {
+        "Consume" => "소비",
+        "Install" => "설치",
+        "Etc" => "기타",
+        "Cash" => "캐시",
+        "Pet" => "펫",
+        _ => return None,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

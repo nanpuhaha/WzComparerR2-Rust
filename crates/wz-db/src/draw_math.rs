@@ -473,3 +473,59 @@ mod frame_geometry_tests {
         assert_eq!(origin, (13, 20));
     }
 }
+
+/// `RenderHelper.DrawV6SkillDotline`의 브러시 타일 사각형.
+///
+/// 원본은 `TextureBrush(picCenter)`를 `(x1, y)`로 평행이동한 뒤
+/// `FillRectangle(x1, y, x2 - x1, picCenter.Height)`를 채운다. 즉 점선은
+/// `x1`에서 시작해 비트맵 폭 간격으로 타일링되고, 오른쪽 끝은 `x2`에서 잘린다.
+///
+/// 비트맵(`dot_width`/`dot_height`)은 GDI+ 리소스라 호출자가 제공한다.
+pub fn skill_dotline_tiles(
+    x1: i32,
+    x2: i32,
+    y: i32,
+    dot_width: i32,
+    dot_height: i32,
+) -> Vec<(i32, i32, i32, i32)> {
+    if x2 <= x1 || dot_width <= 0 || dot_height <= 0 {
+        return Vec::new();
+    }
+    let mut tiles = Vec::new();
+    let mut x = x1;
+    while x < x2 {
+        let width = (x2 - x).min(dot_width);
+        tiles.push((x, y, width, dot_height));
+        x += dot_width;
+    }
+    tiles
+}
+
+#[cfg(test)]
+mod dotline_tests {
+    use super::*;
+
+    #[test]
+    fn tiles_from_x1_and_clip_at_x2() {
+        assert_eq!(
+            skill_dotline_tiles(12, 22, 5, 4, 1),
+            vec![(12, 5, 4, 1), (16, 5, 4, 1), (20, 5, 2, 1)]
+        );
+    }
+
+    #[test]
+    fn exact_multiple_has_no_partial_tile() {
+        assert_eq!(
+            skill_dotline_tiles(0, 8, 0, 4, 2),
+            vec![(0, 0, 4, 2), (4, 0, 4, 2)]
+        );
+    }
+
+    #[test]
+    fn empty_or_invalid_inputs_produce_nothing() {
+        assert!(skill_dotline_tiles(10, 10, 0, 4, 1).is_empty());
+        assert!(skill_dotline_tiles(12, 11, 0, 4, 1).is_empty());
+        assert!(skill_dotline_tiles(0, 10, 0, 0, 1).is_empty());
+        assert!(skill_dotline_tiles(0, 10, 0, 4, 0).is_empty());
+    }
+}

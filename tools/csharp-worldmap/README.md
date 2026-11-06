@@ -684,3 +684,12 @@ Verified gear prop 2-column pairs (`gearproppairs <fixture.json>`):
 Calls the real `ItemStringHelper.GetGearPropString22`; matches Rust
 `gear_prop_pair` including null label/value elements and the `default` returning
 a 2-null array (not null).
+
+Verified dotline tiles (`dotline <fixture.json>`) and item categories
+(`itemcategory <fixture.json>`):
+```
+7 dotline cases (partial tiles, exact multiples, invalid inputs)
+6 Item.ItemType values via real GetItemCategoryName
+```
+Dotline is a transcription of the GDI+ TextureBrush tiling (bitmap itself is a
+GDI+ resource); categories call the real method.

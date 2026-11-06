@@ -277,6 +277,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   옮기고 실제 장비 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
 - `GetGearPropString` signFlag: 0/1/2 부호 규칙(음수에서 `+-5`)을 옮기고 실제
   장비 속성 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
+- 스킬 점선 타일 기하: `DrawV6SkillDotline`의 브러시 타일/clip 규칙을 옮기고
+  7케이스에서 C# 전사 구현과 일치(점 비트맵 자체는 GDI+ 리소스라 제외).
+- 아이템 분류명: `GetItemCategoryName`을 실제 C# 호출과 6값 비교.
 - ItemTooltip 공통 속성: `GetItemPropString` 11종과 상단 속성 순서/특례를
   옮기고, 실제 아이템 속성 303케이스에서 실제 C# 메서드 호출과 완전 일치.
   `DrawV6SkillDotline`은 리소스 비트맵/GDI+ 브러시 의존이라 미이식.

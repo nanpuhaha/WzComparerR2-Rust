@@ -4426,6 +4426,43 @@ return tostring(ok) .. '|' .. tostring(acc)
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // `RenderHelper.DrawV6SkillDotline`의 브러시 타일 기하(전사 구현).
+    static void Dotline(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            int x1 = item.GetProperty("x1").GetInt32();
+            int x2 = item.GetProperty("x2").GetInt32();
+            int y = item.GetProperty("y").GetInt32();
+            int w = item.GetProperty("dot_width").GetInt32();
+            int h = item.GetProperty("dot_height").GetInt32();
+            var tiles = new List<object>();
+            if (x2 > x1 && w > 0 && h > 0)
+            {
+                for (int x = x1; x < x2; x += w)
+                    tiles.Add(new { x, y, width = Math.Min(w, x2 - x), height = h });
+            }
+            rows.Add(new { x1, x2, y, dot_width = w, dot_height = h, tiles });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
+
+    // 실제 `ItemStringHelper.GetItemCategoryName` 실행.
+    static void ItemCategory(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            string name = item.GetString()!;
+            var type = (WzComparerR2.CharaSim.Item.ItemType)Enum.Parse(
+                typeof(WzComparerR2.CharaSim.Item.ItemType), name);
+            rows.Add(new { name, text = WzComparerR2.CharaSim.ItemStringHelper.GetItemCategoryName(type) });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4451,6 +4488,8 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "itemtooltips") ItemTooltips(args[1], args[2], args[3]);
         else if (args[0] == "gearpropsigns") GearPropSigns(args[1]);
         else if (args[0] == "gearproppairs") GearPropPairs(args[1]);
+        else if (args[0] == "dotline") Dotline(args[1]);
+        else if (args[0] == "itemcategory") ItemCategory(args[1]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));
