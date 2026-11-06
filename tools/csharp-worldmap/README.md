@@ -503,3 +503,12 @@ context_created=true; Fixture.AlphaPlugin, Fixture.DerivedPlugin
 `PluginContext` is constructed with a null provider, so `LoadPlugin`'s
 `Activator.CreateInstance(type, context)` path runs on macOS. Metadata matches
 Rust `wz_db::plugin_entries`.
+
+Verified DB2 BIN layout (`db2bin`):
+```
+3 rows (가/나/다) x 2 columns -> base64 bytes
+```
+Byte-identical to Rust `Db2BinGrid::write_bin`; `read_bin` reproduces
+`LoadBin`'s dropped last row. PNG payload length uses the exact byte count
+(the original writes `MemoryStream.GetBuffer()` capacity, which is
+platform-dependent).

@@ -892,3 +892,52 @@ C#: `-- pluginactivate <plugin.dll> <PluginBase.dll>`.
 한계: 실제 엔드포인트 호출은 Nexon API 키가 필요하다. HTTPS 전송은
 `Transport` 구현 주입으로 대체하며, 저장소에는 목 서버 검증용 `TcpTransport`만
 있다(순수 Rust 원칙상 TLS 클라이언트를 새로 들이지 않았다).
+
+## DB2 BIN 그리드 컨테이너 (`DataGrid.SaveBin`/`LoadBin`)
+
+형식(`BinaryWriter` 기준, `int`는 little-endian, `string`은 7비트 길이 + UTF-8):
+
+```
+int32 columns
+int32 rows
+rows × columns:
+  string tag        // "str" | "Bitmap"
+  str    -> string value
+  Bitmap -> int32 length, byte[length]
+```
+
+확인한 원본 특이점:
+- `SaveBin`은 `string`/`Bitmap` 셀만 쓰는데 `LoadBin`은 모든 셀의 태그를
+  읽는다 → 다른 타입이 섞이면 스트림이 어긋난다.
+- `LoadBin`의 루프가 `i <= m - 2`라서 **마지막 행을 버린다**.
+- PNG는 `MemoryStream.GetBuffer()`(용량)로 쓰여 0 패딩이 붙는다. 용량은
+  GDI+가 스트림에 쓰는 청크 크기에 따라 달라진다(측정: 같은 4097바이트도
+  1회 쓰기 4097, 1KB 청크 8192). 재현 불가능한 플랫폼 의존이라 Rust는
+  정확한 페이로드 길이를 쓴다(C# 하네스도 동일하게 맞춤).
+
+검증:
+- `crates/wz-db/tests/db2_bin_parity.rs` 3종
+  - `write_bin()` 결과가 C# `BinaryWriter` 산출 바이트와 **base64까지 동일**
+  - `read_bin()`이 C# `LoadBin`과 같은 2행(마지막 행 제외)을 복원
+  - `read_bin_all()`은 선언된 3행을 모두 복원
+- 단위 테스트 4종(헤더/문자열 7비트/비트맵 길이/오류)
+- C# 하네스: `-- db2bin`
+
+## DB2 Familiar 그리드 (`LoadFamiliar`)
+
+`Character/Familiar`가 0개라 실데이터 비교는 불가하고, 노드 규칙만 옮겼다.
+
+- `ID` = 이미지 이름(.img 제거)
+- `MobID` = `info/MobID`(7자리 패딩) → 없으면
+  `Etc/FamiliarInfo.img/<ID>/mob`(기본 `100100`) → 둘 다 없으면 **이전 값 유지**
+  (원본은 `MobID`를 루프 밖에서 선언한다)
+- `SkillID` = `info/skill/id`, 이름/설명은
+  `String/FamiliarSkill.img/skill/<id>` 우선, 없으면 `String/Familiar.img/skill/<id>`
+  → `"{skillID}:{name}"`
+- `CardID` = `FamiliarInfo.img/<ID>/consume`(있으면) 아니면 `info/monsterCardID`
+- 카드 아이콘 = `Item/Consume/0287.img/0<CardID>/info/icon` 또는
+  `0238.img/0<CardID>/info/iconRaw`
+- `CardName` = `String/Consume.img/<CardID>/name`
+
+검증: 합성 노드 fixture 단위 테스트 2종
+(`info/MobID` 우선순위, FamiliarInfo 기본값, 이전 MobID 유지).

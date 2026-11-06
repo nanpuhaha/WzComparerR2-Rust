@@ -1,0 +1,16 @@
+{
+  "columns": 2,
+  "declared_rows": 3,
+  "bin_base64": "AgAAAAMAAAADc3RyA\u002BqwgAZCaXRtYXADAAAAAQIDA3N0cgPrgpgGQml0bWFwLAEAAP///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////wNzdHID64ukBkJpdG1hcAAAAAA=",
+  "parsed_rows": [
+    [
+      "\uAC00",
+      "010203"
+    ],
+    [
+      "\uB098",
+      "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    ]
+  ],
+  "parsed_row_count": 2
+}

@@ -91,7 +91,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
    미니맵 2차 패스를 구현해 **17,469행**(4,382 / 1,946 / 11,141)을 C#과
    비교했고, Mob 탭 3분할(선행 숫자 8/9 제외·8·9)로 **3,487행**
    (742 / 1,160 / 1,585)을 비교했다.
-   남은 탭은 Familiar(`Character/Familiar` 0개)·BIN(`.BIN` 0개)뿐이다.
+   Familiar는 `Character/Familiar`가 0개라 행 규칙만 구현하고 합성
+   fixture로 검증했고, BIN 그리드 컨테이너(`SaveBin`/`LoadBin`)는 C#
+   `BinaryWriter`/`BinaryReader`와 **바이트 단위로 일치**한다(`.BIN` 파일은
+   0개).
 6. `WzComparerR2.Common/Controls` (2,138 LOC) — GDI/SharpDX 비의존 순수 로직을
    `wz-db::common_controls`로 옮겼다. `FrameAnimator.CreateTimeline`/
    `GetProcessFromTimeline`, `AnimationRecoder.GetGifTimeLine`/`GetMaxLength`,

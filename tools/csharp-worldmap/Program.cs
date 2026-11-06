@@ -2817,6 +2817,61 @@ class Program
             .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    // 원본 `DataGrid.SaveBin`/`LoadBin`의 직렬화 루프를 그대로 옮기되,
+    // WinForms `DataGridView` 대신 행/셀 값을 직접 쓴다. BinaryWriter/Reader는
+    // 실제 .NET 구현을 쓴다. PNG는 `MemoryStream.GetBuffer()`(용량) 대신
+    // 정확한 길이를 써서 플랫폼 의존 패딩을 제거한다(docs 참고).
+    static void Db2Bin()
+    {
+        var rows = new List<(string id, byte[] png)>
+        {
+            ("가", new byte[] { 1, 2, 3 }),
+            ("나", Enumerable.Repeat((byte)0xFF, 300).ToArray()),
+            ("다", Array.Empty<byte>()),
+        };
+        var ms = new MemoryStream();
+        var writer = new BinaryWriter(ms, System.Text.Encoding.UTF8, true);
+        writer.Write(2);
+        writer.Write(rows.Count);
+        foreach (var (id, png) in rows)
+        {
+            writer.Write("str");
+            writer.Write(id);
+            writer.Write("Bitmap");
+            writer.Write(png.Length);
+            writer.Write(png);
+        }
+        writer.Flush();
+        var bytes = ms.ToArray();
+
+        var reader = new BinaryReader(new MemoryStream(bytes), System.Text.Encoding.UTF8, true);
+        int n = reader.ReadInt32();
+        int m = reader.ReadInt32();
+        var parsed = new List<object>();
+        for (int i = 0; i <= m - 2; i++)
+        {
+            var cells = new List<object>();
+            for (int j = 0; j <= n - 1; j++)
+            {
+                if (reader.ReadString() == "str")
+                    cells.Add(reader.ReadString());
+                else
+                {
+                    var len = reader.ReadInt32();
+                    cells.Add(Convert.ToHexString(reader.ReadBytes(len)).ToLowerInvariant());
+                }
+            }
+            parsed.Add(cells);
+        }
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            columns = 2,
+            declared_rows = rows.Count,
+            bin_base64 = Convert.ToBase64String(bytes),
+            parsed_rows = parsed,
+            parsed_row_count = parsed.Count,
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2871,6 +2926,7 @@ class Program
         else if (args[0] == "luapath") LuaPath(args[1], args[2], args[3], args[4]);
         else if (args[0] == "pluginactivate") PluginActivate(args[1], args[2]);
         else if (args[0] == "itemcosmetic") ItemCosmeticEulo(args[1], args[2]);
+        else if (args[0] == "db2bin") Db2Bin();
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

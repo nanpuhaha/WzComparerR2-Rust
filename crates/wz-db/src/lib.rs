@@ -29,8 +29,10 @@ pub mod common_controls;
 pub mod cosmetic_eulo;
 pub mod damage_skin;
 pub mod db2;
+pub mod db2_bin;
 pub mod db2_characters;
 pub mod db2_damage_skins;
+pub mod db2_familiar;
 pub mod db2_item_tabs;
 pub mod db2_items;
 pub mod db2_maps;
@@ -77,11 +79,13 @@ pub use cosmetic_eulo::{
 };
 pub use damage_skin::{DamageSkin, DamageSkinSection};
 pub use db2::{image_rows as db2_image_rows, Db2Row};
+pub use db2_bin::{BinCell, BinError, Db2BinGrid};
 pub use db2_characters::{
     character_grid_rows as db2_character_grid_rows,
     character_grid_rows_for as db2_character_grid_rows_for, Db2CharacterRow,
 };
 pub use db2_damage_skins::{damage_skin_rows as db2_damage_skin_rows, Db2DamageSkinRow};
+pub use db2_familiar::{familiar_rows, FamiliarLookups, FamiliarRow};
 pub use db2_item_tabs::{
     item_tab_rows as db2_item_tab_rows, item_tab_tooltips as db2_item_tab_tooltips,
     load_string_image as db2_item_tab_string_image, Db2ItemTabRow,

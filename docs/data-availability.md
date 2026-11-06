@@ -28,8 +28,8 @@ weather: 원본 C# 소스에 weather 구현 없음
 |---|---|---|
 | Skill `common`/`level` 수치 치환 | skill 7,055개 중 `common` 0, `level` 3, `req` 0, `reqLev` 0 | 데이터 없음. resolver 실패 경로 20,629행은 C#과 일치 |
 | WorldMap `QuestLimit`/`Fog` | WorldMap 168 이미지에 노드 0개 | 데이터 없음 (fixture 단위 테스트만 존재) |
-| Familiar | `Character/Familiar`, `Etc/FamiliarInfo.img` 파일 0개 | 데이터 없음 |
-| BIN | `.BIN` 파일 0개 | 데이터 없음 (포맷 파서만 구현) |
+| Familiar | `Character/Familiar`, `Etc/FamiliarInfo.img` 파일 0개 | 데이터 없음 (행 모델은 합성 fixture로만 검증) |
+| BIN | `.BIN` 파일 0개 | 데이터 없음. 포맷 자체는 C# `BinaryWriter`와 바이트 단위 일치 검증 |
 | weather | 원본 `WzComparerR2`, `WzComparerR2.Common`, `WzComparerR2.WzLib`에 `weather` 문자열 없음 | 원본 기능 아님 |
 | MobTooltip 스탯 | Mob 3,524 이미지 중 info 227개, `level`/`elemAttr` 0개 | 스탯/속성 라인은 데이터 없음. 이름/ID는 StringMob으로 검증 가능 |
 | RecipeTooltip | `Recipe.img` 0개 | 데이터 없음 |
