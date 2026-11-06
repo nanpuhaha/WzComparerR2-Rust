@@ -500,6 +500,127 @@ pub fn render_gear_tooltip(
     )
 }
 
+/// `GetGearPropString22(propType, value, signFlag)` — `(라벨, 값)` 2열 포맷.
+///
+/// 원본은 `string[2]`를 돌려주며 각 원소가 `null`일 수 있고, 지원하지 않는
+/// 타입은 배열 자체가 `null`이다. 그래서 `Option<(Option<String>, Option<String>)>`로
+/// 표현한다. 부호 규칙은 [`gear_prop_line_with_sign`]과 같다.
+pub fn gear_prop_pair(
+    key: &str,
+    value: i64,
+    sign_flag: i32,
+) -> Option<(Option<String>, Option<String>)> {
+    let sign = match sign_flag {
+        1 => "+",
+        2 => "",
+        _ => {
+            if value > 0 {
+                "+"
+            } else {
+                ""
+            }
+        }
+    };
+    let pair = |label: String, val: String| (Some(label), Some(val));
+    let label_only = |label: String| (Some(label), None);
+    let plain = |label: &str| pair(label.to_string(), format!("{sign}{value}"));
+    let percent = |label: &str| pair(label.to_string(), format!("{sign}{value}%"));
+    let value_zero_none = |label: &str| -> (Option<String>, Option<String>) {
+        if value == 0 {
+            (None, None)
+        } else {
+            label_only(label.to_string())
+        }
+    };
+    Some(match key {
+        "incSTR" => plain("STR"),
+        "incSTRr" => percent("STR"),
+        "incDEX" => plain("DEX"),
+        "incDEXr" => percent("DEX"),
+        "incINT" => plain("INT"),
+        "incINTr" => percent("INT"),
+        "incLUK" => plain("LUK"),
+        "incLUKr" => percent("LUK"),
+        "incAllStat" => plain("올스탯"),
+        "statR" => percent("올스탯"),
+        "incMHP" => plain("최대 HP"),
+        "incMHPr" => percent("최대 HP"),
+        "incMMP" => plain("최대 MP"),
+        "incMMPr" => percent("최대 MP"),
+        "incMDF" => plain("최대 DF"),
+        "incPAD" | "incWAT" => plain("공격력"),
+        "incPADr" => percent("공격력"),
+        "incMAD" => plain("마력"),
+        "incMADr" => percent("마력"),
+        "incPDD" => plain("방어력"),
+        "incPDDr" => percent("방어력"),
+        "incSpeed" => plain("이동속도"),
+        "incJump" => plain("점프력"),
+        "incCraft" => plain("손재주"),
+        "damR" | "incDAMr" => percent("데미지"),
+        "incCr" | "incCRT" => percent("크리티컬 확률"),
+        "incCDr" | "incCRD" => percent("크리티컬 데미지"),
+        "incEXPr" => percent("추가 경험치"),
+        "knockback" => label_only(format!("직접 타격시 {value}%의 확률로 넉백")),
+        "incPQEXPr" => label_only(format!("파티퀘스트 경험치 {value}% 추가")),
+        "incBDR" | "bdR" => pair("보스 몬스터 데미지".into(), format!("+{value}%")),
+        "incIMDR" | "imdR" => pair("몬스터 방어율 무시".into(), format!("+{value}%")),
+        "nbdR" => pair("일반 몬스터 데미지".into(), format!("+{value}%")),
+        "incARC" => plain("ARC"),
+        "incAUT" => plain("AUT"),
+        "incCHUC" => plain("스타포스"),
+        "tradeBlock" => value_zero_none("#$r교환 불가#"),
+        "accountSharable" => value_zero_none("#$r월드 내 나의 캐릭터 간 이동만 가능#"),
+        "sharableOnce" => {
+            value_zero_none("#$r월드 내 나의 캐릭터 간 1회 이동 가능 (이동 후 교환불가)#")
+        }
+        "only" => value_zero_none("#$r중복 소지 불가#"),
+        "onlyEquip" => value_zero_none("#$r중복 장착 불가#"),
+        "equipTradeBlock" => value_zero_none("#$r장착 시 교환 불가#"),
+        "notExtend" => value_zero_none(" (연장 불가)"),
+        "accountSharableAfterExchange" => {
+            value_zero_none("#$r1회 교환 가능 (거래 후 월드 내 나의 캐릭터 간 이동만 가능)#")
+        }
+        "timeLimited" => value_zero_none("유효 기간"),
+        "abilityTimeLimited" => value_zero_none("능력치 유효 기간"),
+        "noLookChange" => value_zero_none("#$r훈장 신비의 모루 사용 불가#"),
+        "reissueBan" => value_zero_none("#$r재발급 불가#"),
+        "noPrism" => value_zero_none("#$r염색하기 불가#"),
+        "mintable" => value_zero_none("#$r민팅 가능#"),
+        "tradeAvailable" => match value {
+            1 => {
+                label_only("#$g카르마의 가위 또는 실버 카르마의 가위 사용 시 1회 교환 가능#".into())
+            }
+            2 => label_only("#$g플래티넘 카르마의 가위 사용 시 1회 교환 가능#".into()),
+            _ => return Some((None, None)),
+        },
+        "accountShareTag" => match value {
+            1 => label_only(
+                "#$g쉐어 네임 텍을 사용하면 월드 내 나의 캐릭터 간 1회 이동할 수 있습니다.#".into(),
+            ),
+            _ => return Some((None, None)),
+        },
+        "superiorEqp" => value_zero_none("아이템 강화 성공시 더욱 높은 효과를 받을 수 있습니다."),
+        "incAllStat_incMHP25" => label_only(format!(
+            "올스탯  {sign}{value}, 최대 HP  {sign}{}",
+            value * 25
+        )),
+        "incAllStat_incMHP50_incMMP50" => label_only(format!(
+            "올스탯  {sign}{value}, 최대 HP / 최대 MP  {sign}{}",
+            value * 50
+        )),
+        "incMHP_incMMP" => label_only(format!("최대 HP / 최대 MP  {sign}{value}")),
+        "incMHPr_incMMPr" => label_only(format!("최대 HP / 최대 MP  {sign}{value}%")),
+        "incPAD_incMAD" | "incAD" => label_only(format!("공격력 / 마력  {sign} {value}")),
+        "incPDD_incMDD" => label_only(format!("방어력  {sign}{value}")),
+        "Etuc" => label_only(format!("#$d익셉셔널 : 없음 (최대 {value}회)#")),
+        "CuttableCount" => label_only(format!(" #$r(가위 사용 잔여 횟수：{value} / {value})#")),
+        // 원본 22 버전의 `default:`는 null이 아니라 **null 원소 2개짜리 배열**을
+        // 돌려준다(GearPropType이지만 표시 문자열이 없는 속성).
+        _ => return Some((None, None)),
+    })
+}
+
 /// 원본 `ItemStringHelper.GetItemPropString` — 아이템 공통 속성 문자열.
 ///
 /// `GetGearPropString`을 쓰는 항목은 [`gear_prop_line`]에 위임한다.

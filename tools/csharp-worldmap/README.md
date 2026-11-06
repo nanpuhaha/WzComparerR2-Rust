@@ -676,3 +676,11 @@ Verified gear prop sign flags (`gearpropsigns <fixture.json>`):
 ```
 Calls the real `ItemStringHelper.GetGearPropString(propType, value, signFlag)`;
 matches Rust `gear_prop_line_with_sign`.
+
+Verified gear prop 2-column pairs (`gearproppairs <fixture.json>`):
+```
+54 cases x 3 signFlags = 162 rows
+```
+Calls the real `ItemStringHelper.GetGearPropString22`; matches Rust
+`gear_prop_pair` including null label/value elements and the `default` returning
+a 2-null array (not null).

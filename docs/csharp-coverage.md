@@ -273,6 +273,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - ItemTooltip 오프스크린 렌더: 파서→배치→아이콘 픽셀 연산→게임 폰트를 합쳐
   300×153 RGBA를 만들고 SHA-256을 fixture로 고정. GUI 인스펙터가 이 경로를
   사용한다. GDI+ 감마/힌팅과의 픽셀 동일성은 주장하지 않는다.
+- `GetGearPropString22`: 2열 라벨/값 포맷(중첩 switch·null 원소·단일 라벨 케이스)을
+  옮기고 실제 장비 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
 - `GetGearPropString` signFlag: 0/1/2 부호 규칙(음수에서 `+-5`)을 옮기고 실제
   장비 속성 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
 - ItemTooltip 공통 속성: `GetItemPropString` 11종과 상단 속성 순서/특례를

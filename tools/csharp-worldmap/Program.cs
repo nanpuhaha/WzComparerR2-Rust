@@ -4396,6 +4396,36 @@ return tostring(ok) .. '|' .. tostring(acc)
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // `GetGearPropString22(propType, value, signFlag)` — (라벨, 값) 2열.
+    static void GearPropPairs(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            string key = item.GetProperty("key").GetString()!;
+            long value = item.GetProperty("value").GetInt64();
+            if (!Enum.TryParse<WzComparerR2.CharaSim.GearPropType>(key, out var propType))
+            {
+                rows.Add(new { key, value, flag = -1, label = (string)null!, value_text = (string)null!, error = "unknown" });
+                continue;
+            }
+            for (int flag = 0; flag <= 2; flag++)
+            {
+                var pair = WzComparerR2.CharaSim.ItemStringHelper.GetGearPropString22(propType, value, flag);
+                rows.Add(new
+                {
+                    key,
+                    value,
+                    flag,
+                    pair_null = pair == null,
+                    label = pair?[0],
+                    value_text = pair?[1],
+                });
+            }
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4420,6 +4450,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "itemtab") ItemTab(args[1], args[2], args[3]);
         else if (args[0] == "itemtooltips") ItemTooltips(args[1], args[2], args[3]);
         else if (args[0] == "gearpropsigns") GearPropSigns(args[1]);
+        else if (args[0] == "gearproppairs") GearPropPairs(args[1]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));

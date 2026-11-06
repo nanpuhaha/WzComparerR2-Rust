@@ -1762,3 +1762,28 @@ fixture: `gear_prop_cases.json`, `gear_prop_expected.json`,
 C#: `-- gearpropsigns <fixture.json>`.
 
 남는 것: `GetGearPropString22`(2열 포맷)는 별도 함수라 미이식이다.
+
+## `GetGearPropString22` (2열 라벨/값)
+
+`(라벨, 값)` 2열 포맷을 `gear_prop_pair(key, value, sign_flag)`로 옮겼다.
+
+- 반환은 `Option<(Option<String>, Option<String>)>`
+  - 각 원소는 `null` 가능(예: `only`는 값이 0이면 라벨 null)
+  - 원본 22 버전의 `default:`(GearPropType이지만 표시 문자열 없음, 예 `cash`)는
+    **null 배열이 아니라 null 원소 2개짜리 배열**이므로 `Some((None, None))`
+- `signFlag` 0/1/2 규칙은 `GetGearPropString`과 동일
+- `attackSpeed`는 원본에서 **주석 처리**되어 있어 포함하지 않았다
+- `tradeAvailable`/`accountShareTag`는 값별 중첩 switch를 그대로 옮겨
+  1/2 이외 값은 `(None, None)`
+- 단일 문자열 케이스(`knockback`, `Etuc`, `CuttableCount`, `inc*_inc*` 조합 등)는
+  라벨만 채우고 값은 null
+
+검증:
+- 입력은 실제 장비 (키, 값) 54케이스 × signFlag 3 = **162행**
+- C# 하네스가 **실제 `ItemStringHelper.GetGearPropString22`** 를 호출해
+  `pair_null`/`label`/`value_text`를 덤프
+- `crates/wz-avatar/tests/gear_prop_pairs_parity.rs` 완전 일치
+  (예: `notExtend 1 → (" (연장 불가)", null)`, `only 0 → (null, null)`)
+
+fixture: `gear_prop_cases.json`, `gear_prop_pairs_expected.json`,
+C#: `-- gearproppairs <fixture.json>`.
