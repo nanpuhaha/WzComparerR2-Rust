@@ -4497,6 +4497,35 @@ return tostring(ok) .. '|' .. tostring(acc)
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // 실제 `ItemStringHelper.ToThousandsNumberExpr` / `GetMobSkillName`.
+    static void Thousands(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            long value = item.GetInt64();
+            rows.Add(new
+            {
+                value,
+                kms = WzComparerR2.CharaSim.ItemStringHelper.ToThousandsNumberExpr(value),
+                msea = WzComparerR2.CharaSim.ItemStringHelper.ToThousandsNumberExpr(value, true),
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
+
+    static void MobSkill(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            int id = item.GetInt32();
+            rows.Add(new { id, name = WzComparerR2.CharaSim.ItemStringHelper.GetMobSkillName(id) });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4526,6 +4555,8 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "itemcategory") ItemCategory(args[1]);
         else if (args[0] == "skillreqamount") SkillReqAmount(args[1]);
         else if (args[0] == "cjknumber") CjkNumber(args[1]);
+        else if (args[0] == "thousands") Thousands(args[1]);
+        else if (args[0] == "mobskill") MobSkill(args[1]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));

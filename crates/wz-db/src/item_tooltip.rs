@@ -314,3 +314,158 @@ mod cjk_number_tests {
         assert_eq!(to_cjk_number_expr(-45, true), "-4십5");
     }
 }
+
+/// `ItemStringHelper.ToThousandsNumberExpr` — 가격 축약 표기.
+///
+/// - `is_msea = false`: 1e9/1e6/1e3 이상을 **소수 1자리**로 반올림해
+///   `B`/`M`/`K` 접미(`Math.Round(double, 1)` = banker's rounding)
+/// - `is_msea = true`: `Q/T/B/M/K` 블록을 공백으로 구분(내림 나눗셈)
+/// - 0은 `"0"`, 음수는 `-` 접두
+pub fn to_thousands_number_expr(value: i64, is_msea: bool) -> String {
+    let mut out = String::new();
+    let mut v = value;
+    if v < 0 {
+        out.push('-');
+        v = v.wrapping_neg();
+    }
+    if is_msea {
+        const UNITS: [(i64, &str); 5] = [
+            (1_0000_0000_0000_0000, "Q"),
+            (1_000_000_000_000, "T"),
+            (1_000_000_000, "B"),
+            (1_000_000, "M"),
+            (1_000, "K"),
+        ];
+        let mut first = true;
+        for (unit, suffix) in UNITS {
+            if v >= unit {
+                let part = v / unit;
+                if !first {
+                    out.push(' ');
+                }
+                out.push_str(&format!("{part}{suffix}"));
+                v -= part * unit;
+                first = false;
+            }
+        }
+        if v > 0 {
+            if !first {
+                out.push(' ');
+            }
+            out.push_str(&v.to_string());
+        }
+    } else if v >= 1_000_000_000 {
+        out.push_str(&format_dotnet_one_decimal(v as f64 / 1_000_000_000.0));
+        out.push('B');
+    } else if v >= 1_000_000 {
+        out.push_str(&format_dotnet_one_decimal(v as f64 / 1_000_000.0));
+        out.push('M');
+    } else if v >= 1_000 {
+        out.push_str(&format_dotnet_one_decimal(v as f64 / 1_000.0));
+        out.push('K');
+    } else if v > 0 {
+        out.push_str(&v.to_string());
+    }
+    if out.is_empty() {
+        "0".to_string()
+    } else {
+        out
+    }
+}
+
+/// `Math.Round(x, 1)` 후 C# `double.ToString()`과 같은 최단 표기.
+fn format_dotnet_one_decimal(x: f64) -> String {
+    let rounded = (x * 10.0).round_ties_even() / 10.0;
+    format!("{rounded}")
+}
+
+/// `ItemStringHelper.GetMobSkillName` — 몹 스킬 ID의 한글명.
+pub fn get_mob_skill_name(id: i32) -> Option<&'static str> {
+    Some(match id {
+        100 => "물리 공격력 증가",
+        101 => "마법 공격력 증가",
+        102 => "물리 방어력 증가",
+        103 => "마법 방어력 증가",
+        105 => "HP 흡수",
+        110 => "주변 물리 공격력 증가",
+        111 => "주변 마법 공격력 증가",
+        112 => "주변 물리 방어력 증가",
+        113 => "주변 마법 방어력 증가",
+        114 => "HP 회복",
+        115 => "이동속도 증가",
+        120 => "봉인",
+        121 => "빗나감",
+        122 => "허약",
+        123 => "기절",
+        124 => "저주",
+        125 => "중독",
+        126 => "슬로우",
+        127 => "버프 해제",
+        128 => "유혹",
+        129 => "추방",
+        131 => "범위 지속 데미지",
+        132 => "혼란",
+        133 => "언데드",
+        134 => "물약 봉인",
+        135 => "멈추지 않는",
+        136 => "암흑",
+        137 => "프로즌",
+        138 => "잠재능력 무효",
+        140 => "물리 공격 무시",
+        141 => "마법 공격 무시",
+        142 => "하드 스킨",
+        143 => "물리 공격 반사",
+        144 => "마법 공격 반사",
+        145 => "공격 반사",
+        146 => "무적",
+        150 => "물리 공격력 증가",
+        151 => "마법 공격력 증가",
+        152 => "물리 방어력 증가",
+        153 => "마법 방어력 증가",
+        154 => "명중률 증가",
+        155 => "회피율 증가",
+        156 => "이동속도 증가",
+        170 => "텔레포트",
+        171 => "폭발",
+        172 => "변이",
+        173 => "에어본",
+        174 => "석화",
+        200 => "소환",
+        201 => "소환",
+        _ => return None,
+    })
+}
+
+#[cfg(test)]
+mod thousands_mobskill_tests {
+    use super::*;
+
+    #[test]
+    fn thousands_short_forms() {
+        assert_eq!(to_thousands_number_expr(0, false), "0");
+        assert_eq!(to_thousands_number_expr(999, false), "999");
+        assert_eq!(to_thousands_number_expr(1000, false), "1K");
+        assert_eq!(to_thousands_number_expr(1500, false), "1.5K");
+        assert_eq!(to_thousands_number_expr(1_500_000_000, false), "1.5B");
+        // i64::MIN은 C# unchecked 부정으로 부호만 남는다.
+        assert_eq!(to_thousands_number_expr(i64::MIN, false), "-");
+    }
+
+    #[test]
+    fn thousands_msea_blocks() {
+        assert_eq!(to_thousands_number_expr(1500, true), "1K 500");
+        assert_eq!(
+            to_thousands_number_expr(1_234_567_890, true),
+            "1B 234M 567K 890"
+        );
+        assert_eq!(to_thousands_number_expr(-1000, true), "-1K");
+    }
+
+    #[test]
+    fn mob_skill_names() {
+        assert_eq!(get_mob_skill_name(100), Some("물리 공격력 증가"));
+        assert_eq!(get_mob_skill_name(201), Some("소환"));
+        assert_eq!(get_mob_skill_name(104), None);
+        assert_eq!(get_mob_skill_name(999), None);
+    }
+}

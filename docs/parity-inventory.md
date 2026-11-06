@@ -1864,3 +1864,26 @@ C#: `-- skillreqamount <fixture.json>`.
 
 fixture: `cjk_number_cases.json`, `cjk_number_expected.json`,
 C#: `-- cjknumber <fixture.json>`.
+
+## 가격 축약 표기 (`ToThousandsNumberExpr`) 와 몹 스킬명
+
+### `to_thousands_number_expr(value, is_msea)`
+
+- KMS(기본): 1e9/1e6/1e3 이상을 **소수 1자리 반올림** 후 `B`/`M`/`K`
+  (`Math.Round(x,1)` = banker's rounding). 1000 미만은 그대로
+- MSEA: `Q/T/B/M/K` 블록을 공백으로 구분(내림 나눗셈)
+- 0은 `"0"`, 음수는 `-` 접두. `i64::MIN`은 C# unchecked 부정으로 `"-"`만 남는다
+
+### `get_mob_skill_name(id)`
+
+`GetMobSkillName`의 51개 ID → 한글명, 그 외 `None`.
+
+검증(실제 C# 실행):
+- 가격/경계 **142케이스** × 두 모드 = 284문자열 완전 일치
+  (실제 아이템 `info/price` + 999/1000/1500/1e9/1.5e9/1234567890/`i64::MAX`/`i64::MIN` 등)
+- 몹 스킬 ID **63개**(스위치 전체 + 인접/미지원) 완전 일치
+- 단위 테스트 3종
+
+fixture: `thousands_cases.json`, `thousands_expected.json`,
+`mob_skill_cases.json`, `mob_skill_expected.json`,
+C#: `-- thousands <fixture.json>`, `-- mobskill <fixture.json>`.

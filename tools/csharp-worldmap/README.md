@@ -707,3 +707,11 @@ Verified CJK number expressions (`cjknumber <fixture.json>`):
 ```
 Calls the real `ItemStringHelper.ToCJKNumberExpr`; matches Rust
 `to_cjk_number_expr`.
+
+Verified price shortening (`thousands <fixture.json>`) and mob skill names
+(`mobskill <fixture.json>`):
+```
+142 values x KMS/MSEA = 284 strings; 63 mob skill ids
+```
+Both call the real `ItemStringHelper` methods; match Rust
+`to_thousands_number_expr` / `get_mob_skill_name`.

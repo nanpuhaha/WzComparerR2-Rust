@@ -277,6 +277,8 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   옮기고 실제 장비 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
 - `GetGearPropString` signFlag: 0/1/2 부호 규칙(음수에서 `+-5`)을 옮기고 실제
   장비 속성 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
+- 가격 축약/몹 스킬명: `ToThousandsNumberExpr`(KMS 소수 1자리, MSEA Q/T/B/M/K)과
+  `GetMobSkillName`을 옮기고 실제 C# 호출과 142×2 + 63 케이스를 비교.
 - 가격/수치 표기: `ToCJKNumberExpr`의 plain/detailed 두 모드를 옮기고 실제
   아이템 가격 130케이스(260문자열)를 실제 C# 호출과 비교.
 - 스킬 요구량 라벨: `GetSkillReqAmount`의 만 단위 분기/중국어 라벨을 옮기고
