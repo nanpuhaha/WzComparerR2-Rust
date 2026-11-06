@@ -1105,3 +1105,25 @@ C#: `-- controlsinput`.
 
 범위: WinForms 컨트롤 인스턴스화/이벤트 구독/`Invalidate` 호출은 여전히
 호스트 의존이다. 여기서는 이벤트가 전달하는 좌표/델타로부터의 계산만 다룬다.
+
+## GDI 비의존 드로잉 계산 (`wz-db::draw_math`)
+
+툴팁/애니메이션 렌더링에서 **GDI 없이 계산 가능한 기하**만 옮겼다.
+
+| 원본 | Rust | 규칙 |
+|---|---|---|
+| `GearGraphics.DrawGearDetailNumber` | `gear_detail_number_glyphs` | 숫자 `x += w+1`, `-`는 `y+3`에 그리고 `x += w+1`, `%`는 `x+1`에 그리고 `x += w+2`, 그 외 문자는 전진하지 않음(원본 switch에 default 없음) |
+| `AnimationGraphics.Draw` | `sprite_destination` | `SpriteBatch.Draw(position: Zero, origin: frame.Origin, scale: 1)` + 아이템 `Position` 평행이동 → `(pos - origin, source_size)` |
+| `SpriteBatchEx.DrawPath` | `path_rects` | 폴리라인 → 1px 사각형, 역방향은 `+1` 보정, 닫힌 경로는 마지막 점 사각형 생략, 0 이하 크기는 버림 |
+| `GearGraphics.GetBorderPath`/`GetIconBorderPath` | `border_path`/`icon_border_path` | 13점/5점 고정 경로 |
+
+검증: C# 하네스가 같은 루프를 옮기고 사각형 판정에 실제
+`System.Drawing.Rectangle`을 사용해 4개 그룹 **31케이스**
+(글리프 18, 목적 사각형 4, 경로 6, 보더 3+3)를 계산했고 모두 일치
+(`crates/wz-db/tests/draw_math_parity.rs`).
+
+폭은 실제 리소스 비트맵(`ToolTip_Equip_Can_*`)이 없어 fixture 값
+(`0-9=7`, `-=6`, `%=9`, cannot은 +2)으로 고정했다.
+
+남는 한계: 텍스트 래스터라이제이션과 GDI+ `DrawImage`의 premultiplied/감마
+합성은 여전히 macOS에서 실행 불가다.

@@ -3318,6 +3318,135 @@ return tostring(ok) .. '|' .. tostring(acc)
         Console.WriteLine(JsonSerializer.Serialize(new { cases = rows, env_type = envType, env_tag = envTag },
             new JsonSerializerOptions { WriteIndented = true }));
     }
+    // `DrawGearDetailNumber` 전진 규칙 / `AnimationGraphics.Draw` 목적 사각형 /
+    // `SpriteBatchEx.DrawPath` / `GetBorderPath` — GDI 없이 계산 가능한 부분.
+    static void DrawMath()
+    {
+        // 리소스 비트맵이 없으므로 폭은 fixture 값으로 고정한다.
+        int WidthOf(char ch, bool can)
+        {
+            int baseWidth = ch switch
+            {
+                >= '0' and <= '9' => 7,
+                '-' => 6,
+                '%' => 9,
+                _ => -1,
+            };
+            return can ? baseWidth : baseWidth + 2;
+        }
+
+        var numbers = new[] { "0", "12", "-7", "100%", "12,345%", "abc", "%%", "-%", "" };
+        var glyphRows = new List<object>();
+        foreach (var num in numbers)
+        {
+            foreach (var can in new[] { true, false })
+            {
+                int x = 3, y = 4;
+                var glyphs = new List<object>();
+                foreach (var ch in num)
+                {
+                    switch (ch)
+                    {
+                        case '0': case '1': case '2': case '3': case '4':
+                        case '5': case '6': case '7': case '8': case '9':
+                            glyphs.Add(new { ch = ch.ToString(), x, y, w = WidthOf(ch, can), percent = false });
+                            x += WidthOf(ch, can) + 1;
+                            break;
+                        case '-':
+                            glyphs.Add(new { ch = "-", x, y = y + 3, w = WidthOf(ch, can), percent = false });
+                            x += WidthOf(ch, can) + 1;
+                            break;
+                        case '%':
+                            glyphs.Add(new { ch = "%", x = x + 1, y, w = WidthOf(ch, can), percent = true });
+                            x += WidthOf(ch, can) + 2;
+                            break;
+                    }
+                }
+                glyphRows.Add(new { num, can, glyphs, end_x = x });
+            }
+        }
+
+        var destRows = new List<object>();
+        foreach (var (px, py, ox, oy, sw, sh) in new (int, int, int, int, int, int)[]
+        {
+            (20, 10, 5, -3, 27, 30), (0, 0, 0, 0, 27, 27), (-5, 7, 13, 2, 10, 10), (100, 50, -3, 30, 54, 60),
+        })
+        {
+            destRows.Add(new { px, py, ox, oy, sw, sh, x = px - ox, y = py - oy, w = sw, h = sh });
+        }
+
+        var paths = new[]
+        {
+            new[] { (0, 0), (5, 0), (5, 3) },
+            new[] { (5, 0), (0, 0), (0, -2) },
+            new[] { (0, 0), (4, 0), (0, 0) },
+            new[] { (2, 2) },
+            new[] { (0, 0), (3, 3) },
+            new[] { (0, 0), (0, 0), (4, 0) },
+        };
+        var pathRows = new List<object>();
+        foreach (var p in paths)
+        {
+            var rects = new System.Drawing.Rectangle[p.Length];
+            for (int i = 0; i < p.Length - 1; i++)
+            {
+                if (p[i].Item1 == p[i + 1].Item1)
+                {
+                    int dy = p[i + 1].Item2 - p[i].Item2;
+                    if (dy > 0) rects[i] = new System.Drawing.Rectangle(p[i].Item1, p[i].Item2, 1, dy);
+                    else if (dy < 0) rects[i] = new System.Drawing.Rectangle(p[i].Item1, p[i + 1].Item2 + 1, 1, -dy);
+                }
+                else if (p[i].Item2 == p[i + 1].Item2)
+                {
+                    int dx = p[i + 1].Item1 - p[i].Item1;
+                    if (dx > 0) rects[i] = new System.Drawing.Rectangle(p[i].Item1, p[i].Item2, dx, 1);
+                    else if (dx < 0) rects[i] = new System.Drawing.Rectangle(p[i + 1].Item1 + 1, p[i].Item2, -dx, 1);
+                }
+            }
+            if (p[0] != p[p.Length - 1] || p.Length == 1)
+                rects[p.Length - 1] = new System.Drawing.Rectangle(p[p.Length - 1].Item1, p[p.Length - 1].Item2, 1, 1);
+            pathRows.Add(new
+            {
+                path = p.Select(pt => new { x = pt.Item1, y = pt.Item2 }).ToList(),
+                rects = rects.Where(r => r.Width > 0 && r.Height > 0)
+                    .Select(r => new { x = r.X, y = r.Y, w = r.Width, h = r.Height }).ToList(),
+            });
+        }
+
+        var borderRows = new List<object>();
+        foreach (var (dx, w, h) in new[] { (2, 10, 8), (0, 1, 1), (-3, 20, 5) })
+        {
+            borderRows.Add(new
+            {
+                dx, width = w, height = h,
+                points = new[]
+                {
+                    (dx + 1, 0), (dx + 1, 1), (dx, 1), (dx, h - 2), (dx + 1, h - 2), (dx + 1, h - 1),
+                    (dx + w - 2, h - 1), (dx + w - 2, h - 2), (dx + w - 1, h - 2), (dx + w - 1, 1),
+                    (dx + w - 2, 1), (dx + w - 2, 0), (dx + 1, 0),
+                }.Select(pt => new { x = pt.Item1, y = pt.Item2 }).ToList(),
+            });
+        }
+        var iconBorders = new List<object>();
+        foreach (var (x, y) in new[] { (4, 5), (0, 0), (-7, 12) })
+        {
+            iconBorders.Add(new
+            {
+                x, y,
+                points = new[] { (x + 32, y + 31), (x + 32, y), (x, y), (x, y + 32), (x + 31, y + 32) }
+                    .Select(pt => new { x = pt.Item1, y = pt.Item2 }).ToList(),
+            });
+        }
+
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            glyphs = glyphRows,
+            destinations = destRows,
+            paths = pathRows,
+            borders = borderRows,
+            icon_borders = iconBorders,
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -3377,6 +3506,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "pixelops") PixelOps(args[1]);
         else if (args[0] == "iconblock") IconBlock(args[1]);
         else if (args[0] == "iconblend") IconBlend(args[1]);
+        else if (args[0] == "drawmath") DrawMath();
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

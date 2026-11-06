@@ -45,6 +45,7 @@ pub mod db2_reactors;
 pub mod db2_skills;
 pub mod db2_taming_mobs;
 pub mod dotnet_metadata;
+pub mod draw_math;
 pub mod gear_stats;
 pub mod item_tooltip;
 pub mod item_tooltip_extra;
@@ -114,6 +115,10 @@ pub use db2_skills::{skill_grid_rows as db2_skill_grid_rows, Db2SkillRow};
 pub use db2_taming_mobs::{taming_mob_grid_rows as db2_taming_mob_grid_rows, Db2TamingMobRow};
 pub use dotnet_metadata::{
     plugin_entries, plugin_types, read_assembly, DotnetAssembly, PluginEntryInfo, PublicType,
+};
+pub use draw_math::{
+    border_path, gear_detail_number_glyphs, icon_border_path, path_rects, sprite_destination,
+    GlyphDraw,
 };
 pub use gear_stats::extract_gear_props;
 pub use item_tooltip::{

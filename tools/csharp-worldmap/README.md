@@ -562,3 +562,11 @@ Verified ItemTooltip icon alpha blend (`iconblend <fixture.json>`):
 Integer straight-alpha source-over matches Rust
 `wz_db::pixel_ops::compose_icon_block_alpha` by SHA-256. GDI+'s
 premultiplied/gamma compositing is not reproducible on macOS.
+
+Verified GDI-free drawing math (`drawmath`):
+```
+18 glyph layouts, 4 sprite destinations, 6 path polylines, 3 border + 3 icon-border paths
+```
+`DrawGearDetailNumber` advance rules, `AnimationGraphics.Draw` destination,
+`SpriteBatchEx.DrawPath` rectangles and the baked border paths match Rust
+`wz_db::draw_math`.
