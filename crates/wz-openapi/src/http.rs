@@ -181,6 +181,13 @@ struct ErrorEnvelope {
     error: ApiErrorBody,
 }
 
+/// 응답 본문에서 `error` 봉투를 꺼낸다. 봉투가 없으면 `None`.
+pub fn parse_api_error(body: &str) -> Option<ApiErrorBody> {
+    serde_json::from_str::<ErrorEnvelope>(body)
+        .ok()
+        .map(|envelope| envelope.error)
+}
+
 #[derive(Debug)]
 pub enum ApiError {
     /// Nexon API 오류 봉투(`OPENAPI00004` 등).
@@ -256,8 +263,8 @@ impl<T: Transport> OpenApiClient<T> {
             .get(url, &headers)
             .map_err(ApiError::Transport)?;
         if !(200..300).contains(&response.status) {
-            if let Ok(envelope) = serde_json::from_str::<ErrorEnvelope>(&response.body) {
-                return Err(ApiError::Api(envelope.error));
+            if let Some(error) = parse_api_error(&response.body) {
+                return Err(ApiError::Api(error));
             }
             return Err(ApiError::Status(response.status, response.body));
         }

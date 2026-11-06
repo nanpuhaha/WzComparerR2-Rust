@@ -45,7 +45,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | Rendering | 25 | 2,726 | `wz-render`, `wz-image` | 🟡 (light/water/sprite) |
 | Animation | 15 | 2,415 | `wz-avatar` frame loader | 🟡 |
 | Controls | 16 | 2,138 | `wz-db::common_controls`(타임라인/GIF), `controls_input`(히트테스트/드래그/휠), `draw_math`(숫자/경로/보더) | 🟡 |
-| OpenAPI | 4 | 2,086 | `wz-openapi` helpers + AvatarCodeStructure/Unpack + HTTP 계층(목 서버 검증) | 🟡 |
+| OpenAPI | 4 | 2,086 | `wz-openapi` helpers + AvatarCodeStructure/Unpack + HTTP 계층(목 서버 + 실 엔드포인트 오류 경로 검증) | 🟡 |
 | Text | 4 | 707 | `wz-core::text` | ✅ |
 | Encoders | 6 | 534 | `wz-image` | ✅ (PNG/BC7) |
 | Config | 6 | 355 | — | ⬜ |
@@ -203,6 +203,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - PluginBase `FindWz`: 57개 경로 C# 일치.
 - Network 오프라인: RC4 12개 벡터 + 프레임 코덱 자체 테스트.
 - OpenAPI 아바타 비트팩: v26–44 38케이스 C# 일치.
+- OpenAPI 실 엔드포인트: 미인증/오류 키 요청을 실제로 보내
+  `OPENAPI00004`/`OPENAPI00005` 봉투를 캡처하고 파서·URL·헤더를 고정.
+  성공 경로는 API 키 필요.
 - OpenAPI 오프라인 helpers: C# `Utils.Decrypt`/`CheckVer`/`GetItemID`를
   16/32/64바이트 벡터에서 비교해 완전 일치(`wz-openapi` 통합 테스트).
 - ItemTooltip 사용기간: `consumableFrom`/`endUseDate`를 `년/월/일/시/분`
@@ -311,7 +314,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   LuaConsole의 NLua CLR 브리지·콘솔 UI.
 - PluginBase의 메뉴 주입(`OnLoad` → WinForms RibbonBar).
 - Network TCP/재접속/로그인 상태 머신(서버 필요).
-- OpenAPI 실제 엔드포인트 호출(Nexon API 키 필요). 요청/파싱 계층은 목 서버로 검증됨.
+- OpenAPI 성공(200) 응답 호출(Nexon API 키 필요). 오류 경로·요청/파싱 계층은 실 서버/목 서버로 검증됨.
 - WorldMap 실제 QuestLimit/Fog 데이터는 클라이언트에 없음.
 - weather는 원본 C# 로더/에셋에 없음.
 

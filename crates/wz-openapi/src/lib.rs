@@ -5,6 +5,7 @@
 
 pub mod avatar;
 pub mod http;
+pub use http::{parse_api_error, ApiError, ApiErrorBody, HttpResponse, OpenApiConfig, Region};
 
 use aes::cipher::{BlockDecrypt, KeyInit};
 use aes::Aes128;

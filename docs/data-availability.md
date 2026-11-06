@@ -44,3 +44,14 @@ weather: 원본 C# 소스에 weather 구현 없음
 
 이 항목들은 구현 누락이 아니라 검증 대상 데이터가 없는 경우이며, 데이터가
 추가되면 `wz parity-scan` 수치가 바뀌므로 즉시 드러난다.
+
+## 2026-11-06 범위 확대 재스캔
+
+```
+Map: 137 WZ files, 28,490 images, QuestLimit=0, fog=4 (모두 무관한 스프라이트)
+Data: 792 WZ files, Recipe.img=0, Familiar* 이미지=0, weather* 이미지=0
+```
+
+- `fog` 4건은 `Effect3.img/BossLucid/fog`, `ForestTraining.img/obj/fog`로
+  WorldMap 안개 필드가 아니다.
+- `Recipe.img`는 파일명이 아니라 WZ 내부 이미지 이름으로 찾아도 0건이다.

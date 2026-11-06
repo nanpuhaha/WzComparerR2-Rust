@@ -1127,3 +1127,42 @@ C#: `-- controlsinput`.
 
 남는 한계: 텍스트 래스터라이제이션과 GDI+ `DrawImage`의 premultiplied/감마
 합성은 여전히 macOS에서 실행 불가다.
+
+## OpenAPI 실제 엔드포인트 (오류 경로)
+
+`https://open.api.nexon.com`에 **실제로 요청**해 응답을 캡처했다
+(2026-11-06).
+
+```text
+GET /maplestory/v1/id?character_name=test
+  -> 400 {"error":{"name":"OPENAPI00004","message":"Please input valid parameter"}}
+
+GET /maplestory/v1/id?character_name=test   (x-nxopen-api-key: test-invalid-key)
+  -> 400 {"error":{"name":"OPENAPI00005","message":"The apikey is not valid."}}
+```
+
+- 우리 클라이언트가 만드는 URL(`OpenApiConfig::url`)과 헤더
+  (`x-nxopen-api-key`)가 위 호출과 **문자열 단위로 동일**함을 테스트로 고정
+- `wz_openapi::parse_api_error`가 두 실측 본문을 `ApiErrorBody`로 정확히 해석
+- 400 응답이 `ApiError::Api`로 승격되는 경로 확인
+
+fixture: `crates/wz-openapi/tests/fixtures/nexon_error_no_key.json`,
+`nexon_error_bad_key.json`;
+테스트: `crates/wz-openapi/tests/real_endpoint_errors.rs` (5종).
+
+남는 한계: **성공(200) 경로는 Nexon API 키가 필요**해 호출하지 못했다.
+요청/파싱 계층 자체는 목 서버(`http_mock.rs`)로 이미 검증되어 있다.
+
+## 데이터 부재 재스캔 (범위 확대)
+
+이전 스캔은 WorldMap/String 등 일부 경로만 봤다. 이번에 범위를 넓혀
+다시 확인했다.
+
+| 항목 | 스캔 범위 | 결과 |
+|---|---|---|
+| `QuestLimit` / WorldMap `Fog` | `Data/Map` 전체 137 WZ / 28,490 이미지 | `QuestLimit` 0. `fog` 4건은 `Effect3.img/BossLucid/fog`, `ForestTraining.img/obj/fog` 같은 **무관한 스프라이트 이름** |
+| `Recipe.img` | `Data` 전체 792 WZ 이미지 엔트리 | 0 |
+| Familiar 이미지 | `Data` 전체 이미지 엔트리 | 0 |
+| weather 이미지 | `Data` 전체 이미지 엔트리 | 0 (원본 C#에도 기능 없음) |
+
+즉 `#cosmetic_EULO#` 때와 달리, 이 항목들은 스캔 범위를 넓혀도 데이터가 없다.
