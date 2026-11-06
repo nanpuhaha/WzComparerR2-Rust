@@ -5003,3 +5003,239 @@ pub fn cmd_lua_run(
     }
     Ok(())
 }
+
+pub fn cmd_item_cosmetic_eulo(
+    data_root: &Path,
+    string_wz: &Path,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+
+    let mut rows = Vec::new();
+    for dir in ["Cash", "Consume", "Install", "Etc", "Special", "Pet"] {
+        let mut paths: Vec<_> = std::fs::read_dir(data_root.join("Item").join(dir))
+            .ok()
+            .into_iter()
+            .flatten()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+            .collect();
+        paths.sort();
+        for path in paths {
+            let Ok(archive) = WzArchive::open(&path) else {
+                continue;
+            };
+            let Ok(tree) = archive.read_tree() else {
+                continue;
+            };
+            for entry in &tree.root.entries {
+                if entry.node_type != 4 {
+                    continue;
+                }
+                let Some(offset) = entry.offset else {
+                    continue;
+                };
+                let Ok(image) = archive.parse_image_at(offset) else {
+                    continue;
+                };
+                for item in image.object_children() {
+                    let Ok(id) = item.name.as_ref().parse::<i32>() else {
+                        continue;
+                    };
+                    let Some(cosmetic) = item
+                        .object_children()
+                        .iter()
+                        .find(|c| c.name.as_ref() == "spec")
+                        .and_then(|spec| {
+                            spec.object_children()
+                                .iter()
+                                .find(|c| c.name.as_ref() == "cosmetic")
+                        })
+                        .and_then(|c| match &c.value {
+                            Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
+                            Some(wz_core::image::ImageValue::Str(s))
+                            | Some(wz_core::image::ImageValue::Uol(s)) => s.parse().ok(),
+                            _ => None,
+                        })
+                    else {
+                        continue;
+                    };
+                    let desc = linker.string_item.get(&id).and_then(|sr| sr.desc.clone());
+                    let Some(desc) = desc else { continue };
+                    if !desc.contains("#cosmetic_EULO#") {
+                        continue;
+                    }
+                    let eqp_name = linker
+                        .string_eqp
+                        .get(&cosmetic)
+                        .map(|sr| sr.name.clone())
+                        .filter(|s| !s.is_empty());
+                    let replacement = wz_db::cosmetic_eulo_text(eqp_name.as_deref(), cosmetic);
+                    rows.push(serde_json::json!({
+                        "id": id,
+                        "cosmetic_id": cosmetic,
+                        "gender": wz_db::get_gender(cosmetic),
+                        "eqp_name": eqp_name,
+                        "replacement": replacement,
+                        "replaced": wz_db::replace_cosmetic_eulo(
+                            &desc,
+                            eqp_name.as_deref(),
+                            cosmetic
+                        ),
+                    }));
+                }
+            }
+        }
+    }
+    rows.sort_by_key(|r| r["id"].as_i64());
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!(
+                "{} {}",
+                row["id"],
+                row["replacement"].as_str().unwrap_or("")
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod item_cosmetic_eulo_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn item_cosmetic_eulo_matches_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let string_wz = root.join("String/String_000.wz");
+        if !root.join("Item").exists() || !string_wz.exists() {
+            return;
+        }
+        use wz_db::{Arena, StringLinker};
+        let string_archive = wz_core::WzArchive::open(&string_wz).unwrap();
+        let (arena, string_root) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&arena, string_root));
+
+        let mut rows: Vec<(i32, i32, i32, String, String, String)> = Vec::new();
+        for dir in ["Cash", "Consume", "Install", "Etc", "Special", "Pet"] {
+            let mut paths: Vec<_> = std::fs::read_dir(root.join("Item").join(dir))
+                .ok()
+                .into_iter()
+                .flatten()
+                .flatten()
+                .map(|e| e.path())
+                .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+                .collect();
+            paths.sort();
+            for path in paths {
+                let Ok(archive) = wz_core::WzArchive::open(&path) else {
+                    continue;
+                };
+                let Ok(tree) = archive.read_tree() else {
+                    continue;
+                };
+                for entry in &tree.root.entries {
+                    if entry.node_type != 4 {
+                        continue;
+                    }
+                    let Some(offset) = entry.offset else { continue };
+                    let Ok(image) = archive.parse_image_at(offset) else {
+                        continue;
+                    };
+                    for item in image.object_children() {
+                        let Ok(id) = item.name.as_ref().parse::<i32>() else {
+                            continue;
+                        };
+                        let Some(cosmetic) = item
+                            .object_children()
+                            .iter()
+                            .find(|c| c.name.as_ref() == "spec")
+                            .and_then(|spec| {
+                                spec.object_children()
+                                    .iter()
+                                    .find(|c| c.name.as_ref() == "cosmetic")
+                            })
+                            .and_then(|c| match &c.value {
+                                Some(wz_core::image::ImageValue::Int(v)) => Some(*v),
+                                Some(wz_core::image::ImageValue::Str(s))
+                                | Some(wz_core::image::ImageValue::Uol(s)) => s.parse().ok(),
+                                _ => None,
+                            })
+                        else {
+                            continue;
+                        };
+                        let Some(desc) = linker.string_item.get(&id).and_then(|sr| sr.desc.clone())
+                        else {
+                            continue;
+                        };
+                        if !desc.contains("#cosmetic_EULO#") {
+                            continue;
+                        }
+                        let eqp_name = linker
+                            .string_eqp
+                            .get(&cosmetic)
+                            .map(|sr| sr.name.clone())
+                            .filter(|s| !s.is_empty());
+                        rows.push((
+                            id,
+                            cosmetic,
+                            wz_db::get_gender(cosmetic),
+                            eqp_name.clone().unwrap_or_default(),
+                            wz_db::cosmetic_eulo_text(eqp_name.as_deref(), cosmetic),
+                            wz_db::replace_cosmetic_eulo(&desc, eqp_name.as_deref(), cosmetic),
+                        ));
+                    }
+                }
+            }
+        }
+        rows.sort_by_key(|r| r.0);
+        let rec = char::from(0x1e);
+        let canon = rows
+            .iter()
+            .map(|(id, cosmetic, gender, eqp, replacement, replaced)| {
+                [
+                    id.to_string(),
+                    cosmetic.to_string(),
+                    gender.to_string(),
+                    eqp.clone(),
+                    replacement.clone(),
+                    replaced.clone(),
+                ]
+                .join(&rec.to_string())
+            })
+            .collect::<Vec<_>>()
+            .join(&rec.to_string());
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/item_cosmetic_eulo.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(rows.len() as u64, expected["rows"].as_u64().unwrap());
+        assert_eq!(
+            sha256_hex(canon.as_bytes()),
+            expected["sha256"].as_str().unwrap()
+        );
+    }
+}

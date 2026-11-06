@@ -729,3 +729,38 @@ mod tests {
         );
     }
 }
+
+/// `PluginManager.LoadPlugin`이 만드는 `PluginInfo.Instance`가 노출하는 값.
+///
+/// 원본 `PluginEntry`의 기본 프로퍼티 규칙:
+/// - `Name`  = `AssemblyTitle`
+/// - `Author` = `AssemblyCompany`
+/// - `Version` = `AssemblyName.Version`
+/// - `FileVersion` = `AssemblyInformationalVersion`(비어있지 않을 때) 또는
+///   `AssemblyFileVersion`
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PluginEntryInfo {
+    pub type_name: String,
+    pub name: Option<String>,
+    pub author: Option<String>,
+    pub version: Option<String>,
+    pub file_version: Option<String>,
+}
+
+/// 열거된 `PluginEntry` 서브클래스마다 인스턴스가 노출할 메타데이터.
+pub fn plugin_entries(assembly: &DotnetAssembly) -> Vec<PluginEntryInfo> {
+    plugin_types(assembly)
+        .into_iter()
+        .map(|type_name| PluginEntryInfo {
+            type_name,
+            name: assembly.title.clone(),
+            author: assembly.company.clone(),
+            version: assembly.version.clone(),
+            file_version: assembly
+                .informational_version
+                .clone()
+                .filter(|s| !s.is_empty())
+                .or_else(|| assembly.file_version.clone()),
+        })
+        .collect()
+}

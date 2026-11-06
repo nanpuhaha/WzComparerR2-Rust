@@ -1,0 +1,22 @@
+{
+  "context_created": true,
+  "context_error": null,
+  "entries": [
+    {
+      "type": "Fixture.AlphaPlugin",
+      "name": "\uD53D\uC2A4\uCC98 \uD50C\uB7EC\uADF8\uC778",
+      "author": "\uD14C\uC2A4\uD2B8 \uC791\uC131\uC790",
+      "version": "1.2.3.4",
+      "file_version": "9.9.9-beta",
+      "error": null
+    },
+    {
+      "type": "Fixture.DerivedPlugin",
+      "name": "\uD53D\uC2A4\uCC98 \uD50C\uB7EC\uADF8\uC778",
+      "author": "\uD14C\uC2A4\uD2B8 \uC791\uC131\uC790",
+      "version": "1.2.3.4",
+      "file_version": "9.9.9-beta",
+      "error": null
+    }
+  ]
+}

@@ -291,6 +291,18 @@ enum Command {
         limit: usize,
     },
 
+    /// ItemTooltip `#cosmetic_EULO#` 치환 결과
+    ItemCosmeticEulo {
+        /// Data 루트
+        data_root: PathBuf,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// LuaConsole 샌드박스에서 스크립트 실행
     LuaRun {
         /// 실행할 Lua 스크립트
@@ -998,6 +1010,11 @@ fn main() {
             json,
             limit,
         } => cmd_db2_mobs(&wz, &string, json, limit),
+        Command::ItemCosmeticEulo {
+            data_root,
+            string,
+            json,
+        } => commands::cmd_item_cosmetic_eulo(&data_root, &string, json),
         Command::LuaRun {
             script,
             base_dir,

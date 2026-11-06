@@ -37,7 +37,8 @@ weather: 원본 C# 소스에 weather 구현 없음
 | DB2 Mob `info/link` | Mob 3,524 이미지 중 `info` 227, `link` 0 | 링크 컬럼 전부 null |
 | ItemTooltip exp/펫 명령어 | `Item` 71,249개 중 `exp_minLev` 0, `interact` 0, `spec/recipe*` 827 | 레시피만 실데이터 비교, 나머지는 규칙 구현 |
 | ItemTooltip 사용기간 | `consumableFrom` 76, `endUseDate` 446 (유효 450필드/449행, 12자 미만 72필드) | 구현·C# 비교 완료 |
-| ItemTooltip desc_leftalign/pointCost/cant | desc_leftalign 1,359(`#t` 25, cosmetic 0), pointCost 20, cant 5 | 구현·C# 비교 완료 (1,242행) |
+| ItemTooltip desc_leftalign/pointCost/cant | desc_leftalign 1,359(`#t` 25), pointCost 20, cant 5 | 구현·C# 비교 완료 (1,242행) |
+| ItemTooltip `#cosmetic_EULO#` | `desc`에 1,133건 (desc_leftalign에는 0) | 구현·C# 비교 완료 |
 | WorldArchiveTooltip | `Etc_002.wz/worldArchive.img` 894KB, 1,845 항목 (NPC 대사 767) | 구현·검증 완료 (`wz world-archive`) |
 | AchievementTooltip | Achievement 파일 6개 | 구현·검증 완료 (1,579개, `wz achievements`) |
 

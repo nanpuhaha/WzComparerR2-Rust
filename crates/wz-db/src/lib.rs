@@ -26,6 +26,7 @@ pub mod calc;
 pub mod chara_prop;
 pub mod chara_tooltip;
 pub mod common_controls;
+pub mod cosmetic_eulo;
 pub mod damage_skin;
 pub mod db2;
 pub mod db2_characters;
@@ -70,6 +71,10 @@ pub use common_controls::{
     add_item_times, clamp_scale, create_timeline, get_process_from_timeline, gif_timeline,
     max_length, playing_indices, should_reset, update_time_offset, KeyFrame,
 };
+pub use cosmetic_eulo::{
+    cosmetic_eulo_text, get_cosmetic_gender, get_gear_type, get_gender, is_sub_weapon,
+    replace_cosmetic_eulo,
+};
 pub use damage_skin::{DamageSkin, DamageSkinSection};
 pub use db2::{image_rows as db2_image_rows, Db2Row};
 pub use db2_characters::{
@@ -96,7 +101,9 @@ pub use db2_npcs::{npc_grid_rows as db2_npc_grid_rows, Db2NpcRow};
 pub use db2_reactors::{reactor_grid_rows as db2_reactor_grid_rows, Db2ReactorRow};
 pub use db2_skills::{skill_grid_rows as db2_skill_grid_rows, Db2SkillRow};
 pub use db2_taming_mobs::{taming_mob_grid_rows as db2_taming_mob_grid_rows, Db2TamingMobRow};
-pub use dotnet_metadata::{plugin_types, read_assembly, DotnetAssembly, PublicType};
+pub use dotnet_metadata::{
+    plugin_entries, plugin_types, read_assembly, DotnetAssembly, PluginEntryInfo, PublicType,
+};
 pub use gear_stats::extract_gear_props;
 pub use item_tooltip::{
     build_item_tooltip, item_attribute_lines, item_core_spec_string, ItemTooltipView,

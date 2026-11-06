@@ -2705,6 +2705,118 @@ class Program
             joined = string.Join(";", entries),
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void PluginActivate(string dllPath, string pluginBasePath)
+    {
+        var pluginAsm = System.Reflection.Assembly.LoadFrom(pluginBasePath);
+        var contextType = pluginAsm.GetType("WzComparerR2.PluginBase.PluginContext")!;
+        var entryType = pluginAsm.GetType("WzComparerR2.PluginBase.PluginEntry")!;
+        object context = null;
+        string contextError = null;
+        try
+        {
+            context = Activator.CreateInstance(contextType,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+                null, new object[] { null }, null);
+        }
+        catch (Exception ex)
+        {
+            contextError = ex.GetType().Name + ": " + ex.Message;
+        }
+
+        var asm = System.Reflection.Assembly.LoadFrom(dllPath);
+        var rows = new List<object>();
+        foreach (var type in asm.GetExportedTypes()
+            .Where(t => t.IsSubclassOf(entryType) && !t.IsAbstract)
+            .OrderBy(t => t.FullName, StringComparer.Ordinal))
+        {
+            string error = null;
+            string name = null, author = null, version = null, fileVersion = null;
+            try
+            {
+                var instance = Activator.CreateInstance(type, new[] { context })!;
+                var entry = (WzComparerR2.PluginBase.PluginEntry)instance;
+                name = entry.Name;
+                author = entry.Author;
+                version = entry.Version;
+                fileVersion = entry.FileVersion;
+            }
+            catch (Exception ex)
+            {
+                error = ex.GetType().Name + ": " + ex.Message;
+            }
+            rows.Add(new
+            {
+                type = type.FullName,
+                name,
+                author,
+                version,
+                file_version = fileVersion,
+                error,
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            context_created = context != null,
+            context_error = contextError,
+            entries = rows,
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    static void ItemCosmeticEulo(string dataRoot, string stringWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        linker.Load(str.wz_files[0], null, null);
+
+        var rows = new List<object>();
+        foreach (var dir in new[] { "Cash", "Consume", "Install", "Etc", "Special", "Pet" })
+        {
+            var dirPath = Path.Combine(dataRoot, "Item", dir);
+            if (!Directory.Exists(dirPath)) continue;
+            foreach (var file in Directory.GetFiles(dirPath, "*.wz").OrderBy(x => x, StringComparer.Ordinal))
+            {
+                var st = new Wz_Structure(); st.Load(file);
+                foreach (Wz_Node n in st.WzNode.Nodes)
+                {
+                    if (n.Value is not Wz_Image img) continue;
+                    if (!img.TryExtract()) continue;
+                    foreach (Wz_Node item in img.Node.Nodes)
+                    {
+                        if (!int.TryParse(item.Text, out int id)) continue;
+                        var cosmeticNode = item.FindNodeByPath(@"spec\cosmetic");
+                        if (cosmeticNode?.Value == null) continue;
+                        int cosmeticId = Convert.ToInt32(cosmeticNode.Value);
+                        linker.StringItem.TryGetValue(id, out var sr);
+                        var desc = sr?.Desc;
+                        if (desc == null || !desc.Contains("#cosmetic_EULO#")) continue;
+
+                        int gender = WzComparerR2.CharaSim.Gear.GetGender(cosmeticId);
+                        linker.StringEqp.TryGetValue(cosmeticId, out var eqp);
+                        var name = $"#c{eqp?.Name ?? "(null)"}{(gender == 0 ? "(남)" : (gender == 1 ? "(여)" : ""))}#";
+                        int last = (name.LastOrDefault(c => c >= '가' && c <= '힣') - '가') % 28;
+                        name += ((last == 0 || last == 8 ? "" : "으") + "로");
+                        // AvatarCanvas.HairColor 8종
+                        foreach (var color in new[] { "검은색", "빨간색", "주황색", "노란색",
+                                                     "초록색", "파란색", "보라색", "갈색" })
+                        {
+                            name = name.Replace($"{color} ", "");
+                        }
+                        rows.Add(new
+                        {
+                            id,
+                            cosmetic_id = cosmeticId,
+                            gender,
+                            eqp_name = eqp?.Name,
+                            replacement = name,
+                            replaced = desc.Replace("#cosmetic_EULO#", name),
+                        });
+                    }
+                }
+            }
+        }
+        rows.Sort((a, b) => ((int)a.GetType().GetProperty("id").GetValue(a))
+            .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2757,6 +2869,8 @@ class Program
         else if (args[0] == "mobpart") MobPart(args[1], int.Parse(args[2]), args[3]);
         else if (args[0] == "skilltooltips") SkillTooltips(args[1], args[2]);
         else if (args[0] == "luapath") LuaPath(args[1], args[2], args[3], args[4]);
+        else if (args[0] == "pluginactivate") PluginActivate(args[1], args[2]);
+        else if (args[0] == "itemcosmetic") ItemCosmeticEulo(args[1], args[2]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

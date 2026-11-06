@@ -18,7 +18,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | CharaSimResource | 2 | 7,490 | — (WinForms 리소스) | ⬜ |
 | WzComparerR2.Network | 28 | 1,954 | `wz-network` RC4/프레임/계약 JSON/TCP 로그인 루프백 | 🟡 |
 | WzComparerR2.LuaConsole | 10 | 1,451 | `wz-lua` 샌드박스(package.path/env/each/실행) | 🟡 |
-| WzComparerR2.PluginBase | 10 | 693 | `wz find-wz`, `wz plugin-files`, PE/CLI 메타데이터 리더 | 🟡 |
+| WzComparerR2.PluginBase | 10 | 693 | `wz find-wz`, `wz plugin-files`, PE 메타데이터, `LoadPlugin` 인스턴스화 | 🟡 |
 | WzComparerR2.Updater | 3 | 276 | `wz patch` (부분) | 🟡 |
 
 ## 디렉터리별
@@ -235,6 +235,10 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook`로 몹/NPC
   설명, `[몬스터북]`, `NPC 대사` 라인을 구성해 **1,845개 항목**
   (NPC 대사 767개)이 C#과 완전 일치.
+- ItemTooltip `#cosmetic_EULO#`: `desc`에 실제로 **1,133건** 존재한다
+  (이전 조사는 `desc_leftalign`만 봐서 0건으로 오판). `Gear.GetGearType`/
+  `IsSubWeapon`/`GetGender`/`GetCosmeticGender`, 조사(으로/로) 판정,
+  `AvatarCanvas.HairColor` 8색 접두어 제거를 옮겨 1,133행이 C#과 일치.
 - `SkillTooltipRender2` 헤더 텍스트: 이름, `[마스터 레벨 : N]`/`[최대 레벨 : N]`
   분기(`PreBBSkill`=level 자식 존재, `hyperStat`), `reqLev`/`req` 요구 스킬을
   `Skill` 7,055개에서 C#과 일치. 이 클라이언트는 `common` 0·`req` 0·`level` 3이라
@@ -282,7 +286,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - DB2/CharaSimControl/Comparer HTML/EasyComparer 등 UI·리포팅 모듈.
 - Common Controls의 그래픽 장치/스프라이트/마우스 드래그(GDI·SharpDX),
   LuaConsole의 NLua CLR 브리지·콘솔 UI.
-- PluginBase의 플러그인 로딩/메뉴 주입(WinForms 호스트 필요).
+- PluginBase의 메뉴 주입(`OnLoad` → WinForms RibbonBar).
 - Network TCP/재접속/로그인 상태 머신(서버 필요).
 - OpenAPI HTTP 호출(Nexon API 키 필요).
 - WorldMap 실제 QuestLimit/Fog 데이터는 클라이언트에 없음.

@@ -819,3 +819,41 @@ C# 대조는 `package.path` 부분만 가능하다. `LuaSandbox.InitLuaEnv`가 N
 NLua `luanet.import_type` 기반 CLR 타입 브리지, `RegisterLuaDelegateType`,
 WinForms 콘솔/에디터(`FrmConsole`, `FrmLuaEditor`), 문법 강조
 (`AppSyntaxModeProvider`)는 재현하지 않는다.
+
+## ItemTooltip `#cosmetic_EULO#`
+
+원본 `ItemTooltipRender2.ReplaceDescTags`는 `desc`에 이 태그가 있으면 코스메틱
+ID로 이름/성별/조사를 만들어 치환한다.
+
+- `Gear.GetGearType` — 특수 코드 구간(1098/1099/1212…, 135xx, 119xx, 179x,
+  172xx Astra 보조무기 표)을 그대로 옮김
+- `Gear.IsSubWeapon`, `Gear.GetGender`, `Gear.GetCosmeticGender`
+- 이름: `StringLinker.StringEqp[cosmetic]`, 없으면 `(null)`
+- 조사: **치환 문자열 전체**(성별 접미어 포함)의 마지막 한글 음절 종성으로
+  `으로`/`로` 결정 → `(남)`/`(여)`가 붙으면 받침이 있어 `으로`
+- `AvatarCanvas.HairColor` 8색(검은/빨간/주황/노란/초록/파란/보라/갈색) 접두어 제거
+
+검증: `desc`에 태그가 있는 **1,133개 아이템**이 C#(실제 `Gear.GetGender` 호출)
+결과와 `gender/eqp_name/replacement/replaced`까지 완전 일치.
+fixture: `crates/wz-cli/tests/fixtures/item_cosmetic_eulo.expected.json`,
+테스트: `item_cosmetic_eulo_matches_csharp`,
+CLI: `wz item-cosmetic-eulo <Data> --string <String_000.wz>`,
+C#: `-- itemcosmetic <Data> <String_000.wz>`.
+
+## PluginBase `LoadPlugin` 인스턴스화
+
+원본 `PluginManager.LoadPlugin`은 `GetExportedTypes()`에서 `PluginEntry`
+서브클래스(비추상)를 골라 `Activator.CreateInstance(type, context)`로 만든다.
+macOS에서도 `PluginContext`를 provider=`null`로 생성할 수 있어 **실행 검증이
+가능**했다.
+
+- C# 하네스: `context_created=true`, fixture 플러그인 2종 인스턴스화 성공
+- 각 인스턴스의 `Name`(AssemblyTitle), `Author`(AssemblyCompany),
+  `Version`(AssemblyName.Version), `FileVersion`(InformationalVersion 우선)
+- Rust `wz_db::plugin_entries`가 동일한 2행을 낸다
+
+fixture: `crates/wz-db/tests/fixtures/plugin_entries_activated.json`,
+테스트: `plugin_activation_parity`,
+C#: `-- pluginactivate <plugin.dll> <PluginBase.dll>`.
+
+남은 것: `OnLoad()`가 호출하는 `Context.AddRibbonBar`(DevComponents/WinForms).

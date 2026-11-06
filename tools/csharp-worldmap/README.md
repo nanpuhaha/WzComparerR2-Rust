@@ -488,3 +488,18 @@ Verified LuaConsole `package.path` (`luapath <script> <plugin> <wcr2> <cwd>`):
 `LuaSandbox.InitLuaEnv` needs NLua + WinForms, so the harness compiles the
 verbatim path-building block. Rust `wz_lua::package_path` matches all cases;
 script execution is verified separately with real Lua fixtures.
+
+Verified ItemTooltip `#cosmetic_EULO#` (`itemcosmetic <Data> <String_000.wz>`):
+```
+1133 items
+```
+Uses the real `Gear.GetGender`; `gender/eqp_name/replacement/replaced` match
+Rust `wz item-cosmetic-eulo` exactly.
+
+Verified PluginBase instantiation (`pluginactivate <plugin.dll> <PluginBase.dll>`):
+```
+context_created=true; Fixture.AlphaPlugin, Fixture.DerivedPlugin
+```
+`PluginContext` is constructed with a null provider, so `LoadPlugin`'s
+`Activator.CreateInstance(type, context)` path runs on macOS. Metadata matches
+Rust `wz_db::plugin_entries`.
