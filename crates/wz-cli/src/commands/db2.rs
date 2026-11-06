@@ -5286,3 +5286,91 @@ pub fn cmd_openapi_fetch(
     }
     Ok(())
 }
+
+fn b64_encode(bytes: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let b = [
+            chunk[0],
+            chunk.get(1).copied().unwrap_or(0),
+            chunk.get(2).copied().unwrap_or(0),
+        ];
+        let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
+        out.push(T[(n >> 18) as usize & 63] as char);
+        out.push(T[(n >> 12) as usize & 63] as char);
+        out.push(if chunk.len() > 1 {
+            T[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            T[n as usize & 63] as char
+        } else {
+            '='
+        });
+    }
+    out
+}
+
+/// ItemTooltip 픽셀 비교용 fixture를 실제 WZ 캔버스에서 만든다.
+///
+/// 아이콘은 `_outlink`로 분할 `_Canvas` 파일에 있으므로, 캔버스가 실제로
+/// 들어 있는 WZ(예: `Item/Consume/_Canvas/_Canvas_000.wz`)를 받는다.
+pub fn cmd_pixel_fixture(wz_path: &Path, limit: usize) -> Result<(), Box<dyn std::error::Error>> {
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let source = archive.source().clone();
+    let mut icons = Vec::new();
+
+    fn walk(
+        node: &wz_core::image::Node,
+        path: &str,
+        source: &std::sync::Arc<dyn wz_pool::ByteSource>,
+        limit: usize,
+        out: &mut Vec<serde_json::Value>,
+    ) {
+        if out.len() >= limit {
+            return;
+        }
+        let here = format!("{path}/{}", node.name);
+        if let Some(wz_core::image::ImageValue::Png(png)) = &node.value {
+            if png.width >= 16 && png.height >= 16 {
+                if let Ok((w, h, rgba)) = wz_image::decode_png_ref_to_rgba(png, source) {
+                    out.push(serde_json::json!({
+                        "path": here,
+                        "width": w,
+                        "height": h,
+                        "rgba_b64": b64_encode(&rgba),
+                    }));
+                }
+            }
+        }
+        for child in node.object_children() {
+            walk(child, &here, source, limit, out);
+            if out.len() >= limit {
+                return;
+            }
+        }
+    }
+
+    'outer: for entry in &tree.root.entries {
+        if entry.node_type != 4 {
+            continue;
+        }
+        let Some(offset) = entry.offset else { continue };
+        let Ok(image) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        let name = entry.name.as_deref().unwrap_or("");
+        walk(&image, name, &source, limit, &mut icons);
+        if icons.len() >= limit {
+            break 'outer;
+        }
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({ "icons": icons }))?
+    );
+    Ok(())
+}

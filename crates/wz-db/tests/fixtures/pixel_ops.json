@@ -1,0 +1,56 @@
+[
+  {
+    "path": "0200.img//02000000/info/icon",
+    "width": 27,
+    "height": 30,
+    "out_width": 54,
+    "out_height": 60,
+    "out_len": 12960,
+    "out_sha256": "2c8a3028d5c7662ce0c9b2229bbed62569cf73c3a73671ea3cdbbc63d4b6325e"
+  },
+  {
+    "path": "0200.img//02000000/info/iconRaw",
+    "width": 27,
+    "height": 27,
+    "out_width": 54,
+    "out_height": 54,
+    "out_len": 11664,
+    "out_sha256": "218316712aec25fa342e9ebb0f61ebfc10d3884519338d2d399e0598241f17b7"
+  },
+  {
+    "path": "0200.img//02000001/info/icon",
+    "width": 27,
+    "height": 30,
+    "out_width": 54,
+    "out_height": 60,
+    "out_len": 12960,
+    "out_sha256": "ccfc389023f2e856b04f3f9fd386b8473f7d4e55f317c50e880cce0364a43f02"
+  },
+  {
+    "path": "0200.img//02000001/info/iconRaw",
+    "width": 27,
+    "height": 27,
+    "out_width": 54,
+    "out_height": 54,
+    "out_len": 11664,
+    "out_sha256": "195fee46ed111d93ea51bc04b0766dc860dfa8de44d135761bfaa6146bbb7ec2"
+  },
+  {
+    "path": "0200.img//02000002/info/icon",
+    "width": 27,
+    "height": 30,
+    "out_width": 54,
+    "out_height": 60,
+    "out_len": 12960,
+    "out_sha256": "a1393bcdca52c8034594873f954ccdfb854de23735135b542c12367737663f20"
+  },
+  {
+    "path": "0200.img//02000002/info/iconRaw",
+    "width": 27,
+    "height": 27,
+    "out_width": 54,
+    "out_height": 54,
+    "out_len": 11664,
+    "out_sha256": "d4667332c511207495a6539413b7ce22ad6564e4b4655711a4afd406551c1f11"
+  }
+]

@@ -53,6 +53,7 @@ pub mod map_tooltip;
 pub mod node;
 pub mod npc_quote;
 pub mod particle;
+pub mod pixel_ops;
 pub mod plugin_find;
 pub mod query;
 pub mod quest_tooltip;
@@ -130,6 +131,7 @@ pub use map_tooltip::{MapTooltipFields, MapTooltipText};
 pub use node::{NodeId, NodeValue, RawDataRef};
 pub use npc_quote::{message as npc_quote_message, parse as npc_quote_parse, NpcQuote};
 pub use particle::{parse_particle_desc, ParticleDesc, ParticleTexture};
+pub use pixel_ops::enlarge_2x;
 pub use plugin_find::{plugin_files, FoundNode, PluginMetadata, PluginWzSet};
 pub use query::{
     execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,

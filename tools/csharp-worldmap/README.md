@@ -521,3 +521,11 @@ The harness subclasses the real `WzComparerR2.Text.TextRenderer<string>` and
 injects a deterministic measure (`7 x UTF-16 length`), so the line-breaking
 loop is original code. `(start,len,x,y)` + final y match Rust
 `wz_db::text_layout`.
+
+Verified ItemTooltip icon pixels (`pixelops <fixture.json>`):
+```
+6 canvases (27x30 icon, 27x27 iconRaw) from Item/Consume/_Canvas
+```
+`EnlargeBitmap`'s byte loop (transcribed; LockBits stride == width*4) produces
+SHA-256-identical output to Rust `wz_db::pixel_ops::enlarge_2x`.
+Alpha compositing and text rasterization remain GDI+-bound.

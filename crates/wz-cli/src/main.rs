@@ -313,6 +313,15 @@ enum Command {
         json: bool,
     },
 
+    /// ItemTooltip 아이콘 픽셀 비교용 fixture 생성 (실제 WZ 캔버스)
+    PixelFixture {
+        /// Item WZ 파일
+        wz: PathBuf,
+        /// 최대 아이콘 수
+        #[arg(long, default_value_t = 6)]
+        limit: usize,
+    },
+
     /// ItemTooltip `#cosmetic_EULO#` 치환 결과
     ItemCosmeticEulo {
         /// Data 루트
@@ -1047,6 +1056,7 @@ fn main() {
             &base_url,
             json,
         ),
+        Command::PixelFixture { wz, limit } => commands::cmd_pixel_fixture(&wz, limit),
         Command::ItemCosmeticEulo {
             data_root,
             string,

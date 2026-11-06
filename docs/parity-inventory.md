@@ -950,7 +950,8 @@ rows × columns:
 
 - 측정 함수를 **주입**받아 순수 계산만 수행(`measure(&str) -> i32`)
 - 인덱스는 원본과 같이 UTF-16 코드 유닛 기준
-- `PrepareRuns`(StringReader.ReadLine 의미), `SplitWords`(공백/탭//
+- `PrepareRuns`(StringReader.ReadLine 의미), `SplitWords`(공백/탭/
+/
 ),
   `MeasureRuns`, `MeasureChars`, 정렬 보정(`Center`/`Right`), 줄 끝 `,.` 병합
   규칙까지 이식
@@ -962,7 +963,8 @@ rows × columns:
 그 자체**이며 전사(transcription)가 아니다.
 
 검증: 12개 케이스(줄바꿈, 문자 단위 분할, 명시적 `
-`/``/`
+`/`
+`/`
 `,
 Center/Right 정렬, 줄 끝 `,.` 병합, 공백만, 빈 문자열)에서 `(start,len,x,y)`
 목록과 최종 `y`가 완전 일치.
@@ -981,3 +983,31 @@ C#: `-- textlayout`.
 - 색상 태그 파서(`Parser.Parse`, `#c`/`#fc`/`#t`/이미지 토큰)는 이번 슬라이스에
   포함하지 않았다. `DrawFormatString` 경로도 같은 `LayoutRuns` 코어를 쓰므로
   줄바꿈/오프셋 계산은 공유되지만, 태그별 run 분할은 미검증이다.
+
+## ItemTooltip 아이콘 픽셀 (`GearGraphics.EnlargeBitmap`)
+
+`ItemTooltipRender22`/`GearTooltipRender2`는 아이템 아이콘을 `EnlargeBitmap`으로
+2배 확대해 `DrawImage` 한다. 이 함수는 `Bitmap.LockBits`(32bpp → stride ==
+width*4) + `Marshal.Copy`로 바이트 배열을 만든 뒤 다음 두 단계만 수행한다.
+
+1. 원본 `(j, i)` 픽셀을 목적지 `(2j, 2i)`와 `(2j+1, 2i)`에 복사
+2. 목적지 행 `2i`를 행 `2i+1`로 통째로 복사
+
+색 공간/알파 합성과 무관한 **순수 바이트 변환**이라 GDI+ 없이 픽셀 단위로
+비교할 수 있다.
+
+검증:
+- 입력은 실제 클라이언트 캔버스다. 아이템 아이콘은 `_outlink`로 분할
+  `_Canvas` 파일에 있으므로 `Item/Consume/_Canvas/_Canvas_000.wz`에서
+  `0200.img/0200000N/info/icon`(27×30), `iconRaw`(27×27) 6개를 디코드했다.
+- C# 하네스는 원본 바이트 루프를 그대로 옮긴 참조 구현으로 확대해 SHA-256을 낸다.
+- `crates/wz-db/tests/pixel_ops_parity.rs` — 6개 아이콘의 출력 길이/크기/SHA-256
+  완전 일치(`wz-db::pixel_ops::enlarge_2x`).
+
+fixture: `crates/wz-db/tests/fixtures/pixel_ops_input.json`(입력 RGBA),
+`pixel_ops.json`(C# 출력 해시), C#: `-- pixelops <fixture.json>`,
+CLI: `wz pixel-fixture <canvas.wz> --limit N`.
+
+범위 한계: 아이콘 **확대 픽셀**만 비교했다. 툴팁 캔버스로의 알파 합성
+(`Graphics.DrawImage`의 source-over)과 텍스트 래스터라이제이션은 GDI+ 의존이라
+여전히 미검증이다.

@@ -26,7 +26,7 @@ weather: 원본 C# 소스에 weather 구현 없음
 
 | 항목 | 근거 | 상태 |
 |---|---|---|
-| Skill `common`/`level` 수치 치환 | skill 7,055개 중 `common` 0, `level` 3, `req` 0, `reqLev` 0 | 데이터 없음. resolver 실패 경로 20,629행은 C#과 일치 |
+| Skill `common`/`level` 수치 치환 | skill 7,055개 중 `common` 0, `level` 3, `req` 0, `reqLev` 0. `Skill/MobSkill`·`Skill/Dragon`에는 `skill` 노드 자체가 0 | 데이터 없음. resolver 실패 경로 20,629행은 C#과 일치 |
 | WorldMap `QuestLimit`/`Fog` | WorldMap 168 이미지에 노드 0개 | 데이터 없음 (fixture 단위 테스트만 존재) |
 | Familiar | `Character/Familiar`, `Etc/FamiliarInfo.img` 파일 0개 | 데이터 없음 (행 모델은 합성 fixture로만 검증) |
 | BIN | `.BIN` 파일 0개 | 데이터 없음. 포맷 자체는 C# `BinaryWriter`와 바이트 단위 일치 검증 |

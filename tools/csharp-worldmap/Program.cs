@@ -2963,6 +2963,53 @@ class Program
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    // 원본 `GearGraphics.EnlargeBitmap`의 바이트 루프를 그대로 옮긴 참조 구현.
+    // `Bitmap.LockBits`/`Marshal.Copy`는 32bpp에서 stride == width*4 이므로
+    // 바이트 배열 연산과 동일하다.
+    static byte[] EnlargeBitmapBytes(byte[] origin, int width, int height)
+    {
+        int stride = width * 4;
+        var newByte = new byte[origin.Length * 4];
+        var buffer = new byte[4];
+        for (int i = 0; i < height; i++)
+        {
+            for (int j = 0; j < width; j++)
+            {
+                Array.Copy(origin, i * stride + j * 4, buffer, 0, 4);
+                int dst = (2 * i * (width * 2) + 2 * j) * 4;
+                Array.Copy(buffer, 0, newByte, dst, 4);
+                Array.Copy(buffer, 0, newByte, dst + 4, 4);
+            }
+            int rowDst = 2 * i * (width * 2) * 4;
+            Array.Copy(newByte, rowDst, newByte, rowDst + width * 2 * 4, width * 2 * 4);
+        }
+        return newByte;
+    }
+
+    static void PixelOps(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        foreach (var icon in doc.RootElement.GetProperty("icons").EnumerateArray())
+        {
+            int w = icon.GetProperty("width").GetInt32();
+            int h = icon.GetProperty("height").GetInt32();
+            var rgba = Convert.FromBase64String(icon.GetProperty("rgba_b64").GetString()!);
+            var enlarged = EnlargeBitmapBytes(rgba, w, h);
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            rows.Add(new
+            {
+                path = icon.GetProperty("path").GetString(),
+                width = w,
+                height = h,
+                out_width = w * 2,
+                out_height = h * 2,
+                out_len = enlarged.Length,
+                out_sha256 = Convert.ToHexString(sha.ComputeHash(enlarged)).ToLowerInvariant(),
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -3019,6 +3066,7 @@ class Program
         else if (args[0] == "itemcosmetic") ItemCosmeticEulo(args[1], args[2]);
         else if (args[0] == "db2bin") Db2Bin();
         else if (args[0] == "textlayout") TextLayout();
+        else if (args[0] == "pixelops") PixelOps(args[1]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

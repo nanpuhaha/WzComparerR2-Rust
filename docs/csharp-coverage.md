@@ -238,6 +238,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook`로 몹/NPC
   설명, `[몬스터북]`, `NPC 대사` 라인을 구성해 **1,845개 항목**
   (NPC 대사 767개)이 C#과 완전 일치.
+- ItemTooltip 아이콘 픽셀: `GearGraphics.EnlargeBitmap`(2배 최근접 확대)을
+  실제 클라이언트 아이콘 6개(27×30/27×27)로 비교해 출력 SHA-256이 완전 일치.
+  알파 합성과 텍스트 래스터는 GDI+ 의존으로 남는다.
 - ItemTooltip 텍스트 레이아웃: `TextRenderer.DrawPlainText` 코어를 옮기고,
   C# 하네스가 원본 `TextRenderer<string>`를 상속해 12케이스의 줄 사각형/최종
   y를 비교했다. 픽셀 비교는 `Graphics.MeasureString`(GDI+) 의존이라 여전히
