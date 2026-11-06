@@ -1647,3 +1647,36 @@ C#: `-- mainwindow <PluginBase.dll> <plugin.dll> <fixture.json>`.
 
 남는 것: 원본의 `print` 전역 리다이렉트는 소스에 없어(스크립트는 `env:` 사용)
 구현하지 않았고, `DoStringAsync` 취소 토큰/디버그 훅도 미구현이다.
+
+## LuaConsole 취소 계약 (`DoStringAsync`)
+
+원본 `LuaSandbox.DoStringAsync`는 `CancellationToken` 등록 시
+`SetDebugHook(Count, 1)`을 걸고, 취소되면 `Lua.State.Error("Operation cancelled.")`로
+청크를 중단한 뒤 훅을 제거한다.
+
+`wz-lua` 구현:
+- `do_string_with_cancel(chunk, &Arc<AtomicBool>)` — 매 명령어 훅에서 플래그 확인
+- `do_string_interruptible(chunk, should_cancel)` — 판정 클로저(테스트/호스트 훅)
+- 오류 메시지는 원본과 같은 `Operation cancelled.`, 종료 후 `remove_hook()`
+
+검증(fixture `lua_cancel.json` + `lua_cancel.rs` 2종):
+- `while true do end` + 즉시 취소 → 오류에 `Operation cancelled.`
+- `for i=1,1000` 100만 훅 제한 → `500500` 정상 반환
+- 같은 루프 10훅 제한 → 취소(중단 지점 결정적)
+- 사전 취소 플래그 → 실행 즉시 취소
+- 취소 후 **같은 샌드박스 재사용**: `return 'alive'` 성공, 전역(`x=41`) 유지
+
+차이: 원본은 `Task.Run`(별도 스레드)에서 실행하지만, 여기서는 동기 실행 +
+훅 중단이다(관찰 결과는 동일한 오류/중단).
+
+## macOS에서 실행 불가로 남는 항목 (근거)
+
+- **GDI+ 비교 불가**: macOS에 `System.Drawing` GDI+ 백엔드가 없어
+  `Graphics.MeasureString`/`DrawString`/`DrawImage`의 premultiplied·감마·
+  힌팅을 실행할 수 없다. 현재 근거는 (a) 게임 폰트 기반 오프스크린 렌더 해시,
+  (b) wgpu에서 관찰한 premultiplied readback(`(0,0,255,128)→(0,0,128,128)`),
+  (c) CPU straight-alpha 합성이며, GDI+ 자체와의 픽셀 동일성은 주장하지 않는다.
+- **WinForms 컨트롤 인스턴스화**: `System.Windows.Forms`/DevComponents
+  `RibbonBar`/`SuperTabControl`은 Windows 전용이라 macOS에서 로드/생성할 수
+  없다. 그래서 리본 배치·이벤트/무효화·탭/명령 수명주기는 **모델 + C# 참조
+  하네스**로 검증했고, 실제 컨트롤 인스턴스화/`Invalidate()` 호출은 미실행이다.

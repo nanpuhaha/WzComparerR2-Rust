@@ -1,0 +1,9 @@
+{
+  "note": "LuaSandbox.DoStringAsync: CancellationToken 해제 시 디버그 훅(Count, 1)에서 'Operation cancelled.' 오류로 중단.",
+  "cases": [
+    { "name": "infinite_immediate", "chunk": "while true do end", "cancel_after_hooks": 1, "cancelled": true },
+    { "name": "loop_completes", "chunk": "local s=0 for i=1,1000 do s=s+i end return s", "cancel_after_hooks": 1000000, "cancelled": false, "values": ["500500"] },
+    { "name": "loop_aborts", "chunk": "local s=0 for i=1,1000 do s=s+i end return s", "cancel_after_hooks": 10, "cancelled": true },
+    { "name": "preset_cancel", "chunk": "return 1", "cancel_after_hooks": 0, "cancelled": true }
+  ]
+}

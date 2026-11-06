@@ -228,6 +228,50 @@ impl Sandbox {
         Ok(values.into_iter().map(describe).collect::<Vec<_>>())
     }
 
+    /// `DoStringAsync`의 취소 계약 — 매 명령어 훅에서 플래그를 확인하고,
+    /// 참이면 원본과 같은 `"Operation cancelled."` 오류로 중단한다.
+    pub fn do_string_with_cancel(
+        &self,
+        chunk: &str,
+        cancel: &std::sync::Arc<std::sync::atomic::AtomicBool>,
+    ) -> mlua::Result<Vec<String>> {
+        self.do_string_interruptible(chunk, {
+            let cancel = cancel.clone();
+            move || cancel.load(std::sync::atomic::Ordering::Relaxed)
+        })
+    }
+
+    /// 취소 판정을 클로저로 받는 형태(테스트/호스트 훅).
+    ///
+    /// 훅은 `Count` 마스크(매 명령어)마다 호출되며, 종료 후 반드시 제거한다.
+    pub fn do_string_interruptible<F>(
+        &self,
+        chunk: &str,
+        should_cancel: F,
+    ) -> mlua::Result<Vec<String>>
+    where
+        F: Fn() -> bool + 'static,
+    {
+        self.lua.set_hook(
+            mlua::HookTriggers {
+                every_nth_instruction: Some(1),
+                ..Default::default()
+            },
+            move |_lua, _debug| {
+                if should_cancel() {
+                    Err(mlua::Error::RuntimeError(
+                        "Operation cancelled.".to_string(),
+                    ))
+                } else {
+                    Ok(())
+                }
+            },
+        );
+        let result = self.lua.load(chunk).eval::<MultiValue>();
+        self.lua.remove_hook();
+        result.map(|values| values.into_iter().map(describe).collect())
+    }
+
     /// `env:Write`/`env:WriteLine`이 쌓인 출력(개행 포함)을 비우며 가져온다.
     pub fn drain_output(&self) -> String {
         std::mem::take(&mut *self.output.borrow_mut())
