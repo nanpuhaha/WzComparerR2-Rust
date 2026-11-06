@@ -1558,6 +1558,68 @@ class Program
         public override void WriteJson(Newtonsoft.Json.JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer)
             => writer.WriteValue(Convert.ToBase64String((byte[])value));
     }
+    static void CharaTooltips(string npcWzPath, string reactorWzPath, string stringWzPath, string etcWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var etc = new Wz_Structure(); etc.Load(etcWzPath);
+        var linker = new StringLinker();
+        linker.Load(str.wz_files[0], null, etc.wz_files[0]);
+        var locImage = etc.WzNode.Nodes.FirstOrDefault(n => n.Text == "NpcLocation.img")?.Value as Wz_Image;
+        locImage?.TryExtract();
+        var rows = new List<object>();
+
+        string MapName(int mapId)
+        {
+            linker.StringMap.TryGetValue(mapId, out var msr);
+            return msr?.Name ?? "null";
+        }
+
+        var npc = new Wz_Structure(); npc.Load(npcWzPath);
+        foreach (Wz_Node n in npc.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            var idText = n.Text.Replace(".img", "");
+            if (!int.TryParse(idText, out int npcId)) continue;
+            if (!img.TryExtract()) continue;
+            linker.StringNpc.TryGetValue(npcId, out var sr);
+            var lines = new List<string> { sr?.Name ?? "(null)", $"ID:{npcId}", "등장위치 :" };
+            var locNode = locImage?.Node.Nodes[npcId.ToString()];
+            int locCount = 0;
+            if (locNode != null)
+            {
+                foreach (Wz_Node mapNode in locNode.Nodes)
+                {
+                    string mapName = null;
+                    if (int.TryParse(mapNode.Text, out int mapId)) mapName = MapName(mapId);
+                    lines.Add($" {mapName ?? "null"}({mapNode.Text})");
+                    locCount++;
+                }
+            }
+            if (locCount == 0) lines.Add(" 불명");
+            rows.Add(new { kind = "npc", id = npcId, name = sr?.Name, lines });
+        }
+
+        var reactor = new Wz_Structure(); reactor.Load(reactorWzPath);
+        foreach (Wz_Node n in reactor.WzNode.Nodes)
+        {
+            if (n.Value is not Wz_Image img) continue;
+            if (!img.TryExtract()) continue;
+            var idText = n.Text.Replace(".img", "");
+            if (!int.TryParse(idText, out int rid)) continue;
+            var node = img.Node;
+            var info = node.Nodes["info"];
+            var name = info?.Nodes["viewName"]?.Value?.ToString()
+                ?? info?.Nodes["name"]?.Value?.ToString()
+                ?? info?.Nodes["info"]?.Value?.ToString();
+            var action = node.Nodes["action"]?.Value?.ToString();
+            int clip = 0;
+            while (node.Nodes[clip.ToString()] != null) clip++;
+            var lines = new List<string> { $"이름: {(string.IsNullOrEmpty(name) ? "(null)" : name)}", $"클립: {clip}개" };
+            if (!string.IsNullOrEmpty(action)) lines.Add($"액션: {action}");
+            rows.Add(new { kind = "reactor", id = rid, name, action, clip_count = clip, lines });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1591,6 +1653,7 @@ class Program
         else if (args[0] == "worldarchive") WorldArchive(args[1], args[2]);
         else if (args[0] == "findwz") FindWz(args, 1);
         else if (args[0] == "netpack") NetPack(args[1]);
+        else if (args[0] == "charatooltips") CharaTooltips(args[1], args[2], args[3], args[4]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

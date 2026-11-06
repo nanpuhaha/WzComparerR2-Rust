@@ -2512,3 +2512,222 @@ mod findwz_tests {
         }
     }
 }
+
+pub fn cmd_chara_tooltips(
+    npc_wz: &Path,
+    reactor_wz: &Path,
+    string_wz: &Path,
+    etc_wz: &Path,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (string_arena, string_root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&string_arena, string_root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let etc_archive = WzArchive::open(etc_wz)?;
+    let etc_tree = etc_archive.read_tree()?;
+    let location_image = etc_tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some("NpcLocation.img"))
+        .and_then(|e| e.offset)
+        .and_then(|offset| etc_archive.parse_image_at(offset).ok())
+        .unwrap_or_else(|| wz_core::image::Node::new("NpcLocation.img"));
+
+    let map_name = |id: i32| linker.string_map.get(&id).map(|sr| sr.name.clone());
+
+    let npc_archive = WzArchive::open(npc_wz)?;
+    let npc_tree = npc_archive.read_tree()?;
+    let mut rows = Vec::new();
+    for entry in &npc_tree.root.entries {
+        if entry.node_type != 4 {
+            continue;
+        }
+        let Some(offset) = entry.offset else {
+            continue;
+        };
+        let Ok(mut node) = npc_archive.parse_image_at(offset) else {
+            continue;
+        };
+        let Some(name) = entry.name.as_deref() else {
+            continue;
+        };
+        node.name = std::sync::Arc::from(name);
+        let Some(id) = name
+            .strip_suffix(".img")
+            .and_then(|s| s.parse::<i32>().ok())
+        else {
+            continue;
+        };
+        let locations = wz_db::npc_locations(&location_image, id);
+        let npc_name = linker.string_npc.get(&id).map(|sr| sr.name.clone());
+        rows.push(serde_json::json!({
+            "kind": "npc",
+            "id": id,
+            "name": npc_name,
+            "lines": wz_db::npc_lines(npc_name.as_deref(), id, &locations, &map_name),
+        }));
+    }
+
+    let reactor_archive = WzArchive::open(reactor_wz)?;
+    let reactor_tree = reactor_archive.read_tree()?;
+    for entry in &reactor_tree.root.entries {
+        if entry.node_type != 4 {
+            continue;
+        }
+        let Some(offset) = entry.offset else {
+            continue;
+        };
+        let Ok(mut node) = reactor_archive.parse_image_at(offset) else {
+            continue;
+        };
+        let Some(name) = entry.name.as_deref() else {
+            continue;
+        };
+        node.name = std::sync::Arc::from(name);
+        if let Some(tooltip) = wz_db::reactor_from_node(&node) {
+            rows.push(serde_json::json!({
+                "kind": "reactor",
+                "id": tooltip.id,
+                "name": tooltip.name,
+                "action": tooltip.action,
+                "clip_count": tooltip.clip_count,
+                "lines": tooltip.lines,
+            }));
+        }
+    }
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!("{} {}", row["kind"].as_str().unwrap_or(""), row["id"]);
+            for line in row["lines"].as_array().into_iter().flatten() {
+                println!("  {}", line.as_str().unwrap_or(""));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod chara_tooltip_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn chara_tooltips_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let npc = root.join("Npc/Npc_000.wz");
+        let reactor = root.join("Reactor/_Canvas/_Canvas_000.wz");
+        let string_wz = root.join("String/String_000.wz");
+        let etc = root.join("Etc/Etc_000.wz");
+        for path in [&npc, &reactor, &string_wz, &etc] {
+            if !path.exists() {
+                return;
+            }
+        }
+        use wz_db::{Arena, StringLinker};
+        let string_archive = wz_core::WzArchive::open(&string_wz).unwrap();
+        let (string_arena, string_root) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&string_arena, string_root));
+        let etc_archive = wz_core::WzArchive::open(&etc).unwrap();
+        let etc_tree = etc_archive.read_tree().unwrap();
+        let location_image = etc_tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("NpcLocation.img"))
+            .and_then(|e| e.offset)
+            .and_then(|o| etc_archive.parse_image_at(o).ok())
+            .unwrap_or_else(|| wz_core::image::Node::new("NpcLocation.img"));
+        let map_name = |id: i32| linker.string_map.get(&id).map(|sr| sr.name.clone());
+
+        let rec = char::from(0x1e);
+        let mut rows: Vec<String> = Vec::new();
+        let npc_archive = wz_core::WzArchive::open(&npc).unwrap();
+        for entry in &npc_archive.read_tree().unwrap().root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else { continue };
+            let Ok(mut node) = npc_archive.parse_image_at(offset) else {
+                continue;
+            };
+            let Some(name) = entry.name.as_deref() else {
+                continue;
+            };
+            node.name = std::sync::Arc::from(name);
+            let Some(id) = name.strip_suffix(".img").and_then(|s| s.parse().ok()) else {
+                continue;
+            };
+            let locations = wz_db::npc_locations(&location_image, id);
+            let npc_name = linker.string_npc.get(&id).map(|sr| sr.name.clone());
+            rows.push(
+                [
+                    "npc".to_string(),
+                    id.to_string(),
+                    npc_name.clone().unwrap_or_default(),
+                    String::new(),
+                    String::new(),
+                    wz_db::npc_lines(npc_name.as_deref(), id, &locations, &map_name).join("|"),
+                ]
+                .join(&rec.to_string()),
+            );
+        }
+        let reactor_archive = wz_core::WzArchive::open(&reactor).unwrap();
+        for entry in &reactor_archive.read_tree().unwrap().root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else { continue };
+            let Ok(mut node) = reactor_archive.parse_image_at(offset) else {
+                continue;
+            };
+            let Some(name) = entry.name.as_deref() else {
+                continue;
+            };
+            node.name = std::sync::Arc::from(name);
+            let Some(t) = wz_db::reactor_from_node(&node) else {
+                continue;
+            };
+            rows.push(
+                [
+                    "reactor".to_string(),
+                    t.id.to_string(),
+                    t.name.unwrap_or_default(),
+                    t.action.unwrap_or_default(),
+                    t.clip_count.to_string(),
+                    t.lines.join("|"),
+                ]
+                .join(&rec.to_string()),
+            );
+        }
+        let canon = rows.join(&rec.to_string());
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/chara_tooltips.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(rows.len() as u64, expected["rows"].as_u64().unwrap());
+        assert_eq!(
+            sha256_hex(canon.as_bytes()),
+            expected["sha256"].as_str().unwrap()
+        );
+    }
+}

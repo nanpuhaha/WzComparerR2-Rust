@@ -417,6 +417,23 @@ enum Command {
         json: bool,
     },
 
+    /// NPC/Reactor 툴팁 텍스트
+    CharaTooltips {
+        /// Npc WZ 파일
+        npc: PathBuf,
+        /// Reactor WZ 파일
+        reactor: PathBuf,
+        /// String_000.wz
+        #[arg(long)]
+        string: PathBuf,
+        /// Etc_000.wz (NpcLocation.img 포함)
+        #[arg(long)]
+        etc: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// PluginManager.FindWz 경로 조회 (type=path 등록 후 경로)
     FindWz {
         /// `Mob=Data/Mob/...wz` 형식. 여러 번 지정 가능.
@@ -821,6 +838,13 @@ fn main() {
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
+        Command::CharaTooltips {
+            npc,
+            reactor,
+            string,
+            etc,
+            json,
+        } => commands::cmd_chara_tooltips(&npc, &reactor, &string, &etc, json),
         Command::FindWz { maps, path, json } => commands::cmd_find_wz(&maps, &path, json),
         Command::WorldArchive { string, etc, json } => {
             commands::cmd_world_archive(&string, &etc, json)

@@ -28,7 +28,7 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 | 디렉터리 | 파일 | LOC | 대응 | 상태 |
 |---|---:|---:|---|---|
 | (root) WinForms 메인/비교 창 | 48 | 26,281 | `wz-gui` 최소 PoC | ⬜/🟡 |
-| CharaSimControl | 40 | 21,299 | gear tooltip(base/set/potential/starforce), `GetGearPropString`/`GetJobName`/`GetFifthJobName`/`GetItemCoreSpecString` 전수 비교, Skill `SummaryParser` 요약, ItemTooltip 6탭 32,843개 속성, AchievementTooltip 1,579개, WorldArchiveTooltip 1,845개(NPC 대사 767), bitmap | 🟡 |
+| CharaSimControl | 40 | 21,299 | gear tooltip(base/set/potential/starforce), `GetGearPropString`/`GetJobName`/`GetFifthJobName`/`GetItemCoreSpecString` 전수 비교, Skill `SummaryParser` 요약, ItemTooltip 6탭 32,843개 속성, AchievementTooltip 1,579개, WorldArchiveTooltip 1,845개(NPC 대사 767), NPC/Reactor 툴팁 12,629개, bitmap | 🟡 |
 | AvatarCommon | 12 | 4,086 | `wz-avatar` | ✅ |
 | Comparer | 6 | 3,080 | `wz-diff` + `virtual_node` | 🟡 |
 | Patcher | 16 | 2,547 | `wz-core::patch`, `wz patch` | ✅ core/CLI, UI ⬜ |
@@ -175,6 +175,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
 - Network 오프라인: RC4 12개 벡터 + 프레임 코덱 자체 테스트.
 - OpenAPI 오프라인 helpers: C# `Utils.Decrypt`/`CheckVer`/`GetItemID`를
   16/32/64바이트 벡터에서 비교해 완전 일치(`wz-openapi` 통합 테스트).
+- `NpcTooltipRenderer`/`ReactorTooltipRenderer` 텍스트: 이름/`ID:`/
+  `등장위치 :`/` 맵이름(mapID)`·` 불명`, `이름:`/`클립: n개`/`액션:`를
+  실제 데이터 **12,629개**(NPC 12,188 + Reactor 441)에서 C#과 일치.
 - `WorldArchiveTooltipRender` 텍스트: `worldArchive.img`(Etc_002) +
   `StringLinker.StringWorldArchiveMob/Npc` + `StringMonsterBook`로 몹/NPC
   설명, `[몬스터북]`, `NPC 대사` 라인을 구성해 **1,845개 항목**

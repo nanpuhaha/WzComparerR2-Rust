@@ -454,3 +454,18 @@ Newtonsoft `TypeNameHandling.Objects` + `[JsonObject("id")]` +
 `EncodePack` 실행 결과와 완전 일치.
 fixture: `crates/wz-network/tests/packets.json`,
 테스트: `pack_csharp_parity.rs`.
+
+## NPC/Reactor 툴팁 텍스트
+
+- `NpcTooltipRenderer`: `StringLinker.StringNpc.Name`, `ID:n`,
+  `등장위치 :`, `Etc/NpcLocation.img/<id>` 자식마다
+  ` <StringMap.Name>(<원본 mapID>)`, 위치가 없으면 ` 불명`
+  - 맵 이름은 렌더러와 같이 `StringResult.Name`(=`street : mapName`)을 쓴다.
+- `ReactorTooltipRenderer`: `info/viewName` → `info/name` → `info/info`,
+  `action`, 0부터 연속된 숫자 자식 수(`ClipCount`),
+  `이름: …`/`클립: n개`/`액션: …`
+
+C# `StringLinker` + 동일 필드 추출 하네스와 비교:
+`Npc_000.wz` + `Reactor_000` **12,629개**(NPC 12,188 + Reactor 441)
+완전 일치. fixture: `crates/wz-cli/tests/fixtures/chara_tooltips.expected.json`,
+테스트: `chara_tooltips_match_csharp`, CLI: `wz chara-tooltips`.

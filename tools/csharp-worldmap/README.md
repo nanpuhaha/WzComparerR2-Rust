@@ -371,3 +371,9 @@ Verified Network packet serialization (`netpack <WzComparerR2.Network.dll>`):
 heartbeat, loginreq, loginresp, sendchat, sendchat-null, cryptreq, cryptresp
 ```
 JSON + framed bytes match Rust `wz-network::pack` exactly.
+
+Verified NPC/Reactor tooltip text (`charatooltips <npc.wz> <reactor.wz> <String_000.wz> <Etc_000.wz>`):
+```
+12629 rows (12188 NPC + 441 reactor)
+```
+Lines match Rust `wz chara-tooltips` exactly.
