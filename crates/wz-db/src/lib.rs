@@ -88,8 +88,8 @@ pub use item_tooltip::{
     build_item_tooltip, item_attribute_lines, item_core_spec_string, ItemTooltipView,
 };
 pub use item_tooltip_extra::{
-    cash_tag_lines, exp_restriction_lines, exp_to_next_level, item_int_props, pet_command_lines,
-    RecipeSpec,
+    cant_account_sharable_tooltip, cash_tag_lines, exp_restriction_lines, exp_to_next_level,
+    item_int_props, pet_command_lines, point_cost_line, replace_desc_tags, RecipeSpec,
 };
 pub use linker::{
     extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,

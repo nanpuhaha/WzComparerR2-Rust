@@ -439,6 +439,20 @@ enum Command {
         json: bool,
     },
 
+    /// ItemTooltip desc_leftalign/pointCost/cantAccountSharable
+    ItemTextExtras {
+        /// Data 루트
+        data_root: PathBuf,
+        /// Item 하위 디렉터리
+        dir: String,
+        /// String_000.wz
+        #[arg(long)]
+        string: PathBuf,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// PluginBase 플러그인 파일 탐색 (WzComparerR2.*.dll)
     PluginFiles {
         /// Plugin 디렉터리
@@ -932,6 +946,12 @@ fn main() {
             dir,
             json,
         } => commands::cmd_item_cash_lines(&data_root, &dir, json),
+        Command::ItemTextExtras {
+            data_root,
+            dir,
+            string,
+            json,
+        } => commands::cmd_item_text_extras(&data_root, &dir, &string, json),
         Command::PluginFiles { dir, json } => commands::cmd_plugin_files(&dir, json),
         Command::QuestTooltips { wz, json, limit } => {
             commands::cmd_quest_tooltips(&wz, json, limit)

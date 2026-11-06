@@ -422,3 +422,9 @@ Verified ItemTooltip cash/tag lines (`itemcashlines <Data> Cash`):
 2503 items
 ```
 All lines match Rust `wz item-cash-lines` exactly.
+
+Verified ItemTooltip text extras (`itemtextextras <Data> <dir> <String_000.wz>`):
+```
+Cash 91, Consume 1151
+```
+desc_leftalign(`#t` 치환)/pointCost/cantAccountSharable all match Rust.

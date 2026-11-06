@@ -617,3 +617,16 @@ OK: heartbeat echo + reconnect
 `Item/Cash` **2,503개**가 C# 하네스와 완전 일치.
 fixture: `crates/wz-cli/tests/fixtures/item_cash_lines.expected.json`,
 테스트: `item_cash_lines_match_csharp`, CLI: `wz item-cash-lines <Data> Cash`.
+
+## ItemTooltip desc_leftalign/pointCost/cant
+
+- `StringItem["desc_leftalign"]` → `ReplaceDescTags`
+  - `#t<id>...#` → `StringItem`/`StringEqp` 이름, 없으면 숫자
+  - `#cosmetic_EULO#`는 `desc_leftalign` 1,359개 중 0개라 미구현
+- `info/pointCost > 0` → `· N 포인트`
+- `info/cantAccountSharable/tooltip` → 문자열 그대로
+
+검증: Cash **91** + Consume **1,151** = 1,242개가 C# 하네스와 완전 일치.
+fixture: `crates/wz-cli/tests/fixtures/item_text_extras.expected.json`,
+테스트: `item_text_extras_match_csharp`,
+CLI: `wz item-text-extras <Data> <dir> --string <String_000.wz>`.

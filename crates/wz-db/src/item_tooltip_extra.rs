@@ -125,6 +125,55 @@ pub fn item_int_props(item: &Node) -> std::collections::BTreeMap<String, i64> {
     props
 }
 
+/// `pointCost > 0`일 때의 라인.
+pub fn point_cost_line(value: i64) -> Option<String> {
+    (value > 0).then(|| format!("· {value} 포인트"))
+}
+
+/// `info/cantAccountSharable/tooltip`.
+pub fn cant_account_sharable_tooltip(item: &Node) -> Option<String> {
+    let info = child(item, "info")?;
+    let node = child(info, "cantAccountSharable")?;
+    child(node, "tooltip").and_then(|n| match &n.value {
+        Some(ImageValue::Str(s)) | Some(ImageValue::Uol(s)) => Some(s.to_string()),
+        _ => None,
+    })
+}
+
+/// `ReplaceDescTags` — `#t<id>...#`를 아이템/장비 이름으로 치환한다.
+///
+/// `#cosmetic_EULO#`는 이 클라이언트의 `desc_leftalign`에 등장하지 않아
+/// 구현하지 않았다(스캔 근거는 문서 참고).
+pub fn replace_desc_tags(text: &str, name_of: &dyn Fn(i32) -> Option<String>) -> String {
+    let bytes: Vec<char> = text.chars().collect();
+    let mut out = String::new();
+    let mut i = 0usize;
+    while i < bytes.len() {
+        if bytes[i] == '#' && i + 1 < bytes.len() && bytes[i + 1] == 't' {
+            let mut cursor = i + 2;
+            while cursor < bytes.len() && bytes[cursor].is_whitespace() {
+                cursor += 1;
+            }
+            let start = cursor;
+            while cursor < bytes.len() && bytes[cursor].is_ascii_digit() {
+                cursor += 1;
+            }
+            let digits: String = bytes[start..cursor].iter().collect();
+            if !digits.is_empty() && digits.len() <= 9 {
+                if let Some(end) = bytes[cursor..].iter().position(|c| *c == '#') {
+                    let id: i32 = digits.parse().unwrap_or(-1);
+                    out.push_str(&name_of(id).unwrap_or_else(|| id.to_string()));
+                    i = cursor + end + 1;
+                    continue;
+                }
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    out
+}
+
 /// 원본 `Character.ExpToNextLevel`.
 pub fn exp_to_next_level(level: i32) -> i64 {
     const EXPTNL: [i64; 11] = [
@@ -413,6 +462,17 @@ mod tests {
             cash_tag_lines(5000000, &props),
             vec!["\n#c이 아이템은 넥슨캐시로 구매 후에도 타인과의 교환이 제한됩니다.#"]
         );
+    }
+
+    #[test]
+    fn desc_tags_and_point_cost() {
+        let name = |id: i32| (id == 2000000).then(|| "빨간 포션".to_string());
+        assert_eq!(
+            replace_desc_tags("#t2000000#를 사용", &name),
+            "빨간 포션를 사용"
+        );
+        assert_eq!(point_cost_line(0), None);
+        assert_eq!(point_cost_line(3).as_deref(), Some("· 3 포인트"));
     }
 
     #[test]

@@ -1982,6 +1982,58 @@ class Program
             (string)b.GetType().GetProperty("id").GetValue(b)));
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static void ItemTextExtras(string dataRoot, string dir, string stringWzPath)
+    {
+        var str = new Wz_Structure(); str.Load(stringWzPath);
+        var linker = new StringLinker();
+        linker.Load(str.wz_files[0], null, null);
+        string NameOf(int id)
+        {
+            linker.StringItem.TryGetValue(id, out var sr);
+            if (sr == null) linker.StringEqp.TryGetValue(id, out sr);
+            return string.IsNullOrEmpty(sr?.Name) ? null : sr.Name;
+        }
+        string ReplaceDescTags(string text)
+        {
+            return System.Text.RegularExpressions.Regex.Replace(text, @"#(t)\s*(\d{1,9}).*?#", m =>
+            {
+                if (!int.TryParse(m.Groups[2].Value, out int id)) id = -1;
+                return NameOf(id) ?? id.ToString();
+            });
+        }
+        var rows = new List<object>();
+        foreach (var file in Directory.GetFiles(Path.Combine(dataRoot, "Item", dir), "*.wz").OrderBy(x => x))
+        {
+            var st = new Wz_Structure(); st.Load(file);
+            foreach (Wz_Node n in st.WzNode.Nodes)
+            {
+                if (n.Value is not Wz_Image img) continue;
+                if (!img.TryExtract()) continue;
+                foreach (Wz_Node item in img.Node.Nodes)
+                {
+                    if (!int.TryParse(item.Text, out int id)) continue;
+                    linker.StringItem.TryGetValue(id, out var sr);
+                    var raw = sr?["desc_leftalign"];
+                    var replaced = string.IsNullOrEmpty(raw) ? null : ReplaceDescTags(raw);
+                    var info = item.Nodes["info"] ?? item;
+                    long point = info.Nodes["pointCost"]?.Value is object pv ? Convert.ToInt64(pv) : 0;
+                    var pointLine = point > 0 ? $"· {point} 포인트" : null;
+                    var cant = info.Nodes["cantAccountSharable"]?.Nodes["tooltip"]?.Value?.ToString();
+                    if (string.IsNullOrEmpty(raw) && pointLine == null && string.IsNullOrEmpty(cant)) continue;
+                    rows.Add(new {
+                        id,
+                        desc_leftalign = string.IsNullOrEmpty(raw) ? null : raw,
+                        desc_leftalign_replaced = replaced,
+                        point_cost = pointLine,
+                        cant_account_sharable = string.IsNullOrEmpty(cant) ? null : cant,
+                    });
+                }
+            }
+        }
+        rows.Sort((a, b) => ((int)a.GetType().GetProperty("id").GetValue(a))
+            .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -2024,6 +2076,7 @@ class Program
         else if (args[0] == "pluginfiles") PluginFiles(args[1]);
         else if (args[0] == "itemextras") ItemExtras(args[1], args[2]);
         else if (args[0] == "itemcashlines") ItemCashLines(args[1], args[2]);
+        else if (args[0] == "itemtextextras") ItemTextExtras(args[1], args[2], args[3]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

@@ -3736,3 +3736,214 @@ mod item_cash_line_tests {
         );
     }
 }
+
+pub fn cmd_item_text_extras(
+    data_root: &Path,
+    dir: &str,
+    string_wz: &Path,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (string_arena, string_root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&string_arena, string_root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+    let name_of = |id: i32| {
+        linker
+            .string_item
+            .get(&id)
+            .or_else(|| linker.string_eqp.get(&id))
+            .map(|sr| sr.name.clone())
+            .filter(|s| !s.is_empty())
+    };
+
+    let mut paths: Vec<_> = std::fs::read_dir(data_root.join("Item").join(dir))
+        .ok()
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+        .collect();
+    paths.sort();
+    let mut rows = Vec::new();
+    for path in paths {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else {
+                continue;
+            };
+            let Ok(image) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            for item in image.object_children() {
+                let Ok(id) = item.name.as_ref().parse::<i32>() else {
+                    continue;
+                };
+                let sr = linker.string_item.get(&id);
+                let raw = sr.and_then(|sr| sr.values.get("desc_leftalign").cloned());
+                let replaced = raw
+                    .as_deref()
+                    .map(|text| wz_db::replace_desc_tags(text, &name_of));
+                let props = wz_db::item_int_props(item);
+                let point = wz_db::point_cost_line(props.get("pointCost").copied().unwrap_or(0));
+                let cant = wz_db::cant_account_sharable_tooltip(item);
+                if raw.is_none() && point.is_none() && cant.is_none() {
+                    continue;
+                }
+                rows.push(serde_json::json!({
+                    "id": id,
+                    "desc_leftalign": raw,
+                    "desc_leftalign_replaced": replaced,
+                    "point_cost": point,
+                    "cant_account_sharable": cant,
+                }));
+            }
+        }
+    }
+    rows.sort_by_key(|r| r["id"].as_i64());
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for row in &rows {
+            println!("{}", row["id"]);
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod item_text_extra_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn item_text_extras_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let string_wz = root.join("String/String_000.wz");
+        if !string_wz.exists() {
+            return;
+        }
+        use wz_db::{Arena, StringLinker};
+        let string_archive = wz_core::WzArchive::open(&string_wz).unwrap();
+        let (string_arena, string_root) = Arena::from_archive(&string_archive);
+        let mut linker = StringLinker::new();
+        assert!(linker.load_string_wz(&string_arena, string_root));
+        let name_of = |id: i32| {
+            linker
+                .string_item
+                .get(&id)
+                .or_else(|| linker.string_eqp.get(&id))
+                .map(|sr| sr.name.clone())
+                .filter(|s| !s.is_empty())
+        };
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/item_text_extras.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
+        for dir in ["Cash", "Consume"] {
+            let item_dir = root.join("Item").join(dir);
+            if !item_dir.exists() {
+                continue;
+            }
+            let mut paths: Vec<_> = std::fs::read_dir(&item_dir)
+                .unwrap()
+                .flatten()
+                .map(|e| e.path())
+                .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+                .collect();
+            paths.sort();
+            let mut rows: Vec<(i32, String, String, String, String)> = Vec::new();
+            for path in paths {
+                let Ok(archive) = wz_core::WzArchive::open(&path) else {
+                    continue;
+                };
+                let Ok(tree) = archive.read_tree() else {
+                    continue;
+                };
+                for entry in &tree.root.entries {
+                    if entry.node_type != 4 {
+                        continue;
+                    }
+                    let Some(offset) = entry.offset else { continue };
+                    let Ok(image) = archive.parse_image_at(offset) else {
+                        continue;
+                    };
+                    for item in image.object_children() {
+                        let Ok(id) = item.name.as_ref().parse::<i32>() else {
+                            continue;
+                        };
+                        let sr = linker.string_item.get(&id);
+                        let raw = sr.and_then(|sr| sr.values.get("desc_leftalign").cloned());
+                        let replaced = raw
+                            .as_deref()
+                            .map(|text| wz_db::replace_desc_tags(text, &name_of));
+                        let props = wz_db::item_int_props(item);
+                        let point =
+                            wz_db::point_cost_line(props.get("pointCost").copied().unwrap_or(0));
+                        let cant = wz_db::cant_account_sharable_tooltip(item);
+                        if raw.is_none() && point.is_none() && cant.is_none() {
+                            continue;
+                        }
+                        rows.push((
+                            id,
+                            raw.unwrap_or_default(),
+                            replaced.unwrap_or_default(),
+                            point.unwrap_or_default(),
+                            cant.unwrap_or_default(),
+                        ));
+                    }
+                }
+            }
+            rows.sort_by_key(|r| r.0);
+            let rec = char::from(0x1e);
+            let canon = rows
+                .iter()
+                .map(|(id, raw, replaced, point, cant)| {
+                    [
+                        id.to_string(),
+                        raw.clone(),
+                        replaced.clone(),
+                        point.clone(),
+                        cant.clone(),
+                    ]
+                    .join(&rec.to_string())
+                })
+                .collect::<Vec<_>>()
+                .join(&rec.to_string());
+            let want = &expected[dir];
+            assert_eq!(
+                rows.len() as u64,
+                want["rows"].as_u64().unwrap(),
+                "{dir} rows"
+            );
+            assert_eq!(
+                sha256_hex(canon.as_bytes()),
+                want["sha256"].as_str().unwrap(),
+                "{dir} hash"
+            );
+        }
+    }
+}
