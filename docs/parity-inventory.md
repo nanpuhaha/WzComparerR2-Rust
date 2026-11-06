@@ -1905,3 +1905,26 @@ C#: `-- thousands <fixture.json>`, `-- mobskill <fixture.json>`.
 fixture: `mob_category_cases.json`, `attack_speed_cases.json`,
 `gear_grade_cases.json`, `gear_diff_cases.json`, `small_formatters_expected.json`,
 C#: `-- smallformatters <fixture-dir>`.
+
+## 3열 비교 문자열과 직업 제한 (`GetGearPropDiffString22`, `GetExtraJobReqString*`)
+
+- `gear_prop_diff_pair(key, value, standard)` → `(라벨, 값, 접미사)`.
+  값 > 기준일 때만 접미사가 붙고, 접미사 목록에 없는 속성은 `null`.
+  (`#$e` 색 토큰은 22 버전에서 `$e`, 1열 버전에서 `$y`)
+- `extra_job_req_string(spec_job)` — 31개 직업 코드 → `… 착용 가능`
+- `extra_job_req_string_list(spec_jobs, is_msn_mode)`
+  - 일반 모드: 1→히어로/팔라딘, 2→아크메이지 3종, 4/11/12/22/32/172 이름, 그 외 숫자
+  - MSN 모드: `11,12,13,14,15,51` 특례(시그너스), 아니면 `job/10` 평균으로 계열
+    (0 모험가, 1 시그너스, 2 영웅, 3 레지스탕스, 4 새벽의 진, 6 노바,
+    15 레프, 16 아니마, 17 강호, 18 샤인, 19 마족)
+  - 결과가 비면 `None`(원본 `null`)
+  - **원본은 빈 목록 MSN 모드에서 `DivideByZeroException`** — Rust는 `None`으로
+    안전하게 처리한다(문서화된 차이).
+
+검증(실제 C# 실행):
+- 비교 45케이스(9키 × 값/기준 5조합), 직업 ID 35개, 목록 12개
+- `crates/wz-avatar/tests/diff22_jobreq_parity.rs` 완전 일치, 단위 테스트 2종
+
+fixture: `gear_diff_cases.json`, `job_req_cases.json`, `job_req_lists.json`,
+`diff22_jobreq_expected.json`,
+C#: `-- diff22jobreq <fixture-dir> <gear_diff_cases.json> <job_ids> <job_lists>`.

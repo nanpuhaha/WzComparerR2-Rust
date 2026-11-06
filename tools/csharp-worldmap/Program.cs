@@ -4572,6 +4572,44 @@ return tostring(ok) .. '|' .. tostring(acc)
             diffs,
         }, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // 실제 `GetGearPropDiffString22` / `GetExtraJobReqString(int)` / `GetExtraJobReqStringList`.
+    static void Diff22JobReq(string fixtureDir, string gearDiffCases, string jobIds, string jobLists)
+    {
+        var diffRows = new List<object>();
+        var diffDoc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(gearDiffCases));
+        foreach (var x in diffDoc.RootElement.EnumerateArray())
+        {
+            string key = x.GetProperty("key").GetString()!;
+            int value = x.GetProperty("value").GetInt32();
+            int standard = x.GetProperty("standard").GetInt32();
+            var prop = Enum.Parse<WzComparerR2.CharaSim.GearPropType>(key);
+            var res = WzComparerR2.CharaSim.ItemStringHelper.GetGearPropDiffString22(prop, value, standard);
+            diffRows.Add(new { key, value, standard, label = res?[0], value_text = res?[1], suffix = res?[2], pair_null = res == null });
+        }
+
+        var ids = System.Text.Json.JsonDocument
+            .Parse(File.ReadAllText(Path.Combine(fixtureDir, jobIds))).RootElement
+            .EnumerateArray().Select(e => e.GetInt32())
+            .Select(id => new
+            {
+                id,
+                text = WzComparerR2.CharaSim.ItemStringHelper.GetExtraJobReqString(id),
+            }).ToList();
+
+        var lists = System.Text.Json.JsonDocument
+            .Parse(File.ReadAllText(Path.Combine(fixtureDir, jobLists))).RootElement
+            .EnumerateArray()
+            .Select(e => e.EnumerateArray().Select(v => v.GetInt32()).ToList())
+            .Select(jobs => new
+            {
+                jobs,
+                normal = WzComparerR2.CharaSim.ItemStringHelper.GetExtraJobReqStringList(jobs),
+                msn = WzComparerR2.CharaSim.ItemStringHelper.GetExtraJobReqStringList(jobs, true),
+            }).ToList();
+
+        Console.WriteLine(JsonSerializer.Serialize(new { diffs = diffRows, ids, lists },
+            new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4604,6 +4642,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "thousands") Thousands(args[1]);
         else if (args[0] == "mobskill") MobSkill(args[1]);
         else if (args[0] == "smallformatters") SmallFormatters(args[1]);
+        else if (args[0] == "diff22jobreq") Diff22JobReq(args[1], args[2], args[3], args[4]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));

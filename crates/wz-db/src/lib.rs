@@ -131,9 +131,10 @@ pub use draw_math::{
 pub use format_parser::{parse as parse_format, DocElement, Span};
 pub use gear_stats::extract_gear_props;
 pub use item_tooltip::{
-    build_item_tooltip, get_attack_speed_string, get_gear_grade_string, get_mob_category_name,
-    get_mob_skill_name, item_attribute_lines, item_category_name, item_core_spec_string,
-    skill_req_amount, to_cjk_number_expr, to_thousands_number_expr, ItemTooltipView,
+    build_item_tooltip, extra_job_req_string, extra_job_req_string_list, get_attack_speed_string,
+    get_gear_grade_string, get_mob_category_name, get_mob_skill_name, item_attribute_lines,
+    item_category_name, item_core_spec_string, skill_req_amount, to_cjk_number_expr,
+    to_thousands_number_expr, ItemTooltipView,
 };
 pub use item_tooltip_extra::{
     cant_account_sharable_tooltip, cash_tag_lines, exp_restriction_lines, exp_to_next_level,

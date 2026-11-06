@@ -723,3 +723,11 @@ Verified small formatters (`smallformatters <fixture-dir>`):
 Calls the real `ItemStringHelper` methods; matches Rust
 `get_mob_category_name` / `get_attack_speed_string` / `get_gear_grade_string`
 and `wz_avatar::gear_prop_diff_string`.
+
+Verified 3-column diff and job requirements (`diff22jobreq ...`):
+```
+45 diff rows, 35 job ids, 12 job lists (normal + MSN)
+```
+Calls the real `GetGearPropDiffString22` / `GetExtraJobReqString` /
+`GetExtraJobReqStringList`; matches Rust `gear_prop_diff_pair` and
+`wz_db::extra_job_req_string*`.

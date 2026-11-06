@@ -871,3 +871,78 @@ mod small_formatter_tests {
         );
     }
 }
+
+/// `GetGearPropDiffString22` — 3열 `(라벨, 값, 차이 접미사)`.
+///
+/// 값이 기준 이하이면 세 번째 원소는 `null`이다.
+pub fn gear_prop_diff_pair(
+    key: &str,
+    value: i64,
+    standard_value: i64,
+) -> Option<(Option<String>, Option<String>, Option<String>)> {
+    let (label, value_text) = gear_prop_pair(key, value, 0)?;
+    let suffix = if value > standard_value {
+        let diff = value - standard_value;
+        Some(match key {
+            "incSTR" | "incDEX" | "incINT" | "incLUK" | "incMHP" | "incMMP" | "incMDF"
+            | "incARC" | "incAUT" | "incPAD" | "incMAD" | "incPDD" | "incMDD" | "incSpeed"
+            | "incJump" => format!("({standard_value} #$e+{diff}#)"),
+            "bdR" | "incBDR" | "imdR" | "incIMDR" | "damR" | "incDAMr" | "statR" | "incEXPr" => {
+                format!("({standard_value}% #$e+{diff}%#)")
+            }
+            _ => return Some((label, value_text, None)),
+        })
+    } else {
+        None
+    };
+    Some((label, value_text, suffix))
+}
+
+#[cfg(test)]
+mod diff22_jobreq_tests {
+    use super::gear_prop_diff_pair;
+    use wz_db::{extra_job_req_string, extra_job_req_string_list};
+
+    #[test]
+    fn diff22_three_columns() {
+        assert_eq!(
+            gear_prop_diff_pair("incSTR", 10, 5).unwrap(),
+            (
+                Some("STR".into()),
+                Some("+10".into()),
+                Some("(5 #$e+5#)".into())
+            )
+        );
+        // 값이 기준 이하이거나 접미사 목록에 없으면 세 번째는 null.
+        assert_eq!(gear_prop_diff_pair("incSTR", 5, 5).unwrap().2, None);
+        assert_eq!(gear_prop_diff_pair("only", 1, 0).unwrap().2, None);
+    }
+
+    #[test]
+    fn job_req_single_and_lists() {
+        assert_eq!(extra_job_req_string(21), Some("아란 착용 가능"));
+        assert_eq!(extra_job_req_string(192), Some("레테 착용 가능"));
+        assert_eq!(extra_job_req_string(0), None);
+
+        assert_eq!(
+            extra_job_req_string_list(&[1], false),
+            Some(vec!["히어로".to_string(), "팔라딘".to_string()])
+        );
+        assert_eq!(
+            extra_job_req_string_list(&[1], true),
+            Some(vec!["모험가 직업군".to_string()])
+        );
+        assert_eq!(
+            extra_job_req_string_list(&[11, 12, 13, 14, 15, 51], true),
+            Some(vec!["시그너스 기사단 직업군".to_string()])
+        );
+        assert_eq!(
+            extra_job_req_string_list(&[172], true),
+            Some(vec!["강호 직업군".to_string()])
+        );
+        assert_eq!(
+            extra_job_req_string_list(&[99], false),
+            Some(vec!["99".to_string()])
+        );
+    }
+}

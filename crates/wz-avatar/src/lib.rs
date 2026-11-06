@@ -30,8 +30,8 @@ pub use gear_tooltip::{
     tooltip_stat_line, GearTooltip,
 };
 pub use gear_tooltip::{
-    gear_prop_diff_string, gear_prop_line_with_sign, gear_prop_pair, item_prop_string,
-    item_top_attribute_lines,
+    gear_prop_diff_pair, gear_prop_diff_string, gear_prop_line_with_sign, gear_prop_pair,
+    item_prop_string, item_top_attribute_lines,
 };
 pub use item_tooltip_canvas::{render_item_tooltip, ItemTooltipSpec};
 pub use job_name::{get_fifth_job_name, get_job_name};

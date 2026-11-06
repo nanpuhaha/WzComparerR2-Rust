@@ -513,3 +513,108 @@ pub fn get_gear_grade_string(grade: &str) -> Option<&'static str> {
         _ => return None,
     })
 }
+
+/// `ItemStringHelper.GetExtraJobReqString(int specJob)` — 직업 제한 라벨.
+pub fn extra_job_req_string(spec_job: i32) -> Option<&'static str> {
+    Some(match spec_job {
+        21 => "아란 착용 가능",
+        22 => "에반 착용 가능",
+        23 => "메르세데스 착용가능",
+        24 => "팬텀 착용 가능",
+        25 => "은월 착용 가능",
+        27 => "루미너스 착용 가능",
+        31 => "데몬 직업군 착용 가능",
+        36 => "제논 착용 가능",
+        37 => "블래스터 착용 가능",
+        41 => "하야토 착용 가능",
+        42 => "칸나 착용 가능",
+        51 => "미하일 착용 가능",
+        61 => "카이저 착용 가능",
+        63 => "카인 착용 가능",
+        64 => "카데나 착용 가능",
+        65 => "엔젤릭버스터 착용 가능",
+        101 => "제로 착용 가능",
+        112 => "비스트테이머 착용 가능",
+        142 => "키네시스 착용 가능",
+        151 => "아델 착용 가능",
+        152 => "일리움 착용 가능",
+        154 => "칼리 착용 가능",
+        155 => "아크 착용 가능",
+        161 => "렌 착용 가능",
+        162 => "라라 착용 가능",
+        164 => "호영 착용 가능",
+        172 => "린 착용 가능",
+        175 => "묵현 착용 가능",
+        181 => "에릴 라이트 착용 가능",
+        182 => "시아 아스텔 착용 가능",
+        192 => "레테 착용 가능",
+        _ => return None,
+    })
+}
+
+/// `ItemStringHelper.GetExtraJobReqStringList`.
+///
+/// `is_msn_mode`이면 직업 코드의 십 단위 평균으로 계열명을 하나 고르고,
+/// 아니면 직업명 목록을 만든다. 결과가 비면 `None`(원본은 `null`).
+pub fn extra_job_req_string_list(spec_jobs: &[i32], is_msn_mode: bool) -> Option<Vec<String>> {
+    let mut names: Vec<String> = Vec::new();
+    if is_msn_mode {
+        let joined = spec_jobs
+            .iter()
+            .map(|j| j.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        if joined == "11,12,13,14,15,51" {
+            names.push("시그너스 기사단 직업군".to_string());
+        } else if !spec_jobs.is_empty() {
+            let mut branch = 0i32;
+            for job in spec_jobs {
+                branch += job / 10;
+            }
+            branch /= spec_jobs.len() as i32;
+            let name = match branch {
+                0 => Some("모험가 직업군"),
+                1 => Some("시그너스 기사단 직업군"),
+                2 => Some("영웅 직업군"),
+                3 => Some("레지스탕스 직업군"),
+                4 => Some("새벽의 진 직업군"),
+                6 => Some("노바 직업군"),
+                15 => Some("레프 직업군"),
+                16 => Some("아니마 직업군"),
+                17 => Some("강호 직업군"),
+                18 => Some("샤인 직업군"),
+                19 => Some("마족 직업군"),
+                _ => None,
+            };
+            if let Some(name) = name {
+                names.push(name.to_string());
+            }
+        }
+    } else {
+        for job in spec_jobs {
+            match job {
+                1 => {
+                    names.push("히어로".to_string());
+                    names.push("팔라딘".to_string());
+                }
+                2 => {
+                    names.push("아크메이지(썬,콜)".to_string());
+                    names.push("아크메이지(불,독)".to_string());
+                    names.push("비숍".to_string());
+                }
+                4 => names.push("섀도어".to_string()),
+                11 => names.push("소울마스터".to_string()),
+                12 => names.push("플레임위자드".to_string()),
+                22 => names.push("에반".to_string()),
+                32 => names.push("배틀메이지".to_string()),
+                172 => names.push("린".to_string()),
+                other => names.push(other.to_string()),
+            }
+        }
+    }
+    if names.is_empty() {
+        None
+    } else {
+        Some(names)
+    }
+}
