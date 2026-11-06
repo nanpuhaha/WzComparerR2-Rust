@@ -3544,3 +3544,58 @@ mod item_extra_tests {
         );
     }
 }
+
+pub fn cmd_net_reconnect() -> Result<(), Box<dyn std::error::Error>> {
+    use std::net::{TcpListener, TcpStream};
+    use std::time::Duration;
+    use wz_network::pack::Packet;
+    use wz_network::session::{read_frame, write_frame, Backoff, ReconnectingClient};
+
+    let listener = TcpListener::bind("127.0.0.1:0")?;
+    let addr = listener.local_addr()?;
+    let server = std::thread::spawn(move || -> Result<(), String> {
+        {
+            let (mut stream, _) = listener.accept().map_err(|e| e.to_string())?;
+            let mut read = None;
+            let mut write = None;
+            write_frame(&mut stream, &mut write, Packet::Heartbeat.json().as_bytes())
+                .map_err(|e| e.to_string())?;
+            let echo = read_frame(&mut stream, &mut read)
+                .map_err(|e| e.to_string())?
+                .ok_or("no heartbeat echo")?;
+            if !String::from_utf8_lossy(&echo).contains("\"$type\":\"0\"") {
+                return Err("heartbeat echo mismatch".into());
+            }
+        }
+        let (mut stream, _) = listener.accept().map_err(|e| e.to_string())?;
+        let mut write = None;
+        write_frame(
+            &mut stream,
+            &mut write,
+            br#"{"$type":"4","SessionID":"after-reconnect"}"#,
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    });
+
+    let mut client = ReconnectingClient::new(
+        move || TcpStream::connect(addr),
+        Backoff {
+            initial: Duration::from_millis(1),
+            factor: 1.0,
+            max: Duration::from_millis(1),
+            max_attempts: 3,
+        },
+    );
+    client.connect()?;
+    println!("connected (attempts={})", client.attempts);
+    let packet = client.next_packet()?.ok_or("no packet")?;
+    println!(
+        "heartbeat echoed, then reconnect #{}; packet={}",
+        client.reconnects,
+        String::from_utf8_lossy(&packet)
+    );
+    server.join().map_err(|_| "server panicked")??;
+    println!("OK: heartbeat echo + reconnect");
+    Ok(())
+}

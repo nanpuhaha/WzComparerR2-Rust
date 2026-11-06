@@ -585,3 +585,21 @@ CLI: `wz plugin-files <dir>`, C# 하네스: `pluginfiles <dir>`.
 문구와 완전 일치. `exp_minLev`/펫 `interact`는 데이터 0개로 규칙만 구현.
 fixture: `crates/wz-cli/tests/fixtures/item_extras.expected.json`,
 테스트: `item_recipe_lines_match_csharp`, CLI: `wz item-extras <Data> <dir>`.
+
+## Network 하트비트/재접속
+
+- 하트비트: `$type=="0"` 수신 시 같은 패킷을 즉시 회신하고 상위로 올리지 않음
+  (원본 `OnPackReceived(PackHeartBeat) => Client.Send(pack)`).
+- 재접속: `ReconnectingClient`가 EOF/오류 시 `Backoff` 지연 후 재연결.
+  지연은 `initial * factor^attempt`를 `max`로 상한, `max_attempts` 초과 시 중단.
+  `max_attempts == 0`이면 재접속 비활성(즉시 오류).
+- 검증: `crates/wz-network/tests/reconnect.rs`
+  - 하트비트 에코 후 서버가 연결을 끊으면 재접속해 다음 패킷 수신
+  - 백오프 100/200/300/300ms 상한
+  - 재접속 비활성 시 `NotConnected`
+- CLI 데모 `wz net-reconnect`:
+```
+connected (attempts=0)
+heartbeat echoed, then reconnect #1; packet={"$type":"4","SessionID":"after-reconnect"}
+OK: heartbeat echo + reconnect
+```

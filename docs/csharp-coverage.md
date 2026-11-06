@@ -112,7 +112,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
    `Connected→CryptoRequested→Ready→LoginSent→LoggedIn` 전이를 검증했다.
    C# `WcClient`는 WinForms/PluginBase 로드가 필요해 macOS에서 인스턴스화할
    수 없으므로, 프로토콜 검증은 C#과 바이트 일치가 확인된 패킷 코덱 fixture를
-   공유하는 방식으로 수행했다. 재접속/실서버 연동은 제외한다.
+   공유하는 방식으로 수행했다. 추가로 하트비트 에코(수신 즉시 회신)와
+   재접속/백오프(`ReconnectingClient`, 시도별 지연·상한)를 구현해 루프백
+   테스트로 검증했다. 실서버 연동은 제외한다.
 
 ## 이번 턴 추가 구현
 

@@ -200,3 +200,131 @@ mod tests {
         assert_eq!(base64_decode("").unwrap(), Vec::<u8>::new());
     }
 }
+
+/// 재접속 백오프. 원본은 실패 시 5초 고정, 성공 후 재접속 시도는 즉시였다.
+/// 여기서는 시도별 지연을 명시적으로 계산해 테스트 가능하게 한다.
+#[derive(Debug, Clone)]
+pub struct Backoff {
+    pub initial: std::time::Duration,
+    pub factor: f64,
+    pub max: std::time::Duration,
+    pub max_attempts: usize,
+}
+
+impl Default for Backoff {
+    fn default() -> Self {
+        Self {
+            initial: std::time::Duration::from_secs(5),
+            factor: 2.0,
+            max: std::time::Duration::from_secs(60),
+            max_attempts: 10,
+        }
+    }
+}
+
+impl Backoff {
+    /// `attempt`는 0부터. 한도를 넘으면 `None`.
+    pub fn delay(&self, attempt: usize) -> Option<std::time::Duration> {
+        if self.max_attempts == 0 || attempt >= self.max_attempts {
+            return None;
+        }
+        let millis = self.initial.as_millis() as f64 * self.factor.powi(attempt as i32);
+        let capped = millis.min(self.max.as_millis() as f64);
+        Some(std::time::Duration::from_millis(capped as u64))
+    }
+}
+
+/// 재접속을 포함한 클라이언트. `connect`는 새 스트림을 만든다.
+pub struct ReconnectingClient<C, S>
+where
+    C: FnMut() -> io::Result<S>,
+    S: Read + Write,
+{
+    connector: C,
+    session: Option<ClientSession<S>>,
+    pub backoff: Backoff,
+    pub attempts: usize,
+    pub reconnects: usize,
+}
+
+impl<C, S> ReconnectingClient<C, S>
+where
+    C: FnMut() -> io::Result<S>,
+    S: Read + Write,
+{
+    pub fn new(connector: C, backoff: Backoff) -> Self {
+        Self {
+            connector,
+            session: None,
+            backoff,
+            attempts: 0,
+            reconnects: 0,
+        }
+    }
+
+    pub fn session(&self) -> Option<&ClientSession<S>> {
+        self.session.as_ref()
+    }
+
+    /// 백오프를 적용해 연결한다.
+    pub fn connect(&mut self) -> io::Result<()> {
+        let mut attempt = 0usize;
+        loop {
+            match (self.connector)() {
+                Ok(io) => {
+                    self.session = Some(ClientSession::new(io));
+                    self.attempts = attempt;
+                    return Ok(());
+                }
+                Err(e) => {
+                    self.attempts = attempt + 1;
+                    match self.backoff.delay(attempt) {
+                        Some(delay) => {
+                            std::thread::sleep(delay);
+                            attempt += 1;
+                        }
+                        None => return Err(e),
+                    }
+                }
+            }
+        }
+    }
+
+    /// 하트비트는 즉시 되돌려 보내고, 그 외 패킷만 반환한다.
+    pub fn next_packet(&mut self) -> io::Result<Option<Vec<u8>>> {
+        loop {
+            let Some(session) = self.session.as_mut() else {
+                self.reconnect()?;
+                continue;
+            };
+            match session.recv_packet() {
+                Ok(Some(body)) => {
+                    if body.starts_with(b"{\"$type\":\"0\"}") {
+                        session.send_packet(&Packet::Heartbeat)?;
+                        continue;
+                    }
+                    return Ok(Some(body));
+                }
+                Ok(None) => {
+                    self.reconnect()?;
+                }
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => {
+                    self.reconnect()?;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
+
+    fn reconnect(&mut self) -> io::Result<()> {
+        if self.backoff.max_attempts == 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::NotConnected,
+                "reconnect disabled",
+            ));
+        }
+        self.reconnects += 1;
+        self.session = None;
+        self.connect()
+    }
+}

@@ -475,6 +475,9 @@ enum Command {
     /// Network 루프백 핸드셰이크/로그인 데모
     NetLoopback,
 
+    /// Network 하트비트/재접속 루프백 데모
+    NetReconnect,
+
     /// DamageSkin 모델 (툴팁/아이템 연결 필드)
     DamageSkinModel {
         /// Etc_000.wz (DamageSkin.img 포함)
@@ -924,6 +927,7 @@ fn main() {
             json,
         } => commands::cmd_avatar_unpack(version, &pack, json),
         Command::NetLoopback => commands::cmd_net_loopback(),
+        Command::NetReconnect => commands::cmd_net_reconnect(),
         Command::DamageSkinModel { wz, image, json } => {
             commands::cmd_damage_skin_model(&wz, &image, json)
         }
