@@ -66,7 +66,7 @@ dashmap = "6.1"
 # `lru` 0.18 은 개수 상한 없는 `LruCache::unbounded()` 가 기본이다.
 # 항목 수가 아니라 **바이트 예산**으로 관리해야 하므로 개수 상한이 필요 없다
 # (원본의 LRU(32) 는 너무 작다 — 리포트 ADR-1).
-lru = "0.18"
+lru = "0.19"
 rayon = "1.10"
 # KMST1206 hashVersion 은 HMAC-SHA256 기반이다 (WzVersionHasher.cs:61-89).
 hmac = "0.12"
