@@ -3165,6 +3165,86 @@ class Program
         Console.WriteLine(JsonSerializer.Serialize(new { rects, hits, ties, drags, drag_boxes = dragBoxes, wheels },
             new JsonSerializerOptions { WriteIndented = true }));
     }
+    // `LuaSandbox.InitLuaEnv`의 프렐류드를 **원문 그대로** NLua로 실행해
+    // CLR 브리지(`luanet.import_type`/`get_method_bysig`) 동작을 기록한다.
+    // WinForms(`Application.StartupPath`)와 `Entry` 어셈블리 경로 계산만 제외.
+    const string LuaClrPrelude = @"
+local t_IEnumerable = {}
+t_IEnumerable.typeRef = luanet.import_type('System.Collections.IEnumerable')
+t_IEnumerable.GetEnumerator = luanet.get_method_bysig(t_IEnumerable.typeRef, 'GetEnumerator')
+
+local t_IEnumerator = {}
+t_IEnumerator.typeRef = luanet.import_type('System.Collections.IEnumerator')
+t_IEnumerator.MoveNext = luanet.get_method_bysig(t_IEnumerator.typeRef, 'MoveNext')
+t_IEnumerator.get_Current = luanet.get_method_bysig(t_IEnumerator.typeRef, 'get_Current')
+
+function each(userData)
+  if type(userData) == 'userdata' then
+    local i = 0;
+    local ienum = t_IEnumerable.GetEnumerator(userData)
+    return function()
+      if ienum and t_IEnumerator.MoveNext(ienum) then
+        i = i + 1
+        return i, t_IEnumerator.get_Current(ienum)
+      end
+      return nil, nil
+    end
+  end
+end
+";
+
+    static void LuaClr()
+    {
+        using var lua = new NLua.Lua();
+        lua.State.Encoding = System.Text.Encoding.UTF8;
+        lua.LoadCLRPackage();
+        lua["env"] = new { tag = "host" };
+        lua.DoString(LuaClrPrelude);
+
+        var objects = new (string name, object value, string kind)[]
+        {
+            ("list_int", new List<int> { 10, 20, 30 }, "clr"),
+            ("list_str", new List<string> { "가", "나" }, "clr"),
+            ("array_int", new[] { 1, 2, 3 }, "clr"),
+            ("empty_list", new List<int>(), "clr"),
+            ("lua_table", null, "table"),
+            ("nil_value", null, "nil"),
+        };
+        var rows = new List<object>();
+        foreach (var (name, value, kind) in objects)
+        {
+            if (kind == "clr") lua[name] = value;
+            var arg = kind switch
+            {
+                "clr" => name,
+                "table" => "{1,2,3}",
+                _ => "nil",
+            };
+            var count = lua.DoString($"return select('#', each({arg}))")[0]?.ToString() ?? "0";
+            var res = lua.DoString($@"
+local ok, acc = pcall(function()
+  local out = ''
+  for i, v in each({arg}) do out = out .. i .. '=' .. tostring(v) .. ';' end
+  return out
+end)
+return tostring(ok) .. '|' .. tostring(acc)
+");
+            var parts = (res[0]?.ToString() ?? "false|").Split('|', 2);
+            rows.Add(new
+            {
+                name,
+                kind,
+                iterator_count = count,
+                ok = parts[0] == "true",
+                value = parts.Length > 1 ? parts[1] : null,
+            });
+        }
+
+        var envType = lua.DoString("return type(env)")[0]?.ToString();
+        var envTag = lua.DoString("return env.tag")[0]?.ToString();
+        Console.WriteLine(JsonSerializer.Serialize(new { cases = rows, env_type = envType, env_tag = envTag },
+            new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -3224,6 +3304,7 @@ class Program
         else if (args[0] == "pixelops") PixelOps(args[1]);
         else if (args[0] == "iconblock") IconBlock(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
+        else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

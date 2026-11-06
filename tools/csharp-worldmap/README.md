@@ -544,3 +544,13 @@ Verified Common/Controls input math (`controlsinput`):
 ```
 Uses the real `Math.Round` (banker's rounding) and `System.Drawing.Rectangle`
 to match Rust `wz_db::controls_input`.
+
+Verified LuaConsole CLR bridge (`luaclr`, requires NLua 1.7.5 + osx-arm64):
+```
+List<int>, List<string>, int[], empty list -> each() yields (i, value)
+Lua table / nil -> 0 iterator values (original behavior)
+env -> userdata (type check)
+```
+The harness runs the **verbatim** `LuaSandbox.InitLuaEnv` prelude under real
+NLua on macOS; Rust `wz-lua` matches the observable contract with userdata
+collections.

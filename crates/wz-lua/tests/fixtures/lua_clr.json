@@ -1,0 +1,48 @@
+{
+  "cases": [
+    {
+      "name": "list_int",
+      "kind": "clr",
+      "iterator_count": "1",
+      "ok": true,
+      "value": "1=10;2=20;3=30;"
+    },
+    {
+      "name": "list_str",
+      "kind": "clr",
+      "iterator_count": "1",
+      "ok": true,
+      "value": "1=\uAC00;2=\uB098;"
+    },
+    {
+      "name": "array_int",
+      "kind": "clr",
+      "iterator_count": "1",
+      "ok": true,
+      "value": "1=1;2=2;3=3;"
+    },
+    {
+      "name": "empty_list",
+      "kind": "clr",
+      "iterator_count": "1",
+      "ok": true,
+      "value": ""
+    },
+    {
+      "name": "lua_table",
+      "kind": "table",
+      "iterator_count": "0",
+      "ok": false,
+      "value": "[string \u0022chunk\u0022]:4: attempt to call a nil value (for iterator \u0027for iterator\u0027)"
+    },
+    {
+      "name": "nil_value",
+      "kind": "nil",
+      "iterator_count": "0",
+      "ok": false,
+      "value": "[string \u0022chunk\u0022]:4: attempt to call a nil value (for iterator \u0027for iterator\u0027)"
+    }
+  ],
+  "env_type": "userdata",
+  "env_tag": "host"
+}

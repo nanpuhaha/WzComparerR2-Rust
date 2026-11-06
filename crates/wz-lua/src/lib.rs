@@ -58,16 +58,20 @@ pub fn package_path(
     package_path_entries(script_base_dir, plugin_base_dir, wc_r2_dir, cwd).join(";")
 }
 
-/// 원본의 Lua 프렐류드. CLR 타입 import 부분만 주석으로 남긴다.
+/// 원본의 Lua 프렐류드.
+///
+/// 원본은 `luanet.import_type('System.Collections.IEnumerable')` +
+/// `get_method_bysig`로 CLR 열거자를 감싼다. 여기서는 같은 계약을 Lua
+/// **userdata**로 제공한다: 호스트가 [`Sandbox::collection`]으로 만든
+/// userdata는 `:get(i)`/`:len()`만 노출하므로 `each`의 관찰 동작
+/// (`type() == 'userdata'`일 때만 반복자 반환, 그 외 0개 값)이 동일하다.
 pub const PRELUDE: &str = r#"
--- 원본은 luanet.import_type('System.Collections.IEnumerable') 로 CLR
--- 열거자를 감쌌다. CLR이 없는 환경에서는 호스트가 넘긴 Lua 배열을 쓴다.
 function each(userData)
-  if type(userData) == 'table' then
+  if type(userData) == 'userdata' then
     local i = 0
     return function()
       i = i + 1
-      local v = userData[i]
+      local v = userData:get(i)
       if v ~= nil then
         return i, v
       end
@@ -76,6 +80,49 @@ function each(userData)
   end
 end
 "#;
+
+/// `each`가 순회하는 호스트 컬렉션 원소.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Item {
+    Int(i64),
+    Str(String),
+}
+
+/// CLR `IEnumerable` 자리에 놓이는 userdata.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Collection {
+    items: Vec<Item>,
+}
+
+impl Collection {
+    pub fn new(items: Vec<Item>) -> Self {
+        Self { items }
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+}
+
+impl mlua::UserData for Collection {
+    fn add_methods<'lua, M: mlua::UserDataMethods<'lua, Self>>(m: &mut M) {
+        m.add_method("get", |lua, this, index: i64| {
+            if index < 1 {
+                return Ok(Value::Nil);
+            }
+            match this.items.get((index - 1) as usize) {
+                Some(Item::Int(value)) => Ok(Value::Integer(*value)),
+                Some(Item::Str(text)) => Ok(Value::String(lua.create_string(text)?)),
+                None => Ok(Value::Nil),
+            }
+        });
+        m.add_method("len", |_, this, ()| Ok(this.items.len() as i64));
+    }
+}
 
 /// LuaConsole 세션. 원본 `LuaSandbox`에 대응한다.
 pub struct Sandbox {
@@ -120,6 +167,20 @@ impl Sandbox {
     pub fn do_string(&self, chunk: &str) -> mlua::Result<Vec<String>> {
         let values: MultiValue = self.lua.load(chunk).eval()?;
         Ok(values.into_iter().map(describe).collect::<Vec<_>>())
+    }
+
+    /// 호스트 컬렉션을 userdata로 만들어 반환한다(`each` 대상).
+    pub fn collection(&self, items: Vec<Item>) -> mlua::Result<mlua::AnyUserData<'_>> {
+        self.lua.create_userdata(Collection::new(items))
+    }
+
+    /// 전역 변수 설정(`lua["name"] = value` 상당).
+    pub fn set_global<'lua>(
+        &'lua self,
+        name: &str,
+        value: impl mlua::IntoLua<'lua>,
+    ) -> mlua::Result<()> {
+        self.lua.globals().set(name, value)
     }
 
     /// 스크립트 폴더 기준 `package.path`(테스트/CLI 확인용).
@@ -205,23 +266,40 @@ mod tests {
     }
 
     #[test]
-    fn each_visits_array_table() {
+    fn each_visits_host_collection() {
         let mut sandbox = Sandbox::new().unwrap();
         sandbox
             .init(None, None, None, None, Path::new("."))
             .unwrap();
+        let handle = sandbox
+            .collection(vec![Item::Int(10), Item::Int(20), Item::Str("가".into())])
+            .unwrap();
+        sandbox.set_global("list", handle).unwrap();
         let out = sandbox
             .do_string(
                 r#"
 local acc = ''
-for i, v in each({'a','b','c'}) do
-  acc = acc .. i .. '=' .. v .. ';'
+for i, v in each(list) do
+  acc = acc .. i .. '=' .. tostring(v) .. ';'
 end
 return acc
 "#,
             )
             .unwrap();
-        assert_eq!(out, vec!["1=a;2=b;3=c;"]);
+        assert_eq!(out, vec!["1=10;2=20;3=가;"]);
+    }
+
+    /// 원본과 같이 userdata가 아니면 반복자를 만들지 않는다(Lua 테이블 포함).
+    #[test]
+    fn each_rejects_tables_like_original() {
+        let mut sandbox = Sandbox::new().unwrap();
+        sandbox
+            .init(None, None, None, None, Path::new("."))
+            .unwrap();
+        let out = sandbox
+            .do_string("return select('#', each({1,2,3})), select('#', each(42))")
+            .unwrap();
+        assert_eq!(out, vec!["0", "0"]);
     }
 
     #[test]

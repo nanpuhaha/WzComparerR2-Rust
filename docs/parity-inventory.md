@@ -811,14 +811,35 @@ C#: `-- skilltooltips <Data> <String_000.wz>`.
 - `crates/wz-lua/src/lib.rs` 단위 테스트 4종.
 - CLI `wz lua-run <script>` 로 `env`/`each`/`require` 데모 실행 확인.
 
-C# 대조는 `package.path` 부분만 가능하다. `LuaSandbox.InitLuaEnv`가 NLua
-네이티브(5.1)와 WinForms를 요구하므로, 하네스는 원본 소스의 path 구성
-블록을 **그대로 옮긴 참조 구현**을 컴파일해 쓴다
-(`tools/csharp-worldmap ... -- luapath <script> <plugin> <wcr2> <cwd>`).
+C# 대조:
+- `package.path` — 원본 path 구성 블록을 그대로 옮긴 참조 구현
+  (`-- luapath ...`).
+- **CLR 브리지 — 실제 NLua 실행**. `NLua 1.7.5`가 macOS arm64에서 동작함을
+  확인해(네이티브 Lua 포함), `LuaSandbox.InitLuaEnv`의 프렐류드를 **원문
+  그대로** 돌렸다. `luanet.import_type('System.Collections.IEnumerable')` +
+  `get_method_bysig` + `each()`가 CLR `IEnumerable`을 순회하는지 6케이스로
+  기록했다 (`-- luaclr`).
 
-NLua `luanet.import_type` 기반 CLR 타입 브리지, `RegisterLuaDelegateType`,
-WinForms 콘솔/에디터(`FrmConsole`, `FrmLuaEditor`), 문법 강조
-(`AppSyntaxModeProvider`)는 재현하지 않는다.
+| 케이스 | `select('#', each(x))` | 순회 결과 |
+|---|---|---|
+| `List<int>{10,20,30}` | 1 | `1=10;2=20;3=30;` |
+| `List<string>{"가","나"}` | 1 | `1=가;2=나;` |
+| `int[]{1,2,3}` | 1 | `1=1;2=2;3=3;` |
+| 빈 `List<int>` | 1 | `` |
+| Lua 테이블 `{1,2,3}` | 0 | 오류(반복자 없음) |
+| `nil` | 0 | 오류(반복자 없음) |
+
+Rust `wz-lua`는 같은 관찰 계약을 Lua **userdata**로 구현해(`each`는
+`type()=='userdata'`일 때만 반복자 반환) 위 6케이스가 완전 일치한다
+(`crates/wz-lua/tests/lua_clr_parity.rs`, fixture `lua_clr.json`).
+
+주의(의도적 차이): 원본은 `env`도 CLR 객체(userdata)라 `type(env)`가
+`userdata`지만, Rust는 JSON을 Lua 테이블로 넣어 `table`이다. `env.tag` 같은
+필드 접근 결과는 동일하다.
+
+여전히 재현하지 않는 것: `RegisterLuaDelegateType`, WinForms
+콘솔/에디터(`FrmConsole`, `FrmLuaEditor`), 문법 강조
+(`AppSyntaxModeProvider`).
 
 ## ItemTooltip `#cosmetic_EULO#`
 
