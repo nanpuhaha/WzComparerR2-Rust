@@ -469,3 +469,18 @@ C# `StringLinker` + 동일 필드 추출 하네스와 비교:
 `Npc_000.wz` + `Reactor_000` **12,629개**(NPC 12,188 + Reactor 441)
 완전 일치. fixture: `crates/wz-cli/tests/fixtures/chara_tooltips.expected.json`,
 테스트: `chara_tooltips_match_csharp`, CLI: `wz chara-tooltips`.
+
+## DamageSkin 모델 (`DamageSkin.CreateFromNode`)
+
+`DamageSkinTooltipRenderer`는 텍스트 라인이 없어(ID/샘플만 그린다) 모델 필드를
+비교 대상으로 삼았다.
+
+- `desc`, `extractID`, `sample` 존재, `customType`
+- `effect`/레거시 `NoRed0`,`NoRed1`,`NoCri0`,`NoCri1`,`NoCustom`
+  - 각 섹션의 숫자 키 집합(직접 UOL/PNG 또는 자식 중 첫 UOL/PNG)
+  - `numberSpace`, `bottomFix`(>0), `dotSpace`
+- 원본 switch가 무시하는 `NoBlue*`/`NoViolet*`/`NoProduction*` 섹션은 제외
+
+`Etc_000.wz/DamageSkin.img` **402개**가 C# 추출과 완전 일치.
+fixture: `crates/wz-cli/tests/fixtures/damage_skins.expected.json`,
+테스트: `damage_skin_models_match_csharp`, CLI: `wz damage-skin-model`.

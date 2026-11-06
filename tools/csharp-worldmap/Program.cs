@@ -1620,6 +1620,102 @@ class Program
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
     }
+    static object ParseDamageSkinSection(Wz_Node node)
+    {
+        var keys = new List<string>();
+        int numberSpace = 0, dotSpace = 0;
+        bool bottomFix = false;
+        foreach (Wz_Node d in node.Nodes)
+        {
+            if (d.Value is Wz_Uol || d.Value is Wz_Png)
+            {
+                keys.Add(d.Text);
+                continue;
+            }
+            if (d.Nodes.Count > 1)
+            {
+                if (d.Nodes.Any(x => x.Value is Wz_Uol || x.Value is Wz_Png)) keys.Add(d.Text);
+                continue;
+            }
+            switch (d.Text)
+            {
+                case "numberSpace": numberSpace = Convert.ToInt32(d.Value); break;
+                case "bottomFix": bottomFix = Convert.ToInt32(d.Value) > 0; break;
+                case "dotSpace": dotSpace = Convert.ToInt32(d.Value); break;
+            }
+        }
+        keys.Sort(StringComparer.Ordinal);
+        return new { keys, number_space = numberSpace, bottom_fix = bottomFix, dot_space = dotSpace };
+    }
+    static void AddDamageSkinEffect(Wz_Node effect, Dictionary<string, object> sections, ref string customType)
+    {
+        switch (effect.Text)
+        {
+            case "NoRed0":
+            case "NoRed1":
+            case "NoCri0":
+            case "NoCri1":
+                sections[effect.Text] = ParseDamageSkinSection(effect);
+                break;
+            case "NoCustom":
+                foreach (Wz_Node sub in effect.Nodes)
+                {
+                    if (sub.Text == "customType") customType = sub.Value?.ToString();
+                    else sections[sub.Text] = ParseDamageSkinSection(sub);
+                }
+                break;
+        }
+    }
+    static void DamageSkinModel(string etcWzPath, string imageName)
+    {
+        var st = new Wz_Structure(); st.Load(etcWzPath);
+        var imgNode = st.WzNode.Nodes.FirstOrDefault(n => n.Text == imageName);
+        if (imgNode?.Value is not Wz_Image img || !img.TryExtract())
+        {
+            Console.WriteLine("{\"error\":\"image not found\"}");
+            return;
+        }
+        var rows = new List<object>();
+        foreach (Wz_Node n in img.Node.Nodes)
+        {
+            if (!int.TryParse(n.Text, out int id)) continue;
+            string desc = null, customType = null;
+            int extractId = 0;
+            bool hasSample = false;
+            var sections = new Dictionary<string, object>();
+            foreach (Wz_Node sub in n.Nodes)
+            {
+                switch (sub.Text)
+                {
+                    case "desc": desc = sub.Value?.ToString(); break;
+                    case "extractID": extractId = Convert.ToInt32(sub.Value); break;
+                    case "sample": hasSample = true; break;
+                    case "effect":
+                        foreach (Wz_Node effect in sub.Nodes) AddDamageSkinEffect(effect, sections, ref customType);
+                        break;
+                    case "NoRed0":
+                    case "NoRed1":
+                    case "NoCri0":
+                    case "NoCri1":
+                    case "NoCustom":
+                        AddDamageSkinEffect(sub, sections, ref customType);
+                        break;
+                }
+            }
+            rows.Add(new {
+                id,
+                desc,
+                extract_id = extractId,
+                custom_type = customType,
+                has_sample = hasSample,
+                sections = sections.OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                    .ToDictionary(kv => kv.Key, kv => kv.Value),
+            });
+        }
+        rows.Sort((a, b) => ((int)a.GetType().GetProperty("id").GetValue(a))
+            .CompareTo((int)b.GetType().GetProperty("id").GetValue(b)));
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -1654,6 +1750,7 @@ class Program
         else if (args[0] == "findwz") FindWz(args, 1);
         else if (args[0] == "netpack") NetPack(args[1]);
         else if (args[0] == "charatooltips") CharaTooltips(args[1], args[2], args[3], args[4]);
+        else if (args[0] == "damageskinmodel") DamageSkinModel(args[1], args[2]);
         else if (args[0] == "summaryprobe")
         {
             var r = new NoSkillResolver();

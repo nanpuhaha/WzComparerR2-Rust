@@ -2731,3 +2731,132 @@ mod chara_tooltip_tests {
         );
     }
 }
+
+pub fn cmd_damage_skin_model(
+    wz_path: &Path,
+    image: &str,
+    json: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let archive = WzArchive::open(wz_path)?;
+    let tree = archive.read_tree()?;
+    let root = tree
+        .root
+        .entries
+        .iter()
+        .find(|e| e.name.as_deref() == Some(image))
+        .and_then(|e| e.offset)
+        .and_then(|o| archive.parse_image_at(o).ok())
+        .ok_or_else(|| format!("이미지를 찾을 수 없습니다: {image}"))?;
+    let mut rows: Vec<wz_db::DamageSkin> = root
+        .object_children()
+        .iter()
+        .filter_map(wz_db::DamageSkin::from_node)
+        .collect();
+    rows.sort_by_key(|s| s.id);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&rows)?);
+    } else {
+        for skin in &rows {
+            println!(
+                "{} desc={:?} extract={} sample={} sections={}",
+                skin.id,
+                skin.desc,
+                skin.extract_id,
+                skin.has_sample,
+                skin.sections.len()
+            );
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod damage_skin_model_tests {
+    fn sha256_hex(bytes: &[u8]) -> String {
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        format!("{:x}", hasher.finalize())
+    }
+
+    #[test]
+    fn damage_skin_models_match_csharp() {
+        let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let wz = root.join("Etc/Etc_000.wz");
+        if !wz.exists() {
+            return;
+        }
+        let archive = wz_core::WzArchive::open(&wz).unwrap();
+        let tree = archive.read_tree().unwrap();
+        let root_node = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("DamageSkin.img"))
+            .and_then(|e| e.offset)
+            .and_then(|o| archive.parse_image_at(o).ok())
+            .unwrap();
+        let mut skins: Vec<wz_db::DamageSkin> = root_node
+            .object_children()
+            .iter()
+            .filter_map(wz_db::DamageSkin::from_node)
+            .collect();
+        skins.sort_by_key(|s| s.id);
+        let rec = char::from(0x1e);
+        let field = char::from(0x1f);
+        let canon = skins
+            .iter()
+            .map(|s| {
+                let secs = s
+                    .sections
+                    .iter()
+                    .map(|(k, v)| {
+                        [
+                            k.clone(),
+                            v.keys.join("|"),
+                            v.number_space.to_string(),
+                            if v.bottom_fix {
+                                "1".into()
+                            } else {
+                                "0".to_string()
+                            },
+                            v.dot_space.to_string(),
+                        ]
+                        .join(&field.to_string())
+                    })
+                    .collect::<Vec<_>>()
+                    .join(";");
+                [
+                    s.id.to_string(),
+                    s.desc.clone().unwrap_or_default(),
+                    s.extract_id.to_string(),
+                    s.custom_type.clone().unwrap_or_default(),
+                    if s.has_sample {
+                        "1".into()
+                    } else {
+                        "0".to_string()
+                    },
+                    secs,
+                ]
+                .join(&rec.to_string())
+            })
+            .collect::<Vec<_>>()
+            .join(&rec.to_string());
+
+        let expected: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures/damage_skins.expected.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(skins.len() as u64, expected["rows"].as_u64().unwrap());
+        assert_eq!(
+            sha256_hex(canon.as_bytes()),
+            expected["sha256"].as_str().unwrap()
+        );
+    }
+}

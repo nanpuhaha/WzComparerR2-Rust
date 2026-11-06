@@ -377,3 +377,10 @@ Verified NPC/Reactor tooltip text (`charatooltips <npc.wz> <reactor.wz> <String_
 12629 rows (12188 NPC + 441 reactor)
 ```
 Lines match Rust `wz chara-tooltips` exactly.
+
+Verified DamageSkin model (`damageskinmodel <Etc_000.wz> DamageSkin.img`):
+```
+402 skins
+```
+desc/extractID/customType/sample and per-section keys/spacing/bottomFix match
+Rust `wz damage-skin-model` exactly.

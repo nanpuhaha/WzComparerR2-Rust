@@ -417,6 +417,18 @@ enum Command {
         json: bool,
     },
 
+    /// DamageSkin 모델 (툴팁/아이템 연결 필드)
+    DamageSkinModel {
+        /// Etc_000.wz (DamageSkin.img 포함)
+        wz: PathBuf,
+        /// 이미지 이름
+        #[arg(long, default_value = "DamageSkin.img")]
+        image: String,
+        /// JSON 출력
+        #[arg(long)]
+        json: bool,
+    },
+
     /// NPC/Reactor 툴팁 텍스트
     CharaTooltips {
         /// Npc WZ 파일
@@ -838,6 +850,9 @@ fn main() {
         } => cmd_item_tooltip(&wz, &image, &id, &string, json),
         Command::GearProps { wz, json } => commands::cmd_gear_props(&wz, json),
         Command::Achievements { wz, json, limit } => commands::cmd_achievements(&wz, json, limit),
+        Command::DamageSkinModel { wz, image, json } => {
+            commands::cmd_damage_skin_model(&wz, &image, json)
+        }
         Command::CharaTooltips {
             npc,
             reactor,
