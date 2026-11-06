@@ -90,6 +90,21 @@ pub fn item_core_spec_string(kind: &str, value: i32, desc: Option<&str>) -> Opti
     })
 }
 
+/// `ItemStringHelper.GetSkillReqAmount` — 스킬 요구량 라벨.
+///
+/// 스킬 ID의 만 단위(`skillID / 10000`)로 동물 계열을 구분한다. 원본은
+/// 11200/11210/11211/11212 외에는 `？？`로 표시한다.
+pub fn skill_req_amount(skill_id: i32, req_amount: i32) -> String {
+    let animal = match skill_id / 10000 {
+        11200 => "巨熊",
+        11210 => "雪豹",
+        11211 => "猛禽",
+        11212 => "猫咪",
+        _ => "？？",
+    };
+    format!("[需要{animal}技能点: {req_amount}]")
+}
+
 /// `GetItemAttributeString`과 같은 순서/문구의 태그 목록.
 pub fn item_attribute_lines(item: &Node, item_id: i32) -> Vec<String> {
     let info = child(item, "info").unwrap_or(item);
@@ -171,6 +186,15 @@ mod tests {
         }
         item.children.push(info);
         item
+    }
+
+    #[test]
+    fn skill_req_amount_uses_ten_thousands() {
+        assert_eq!(skill_req_amount(112_000_000, 7), "[需要巨熊技能点: 7]");
+        assert_eq!(skill_req_amount(112_100_000, 1), "[需要雪豹技能点: 1]");
+        assert_eq!(skill_req_amount(112_130_000, 2), "[需要？？技能点: 2]");
+        // 11200/10000 == 1이라 소형 ID는 매칭되지 않는다(원본과 동일).
+        assert_eq!(skill_req_amount(11_200, 3), "[需要？？技能点: 3]");
     }
 
     #[test]

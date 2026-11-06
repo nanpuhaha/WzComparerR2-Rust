@@ -1816,3 +1816,28 @@ C#: `-- dotline <fixture.json>`.
 검증: C# 하네스가 **실제 `ItemStringHelper.GetItemCategoryName`** 을
 `Item.ItemType` 6개 값에 대해 호출해 완전 일치
 (`item_category_cases.json`, `item_category_expected.json`).
+
+## 스킬 요구량 라벨 (`GetSkillReqAmount`)
+
+`item_category_name`에 이어 `GetSkillReqAmount(skillID, reqAmount)`을 옮겼다.
+`skillID / 10000`으로 동물 계열을 고른다.
+
+| `skillID / 10000` | 라벨 |
+|---|---|
+| 11200 | 巨熊 |
+| 11210 | 雪豹 |
+| 11211 | 猛禽 |
+| 11212 | 猫咪 |
+| 그 외 | ？？ |
+
+형식: `[需要{동물}技能点: {N}]`
+
+검증:
+- 실제 C# `ItemStringHelper.GetSkillReqAmount` 호출
+- 케이스 13개 × reqAmount 7/1 = 26행
+  (경계 111999999/112000000/112099999/112100000, 미지원 112130000, 음수/0 포함)
+- `crates/wz-db/tests/skill_req_parity.rs` 완전 일치
+- 단위 테스트: 소형 ID `11200`은 `/10000 == 1`이라 매칭되지 않음을 고정
+
+fixture: `skill_req_cases.json`, `skill_req_expected.json`,
+C#: `-- skillreqamount <fixture.json>`.

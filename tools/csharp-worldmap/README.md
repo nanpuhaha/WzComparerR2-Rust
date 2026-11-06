@@ -693,3 +693,10 @@ Verified dotline tiles (`dotline <fixture.json>`) and item categories
 ```
 Dotline is a transcription of the GDI+ TextureBrush tiling (bitmap itself is a
 GDI+ resource); categories call the real method.
+
+Verified skill requirement labels (`skillreqamount <fixture.json>`):
+```
+13 skill ids x 2 amounts = 26 rows
+```
+Calls the real `ItemStringHelper.GetSkillReqAmount`; matches Rust
+`skill_req_amount` (ten-thousand digit branch, `？？` fallback).
