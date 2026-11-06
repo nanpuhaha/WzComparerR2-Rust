@@ -49,6 +49,7 @@ pub mod draw_math;
 pub mod gear_stats;
 pub mod item_tooltip;
 pub mod item_tooltip_extra;
+pub mod item_tooltip_layout;
 pub mod linker;
 pub mod map;
 pub mod map_tooltip;
@@ -128,6 +129,9 @@ pub use item_tooltip_extra::{
     cant_account_sharable_tooltip, cash_tag_lines, exp_restriction_lines, exp_to_next_level,
     expire_date_lines, incline_line, item_int_props, pet_command_lines, point_cost_line,
     replace_desc_tags, trade_available_line, RecipeRequirement, RecipeSpec,
+};
+pub use item_tooltip_layout::{
+    layout_item, line_height, wrapped_lines, ItemLayout, ItemLayoutInput,
 };
 pub use linker::{
     extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,

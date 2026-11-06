@@ -352,6 +352,21 @@ enum Command {
         json: bool,
     },
 
+    /// ItemTooltip 세로 배치 fixture 생성 (실제 아이템 데이터)
+    ItemLayoutFixture {
+        /// Data 루트
+        data_root: PathBuf,
+        /// String_000.wz 경로
+        #[arg(long)]
+        string: PathBuf,
+        /// Item 하위 디렉터리
+        #[arg(long, default_value = "Consume")]
+        dir: String,
+        /// 최대 행
+        #[arg(long, default_value_t = 400)]
+        limit: usize,
+    },
+
     /// SkillTooltipRender2 헤더 텍스트 (이름/마스터 레벨/설명)
     SkillTooltips {
         /// Data 루트
@@ -1075,6 +1090,12 @@ fn main() {
             env,
             json,
         } => commands::cmd_lua_run(&script, base_dir.as_deref(), env.as_deref(), json),
+        Command::ItemLayoutFixture {
+            data_root,
+            string,
+            dir,
+            limit,
+        } => commands::cmd_item_layout_fixture(&data_root, &string, &dir, limit),
         Command::SkillTooltips {
             data_root,
             string,

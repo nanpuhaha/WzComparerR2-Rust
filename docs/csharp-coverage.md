@@ -247,6 +247,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   source-over**까지 실제 클라이언트 아이콘 6개(27×30/27×27, origin `[-3,30]`)로
   비교해 캔버스 SHA-256이 완전 일치. GDI+의 premultiplied/감마 합성과 텍스트
   래스터는 macOS에서 실행 불가라 남는다.
+- ItemTooltip 세로 배치: `RenderItem`의 `picH`/`splitterH` 누적을 주입 높이로
+  옮기고, 실제 Consume 18,376개에서 뽑은 320개로 C# 하네스와 `pic_h/icon_y/
+  splitter_h` 완전 일치.
 - ItemTooltip 텍스트 레이아웃: `TextRenderer.DrawPlainText` 코어를 옮기고,
   C# 하네스가 원본 `TextRenderer<string>`를 상속해 12케이스의 줄 사각형/최종
   y를 비교했다. 픽셀 비교는 `Graphics.MeasureString`(GDI+) 의존이라 여전히

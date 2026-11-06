@@ -3557,6 +3557,85 @@ return tostring(ok) .. '|' .. tostring(acc)
 
         Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
     }
+    // `ItemTooltipRender22.RenderItem`의 picH/splitterH 진행을 그대로 옮긴
+    // 참조 구현. 텍스트 높이는 입력 fixture에서 주입된다(GDI+ MeasureString 불가).
+    static void ItemLayout(string fixturePath)
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            long wonder = item.GetProperty("wonder_grade").GetInt64();
+            long bts = item.GetProperty("bts_label").GetInt64();
+            long blackpink = item.GetProperty("blackpink_label").GetInt64();
+
+            int picH = 0;
+            var splitterH = new List<int>();
+            picH += 10;
+            picH += 20;
+
+            if (wonder > 0)
+            {
+                if (wonder != 1 && wonder != 4 && wonder != 5 && wonder != 6) picH -= 15;
+                picH += 15;
+            }
+            else if (bts > 0)
+            {
+                picH += 15;
+            }
+            else if (blackpink > 0)
+            {
+                picH += 15;
+            }
+
+            foreach (var h in item.GetProperty("top_attr_heights").EnumerateArray())
+                picH += h.GetInt32();
+
+            if (item.GetProperty("expire").GetBoolean()) picH += 18;
+            if (item.GetProperty("no_revive").GetBoolean()) picH += 18;
+
+            splitterH.Add(picH - 1);
+
+            picH += 7;
+            int iconY = picH;
+            picH += 3;
+
+            foreach (var key in new[]
+            {
+                "req_level_height", "pet_stats_height", "desc_height",
+                "incline_height", "recipe_height", "flat_rate_height",
+            })
+            {
+                var el = item.GetProperty(key);
+                if (el.ValueKind == System.Text.Json.JsonValueKind.Number)
+                {
+                    picH += el.GetInt32();
+                    picH += 3;
+                }
+            }
+
+            bool hasBottom = false;
+            foreach (var _ in item.GetProperty("bottom_attr_heights").EnumerateArray()) hasBottom = true;
+            if (hasBottom)
+            {
+                picH = Math.Max(picH, iconY + 88);
+                splitterH.Add(picH - 1);
+                picH += 10;
+                foreach (var h in item.GetProperty("bottom_attr_heights").EnumerateArray())
+                    picH += h.GetInt32();
+            }
+
+            picH = Math.Max(iconY + 92, picH + 2);
+            rows.Add(new
+            {
+                id = item.GetProperty("id").GetInt32(),
+                pic_h = picH,
+                icon_y = iconY,
+                splitter_h = splitterH,
+            });
+        }
+        Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -3618,6 +3697,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "iconblend") IconBlend(args[1]);
         else if (args[0] == "drawmath") DrawMath();
         else if (args[0] == "luadelegate") LuaDelegate(args[1]);
+        else if (args[0] == "itemlayout") ItemLayout(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();
         else if (args[0] == "summaryprobe")

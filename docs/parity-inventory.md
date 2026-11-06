@@ -1208,3 +1208,52 @@ C# 하네스: `-- luadelegate <case>` (케이스별 프로세스 분리 — abor
 남는 한계: 실제 WzLib `Wz_Node` 반환 마샬링은 이 저장소에 노드 어셈블리
 의존이 커서 값(`nil`/문자열) 수준에서만 확인했다. WinForms 콘솔/에디터 UI와
 문법 강조는 여전히 호스트 의존이다.
+
+## ItemTooltip 세로 배치 (`RenderItem`의 picH/splitterH)
+
+텍스트 높이는 `Graphics.MeasureString`(GDI+)에서 나오므로 실행할 수 없다.
+그래서 **높이를 주입**하고 원본의 누적 규칙만 그대로 옮겼다
+(`wz-db::item_tooltip_layout`).
+
+| 원본 | 규칙 |
+|---|---|
+| 시작 | `picH = 0` → `+= 10` → `+= 20` |
+| 라벨 | `wonderGrade`가 1/4/5/6이면 `+= 15`, 그 외 양수는 `-= 15` 후 `+= 15`(순증 0). 없으면 BTS → BLACKPINK `else-if` |
+| 상단 속성 | 각 줄 높이만큼 |
+| 유효기간/생명의 물 | 각 18 |
+| 1차 splitter | `splitterH.Add(picH - 1)` |
+| 아이콘 | `picH += 7`, `iconY = picH`, `picH += 3` |
+| 본문 블록 | 요구레벨/펫스탯/설명/성향/레시피/정액제 각각 `+= 높이` 후 `+= 3` |
+| 하단 속성 | 있으면 `picH = max(picH, iconY + 88)`, splitter, `+= 10`, 각 높이 |
+| 마무리 | `picH = max(iconY + 92, picH + 2)` |
+
+검증:
+- 입력은 실제 `Data/Item/Consume` **18,376개**에서 기능별로 뽑은 **320개**
+  (하단 속성 100, 사용기간 113, 레시피 60, 설명만 60)
+- 텍스트 높이는 결정적 규칙(`wrapped_lines`: `\n` 분리 후 40칸 접기, 높이 18/줄)으로
+  양쪽에 동일하게 주입
+- C# 하네스(`-- itemlayout <fixture.json>`)가 같은 누적 루프를 실행
+- `crates/wz-db/tests/item_layout_parity.rs` — 320개 모두 `pic_h`, `icon_y`,
+  `splitter_h` 완전 일치
+
+fixture: `item_layout_input.json`(실데이터 유래 입력),
+`item_layout_expected.json`(C# 출력),
+CLI: `wz item-layout-fixture <Data> --string <String_000.wz> --dir Consume`.
+
+남는 한계: 폰트 래스터라이제이션과 GDI+의 premultiplied/감마는 여전히 실행
+불가다. 상단 속성(`GetItemTopAttributeString`)은 spec 기반이라 이번 비교에서는
+0으로 두었다(하단 `desc_leftalign` 1,126건은 포함).
+
+## Network 실서버 접속 시도 (2026-11-06)
+
+제공된 `100.115.176.120`에 원본 기본 포트(2100)를 포함한 16개 포트를
+프로브했다.
+
+```text
+80, 443, 2100, 2101, 2102, 3306, 5000, 6379, 7575, 8000,
+8080, 8484, 8888, 9000, 21000, 21001
+-> 전부 ConnectionRefusedError (Errno 61)
+```
+
+호스트는 응답하지만(거부 응답) 어떤 포트에서도 서비스가 열려 있지 않다.
+실서버 검증은 **올바른 주소/포트**가 있어야 진행할 수 있다.

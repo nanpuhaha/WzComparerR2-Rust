@@ -582,3 +582,10 @@ out-param delegate            -> process abort (exit 134)
 ```
 Handlers must match the delegate signature exactly; the original 1-parameter
 `LuaGlobalFindNodeFunctionHandler` does not bind under NLua 1.7.3.
+
+Verified ItemTooltip vertical layout (`itemlayout <fixture.json>`):
+```
+320 real Consume items (100 bottom-attr, 113 expire, 60 recipe, 60 desc-only)
+```
+`pic_h`/`icon_y`/`splitter_h` match Rust `wz_db::item_tooltip_layout`.
+Text heights are injected deterministically (18 per wrapped line, 40 cols).

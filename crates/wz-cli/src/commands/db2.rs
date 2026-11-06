@@ -5461,3 +5461,128 @@ pub fn cmd_pixel_fixture(
     );
     Ok(())
 }
+
+fn node_int(node: Option<&wz_core::image::Node>, key: &str) -> i64 {
+    node.and_then(|n| n.object_children().iter().find(|c| c.name.as_ref() == key))
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Int(v)) => Some(i64::from(*v)),
+            Some(wz_core::image::ImageValue::Short(v)) => Some(i64::from(*v)),
+            Some(wz_core::image::ImageValue::Long(v)) => Some(*v),
+            Some(wz_core::image::ImageValue::Uint(v)) => Some(i64::from(*v)),
+            Some(wz_core::image::ImageValue::Str(s)) | Some(wz_core::image::ImageValue::Uol(s)) => {
+                s.parse().ok()
+            }
+            _ => None,
+        })
+        .unwrap_or(0)
+}
+
+fn node_has_text(node: Option<&wz_core::image::Node>, key: &str) -> bool {
+    node.and_then(|n| n.object_children().iter().find(|c| c.name.as_ref() == key))
+        .map(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Str(s)) | Some(wz_core::image::ImageValue::Uol(s)) => {
+                !s.is_empty()
+            }
+            Some(_) => true,
+            None => false,
+        })
+        .unwrap_or(false)
+}
+
+/// 실제 아이템 노드에서 `ItemTooltipRender22.RenderItem`의 세로 배치 입력을 만든다.
+pub fn cmd_item_layout_fixture(
+    data_root: &Path,
+    string_wz: &Path,
+    dir: &str,
+    limit: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use wz_db::{Arena, StringLinker};
+
+    let string_archive = WzArchive::open(string_wz)?;
+    let (arena, root) = Arena::from_archive(&string_archive);
+    let mut linker = StringLinker::new();
+    if !linker.load_string_wz(&arena, root) {
+        return Err("StringLinker 로드 실패".into());
+    }
+
+    let mut paths: Vec<_> = std::fs::read_dir(data_root.join("Item").join(dir))
+        .ok()
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+        .collect();
+    paths.sort();
+
+    let mut rows = Vec::new();
+    'outer: for path in paths {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        for entry in &tree.root.entries {
+            if entry.node_type != 4 {
+                continue;
+            }
+            let Some(offset) = entry.offset else { continue };
+            let Ok(image) = archive.parse_image_at(offset) else {
+                continue;
+            };
+            for item in image.object_children() {
+                let Ok(id) = item.name.as_ref().parse::<i32>() else {
+                    continue;
+                };
+                let Some(info) = item
+                    .object_children()
+                    .iter()
+                    .find(|c| c.name.as_ref() == "info")
+                else {
+                    continue;
+                };
+                let spec = item
+                    .object_children()
+                    .iter()
+                    .find(|c| c.name.as_ref() == "spec");
+                let sr = linker.string_item.get(&id);
+                let desc = sr.and_then(|sr| sr.desc.clone()).unwrap_or_default();
+                let desc_left = sr.and_then(|sr| sr.values.get("desc_leftalign").cloned());
+                let pet = dir == "Pet";
+                let desc_lines = wz_db::wrapped_lines(&desc);
+                let desc_height = (desc_lines > 0).then(|| wz_db::line_height(desc_lines));
+                let wonder_grade = node_int(Some(info), "wonderGrade");
+                let rows_json = serde_json::json!({
+                    "id": id,
+                    "wonder_grade": wonder_grade,
+                    "bts_label": node_int(Some(info), "BTSLabel"),
+                    "blackpink_label": node_int(Some(info), "BLACKPINKLabel"),
+                    "expire": node_has_text(Some(info), "consumableFrom")
+                        || node_has_text(Some(info), "endUseDate"),
+                    "no_revive": node_int(Some(info), "noRevive") > 0,
+                    "req_level_height": (node_int(spec, "reqLevel") > 0).then_some(18),
+                    "pet_stats_height": pet.then_some(54),
+                    "desc_height": desc_height,
+                    "incline_height": (node_int(spec, "incline") != 0).then_some(36),
+                    "recipe_height": (node_int(spec, "recipeUseCount") > 0
+                        || node_int(spec, "recipeValidDay") > 0).then_some(18),
+                    "flat_rate_height": (node_int(Some(info), "flatRate") > 0).then_some(18),
+                    "top_attr_heights": Vec::<i32>::new(),
+                    "bottom_attr_heights": desc_left
+                        .filter(|text| !text.is_empty())
+                        .map(|text| {
+                            vec![wz_db::line_height(wz_db::wrapped_lines(text.as_str()))]
+                        })
+                        .unwrap_or_default(),
+                });
+                rows.push(rows_json);
+                if rows.len() >= limit {
+                    break 'outer;
+                }
+            }
+        }
+    }
+    println!("{}", serde_json::to_string_pretty(&rows)?);
+    Ok(())
+}
