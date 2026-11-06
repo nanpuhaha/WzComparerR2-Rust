@@ -1,0 +1,12 @@
+{
+  "tabs": ["WzComparerR2", "Avatar", "Lua"],
+  "select": [2, 1, 9],
+  "commands": [
+    { "id": "openWz", "requires_selection": false },
+    { "id": "saveNode", "requires_selection": true },
+    { "id": "closeTab", "requires_selection": true }
+  ],
+  "selection_events": [true, false, true],
+  "dispatch": ["saveNode", "openWz", "closeTab", "missing"],
+  "on_load": [["AlphaPlugin", true], ["BetaPlugin", false], ["GammaPlugin", true]]
+}

@@ -4235,6 +4235,96 @@ return tostring(ok) .. '|' .. tostring(acc)
         }
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // 메인 윈도우 탭/명령 수명주기. 탭/Enabled는 WinForms 컨트롤을 만들 수 없어
+    // 규칙을 옮겼고, 플러그인 로드 순서는 **실제** PluginContext + 어셈블리
+    // 열거로 얻는다.
+    static void MainWindow(string pluginBasePath, string pluginPath, string fixturePath)
+    {
+        var pluginAsm = System.Reflection.Assembly.LoadFrom(pluginBasePath);
+        var contextType = pluginAsm.GetType("WzComparerR2.PluginBase.PluginContext")!;
+        var entryType = pluginAsm.GetType("WzComparerR2.PluginBase.PluginEntry")!;
+        object context = Activator.CreateInstance(contextType,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+            null, new object[] { null }, null)!;
+        var asm = System.Reflection.Assembly.LoadFrom(pluginPath);
+        var activationOrder = asm.GetExportedTypes()
+            .Where(t => t.IsSubclassOf(entryType) && !t.IsAbstract)
+            .Select(t => t.Name)
+            .ToList();
+
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+
+        var tabs = new List<string>();
+        int selected = -1;
+        var tabSelection = new List<object>();
+        foreach (var tab in doc.RootElement.GetProperty("tabs").EnumerateArray())
+        {
+            tabs.Add(tab.GetString()!);
+            if (selected < 0) selected = 0;
+        }
+        foreach (var sel in doc.RootElement.GetProperty("select").EnumerateArray())
+        {
+            int index = sel.GetInt32();
+            if (index >= 0 && index < tabs.Count) selected = index;
+            tabSelection.Add(new { index, selected, name = selected >= 0 ? tabs[selected] : (string)null! });
+        }
+
+        var commands = doc.RootElement.GetProperty("commands").EnumerateArray()
+            .Select(c => new
+            {
+                id = c.GetProperty("id").GetString()!,
+                requires = c.GetProperty("requires_selection").GetBoolean(),
+                enabled = !c.GetProperty("requires_selection").GetBoolean(),
+            }).ToList();
+        var enabledAfter = new List<object>();
+        foreach (var has in doc.RootElement.GetProperty("selection_events").EnumerateArray())
+        {
+            bool hasSelection = has.GetBoolean();
+            var changed = new List<(string, bool)>();
+            for (int i = 0; i < commands.Count; i++)
+            {
+                bool enabled = !commands[i].requires || hasSelection;
+                if (commands[i].enabled != enabled)
+                {
+                    changed.Add((commands[i].id, enabled));
+                    commands[i] = new { commands[i].id, commands[i].requires, enabled };
+                }
+            }
+            enabledAfter.Add(new
+            {
+                has_selection = hasSelection,
+                changed = changed.Select(c => new { id = c.Item1, enabled = c.Item2 }).ToList(),
+                enabled = commands.Where(c => c.enabled).Select(c => c.id).ToList(),
+            });
+        }
+        var dispatched = new List<object>();
+        foreach (var id in doc.RootElement.GetProperty("dispatch").EnumerateArray())
+        {
+            string commandId = id.GetString()!;
+            var cmd = commands.FirstOrDefault(c => c.id == commandId);
+            dispatched.Add(new { id = commandId, executed = cmd != null && cmd.enabled });
+        }
+
+        var onLoad = doc.RootElement.GetProperty("on_load").EnumerateArray()
+            .Select(p => new
+            {
+                name = p[0].GetString()!,
+                ok = p[1].GetBoolean(),
+                error = p[1].GetBoolean() ? (string)null! : "boom",
+            }).ToList();
+        var ran = onLoad.Select(p => p.name).ToList();
+        var failures = onLoad.Where(p => !p.ok).Select(p => new { name = p.name, error = p.error }).ToList();
+
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            context_created = context != null,
+            activation_order = activationOrder,
+            tab_selection = tabSelection,
+            enabled_after = enabledAfter,
+            dispatched,
+            on_load = new { ran, failures },
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4303,6 +4393,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "spritecompose") SpriteCompose(args[1]);
         else if (args[0] == "pluginribbon") PluginRibbon(args[1], args[2]);
         else if (args[0] == "pluginmodel") PluginModel(args[1]);
+        else if (args[0] == "mainwindow") MainWindow(args[1], args[2], args[3]);
         else if (args[0] == "framebake") FrameBake(args[1]);
         else if (args[0] == "controlsinput") ControlsInput();
         else if (args[0] == "luaclr") LuaClr();

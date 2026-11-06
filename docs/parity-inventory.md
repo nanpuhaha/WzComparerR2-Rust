@@ -1573,3 +1573,30 @@ C#: `-- framebake <fixture.json>`.
 한계: XNA `SpriteBatch` 기본 샘플러는 **선형**이지만 결정적 비교를 위해
 최근접으로 고정했다. 실제 GPU 베이킹(선형/감마)은 wgpu 오프스크린 경로로는
 가능하지만 C# `GraphicsDevice` 실행이 macOS에서 불가해 대조하지 못했다.
+
+## 메인 윈도우 탭/명령 수명주기
+
+WinForms/DevComponents 컨트롤 없이 관찰 가능한 상태 전이만 옮겼다
+(`wz-db::main_window`).
+
+- **탭**: `AddTab`은 끝에 추가하고 선택을 바꾸지 않는다. 첫 탭은 자동 선택
+  (컨트롤 전제). `select(index)`는 범위 밖이면 상태를 바꾸지 않는다.
+- **명령**: 등록 순서가 표시/디스패치 순서. `requires_selection` 명령은 선택
+  노드 유무에 따라 `Enabled`가 재계산되고, 비활성/미등록 디스패치는 실행되지
+  않는다(`MainForm.cs:1388`의 버튼 토글 패턴).
+- **OnLoad**: `loadedPlugins` 순서대로 호출하고, 예외는 플러그인별로 기록한 뒤
+  다음 플러그인으로 계속한다(`PluginManager.PluginOnLoad`).
+
+검증:
+- C# 하네스가 **실제 `PluginContext` + fixture 플러그인 어셈블리**를 로드해
+  활성화 순서 `[AlphaPlugin, DerivedPlugin]`을 얻음 (기존
+  `plugin_entries_activated.json`과 동일)
+- 탭 3개/선택 3회(범위 밖 포함), 명령 3개/선택 이벤트 3회/디스패치 4회,
+  OnLoad 3건(중간 실패 포함)이 완전 일치
+- `crates/wz-db/tests/main_window_parity.rs` 1종 + 단위 테스트 3종
+
+fixture: `main_window_input.json`, `main_window.json`,
+C#: `-- mainwindow <PluginBase.dll> <plugin.dll> <fixture.json>`.
+
+가정: 첫 탭 자동 선택과 부분 선택 해제 시의 재선택은 컨트롤 없이 확인할 수
+없어 모델에서 명시한 규칙을 따른다(문서화).

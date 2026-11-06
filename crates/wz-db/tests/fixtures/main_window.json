@@ -1,0 +1,109 @@
+{
+  "context_created": true,
+  "activation_order": [
+    "AlphaPlugin",
+    "DerivedPlugin"
+  ],
+  "tab_selection": [
+    {
+      "index": 2,
+      "selected": 2,
+      "name": "Lua"
+    },
+    {
+      "index": 1,
+      "selected": 1,
+      "name": "Avatar"
+    },
+    {
+      "index": 9,
+      "selected": 1,
+      "name": "Avatar"
+    }
+  ],
+  "enabled_after": [
+    {
+      "has_selection": true,
+      "changed": [
+        {
+          "id": "saveNode",
+          "enabled": true
+        },
+        {
+          "id": "closeTab",
+          "enabled": true
+        }
+      ],
+      "enabled": [
+        "openWz",
+        "saveNode",
+        "closeTab"
+      ]
+    },
+    {
+      "has_selection": false,
+      "changed": [
+        {
+          "id": "saveNode",
+          "enabled": false
+        },
+        {
+          "id": "closeTab",
+          "enabled": false
+        }
+      ],
+      "enabled": [
+        "openWz"
+      ]
+    },
+    {
+      "has_selection": true,
+      "changed": [
+        {
+          "id": "saveNode",
+          "enabled": true
+        },
+        {
+          "id": "closeTab",
+          "enabled": true
+        }
+      ],
+      "enabled": [
+        "openWz",
+        "saveNode",
+        "closeTab"
+      ]
+    }
+  ],
+  "dispatched": [
+    {
+      "id": "saveNode",
+      "executed": true
+    },
+    {
+      "id": "openWz",
+      "executed": true
+    },
+    {
+      "id": "closeTab",
+      "executed": true
+    },
+    {
+      "id": "missing",
+      "executed": false
+    }
+  ],
+  "on_load": {
+    "ran": [
+      "AlphaPlugin",
+      "BetaPlugin",
+      "GammaPlugin"
+    ],
+    "failures": [
+      {
+        "name": "BetaPlugin",
+        "error": "boom"
+      }
+    ]
+  }
+}

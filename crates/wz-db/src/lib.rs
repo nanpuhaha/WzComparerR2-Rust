@@ -52,6 +52,7 @@ pub mod item_tooltip;
 pub mod item_tooltip_extra;
 pub mod item_tooltip_layout;
 pub mod linker;
+pub mod main_window;
 pub mod map;
 pub mod map_tooltip;
 pub mod node;
@@ -143,6 +144,7 @@ pub use item_tooltip_layout::{
 pub use linker::{
     extract_gear_stats, LoadMode, StringDomain, StringLinker, StringResult, StringRoot, StringRoots,
 };
+pub use main_window::{plugin_on_load, Command, CommandRegistry, OnLoadOutcome, Tab, TabHost};
 pub use map::{
     BackItem, Foothold, FootholdTree, IlluminantCluster, LadderRope, LadderRopeKind, LifeKind,
     MapData, MapEvent, MapInfo, MapLife, MapLight, MapLight2D, MapParticle, MapPortal, MapReactor,

@@ -648,3 +648,10 @@ Verified frame texture baking (`framebake <fixture.json>`):
 ```
 `ApplyFlip`/`ApplyRotation` CPU bakes match Rust `wz_avatar::frame_bake` in
 size, origin and pixel SHA-256 (nearest inverse sampling, banker's rounding).
+
+Verified main-window lifecycle (`mainwindow <PluginBase.dll> <plugin.dll> <fixture.json>`):
+```
+context_created=true; activation order [AlphaPlugin, DerivedPlugin]
+3 tabs, 3 selections, 3 commands, 4 dispatches, 3 OnLoad entries (one failure)
+```
+Matches Rust `wz_db::main_window` (TabHost/CommandRegistry/plugin_on_load).
