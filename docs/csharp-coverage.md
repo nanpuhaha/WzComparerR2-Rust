@@ -277,6 +277,9 @@ LOC는 `*.cs`에서 `obj/`, `bin/`을 제외한 줄 수다.
   옮기고 실제 장비 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
 - `GetGearPropString` signFlag: 0/1/2 부호 규칙(음수에서 `+-5`)을 옮기고 실제
   장비 속성 54케이스 × 3 flag = 162행을 실제 C# 호출과 비교.
+- 잠재능력 코어: `Potential`의 요약 치환(길이 내림차순)/레벨/옵션타입/
+  `ToString`/`IsPotentialEx`를 옮기고 실제 ItemOption.img 600케이스 + 옵션
+  판정 1,127건 + 레벨 215건을 실제 C# 호출과 비교.
 - 아이템 분류 판정: `Item.GetItemType`(백만 단위, 5xxx Pet/Cash 구분)을 옮기고
   실제 아이템 ID 598개 + 경계 18개를 실제 C# 호출과 616행 비교.
 - 장비 직업 제한: `GetExtraJobReqString(GearType…)` 51그룹과

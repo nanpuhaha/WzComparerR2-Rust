@@ -1,0 +1,7404 @@
+[
+  {
+    "code": 1,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incSTR": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 1,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incSTR": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 2,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incDEX": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 2,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incDEX": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 3,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incINT": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 3,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incINT": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 4,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incLUK": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 4,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incLUK": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 5,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 5,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 6,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 6,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 7,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 7,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 8,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 8,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 9,
+    "level": 1,
+    "option_type": 55,
+    "props": {
+      "incSpeed": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 9,
+    "level": 25,
+    "option_type": 55,
+    "props": {
+      "incSpeed": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 10,
+    "level": 1,
+    "option_type": 55,
+    "props": {
+      "incJump": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 10,
+    "level": 25,
+    "option_type": 55,
+    "props": {
+      "incJump": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 11,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 11,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 12,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 12,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 13,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDD": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 13,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDD": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 14,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDD": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 14,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDD": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 101,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 101,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 102,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 102,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 103,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 103,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 104,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 104,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 105,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 105,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 106,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 106,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 107,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 107,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 108,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 108,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 109,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 7
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 109,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 7
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 110,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 7
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 110,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 7
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 111,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 7
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 111,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 7
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 112,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 7
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 112,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 7
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 113,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 10
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 113,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 10
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 114,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 10
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 114,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 10
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 115,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 10
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 115,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 10
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 116,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 10
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 116,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 10
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 117,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 15
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 117,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 15
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 118,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 15
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 118,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 15
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 119,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 15
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 119,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 15
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 120,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 15
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 120,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 15
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 121,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 20
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 121,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 20
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 122,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 20
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 122,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 20
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 123,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 20
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 123,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 20
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 124,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 20
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 124,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 20
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 131,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 150
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 131,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 150
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 132,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMMP": 150
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 132,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMMP": 150
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 133,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 200
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 133,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 200
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 134,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMMP": 200
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 134,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMMP": 200
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 135,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 300
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 135,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 300
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 136,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMMP": 300
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 136,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMMP": 300
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 137,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 400
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 137,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 400
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 138,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 600
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 138,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 600
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 139,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 800
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 139,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 800
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 140,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 1000
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 140,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 1000
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 141,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 1200
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 141,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 1200
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 142,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 1500
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 142,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 1500
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 151,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 151,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 152,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 152,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 153,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 153,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 154,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 154,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 155,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 155,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 156,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 156,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 157,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 157,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 158,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 158,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 159,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 7
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 159,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 7
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 160,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 7
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 160,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 7
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 161,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 10
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 161,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 10
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 162,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 10
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 162,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 10
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 163,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 12
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 163,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 12
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 164,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 12
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 164,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 12
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 165,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 12
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 165,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 12
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 166,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 12
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 166,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 12
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 167,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 24
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 167,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 24
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 168,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 24
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 168,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 24
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 169,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 24
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 169,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 24
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 170,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 24
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 170,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 24
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 171,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 6
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 171,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 6
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 172,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 6
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 172,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 6
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 173,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 6
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 173,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 6
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 174,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 6
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 174,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 6
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 175,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 500
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 175,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 500
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 176,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 1100
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 176,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 1100
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 177,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 960
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 177,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 960
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 178,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 2000
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 178,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 2000
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 179,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 179,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 180,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 180,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 181,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 181,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 182,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 182,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 4
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 183,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 180
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 183,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 180
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 184,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMMP": 180
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 184,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMMP": 180
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 185,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 18
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 185,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 18
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 186,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 18
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 186,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 18
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 187,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 18
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 187,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 18
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 188,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 18
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 188,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 18
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 189,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 700
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 189,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 700
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 190,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMHP": 1300
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 190,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMHP": 1300
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 191,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 8
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 191,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 8
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 192,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 8
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 192,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 8
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 201,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 2,
+      "incINT": 2,
+      "incLUK": 2,
+      "incSTR": 2
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 201,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 2,
+      "incINT": 2,
+      "incLUK": 2,
+      "incSTR": 2
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 202,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 3,
+      "incINT": 3,
+      "incLUK": 3,
+      "incSTR": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 202,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 3,
+      "incINT": 3,
+      "incLUK": 3,
+      "incSTR": 3
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 203,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 5,
+      "incINT": 5,
+      "incLUK": 5,
+      "incSTR": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 203,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 5,
+      "incINT": 5,
+      "incLUK": 5,
+      "incSTR": 5
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 204,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 7,
+      "incINT": 7,
+      "incLUK": 7,
+      "incSTR": 7
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 204,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 7,
+      "incINT": 7,
+      "incLUK": 7,
+      "incSTR": 7
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 205,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 10,
+      "incINT": 10,
+      "incLUK": 10,
+      "incSTR": 10
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 205,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 10,
+      "incINT": 10,
+      "incLUK": 10,
+      "incSTR": 10
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 206,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 12,
+      "incINT": 12,
+      "incLUK": 12,
+      "incSTR": 12
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 206,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 12,
+      "incINT": 12,
+      "incLUK": 12,
+      "incSTR": 12
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 207,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 10,
+      "incINT": 10,
+      "incLUK": 10,
+      "incSTR": 10
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 207,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 10,
+      "incINT": 10,
+      "incLUK": 10,
+      "incSTR": 10
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 208,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 15,
+      "incINT": 15,
+      "incLUK": 15,
+      "incSTR": 15
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 208,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 15,
+      "incINT": 15,
+      "incLUK": 15,
+      "incSTR": 15
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 209,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 20,
+      "incINT": 20,
+      "incLUK": 20,
+      "incSTR": 20
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 209,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 20,
+      "incINT": 20,
+      "incLUK": 20,
+      "incSTR": 20
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 210,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 8,
+      "incINT": 8,
+      "incLUK": 8,
+      "incSTR": 8
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 210,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 8,
+      "incINT": 8,
+      "incLUK": 8,
+      "incSTR": 8
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 211,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 15,
+      "incINT": 15,
+      "incLUK": 15,
+      "incSTR": 15
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 211,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 15,
+      "incINT": 15,
+      "incLUK": 15,
+      "incSTR": 15
+    },
+    "props_f": {},
+    "req_level": 75,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 212,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 17,
+      "incINT": 17,
+      "incLUK": 17,
+      "incSTR": 17
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 212,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 17,
+      "incINT": 17,
+      "incLUK": 17,
+      "incSTR": 17
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 301,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incCr": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 301,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incCr": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 302,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incCr": 7
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 302,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incCr": 7
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 303,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incCr": 10
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 303,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incCr": 10
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 304,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incCr": 6
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 304,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incCr": 6
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 305,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incCr": 12
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 305,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incCr": 12
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 306,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPADr": 3
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPADr%",
+    "weight": 0
+  },
+  {
+    "code": 306,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPADr": 3
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "공격력 +#incPADr%",
+    "weight": 0
+  },
+  {
+    "code": 307,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMADr": 3
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMADr%",
+    "weight": 0
+  },
+  {
+    "code": 307,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMADr": 3
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "마력 +#incMADr%",
+    "weight": 0
+  },
+  {
+    "code": 308,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incCr": 8
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 308,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incCr": 8
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 391,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEXr": 5,
+      "incINTr": 5,
+      "incLUKr": 5,
+      "incSTRr": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "올스탯 +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 391,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEXr": 5,
+      "incINTr": 5,
+      "incLUKr": 5,
+      "incSTRr": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "올스탯 +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 401,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "ignoreTargetDEF": 3
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "몬스터 방어율 무시 +#ignoreTargetDEF%",
+    "weight": 0
+  },
+  {
+    "code": 401,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "ignoreTargetDEF": 3
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "몬스터 방어율 무시 +#ignoreTargetDEF%",
+    "weight": 0
+  },
+  {
+    "code": 402,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "ignoreTargetDEF": 4
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "몬스터 방어율 무시 +#ignoreTargetDEF%",
+    "weight": 0
+  },
+  {
+    "code": 402,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "ignoreTargetDEF": 4
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "몬스터 방어율 무시 +#ignoreTargetDEF%",
+    "weight": 0
+  },
+  {
+    "code": 403,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "ignoreTargetDEF": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "몬스터 방어율 무시 +#ignoreTargetDEF%",
+    "weight": 0
+  },
+  {
+    "code": 403,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "ignoreTargetDEF": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "몬스터 방어율 무시 +#ignoreTargetDEF%",
+    "weight": 0
+  },
+  {
+    "code": 404,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "ignoreTargetDEF": 7
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "몬스터 방어율 무시 +#ignoreTargetDEF%",
+    "weight": 0
+  },
+  {
+    "code": 404,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "ignoreTargetDEF": 7
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "몬스터 방어율 무시 +#ignoreTargetDEF%",
+    "weight": 0
+  },
+  {
+    "code": 601,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "boss": 1,
+      "incDAMr": 3
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "보스 몬스터 데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 601,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "boss": 1,
+      "incDAMr": 3
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "보스 몬스터 데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 602,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "boss": 1,
+      "incDAMr": 4
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "보스 몬스터 데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 602,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "boss": 1,
+      "incDAMr": 4
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "보스 몬스터 데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 603,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "boss": 1,
+      "incDAMr": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "보스 몬스터 데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 603,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "boss": 1,
+      "incDAMr": 5
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "보스 몬스터 데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 604,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "boss": 1,
+      "incDAMr": 7
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "보스 몬스터 데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 604,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "boss": 1,
+      "incDAMr": 7
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "보스 몬스터 데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 701,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incAllskill": 0
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "4차 이하 스킬 레벨 +#incAllskill (마스터 레벨까지만 증가)",
+    "weight": 0
+  },
+  {
+    "code": 701,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incAllskill": 1
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "4차 이하 스킬 레벨 +#incAllskill (마스터 레벨까지만 증가)",
+    "weight": 0
+  },
+  {
+    "code": 702,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incAllskill": 0
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "4차 이하 스킬 레벨 +#incAllskill (마스터 레벨까지만 증가)",
+    "weight": 0
+  },
+  {
+    "code": 702,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incAllskill": 2
+    },
+    "props_f": {},
+    "req_level": 100,
+    "summary": "4차 이하 스킬 레벨 +#incAllskill (마스터 레벨까지만 증가)",
+    "weight": 0
+  },
+  {
+    "code": 901,
+    "level": 1,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 분노를 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 901,
+    "level": 25,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 분노를 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 902,
+    "level": 1,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 행복을 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 902,
+    "level": 25,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 행복을 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 903,
+    "level": 1,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 사랑에 빠진다.",
+    "weight": 0
+  },
+  {
+    "code": 903,
+    "level": 25,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 사랑에 빠진다.",
+    "weight": 0
+  },
+  {
+    "code": 904,
+    "level": 1,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 격노를 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 904,
+    "level": 25,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 격노를 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 905,
+    "level": 1,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 감동을 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 905,
+    "level": 25,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 감동을 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 2001,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incSTR": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 2001,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incSTR": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 2002,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incDEX": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 2002,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incDEX": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 2003,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incINT": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 2003,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incINT": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 2004,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incLUK": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 2004,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incLUK": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 2005,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 2005,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 2006,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 2006,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 2007,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 2007,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 2008,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 2008,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 2009,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incSpeed": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 2009,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incSpeed": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 2010,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incJump": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 2010,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incJump": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 2011,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPAD": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 2011,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPAD": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 2012,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incMAD": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 2012,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incMAD": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 2013,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incPDD": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 2013,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incPDD": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 2014,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incPDD": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 2014,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incPDD": 60
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 2015,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 2015,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 2016,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 2016,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 2901,
+    "level": 1,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 분노를 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 2901,
+    "level": 25,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 분노를 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 2902,
+    "level": 1,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 행복을 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 2902,
+    "level": 25,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 행복을 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 2903,
+    "level": 1,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 사랑에 빠진다.",
+    "weight": 0
+  },
+  {
+    "code": 2903,
+    "level": 25,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 사랑에 빠진다.",
+    "weight": 0
+  },
+  {
+    "code": 2904,
+    "level": 1,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 격노를 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 2904,
+    "level": 25,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 격노를 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 2905,
+    "level": 1,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 감동을 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 2905,
+    "level": 25,
+    "option_type": 51,
+    "props": {
+      "prop": 10,
+      "time": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "피격 시 #prop% 확률로 #time초간 감동을 느낀다.",
+    "weight": 0
+  },
+  {
+    "code": 5001,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incSTR": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 5001,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incSTR": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 5002,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incDEX": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 5002,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incDEX": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 5003,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incINT": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 5003,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incINT": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 5004,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incLUK": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 5004,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incLUK": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 5005,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incMHP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 5005,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incMHP": 40
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 5006,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incMMP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 5006,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incMMP": 40
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 5007,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incSpeed": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 5007,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incSpeed": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 5008,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incJump": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 5008,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incJump": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 5009,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incPAD": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 5009,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incPAD": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 5010,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incMAD": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 5010,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incMAD": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 5011,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incPDD": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 5011,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incPDD": 40
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 10001,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incSTR": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 10001,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incSTR": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 10002,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incDEX": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 10002,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incDEX": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 10003,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incINT": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 10003,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incINT": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 10004,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incLUK": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 10004,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incLUK": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 10005,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 10005,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 125
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 10006,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 10006,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 125
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 10007,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 10007,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 120
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 10008,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 10008,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 120
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 10009,
+    "level": 1,
+    "option_type": 55,
+    "props": {
+      "incSpeed": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 10009,
+    "level": 25,
+    "option_type": 55,
+    "props": {
+      "incSpeed": 9
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 10010,
+    "level": 1,
+    "option_type": 55,
+    "props": {
+      "incJump": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 10010,
+    "level": 25,
+    "option_type": 55,
+    "props": {
+      "incJump": 9
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 10011,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 10011,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 10012,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 10012,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 10013,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDD": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 10013,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDD": 125
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 10014,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDD": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 10014,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDD": 120
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 10041,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incSTRr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 10041,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incSTRr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 10042,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incDEXr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEXr%",
+    "weight": 0
+  },
+  {
+    "code": 10042,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incDEXr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEXr%",
+    "weight": 0
+  },
+  {
+    "code": 10043,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incINTr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINTr%",
+    "weight": 0
+  },
+  {
+    "code": 10043,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incINTr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINTr%",
+    "weight": 0
+  },
+  {
+    "code": 10044,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incLUKr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUKr%",
+    "weight": 0
+  },
+  {
+    "code": 10044,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incLUKr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUKr%",
+    "weight": 0
+  },
+  {
+    "code": 10045,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incMHPr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHPr%",
+    "weight": 0
+  },
+  {
+    "code": 10045,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incMHPr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHPr%",
+    "weight": 0
+  },
+  {
+    "code": 10046,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incMMPr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMPr%",
+    "weight": 0
+  },
+  {
+    "code": 10046,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incMMPr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMPr%",
+    "weight": 0
+  },
+  {
+    "code": 10047,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 10047,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 120
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 10048,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 10048,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 120
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 10051,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPADr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPADr%",
+    "weight": 0
+  },
+  {
+    "code": 10051,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPADr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPADr%",
+    "weight": 0
+  },
+  {
+    "code": 10052,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMADr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMADr%",
+    "weight": 0
+  },
+  {
+    "code": 10052,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMADr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMADr%",
+    "weight": 0
+  },
+  {
+    "code": 10053,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 10053,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 10054,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 10054,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 10055,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incCr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 10055,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incCr": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 10070,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDAMr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 10070,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDAMr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 10081,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incDEX": 1,
+      "incINT": 1,
+      "incLUK": 1,
+      "incSTR": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 10081,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incDEX": 6,
+      "incINT": 6,
+      "incLUK": 6,
+      "incSTR": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 10151,
+    "level": 1,
+    "option_type": 40,
+    "props": {
+      "RecoveryHP": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "4초 당 #RecoveryHP의 HP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10151,
+    "level": 25,
+    "option_type": 40,
+    "props": {
+      "RecoveryHP": 25
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "4초 당 #RecoveryHP의 HP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10156,
+    "level": 1,
+    "option_type": 40,
+    "props": {
+      "RecoveryMP": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "4초 당 #RecoveryMP의 MP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10156,
+    "level": 25,
+    "option_type": 40,
+    "props": {
+      "RecoveryMP": 25
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "4초 당 #RecoveryMP의 MP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10201,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "HP": 10,
+      "prop": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #HP의 HP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10201,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "HP": 33,
+      "prop": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #HP의 HP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10202,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "HP": 20,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #HP의 HP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10202,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "HP": 250,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #HP의 HP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10206,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "MP": 10,
+      "prop": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #MP의 MP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10206,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "MP": 33,
+      "prop": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #MP의 MP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10207,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "MP": 20,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #MP의 MP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10207,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "MP": 125,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #MP의 MP 회복",
+    "weight": 0
+  },
+  {
+    "code": 10221,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1000,
+      "level": 1,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 중독효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10221,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1000,
+      "level": 7,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 중독효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10222,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1000,
+      "level": 1,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 중독효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10222,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1000,
+      "level": 7,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 중독효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10226,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1001,
+      "level": 1,
+      "prop": 5
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 기절효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10226,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1001,
+      "level": 3,
+      "prop": 5
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 기절효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10227,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1001,
+      "level": 1,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 기절효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10227,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1001,
+      "level": 3,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 기절효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10231,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1002,
+      "level": 1,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 슬로우효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10231,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1002,
+      "level": 3,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 슬로우효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10232,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1002,
+      "level": 1,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 슬로우효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10232,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1002,
+      "level": 3,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 슬로우효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10236,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1003,
+      "level": 1,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 암흑효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10236,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1003,
+      "level": 4,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 암흑효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10237,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1003,
+      "level": 1,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 암흑효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10237,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1003,
+      "level": 4,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 암흑효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10241,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1004,
+      "level": 1,
+      "prop": 5
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 빙결효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10241,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1004,
+      "level": 3,
+      "prop": 5
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 빙결효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10242,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1004,
+      "level": 1,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 빙결효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10242,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1004,
+      "level": 3,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 빙결효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10246,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1005,
+      "level": 1,
+      "prop": 5
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 봉인효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10246,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1005,
+      "level": 3,
+      "prop": 5
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 봉인효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10247,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "attackType": 1005,
+      "level": 1,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 봉인효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10247,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "attackType": 1005,
+      "level": 3,
+      "prop": 10
+    },
+    "props_f": {},
+    "req_level": 10,
+    "summary": "공격 시 #prop% 확률로 #level레벨 봉인효과 적용",
+    "weight": 0
+  },
+  {
+    "code": 10291,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "ignoreTargetDEF": 15
+    },
+    "props_f": {},
+    "req_level": 30,
+    "summary": "몬스터 방어율 무시 +#ignoreTargetDEF%",
+    "weight": 0
+  },
+  {
+    "code": 10291,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "ignoreTargetDEF": 20
+    },
+    "props_f": {},
+    "req_level": 30,
+    "summary": "몬스터 방어율 무시 +#ignoreTargetDEF%",
+    "weight": 0
+  },
+  {
+    "code": 12001,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incSTR": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 12001,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incSTR": 11
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 12002,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incDEX": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 12002,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incDEX": 11
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 12003,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incINT": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 12003,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incINT": 11
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 12004,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incLUK": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 12004,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incLUK": 11
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 12005,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 12005,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 125
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 12006,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 12006,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 125
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 12007,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 12007,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 100
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 12008,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 12008,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 100
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 12009,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incSpeed": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 12009,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incSpeed": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 12010,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incJump": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 12010,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incJump": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 12011,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPAD": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 12011,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPAD": 11
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 12012,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incMAD": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 12012,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incMAD": 11
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 12013,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incPDD": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 12013,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incPDD": 125
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 12014,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incPDD": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 12014,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incPDD": 100
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 12015,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTR": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 12015,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTR": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 12016,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 12016,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 12017,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINT": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 12017,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINT": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 12018,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUK": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 12018,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUK": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 12019,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 12019,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 12020,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 12020,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 13
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 12041,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incSTRr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 12041,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incSTRr": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 12042,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incDEXr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEXr%",
+    "weight": 0
+  },
+  {
+    "code": 12042,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incDEXr": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEXr%",
+    "weight": 0
+  },
+  {
+    "code": 12043,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incINTr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINTr%",
+    "weight": 0
+  },
+  {
+    "code": 12043,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incINTr": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINTr%",
+    "weight": 0
+  },
+  {
+    "code": 12044,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incLUKr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUKr%",
+    "weight": 0
+  },
+  {
+    "code": 12044,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incLUKr": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUKr%",
+    "weight": 0
+  },
+  {
+    "code": 12045,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHPr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHPr%",
+    "weight": 0
+  },
+  {
+    "code": 12045,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHPr": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHPr%",
+    "weight": 0
+  },
+  {
+    "code": 12046,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMPr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMPr%",
+    "weight": 0
+  },
+  {
+    "code": 12046,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMPr": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMPr%",
+    "weight": 0
+  },
+  {
+    "code": 12047,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incSTRr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 12047,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incSTRr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 12048,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEXr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEXr%",
+    "weight": 0
+  },
+  {
+    "code": 12048,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEXr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEXr%",
+    "weight": 0
+  },
+  {
+    "code": 12049,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incINTr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINTr%",
+    "weight": 0
+  },
+  {
+    "code": 12049,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incINTr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINTr%",
+    "weight": 0
+  },
+  {
+    "code": 12050,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incLUKr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUKr%",
+    "weight": 0
+  },
+  {
+    "code": 12050,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incLUKr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUKr%",
+    "weight": 0
+  },
+  {
+    "code": 12051,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPADr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPADr%",
+    "weight": 0
+  },
+  {
+    "code": 12051,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPADr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPADr%",
+    "weight": 0
+  },
+  {
+    "code": 12052,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMADr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMADr%",
+    "weight": 0
+  },
+  {
+    "code": 12052,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMADr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMADr%",
+    "weight": 0
+  },
+  {
+    "code": 12053,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 12053,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 12054,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 12054,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 12055,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incCr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 12055,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incCr": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 12070,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDAMr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 12070,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDAMr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 12081,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incDEX": 1,
+      "incINT": 1,
+      "incLUK": 1,
+      "incSTR": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 12081,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incDEX": 4,
+      "incINT": 4,
+      "incLUK": 4,
+      "incSTR": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 12082,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 1,
+      "incINT": 1,
+      "incLUK": 1,
+      "incSTR": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 12082,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 6,
+      "incINT": 6,
+      "incLUK": 6,
+      "incSTR": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 12801,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDEX": 1,
+      "incINT": 1,
+      "incLUK": 1,
+      "incSTR": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 12801,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDEX": 5,
+      "incINT": 5,
+      "incLUK": 5,
+      "incSTR": 5
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 15001,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incSTR": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 15001,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incSTR": 8
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 15002,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incDEX": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 15002,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incDEX": 8
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 15003,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incINT": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 15003,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incINT": 8
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 15004,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incLUK": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 15004,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incLUK": 8
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 15005,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incMHP": 20
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 15005,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incMHP": 80
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 15006,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incMMP": 20
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 15006,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incMMP": 80
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 15007,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incSpeed": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 15007,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incSpeed": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 15008,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incJump": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 15008,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incJump": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 15009,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incPAD": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 15009,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incPAD": 8
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 15010,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incMAD": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 15010,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incMAD": 8
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 15011,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incPDD": 20
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 15011,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incPDD": 80
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 15041,
+    "level": 1,
+    "option_type": 57,
+    "props": {},
+    "props_f": {
+      "incSTRr": 0.5
+    },
+    "req_level": 0,
+    "summary": "STR +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 15041,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incSTRr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 15042,
+    "level": 1,
+    "option_type": 57,
+    "props": {},
+    "props_f": {
+      "incDEXr": 0.5
+    },
+    "req_level": 0,
+    "summary": "DEX +#incDEXr%",
+    "weight": 0
+  },
+  {
+    "code": 15042,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incDEXr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEXr%",
+    "weight": 0
+  },
+  {
+    "code": 15043,
+    "level": 1,
+    "option_type": 57,
+    "props": {},
+    "props_f": {
+      "incINTr": 0.5
+    },
+    "req_level": 0,
+    "summary": "INT +#incINTr%",
+    "weight": 0
+  },
+  {
+    "code": 15043,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incINTr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINTr%",
+    "weight": 0
+  },
+  {
+    "code": 15044,
+    "level": 1,
+    "option_type": 57,
+    "props": {},
+    "props_f": {
+      "incLUKr": 0.5
+    },
+    "req_level": 0,
+    "summary": "LUK +#incLUKr%",
+    "weight": 0
+  },
+  {
+    "code": 15044,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incLUKr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUKr%",
+    "weight": 0
+  },
+  {
+    "code": 15045,
+    "level": 1,
+    "option_type": 57,
+    "props": {},
+    "props_f": {
+      "incMHPr": 0.5
+    },
+    "req_level": 0,
+    "summary": "최대 HP +#incMHPr%",
+    "weight": 0
+  },
+  {
+    "code": 15045,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incMHPr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHPr%",
+    "weight": 0
+  },
+  {
+    "code": 15046,
+    "level": 1,
+    "option_type": 57,
+    "props": {},
+    "props_f": {
+      "incMMPr": 0.5
+    },
+    "req_level": 0,
+    "summary": "최대 MP +#incMMPr%",
+    "weight": 0
+  },
+  {
+    "code": 15046,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incMMPr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMPr%",
+    "weight": 0
+  },
+  {
+    "code": 15047,
+    "level": 1,
+    "option_type": 57,
+    "props": {},
+    "props_f": {
+      "incPADr": 0.5
+    },
+    "req_level": 0,
+    "summary": "공격력 +#incPADr%",
+    "weight": 0
+  },
+  {
+    "code": 15047,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incPADr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPADr%",
+    "weight": 0
+  },
+  {
+    "code": 15048,
+    "level": 1,
+    "option_type": 57,
+    "props": {},
+    "props_f": {
+      "incMADr": 0.5
+    },
+    "req_level": 0,
+    "summary": "마력 +#incMADr%",
+    "weight": 0
+  },
+  {
+    "code": 15048,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incMADr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMADr%",
+    "weight": 0
+  },
+  {
+    "code": 15049,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incCr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 15049,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incCr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 15050,
+    "level": 1,
+    "option_type": 57,
+    "props": {},
+    "props_f": {
+      "incDAMr": 0.5
+    },
+    "req_level": 0,
+    "summary": "데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 15050,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incDAMr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 15081,
+    "level": 1,
+    "option_type": 57,
+    "props": {
+      "incDEX": 1,
+      "incINT": 1,
+      "incLUK": 1,
+      "incSTR": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 15081,
+    "level": 4,
+    "option_type": 57,
+    "props": {
+      "incDEX": 4,
+      "incINT": 4,
+      "incLUK": 4,
+      "incSTR": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 20001,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incSTR": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 20001,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incSTR": 14
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTR",
+    "weight": 0
+  },
+  {
+    "code": 20002,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incDEX": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 20002,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incDEX": 14
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEX",
+    "weight": 0
+  },
+  {
+    "code": 20003,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incINT": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 20003,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incINT": 14
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINT",
+    "weight": 0
+  },
+  {
+    "code": 20004,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incLUK": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 20004,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incLUK": 14
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUK",
+    "weight": 0
+  },
+  {
+    "code": 20005,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 15
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 20005,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 180
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 20006,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 15
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 20006,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 180
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 20007,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHP": 15
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 20007,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHP": 180
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHP",
+    "weight": 0
+  },
+  {
+    "code": 20008,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMP": 15
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 20008,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMP": 180
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMP",
+    "weight": 0
+  },
+  {
+    "code": 20009,
+    "level": 1,
+    "option_type": 55,
+    "props": {
+      "incSpeed": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 20009,
+    "level": 25,
+    "option_type": 55,
+    "props": {
+      "incSpeed": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "이동속도 +#incSpeed",
+    "weight": 0
+  },
+  {
+    "code": 20010,
+    "level": 1,
+    "option_type": 55,
+    "props": {
+      "incJump": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 20010,
+    "level": 25,
+    "option_type": 55,
+    "props": {
+      "incJump": 10
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "점프력 +#incJump",
+    "weight": 0
+  },
+  {
+    "code": 20011,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPAD": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 20011,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPAD": 14
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPAD",
+    "weight": 0
+  },
+  {
+    "code": 20012,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMAD": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 20012,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMAD": 14
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMAD",
+    "weight": 0
+  },
+  {
+    "code": 20013,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDD": 15
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 20013,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDD": 180
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 20014,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDD": 15
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 20014,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDD": 180
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDD",
+    "weight": 0
+  },
+  {
+    "code": 20041,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incSTRr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 20041,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incSTRr": 7
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "STR +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 20042,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incDEXr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEXr%",
+    "weight": 0
+  },
+  {
+    "code": 20042,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incDEXr": 7
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "DEX +#incDEXr%",
+    "weight": 0
+  },
+  {
+    "code": 20043,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incINTr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINTr%",
+    "weight": 0
+  },
+  {
+    "code": 20043,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incINTr": 7
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "INT +#incINTr%",
+    "weight": 0
+  },
+  {
+    "code": 20044,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incLUKr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUKr%",
+    "weight": 0
+  },
+  {
+    "code": 20044,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incLUKr": 7
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "LUK +#incLUKr%",
+    "weight": 0
+  },
+  {
+    "code": 20045,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHPr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHPr%",
+    "weight": 0
+  },
+  {
+    "code": 20045,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHPr": 7
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHPr%",
+    "weight": 0
+  },
+  {
+    "code": 20046,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMPr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMPr%",
+    "weight": 0
+  },
+  {
+    "code": 20046,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMPr": 7
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMPr%",
+    "weight": 0
+  },
+  {
+    "code": 20047,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMHPr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHPr%",
+    "weight": 0
+  },
+  {
+    "code": 20047,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMHPr": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 HP +#incMHPr%",
+    "weight": 0
+  },
+  {
+    "code": 20048,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incMMPr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMPr%",
+    "weight": 0
+  },
+  {
+    "code": 20048,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incMMPr": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "최대 MP +#incMMPr%",
+    "weight": 0
+  },
+  {
+    "code": 20051,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incPADr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPADr%",
+    "weight": 0
+  },
+  {
+    "code": 20051,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incPADr": 7
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격력 +#incPADr%",
+    "weight": 0
+  },
+  {
+    "code": 20052,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incMADr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMADr%",
+    "weight": 0
+  },
+  {
+    "code": 20052,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incMADr": 7
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "마력 +#incMADr%",
+    "weight": 0
+  },
+  {
+    "code": 20053,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 20053,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 7
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 20054,
+    "level": 1,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 20054,
+    "level": 25,
+    "option_type": 11,
+    "props": {
+      "incPDDr": 6
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "방어력 +#incPDDr%",
+    "weight": 0
+  },
+  {
+    "code": 20055,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incCr": 8
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 20055,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incCr": 9
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "크리티컬 확률 +#incCr%",
+    "weight": 0
+  },
+  {
+    "code": 20070,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "incDAMr": 2
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 20070,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "incDAMr": 7
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "데미지 +#incDAMr%",
+    "weight": 0
+  },
+  {
+    "code": 20086,
+    "level": 1,
+    "option_type": 0,
+    "props": {
+      "incDEXr": 1,
+      "incINTr": 1,
+      "incLUKr": 1,
+      "incSTRr": 1
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 20086,
+    "level": 25,
+    "option_type": 0,
+    "props": {
+      "incDEXr": 4,
+      "incINTr": 4,
+      "incLUKr": 4,
+      "incSTRr": 4
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "올스탯 +#incSTRr%",
+    "weight": 0
+  },
+  {
+    "code": 20201,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "HP": 20,
+      "prop": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #HP의 HP 회복",
+    "weight": 0
+  },
+  {
+    "code": 20201,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "HP": 54,
+      "prop": 3
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #HP의 HP 회복",
+    "weight": 0
+  },
+  {
+    "code": 20202,
+    "level": 1,
+    "option_type": 10,
+    "props": {
+      "HP": 30,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #HP의 HP 회복",
+    "weight": 0
+  },
+  {
+    "code": 20202,
+    "level": 25,
+    "option_type": 10,
+    "props": {
+      "HP": 370,
+      "prop": 20
+    },
+    "props_f": {},
+    "req_level": 0,
+    "summary": "공격 시 #prop% 확률로 #HP의 HP 회복",
+    "weight": 0
+  }
+]

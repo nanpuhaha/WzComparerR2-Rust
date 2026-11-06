@@ -64,6 +64,7 @@ pub mod pixel_ops;
 pub mod plugin_events;
 pub mod plugin_find;
 pub mod plugin_ribbon;
+pub mod potential;
 pub mod query;
 pub mod quest_tooltip;
 pub mod resolve;
@@ -165,6 +166,10 @@ pub use pixel_ops::{blit_opaque_argb, compose_icon_block, enlarge_2x, IconBlock}
 pub use plugin_events::{EventBus, InvalidRegion, InvalidateState, PluginEvent, Rect};
 pub use plugin_find::{plugin_files, FoundNode, PluginMetadata, PluginWzSet};
 pub use plugin_ribbon::{RibbonBar, RibbonError, RibbonModel, RibbonPanel};
+pub use potential::{
+    check_option_type, convert_summary, gear_type_value, is_double_hand_weapon, is_left_weapon,
+    is_potential_ex, is_weapon, potential_level, potential_to_string,
+};
 pub use query::{
     execute_query, node_value_to_string, NumericComparisonMode, QueryExecutionResult, QueryResult,
     QueryRule, QueryRuleKind, QueryValueType, StringComparisonMode, ValueRule, DEFAULT_MAX_RESULTS,

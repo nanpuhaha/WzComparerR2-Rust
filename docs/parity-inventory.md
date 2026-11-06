@@ -1984,3 +1984,34 @@ C#: `-- astrajob <names.json>`.
 
 fixture: `item_type_cases.json`, `item_type_expected.json`,
 C#: `-- itemtypes <ids.json>`.
+
+## 잠재능력 (`Potential` 요약/옵션타입/레벨)
+
+`Item/ItemOption.img`의 문자열 요약을 GDI 없이 계산하는 부분을 옮겼다
+(`wz-db::potential`).
+
+- `convert_summary(summary, props, props_f)` — `stringSummary`의 `#<GearPropType>`를
+  값으로 치환. 원본은 **이름 길이 내림차순**으로 정렬해 접두 관계
+  (`incSTR`/`incSTRr`)에서 긴 이름이 먼저 바뀌게 한다. 같은 길이는 접두 관계가
+  될 수 없어 정렬 불안정성이 결과에 영향이 없다.
+- `potential_level(reqLevel)` — `<=0 → 1`, `>=200 → 20`, 그 외 `(req+9)/10`
+- `check_option_type(optionType, gearType)` — `GearType` 숫자 값 기반
+  (0/10/11/20/40/51~55), `Gear.IsWeapon`/`IsSubWeapon` 포함
+- `is_potential_ex(code)` — `code / 1000 % 10 == 2`
+- `potential_to_string(code, summary, weight)` — `d6 + " " + summary(+ " - weight")`
+- `gear_type_value(name)` — `GearType` 161개 이름 → enum 값
+
+검증(실제 C# 실행):
+- 입력은 실제 `ItemOption.img`의 `(code, level)` **600개**(코드당 2레벨,
+  300코드) + 옵션타입 7종 × GearType 161개 = 1,127 판정 + 레벨 215개
+- C# 하네스가 실제 `Potential.CreateFromNode`/`ConvertSummary`/`ToString`/
+  `IsPotentialEx`/`CheckOptionType`/`GetPotentialLevel` 호출
+- `crates/wz-db/tests/potential_parity.rs` 완전 일치
+  (예: `1/level1 → "STR +1"`, `"000001 STR +1"`)
+- 단위 테스트 5종
+
+fixture: `potential_cases.json`, `potential_expected.json`,
+CLI: `wz potential-cases <Data> --levels-per-code 2`,
+C#: `-- potcases <Item_000.wz> <fixture.json>`.
+
+한계: `PotentialTooltipRender`의 GDI+ 래스터/색상은 여전히 미검증이다(문자열만).

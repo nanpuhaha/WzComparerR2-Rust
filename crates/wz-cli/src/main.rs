@@ -387,6 +387,15 @@ enum Command {
         out: Option<PathBuf>,
     },
 
+    /// 잠재능력(`Potential`) fixture 생성 (실제 ItemOption.img)
+    PotentialCases {
+        /// Data 루트
+        data_root: PathBuf,
+        /// 코드당 최대 레벨 수
+        #[arg(long, default_value_t = 2)]
+        levels_per_code: usize,
+    },
+
     /// 아이템 공통 속성(`GetItemPropString`) fixture 생성
     ItemPropCases {
         /// Data 루트
@@ -1164,6 +1173,10 @@ fn main() {
             fixture,
             out,
         } => commands::cmd_item_tooltip_render(&data_root, &fixture, out.as_deref()),
+        Command::PotentialCases {
+            data_root,
+            levels_per_code,
+        } => commands::cmd_potential_cases(&data_root, levels_per_code),
         Command::ItemPropCases { data_root, limit } => {
             commands::cmd_item_prop_cases(&data_root, limit)
         }

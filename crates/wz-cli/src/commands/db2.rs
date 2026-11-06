@@ -6035,3 +6035,148 @@ pub fn cmd_item_prop_cases(
     println!("{}", serde_json::to_string_pretty(&rows)?);
     Ok(())
 }
+
+fn node_str(node: &wz_core::image::Node, key: &str) -> Option<String> {
+    node.object_children()
+        .iter()
+        .find(|c| c.name.as_ref() == key)
+        .and_then(|c| match &c.value {
+            Some(wz_core::image::ImageValue::Str(s)) | Some(wz_core::image::ImageValue::Uol(s)) => {
+                Some(s.to_string())
+            }
+            _ => None,
+        })
+}
+
+/// 실제 `Data/Item`의 `ItemOption.img`에서 잠재능력 옵션을 뽑는다.
+pub fn cmd_potential_cases(
+    data_root: &Path,
+    levels_per_code: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let item_dir = data_root.join("Item");
+    let mut wz_files: Vec<_> = std::fs::read_dir(&item_dir)?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|s| s.to_str()) == Some("wz"))
+        .collect();
+    wz_files.sort();
+
+    let mut rows: Vec<serde_json::Value> = Vec::new();
+    'outer: for path in wz_files {
+        let Ok(archive) = WzArchive::open(&path) else {
+            continue;
+        };
+        let Ok(tree) = archive.read_tree() else {
+            continue;
+        };
+        let Some(entry) = tree
+            .root
+            .entries
+            .iter()
+            .find(|e| e.name.as_deref() == Some("ItemOption.img"))
+        else {
+            continue;
+        };
+        let Some(offset) = entry.offset else { continue };
+        let Ok(image) = archive.parse_image_at(offset) else {
+            continue;
+        };
+        for code_node in image.object_children() {
+            let Ok(code) = code_node.name.as_ref().parse::<i32>() else {
+                continue;
+            };
+            let info = code_node
+                .object_children()
+                .iter()
+                .find(|c| c.name.as_ref() == "info");
+            let option_type = info.map(|i| node_int(Some(i), "optionType")).unwrap_or(0);
+            let req_level = info.map(|i| node_int(Some(i), "reqLevel")).unwrap_or(0);
+            let weight = info.map(|i| node_int(Some(i), "weight")).unwrap_or(0);
+            let summary = info.and_then(|i| node_str(i, "string")).unwrap_or_default();
+            let Some(level_node) = code_node
+                .object_children()
+                .iter()
+                .find(|c| c.name.as_ref() == "level")
+            else {
+                continue;
+            };
+            let mut levels: Vec<i32> = level_node
+                .object_children()
+                .iter()
+                .filter_map(|c| c.name.as_ref().parse::<i32>().ok())
+                .collect();
+            levels.sort_unstable();
+            if levels.is_empty() {
+                continue;
+            }
+            // 결정적으로 앞/뒤를 섞어 뽑는다.
+            let mut chosen: Vec<i32> = Vec::new();
+            for i in 0..levels_per_code {
+                let idx = if levels.len() == 1 {
+                    0
+                } else {
+                    i * (levels.len() - 1) / (levels_per_code.max(2) - 1).max(1)
+                };
+                let lv = levels[idx.min(levels.len() - 1)];
+                if !chosen.contains(&lv) {
+                    chosen.push(lv);
+                }
+            }
+            for level in chosen {
+                let Some(lv_node) = level_node
+                    .object_children()
+                    .iter()
+                    .find(|c| c.name.as_ref() == level.to_string())
+                else {
+                    continue;
+                };
+                let mut props = serde_json::Map::new();
+                let mut props_f = serde_json::Map::new();
+                for prop in lv_node.object_children() {
+                    let name = prop.name.to_string();
+                    match &prop.value {
+                        Some(wz_core::image::ImageValue::Int(v)) => {
+                            props.insert(name, serde_json::json!(i64::from(*v)));
+                        }
+                        Some(wz_core::image::ImageValue::Short(v)) => {
+                            props.insert(name, serde_json::json!(i64::from(*v)));
+                        }
+                        Some(wz_core::image::ImageValue::Long(v)) => {
+                            props.insert(name, serde_json::json!(*v));
+                        }
+                        Some(wz_core::image::ImageValue::Float(v)) => {
+                            props_f.insert(name, serde_json::json!(f64::from(*v)));
+                        }
+                        Some(wz_core::image::ImageValue::Double(v)) => {
+                            props_f.insert(name, serde_json::json!(*v));
+                        }
+                        Some(wz_core::image::ImageValue::Str(s))
+                        | Some(wz_core::image::ImageValue::Uol(s)) => {
+                            if let Ok(v) = s.parse::<i64>() {
+                                props.insert(name, serde_json::json!(v));
+                            } else if let Ok(v) = s.parse::<f64>() {
+                                props_f.insert(name, serde_json::json!(v));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                rows.push(serde_json::json!({
+                    "code": code,
+                    "level": level,
+                    "option_type": option_type,
+                    "req_level": req_level,
+                    "weight": weight,
+                    "summary": summary,
+                    "props": props,
+                    "props_f": props_f,
+                }));
+                if rows.len() >= 600 {
+                    break 'outer;
+                }
+            }
+        }
+    }
+    println!("{}", serde_json::to_string_pretty(&rows)?);
+    Ok(())
+}

@@ -751,3 +751,13 @@ Verified item types (`itemtypes <ids.json>`):
 616 ids (598 real item ids + boundaries): Item.GetItemType + GetItemCategoryName
 ```
 Matches Rust `wz_db::item_type` / `item_category_name`.
+
+Verified potential core (`potcases <Item_000.wz> <fixture.json>`):
+```
+600 (code, level) from real ItemOption.img
+7 option types x 161 GearType names
+215 GetPotentialLevel inputs
+```
+Calls the real `Potential.CreateFromNode` / `ConvertSummary` / `ToString` /
+`IsPotentialEx` / `CheckOptionType` / `GetPotentialLevel`; matches Rust
+`wz_db::potential`.

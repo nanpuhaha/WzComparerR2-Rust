@@ -4672,6 +4672,61 @@ return tostring(ok) .. '|' .. tostring(acc)
         }).ToList();
         Console.WriteLine(JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = false }));
     }
+    // 실제 `Potential.CreateFromNode` + `ConvertSummary` + `ToString` +
+    // `CheckOptionType` + `GetPotentialLevel`.
+    static void PotentialCases(string wzPath, string fixturePath)
+    {
+        var str = new Wz_Structure();
+        str.Load(wzPath);
+        var root = str.wz_files[0].Node;
+        var optionRoot = root.FindNodeByPath("ItemOption.img", true);
+        if (optionRoot == null) throw new Exception("ItemOption.img not found");
+
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(fixturePath));
+        var rows = new List<object>();
+        var optionTypes = new SortedSet<int>();
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            int code = item.GetProperty("code").GetInt32();
+            int level = item.GetProperty("level").GetInt32();
+            var codeNode = optionRoot.FindNodeByPath(code.ToString("d6"));
+            var potential = WzComparerR2.CharaSim.Potential.CreateFromNode(codeNode, level);
+            optionTypes.Add(item.GetProperty("option_type").GetInt32());
+            rows.Add(new
+            {
+                code,
+                level,
+                created = potential != null,
+                summary = potential?.ConvertSummary(),
+                to_string = potential?.ToString(),
+                is_ex = potential?.IsPotentialEx,
+                option_type = potential?.optionType,
+                req_level = potential?.reqLevel,
+                weight = potential?.weight,
+            });
+        }
+
+        var gearTypes = Enum.GetNames(typeof(WzComparerR2.CharaSim.GearType));
+        var optionChecks = new List<object>();
+        foreach (var typeName in gearTypes)
+        {
+            var type = (WzComparerR2.CharaSim.GearType)Enum.Parse(
+                typeof(WzComparerR2.CharaSim.GearType), typeName);
+            var checks = optionTypes.Select(t => new
+            {
+                option_type = t,
+                allowed = WzComparerR2.CharaSim.Potential.CheckOptionType(t, type),
+            }).ToList();
+            optionChecks.Add(new { gear_type = typeName, checks });
+        }
+
+        var levels = Enumerable.Range(-2, 215)
+            .Select(l => new { req_level = l, level = WzComparerR2.CharaSim.Potential.GetPotentialLevel(l) })
+            .ToList();
+
+        Console.WriteLine(JsonSerializer.Serialize(new { rows, option_checks = optionChecks, levels },
+            new JsonSerializerOptions { WriteIndented = false }));
+    }
     static void Main(string[] args)
     {
         if (args[0] == "fixture") Fixture(args[1]);
@@ -4708,6 +4763,7 @@ return tostring(ok) .. '|' .. tostring(acc)
         else if (args[0] == "geartypenames") GearTypeNames();
         else if (args[0] == "astrajob") AstraJob(args[1]);
         else if (args[0] == "itemtypes") ItemTypes(args[1]);
+        else if (args[0] == "potcases") PotentialCases(args[1], args[2]);
         else if (args[0] == "openapi") OpenApi(args[1]);
         else if (args[0] == "networkrc4") NetworkRc4(args[1], args[2], args[3]);
         else if (args[0] == "jobnames") JobNames(int.Parse(args[1]));
