@@ -5670,6 +5670,14 @@ pub fn cmd_item_tooltip_render(
         icon_height: u32,
         origin: [i32; 2],
         icon_rgba_b64: String,
+        #[serde(default)]
+        top_attributes: Vec<String>,
+        #[serde(default)]
+        bottom_attributes: Vec<String>,
+        #[serde(default)]
+        expire_lines: Vec<String>,
+        #[serde(default)]
+        no_revive_lines: Vec<String>,
     }
 
     let fixture: Fixture = serde_json::from_str(&std::fs::read_to_string(fixture_path)?)?;
@@ -5677,6 +5685,10 @@ pub fn cmd_item_tooltip_render(
     let spec = wz_avatar::ItemTooltipSpec {
         title: &fixture.title,
         desc: &fixture.desc,
+        top_attributes: &fixture.top_attributes,
+        bottom_attributes: &fixture.bottom_attributes,
+        expire_lines: &fixture.expire_lines,
+        no_revive_lines: &fixture.no_revive_lines,
         icon: Some((fixture.icon_width, fixture.icon_height, icon)),
         origin: (fixture.origin[0], fixture.origin[1]),
     };

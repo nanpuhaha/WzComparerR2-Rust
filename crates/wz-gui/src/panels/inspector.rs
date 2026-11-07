@@ -144,6 +144,11 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                                                 .ok()
                                                 .map(|(w, h, rgba)| (w, h, rgba, origin))
                                             });
+                                            let top_attributes: Vec<String> = props
+                                                .iter()
+                                                .map(|(k, v)| format!("{k}: {v}"))
+                                                .collect();
+                                            let bottom_attributes: Vec<String> = Vec::new();
                                             state.tooltip_bitmap =
                                                 data_root.as_deref().and_then(|root| {
                                                     if let (Some((w, h, rgba, origin)), Some(desc)) =
@@ -154,6 +159,10 @@ pub fn show(ui: &mut egui::Ui, state: &mut AppState) {
                                                             &wz_avatar::ItemTooltipSpec {
                                                                 title: &title,
                                                                 desc,
+                                                                top_attributes: &top_attributes,
+                                                                bottom_attributes: &bottom_attributes,
+                                                                expire_lines: &[],
+                                                                no_revive_lines: &[],
                                                                 icon: Some((w, h, rgba)),
                                                                 origin,
                                                             },

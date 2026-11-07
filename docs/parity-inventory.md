@@ -2043,3 +2043,25 @@ fixture: `crates/wz-avatar/tests/fixtures/set_items_expected.json`,
 C#: `-- setitems <Etc_000.wz> <Item_000.wz>`.
 
 한계: 세트 툴팁의 GDI+ 그리기/색상은 미검증이다(구조/문자열까지).
+
+### 색상 run 렌더 (`item22ColorTable`)
+
+`ItemTooltipRender22`의 색 테이블을 그대로 쓴다.
+
+| 토큰 | 색 |
+|---|---|
+| `c` | `#FFCC00` (Equip22BrushEmphasis) |
+| `$r` | `#FF8A18` (Equip22BrushRed) |
+| `$g` | `#CCFF00` (Equip22BrushLegendary) |
+| `$S` | `#77CCFF` (ItemPriceBrush) |
+| `#fcAARRGGBB#` | 8자리 중 RGB |
+
+렌더러는 이제 상단 속성/유효기간/하단 속성도 `format_parser` run으로 그려
+색을 적용하고, `item_tooltip_layout`의 `splitterH`/`iconY` 위치를 사용한다.
+
+- 캔버스: 300×235, SHA-256 `ab3775eb…2384`
+- 테스트: 해시 고정, 아이콘 없이 렌더, **색 토큰이 픽셀을 바꾸는지** 확인
+- CLI `wz item-tooltip-render`도 같은 fixture 필드를 읽는다
+
+여전히 GDI+의 premultiplied/감마·글리프 힌팅과의 픽셀 동일성은 주장하지
+않는다(게임 폰트 래스터 사용).

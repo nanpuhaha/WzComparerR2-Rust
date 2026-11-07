@@ -16,6 +16,14 @@ struct Fixture {
     icon_height: u32,
     origin: [i32; 2],
     icon_rgba_b64: String,
+    #[serde(default)]
+    top_attributes: Vec<String>,
+    #[serde(default)]
+    bottom_attributes: Vec<String>,
+    #[serde(default)]
+    expire_lines: Vec<String>,
+    #[serde(default)]
+    no_revive_lines: Vec<String>,
     width: u32,
     height: u32,
     sha256: String,
@@ -55,6 +63,10 @@ fn headless_render_hash_is_stable() {
     let spec = ItemTooltipSpec {
         title: &fixture.title,
         desc: &fixture.desc,
+        top_attributes: &fixture.top_attributes,
+        bottom_attributes: &fixture.bottom_attributes,
+        expire_lines: &fixture.expire_lines,
+        no_revive_lines: &fixture.no_revive_lines,
         icon: Some((fixture.icon_width, fixture.icon_height, icon)),
         origin: (fixture.origin[0], fixture.origin[1]),
     };
@@ -82,11 +94,32 @@ fn renders_without_icon() {
         title: "제목",
         desc: "#c빨강# 설명",
         icon: None,
-        origin: (0, 0),
+        ..Default::default()
     };
     let (w, h, rgba) = render_item_tooltip(&root, &spec).unwrap();
     assert!(w >= 160 && h >= 60);
     assert_eq!(rgba.len(), (w * h * 4) as usize);
     // 배경 밖으로 나간 픽셀이 없고 알파가 모두 255.
     assert!(rgba.chunks(4).all(|p| p[3] == 255));
+}
+
+/// `#c` 색 토큰이 실제 픽셀을 바꾸는지 확인한다(색 테이블 적용 검증).
+#[test]
+fn colored_runs_change_pixels() {
+    let Some(root) = std::env::var_os("WZ_DATA_ROOT").map(std::path::PathBuf::from) else {
+        return;
+    };
+    let plain = ItemTooltipSpec {
+        title: "제목",
+        desc: "교환 불가",
+        ..Default::default()
+    };
+    let colored = ItemTooltipSpec {
+        title: "제목",
+        desc: "#c교환 불가#",
+        ..Default::default()
+    };
+    let (_, _, a) = render_item_tooltip(&root, &plain).unwrap();
+    let (_, _, b) = render_item_tooltip(&root, &colored).unwrap();
+    assert_ne!(a, b, "color tokens must affect pixels");
 }
